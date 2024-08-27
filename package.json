@@ -1,0 +1,11 @@
+{
+	"license": "MIT",
+	"dependencies": {
+		"commander": "^11.0.0",
+		"peggy": "^4.0.3",
+		"regexp-tree": "^0.1.27"
+	},
+	"scripts": {
+		"start": "node httpd/httpd.js"
+	}
+}

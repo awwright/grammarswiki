@@ -1,0 +1,29 @@
+; title: HTTP/1.1
+
+; cut: <https://www.rfc-editor.org/rfc/rfc9112.html#name-syntax-notation>
+BWS           = <import RFC9112.BWS>
+OWS           = <import RFC9112.OWS>
+RWS           = <import RFC9112.RWS>
+absolute-path = <import RFC9112.absolute-path>
+field-name    = <import RFC9112.field-name>
+field-value   = <import RFC9112.field-value>
+obs-text      = <import RFC9112.obs-text>
+quoted-string = <import RFC9112.quoted-string>
+token         = <import RFC9112.token>
+transfer-coding =
+                <import RFC9112.transfer-coding>
+
+; cut: <https://www.rfc-editor.org/rfc/rfc9112.html#name-syntax-notation>
+absolute-URI  = <import RFC3986.absolute-URI>
+authority     = <import RFC3986.authority>
+uri-host      = <import RFC3986.host>
+port          = <import RFC3986.port>
+query         = <import RFC3986.query>
+
+; cut: <https://www.rfc-editor.org/rfc/rfc9112.html#name-message-format>
+HTTP-message   = start-line CRLF
+                 *( field-line CRLF )
+                 CRLF
+                 [ message-body ]
+
+start-line     = request-line / status-line

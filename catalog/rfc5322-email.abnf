@@ -1,0 +1,17 @@
+; source: RFC 5322
+
+local-part      =   dot-atom / quoted-string
+
+domain          =   dot-atom / domain-literal
+
+quoted-string   =   DQUOTE *qcontent DQUOTE
+qcontent        =   qtext / quoted-pair
+qtext           =   %d33 / %d35-91 / %d93-126
+quoted-pair     =   "\" (VCHAR / WSP)
+
+dot-atom        =   1*atext *("." 1*atext)
+atext           =   ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "/" /
+                    "=" / "?" / "^" / "_" / "`" / "{" / "|" / "}" / "~"
+
+domain-literal  =   "[" *dtext "]"
+dtext           =   %d33-90 / %d94-126

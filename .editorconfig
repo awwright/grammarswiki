@@ -1,0 +1,23 @@
+[*.md]
+end_of_line = lf
+insert_final_newline = true
+indent_style = tab
+indent_size = 3
+
+[*.json]
+end_of_line = lf
+insert_final_newline = true
+indent_style = tab
+indent_size = 3
+
+[*.js]
+end_of_line = lf
+insert_final_newline = true
+indent_style = tab
+indent_size = 3
+
+[*.abnf]
+charset = ascii
+end_of_line = crlf
+indent_style = space
+indent_size = 1

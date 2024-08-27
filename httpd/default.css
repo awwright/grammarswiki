@@ -1,0 +1,16 @@
+
+body {
+	max-width: 40em;
+	margin: 0 auto;
+}
+
+pre {
+	white-space: inherit;
+	text-indent: -10em;
+	margin-left: 10em;
+}
+
+#input {
+	width: 100%;
+	min-height: 20em;
+}

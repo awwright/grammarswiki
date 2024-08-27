@@ -1,0 +1,5 @@
+sf-binary = ":" *(base64) ":"
+base64 = ALPHA / DIGIT / "+" / "/" / "="
+ALPHA = %x41-5A / %x61-7A   ; A-Z / a-z
+DIGIT = %x30-39
+

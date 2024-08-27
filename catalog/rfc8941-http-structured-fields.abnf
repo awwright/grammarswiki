@@ -1,0 +1,76 @@
+; Does Structured Fields misrepresent how it can use parameters?
+; The example shows a field defined as sf-integer, but sf-integer does not permit parameters.
+
+;#name RFC8941
+
+; 3.1. Lists
+; <https://httpwg.org/specs/rfc8941.html#list>
+sf-list       = list-member *( OWS "," OWS list-member )
+list-member   = sf-item / inner-list
+
+; Section 3.1.1. Inner Lists
+; <https://httpwg.org/specs/rfc8941.html#inner-list>
+inner-list    = "(" *SP [ sf-item *( 1*SP sf-item ) *SP ] ")"
+                parameters
+
+; Section 3.1.2. Parameters
+; <https://httpwg.org/specs/rfc8941.html#param>
+parameters    = *( ";" *SP parameter )
+parameter     = param-key [ "=" param-value ]
+param-key     = key
+key           = ( lcalpha / "*" )
+                *( lcalpha / DIGIT / "_" / "-" / "." / "*" )
+lcalpha       = %x61-7A ; a-z
+param-value   = bare-item
+
+; Section 3.2. Dictionaries
+; <https://httpwg.org/specs/rfc8941.html#dictionary>
+sf-dictionary  = dict-member *( OWS "," OWS dict-member )
+dict-member    = member-key ( parameters / ( "=" member-value ))
+member-key     = key
+member-value   = sf-item / inner-list
+
+; Section 3.3. Items
+; <https://httpwg.org/specs/rfc8941.html#item>
+sf-item   = bare-item parameters
+bare-item = sf-integer / sf-decimal / sf-string / sf-token
+            / sf-binary / sf-boolean
+
+; 3.3.1. Integers
+; <https://httpwg.org/specs/rfc8941.html#integer>
+sf-integer = ["-"] 1*15DIGIT
+
+; Section 3.3.2. Decimals
+; <https://httpwg.org/specs/rfc8941.html#decimal>
+sf-decimal  = ["-"] 1*12DIGIT "." 1*3DIGIT
+
+; Section 3.3.3. Strings
+; <https://httpwg.org/specs/rfc8941.html#string>
+sf-string = DQUOTE *chr DQUOTE
+chr       = unescaped / escaped
+unescaped = %x20-21 / %x23-5B / %x5D-7E
+escaped   = "\" ( DQUOTE / "\" )
+
+; Section 3.3.4. Tokens
+; <https://httpwg.org/specs/rfc8941.html#token>
+sf-token = ( ALPHA / "*" ) *( tchar / ":" / "/" )
+
+; Section 3.3.5. Byte Sequences
+; <https://httpwg.org/specs/rfc8941.html#binary>
+sf-binary = ":" *(base64) ":"
+base64    = ALPHA / DIGIT / "+" / "/" / "="
+
+; Section 3.3.6. Booleans
+; <https://httpwg.org/specs/rfc8941.html#boolean>
+sf-boolean = "?" boolean
+boolean    = "0" / "1"
+
+; imported from <https://www.rfc-editor.org/rfc/rfc7230.html>
+tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+               / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+               / DIGIT / ALPHA
+               ; any VCHAR, except delimiters
+
+; imported from <https://www.rfc-editor.org/rfc/rfc7230.html>
+OWS            = *( SP / HTAB )
+               ; optional whitespace

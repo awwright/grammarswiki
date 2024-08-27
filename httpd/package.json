@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "uri-template-router": "^0.0.16"
+  }
+}

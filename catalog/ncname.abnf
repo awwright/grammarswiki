@@ -1,0 +1,6 @@
+
+NCNameStartChar = %x41-5A / "_" / %x61-7A / %xC0-D6 / %xD8-F6 / %xF8-2FF / %x370-37D / %x37F-1FFF / %x200C-200D / %x2070-218F / %x2C00-2FEF / %x3001-D7FF / %xF900-FDCF / %xFDF0-FFFD / %x10000-EFFFF
+
+NCNameChar      = NCNameStartChar / "-" / "." / %x30-39 / %xB7 / %x0300-036F / %x203F-2040
+
+NCName          = NCNameStartChar *NCNameChar
