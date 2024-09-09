@@ -1,0 +1,72 @@
+/* 
+@title: Styleguide
+@description: specific elements from within the Styleguide page
+@author: Grant Kellie (grantkellie.dev)
+*/
+/* 
+@title: SCSS Variables Color
+@description: lists containing a range of different color styles for light, dark or any other mode of the website.
+@author: Grant Kellie (grantkellie.dev)
+@date: 2024 07 25
+@parent: functions_color.scss
+@example: example theming.md
+*/
+/*
+@title: style guide preview
+@description: an element that allows clear preview of the style guide colours 
+*/
+.sg-preview {
+  border: solid 1px;
+  border-radius: 10px;
+  height: 64px;
+  margin: 0 0 25px 0;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+}
+.sg-preview:hover {
+  font-weight: bold;
+}
+
+#buttons .col-2 > * {
+  padding: 16px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/*
+@title: top / bottom
+@description: buttons to quickly get you to either the top or bottom of the page.
+*/
+#top, #bottom {
+  display: none !important;
+  z-index: 9999;
+}
+
+#top {
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  bottom: 125px;
+  right: 25px;
+  position: fixed;
+  background: hsl(240, 6%, 7%);
+}
+
+#bottom {
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  bottom: 50px;
+  right: 25px;
+  position: fixed;
+  background: hsl(240, 6%, 7%);
+}/*# sourceMappingURL=styleguide.css.map */

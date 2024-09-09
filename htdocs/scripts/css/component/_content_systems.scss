@@ -1,0 +1,55 @@
+/* 
+@title: Content systems
+@description: Components for creating a pagination, load more, infinite scroll and filter menu's
+@author: Grant Kellie (grantkellie.dev)
+
+@contents:
+- Filter
+-- Quick search
+- Pagination
+*/
+
+@charset 'utf-8';
+
+/* 
+@title: Filter Menu
+@description: menu system for searching and filterng information.
+*/
+.filter-menu {
+    
+    /* 
+    @title: Quick Search
+    @description: Small filter menu system
+    */
+    &--quick-search {
+        width:calc(100% - 4px);
+        margin:0 auto;
+        padding:16px 0;       
+        text-align: center;    
+
+        & label {
+            margin:0 0 0 16px;
+        }
+
+        & button {
+            min-width:120px;
+            margin:16px 8px 0 8px;
+        }
+    }
+}
+
+/* 
+@title: Pagination
+@description: 
+*/
+.pagination {
+    text-align: center;    
+    
+    // first
+    // previous
+        // numerics
+    // next
+    // last
+}
+
+

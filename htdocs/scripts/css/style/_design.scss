@@ -1,0 +1,88 @@
+/* 
+@title: Stylesheet Design
+@description: 
+@author: Grant Kellie (grantkellie.dev)
+
+@contents:
+- Primary Header
+- Header Logo
+- Primary Header Navigation
+- Desktop menu
+- Responsive button state
+- Responsive button
+- Toggle button
+- Toggle button state
+- Responsive menu
+- Checkbox toggle
+- Hover toggle
+- Responsive dropdown
+- Navigation visability
+*/
+
+@charset 'utf-8';
+@use '../scss/media-queries/mixins_media_queries' as media-queries;
+@use '../scss/color/functions_color' as color;
+
+/* Colour */
+.color--Primary{
+    background:color.set('primary');
+}
+
+.color--Secondary{
+    background:color.set('secondary');
+}
+
+.color--Tertiary{
+    background:color.set('tertiary');
+}
+
+.color--Primary, .color--Secondary, .color--Tertiary {
+    color:color.set('light');
+}
+
+/* Shades */
+.color--light{
+    background:color.set('light');
+}
+
+.color--light-medium{
+    background:color.set('light-medium');
+}
+
+.color--medium{
+    background:color.set('medium');
+}
+
+.color--medium-dark{
+    background:color.set('medium-dark');
+}
+
+.color--dark{
+    background:color.set('dark');
+}
+
+.color--light, .color--light-medium, .color--medium{
+    color:color.set('dark');
+}
+
+.color--medium-dark, .color--dark {
+    color:color.set('light');
+}
+
+/* Misc */
+.color--success{
+    background:color.set('success');
+}
+
+.color--warning{
+    background:color.set('error');
+}
+
+.color--success, .color--warning {
+    color:color.set('light');
+}
+
+
+.radius-100 {
+    border-radius: 100%;
+}

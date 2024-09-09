@@ -1,0 +1,375 @@
+/*
+@title: Structure
+@description: 
+@author: Grant Kellie (grantkellie.dev)
+@date: 2024 08 25
+
+@contents:
+- Structure
+- Container
+- Verical Align
+- Horizontal Align
+- Horizontal / Vertical Align
+- Grid Columns
+-- Desktop columns
+-- Medium Desktop columns
+-- Tablet columns
+-- Mobile columns
+-- Smartwatch columns
+- Table
+- Container Ratio 
+-- Aspect Ratio 1 : 1
+-- Aspect Ratio 2 : 1
+-- Aspect Ratio 4 : 3
+-- Aspect Ratio 16:9
+- Container overflow buffers
+*/
+
+@charset 'utf-8';
+@use '../scss/media-queries/mixins_media_queries' as media-queries;
+@use '../scss/color/functions_color' as color;
+
+/* 
+@title: Structure
+@description: Core base layout components
+@type: Block
+*/
+header, footer {
+    flex-grow: 0;
+    flex-shrink: 0;
+    color:color.set('light');
+    background:color.set('primary');
+}
+
+section {
+    &:not(:first-child){
+        margin-bottom: 50px;
+    }
+}
+
+footer {
+    height:64px;
+    padding:16px 0;
+}
+
+main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+
+    @include media-queries.responsive {
+        margin-top: 80px;
+    }
+}
+
+/* 
+@title: Container
+@description: Contans the page contents, has established sizes for each breakpoint and relative spacing based for each instance.
+@type: Block
+*/
+.container {
+    @include media-queries.desktop {
+        width:1140px;
+        margin:0 auto;
+    }
+
+    @include media-queries.medium-desktop {
+        width:960px;
+    }
+
+    @include media-queries.responsive {
+        width: calc(100% - 4%);
+    }
+   
+    // First container Element
+    &:first-child {
+        margin: 0px auto 0 auto;
+    }
+
+    // Any container elemenet besides the last
+    &:not(:first-child) {
+        margin: 25px auto 25px auto;
+    }
+
+    // Last container element
+    &:last-child {
+        margin: 0 auto 50px auto;
+    }  
+    
+    //@TODO TEMPORARY FOR ERROR PAGE
+    &.center {
+        text-align: center;
+    }
+}
+
+/* 
+@title: Verical Align
+@description: Vertical container contents alignment
+@type: modifier
+*/
+.v-align {
+    &--grid {
+        height: 100%;
+        display: grid;
+        align-items: center;
+    }
+
+    &--flex {
+        height: 100%;
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* 
+@title: Horizontal Align
+@description: Horizontal container contents alignment
+@type: modifier
+@todo: REQUIRES TEST
+*/
+.h-align {
+    &--grid {
+        height: 100%;
+        display:grid;
+        justify-content: center;
+    }
+
+    &--flex {
+        height: 100%;
+        display:flex;
+        justify-content: center;
+    }
+}
+
+/* 
+@title: Horizontal / Vertical Align
+@description: Horizontal & Vertical container contents alignment
+@type: modifier
+@todo: REQUIRES TEST
+*/
+.hv-align{
+    &--grid {
+        height: 100%;
+        display:grid;
+        justify-content: center;
+        align-items: center;
+    }
+
+    &--flex {
+        height: 100%;
+        display:flex;
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+/* 
+@title: Grid Columns
+@description: Used to contain contents and give a structure within a container.
+@type: Element
+*/
+[class^="col-"] {
+    display: grid;
+    grid-gap: 10px;
+}
+
+$min-columns: 1; // Minimum Columns allowed
+$max-columns: 12; // Maximum Columns 
+
+// @title: Desktop columns
+@include media-queries.desktop {
+    // @description: Desktop fractional unit spacing
+    @for $columns from $min-columns through $max-columns {
+        .col-#{$columns} {
+            grid-template-columns: repeat(#{$columns}, minmax(0, 1fr));
+        }
+    }    
+    
+    // @description: Desktop auto spacing
+    @for $columns from $min-columns through $max-columns {
+        .col-#{$columns}-auto {
+            grid-template-columns: repeat(#{$columns}, minmax(0, auto));
+        }
+    }    
+}
+
+// @title: Medium Desktop columns
+@include media-queries.medium-desktop {
+    // @description: Medium Desktop fractional unit spacing
+    @for $columns from $min-columns through $max-columns {
+        .col-#{$columns} {
+            grid-template-columns: repeat(#{$columns}, minmax(0, 1fr));
+        }
+    }    
+
+    // @description: Medium Desktop auto spacing
+    @for $columns from $min-columns through $max-columns {
+        .col-#{$columns}-auto {
+            grid-template-columns: repeat(#{$columns}, minmax(0, auto));
+        }
+    }    
+}
+
+// @title: Tablet columns
+@include media-queries.tablet {
+    // @description: Tablet fractional unit spacing
+    @for $columns from 4 through $max-columns {
+        .col-#{$columns} {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    } 
+
+    // @description: Tablet auto spacing
+    @for $columns from $min-columns through $max-columns {
+        .col-#{$columns}-auto {
+            grid-template-columns: repeat(4, minmax(0, auto));
+        }
+    }  
+}
+
+// @title: Mobile columns
+@include media-queries.mobile {
+    // @description: Mobile fractional unit spacing
+    @for $columns from 2 through $max-columns {
+        .col-#{$columns} {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    } 
+
+    // @description: Mobile auto spacing
+    @for $columns from 2 through $max-columns {
+        .col-#{$columns}-auto {
+            grid-template-columns: repeat(2, minmax(0, auto));
+        }
+    }  
+}
+
+// @title: Smartwatch columns
+@include media-queries.smartwatch {
+    // @description: Mobile fractional unit spacing
+    @for $columns from 1 through $max-columns {
+        .col-#{$columns} {
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+    } 
+
+    // @description: Smartwatch auto spacing
+    @for $columns from $min-columns through $max-columns {
+        .col-#{$columns}-auto {
+            grid-template-columns: repeat(1, minmax(0, auto));
+        }
+    }
+}
+
+/* 
+@title: Table
+@description: predefined configuration for table layouts
+@type: Block
+*/
+table {
+    width: 100%;
+    border-collapse: collapse;    
+    border: 1px solid color.set('medium');
+
+    &.layout--fixed{
+        table-layout: fixed;
+    }
+
+    td, th {
+        padding: 0.5em;
+        height: 40px;
+        padding: 10px;
+        text-align: left;
+    }
+    
+    th {
+        background-color: color.set('primary');
+        color: white;
+    }
+
+    td { 
+        border: 1px solid color.set('medium-dark');
+    }
+
+    tr {
+        &:nth-child(even) {
+            background-color: color.set('light');
+        }
+        &:nth-child(odd) {
+            background-color: color.set('light-medium');
+        }
+    }
+}
+
+/* 
+@title: Container Ratio 
+@description: Aspect ratios that containers contents can made into
+@type: Element
+*/
+.ratio-1-1, .ratio-2-1, .ratio-4-3, .ratio-16-9 {
+    width:auto;
+    height:auto;
+    overflow: hidden !important;
+    position: relative;
+}
+
+/* 
+@title: Aspect Ratio 1 : 1
+@description: Square shaped container
+@type: Element
+*/
+.ratio-1-1 {
+    width:auto;
+    aspect-ratio: 1 / 1;
+}
+
+/* 
+@title: Aspect Ratio 2 : 1
+@description: creates a 1/2 height Square shaped container
+@type: Element
+*/
+.ratio-2-1 {
+    width:auto;
+    aspect-ratio: 2 / 1;
+}
+
+/* 
+@title: Aspect Ratio 4 : 3
+@description: creates a 3/4 height Square shaped container
+@type: Element
+*/
+.ratio-4-3 {
+    width:auto;
+    aspect-ratio: 4 / 3;
+}
+
+/* 
+@title: Aspect Ratio 16:9
+@description: creates a standard rectangular monitor shaped container
+@type: Element
+*/
+.ratio-16-9 {
+    width:auto;
+    aspect-ratio: 16 / 9;
+}
+
+/* 
+@title: Container overflow buffers
+@description: Allows the container to create a scrollwheel where content will push the contents outside of the container boundries.
+@type: 
+*/
+.overflow {
+    overflow: hidden;
+}
+
+.overflow--buffer {
+    overflow: auto;
+}
+
+.horizontal-overflow--buffer{
+    overflow-y: auto;
+}
+
+.vertical-overflow--buffer{
+    overflow-x: auto;
+}
