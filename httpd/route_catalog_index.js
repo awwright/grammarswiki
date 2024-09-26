@@ -15,13 +15,9 @@ function escapeHTML(v) {
 module.exports = makeRoute({
 	uriTemplate: 'http://localhost/catalog/',
 	async get(req, res, match) {
-		const filepath = __dirname + '/../catalog/';
-		const rules = await fp.readdir(filepath);
-
-		res.setHeader('Content-Type', 'application/xhtml+xml');
-
-		const rules_html = rules.filter(function(v){ return v.match(/^[a-z0-9-]+\.abnf$/); }).map(function(v){
-			return '          <li><a href="' + escapeHTML(v.replace(/\.abnf$/, '.html')) +'">'+escapeHTML(v)+'</a></li>';
+		const rules = await catalog.listGrammars();
+		const rules_html = rules.map(function(v){
+			return '          <li><a href="' + escapeHTML(`${v.name}.html`) +'">'+escapeHTML(v.name)+'</a></li>';
 		}).join('\n');
 
 		const html = [
@@ -42,6 +38,8 @@ module.exports = makeRoute({
 			'</html>',
 			'',
 		].join('\r\n');
+
+		res.setHeader('Content-Type', 'application/xhtml+xml');
 		res.end(html);
 	}
 });
