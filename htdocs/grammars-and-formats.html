@@ -5,9 +5,8 @@
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="scripts/css/style.css">
-
 </head>
-<body>
+<body class="panel-layout--left">
     <header>
         <div class="container v-align--grid col-2-auto">
             <a id="logo" href="index.html">
@@ -44,28 +43,103 @@
         </div>
     </header>
 
-    <main>
-        <section class="container">   
-            <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle left">
-            <label for="sidebar-toggle" class="sidebar-label left"></label>
-            <div class="sidebar">
-                <h2>Contents</h2>
-                <a href="#grammar-and-format">Grammar / Format Title</a>
-                <a href="#grid-2">Grid 2</a>
-                <a href="#grid-3">Grid 3</a>
-                <a href="#grid-4">Grid 4</a>
-                <a href="#grid-5">Grid 5</a>
-                <a href="#grid-6">Grid 6</a>
-                <a href="#grid-7">Grid 7</a>
-                <a href="#grid-8">Grid 8</a>
-                <a href="#grid-9">Grid 9</a>
-                <a href="#grid-10">Grid 10</a>
-                <a href="#grid-11">Grid 11</a>
-                <a href="#grid-12">Grid 12</a>
-            </div>        
-        </section>
+    <main> 
+        <nav class="panel panel--left scrollbar--right"> 
+            <div>
+                <section>
+                    <h2>Contents</h2>
+                </section>
+                
+                <section>
+                    <input class="toggle-master" id="main-toggle" type="checkbox" hidden />
+                    <label for="main-toggle" class="main-label">
+                        <h3>Toggle ▼</h3>
+                    </label>              
 
-            
+                    <div class="toggle-section">
+                        <input class="toggle-input" id="section-1-toggle" type="checkbox" hidden />
+                        <label for="section-1-toggle">
+                            <h3>Section 1</h3>
+                        </label>
+                        <ul class="toggle-content">
+                            <li><a href="#grammar-and-format">Grid 1</a></li>
+                            <li><a href="#grid-2">Grid 2</a></li>
+                            <li><a href="#grid-3">Grid 3</a></li>
+                        </ul>
+                    </div>
+                
+                    <div class="toggle-section">
+                        <input class="toggle-input" id="section-2-toggle" type="checkbox" hidden />
+                        <label for="section-2-toggle">
+                            <h3>Section 2</h3>
+                        </label>
+                        <ul class="toggle-content">
+                            <li><a href="#grid-4">Grid 4</a></li>
+                            <li><a href="#grid-5">Grid 5</a></li>
+                            <li><a href="#grid-6">Grid 6</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="toggle-section">
+                        <input class="toggle-input" id="section-3-toggle" type="checkbox" hidden />
+                        <label for="section-3-toggle">
+                            <h3>Section 3</h3>
+                        </label>
+                        <ul class="toggle-content">
+                            <li><a href="#grammar-and-format">Grid 1</a></li>
+                            <li><a href="#grid-2">Grid 2</a></li>
+                            <li><a href="#grid-3">Grid 3</a></li>
+                        </ul>
+                    </div>
+                
+                    <div class="toggle-section">
+                        <input class="toggle-input" id="section-4-toggle" type="checkbox" hidden />
+                        <label for="section-4-toggle">
+                            <h3>Section 4</h3>
+                        </label>
+                        <ul class="toggle-content">
+                            <li><a href="#grid-4">Grid 1</a></li>
+                            <li><a href="#grid-5">Grid 2</a></li>
+                            <li><a href="#grid-6">Grid 3</a></li>
+                            <li><a href="#grid-4">Grid 4</a></li>
+                            <li><a href="#grid-5">Grid 5</a></li>
+                            <li><a href="#grid-6">Grid 6</a></li>
+                        </ul>
+                    </div>
+
+                        
+                    <div class="toggle-section">
+                        <input class="toggle-input" id="section-5-toggle" type="checkbox" hidden />
+                        <label for="section-5-toggle">
+                            <h3>Section 5</h3>
+                        </label>
+                        <ul class="toggle-content">
+                            <li><a href="#grammar-and-format">Grid 1</a></li>
+                            <li><a href="#grid-2">Grid 2</a></li>
+                            <li><a href="#grid-3">Grid 3</a></li>
+                        </ul>
+                    </div>
+                
+                    <div class="toggle-section">
+                        <input class="toggle-input" id="section-6-toggle" type="checkbox" hidden />
+                        <label for="section-6-toggle">
+                            <h3>Section 6</h3>
+                        </label>
+                        <ul class="toggle-content">
+                            <li><a href="#grid-4">Grid 1</a></li>
+                            <li><a href="#grid-5">Grid 2</a></li>
+                            <li><a href="#grid-6">Grid 3</a></li>
+                            <li><a href="#grid-4">Grid 4</a></li>
+                            <li><a href="#grid-5">Grid 5</a></li>
+                            <li><a href="#grid-6">Grid 6</a></li>
+                        </ul>
+                    </div>
+
+                        
+                </section>
+            </div>
+        </nav>
+        
         <section class="container">                 
             <h1>{Grammar / Format Title}</h1>
 
@@ -92,7 +166,32 @@
                 <img src="content/images/placeholder.png" alt="placeholder"/>
             </div>
               
-        </section>       
+        </section>  
+        
+        
+        <section class="container">                 
+            <h1>{Grammar / Format Title}</h1>
+
+            <h2 id="grammar-and-format">What is the grammar/format for {title}, and why is it used?</h2>
+            <p>The Hypertext Transfer Protocol (HTTP) is an application-level  protocol for distributed, collaborative, hypermedia information systems. 
+                HTTP has been in use by the World-Wide Web global information initiative since 1990. The first version of HTTP, referred to as HTTP/0.9, was a simple 
+                protocol for raw data transfer across the Internet.<br><br> 
+                
+                HTTP/1.0, as defined by RFC 1945 [6], improved the protocol by allowing messages to be in the format of MIME-like messages, containing meta-information
+                about the data transferred and modifiers on the request/response semantics. However, HTTP/1.0 does not sufficiently take into consideration the effects of 
+                hierarchical proxies, caching, the need for persistent connections, or virtual hosts. In addition, the proliferation of incompletely-implemented applications 
+                calling themselves "HTTP/1.0" has necessitated a protocol version change in order for two communicating applications to determine each other's true 
+                capabilities. This specification defines the protocol referred to as "HTTP/1.1".<br>
+                This protocol includes more stringent requirements than HTTP/1.0 in order to ensure reliable implementation of its features.<br><br>
+                
+                Practical information systems require more functionality than simple retrieval, including search, front-end update, and annotation. HTTP allows an 
+                open-ended set of methods and headers that indicate the purpose of a request [47]. It builds on the discipline of reference provided by the Uniform 
+                Resource Identifier (URI) [3], as a location (URL) [4] or name  (URN) [20], for indicating the resource to which a....
+            </p>
+
+            <h2>How are {title} grammars/formats implemented?</h2>
+              
+        </section>     
     </main>
     
     <footer>

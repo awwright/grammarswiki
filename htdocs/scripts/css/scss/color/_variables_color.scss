@@ -1,11 +1,8 @@
-/* 
-@title: SCSS Variables Color
-@description: lists containing a range of different color styles for light, dark or any other mode of the website.
-@author: Grant Kellie (grantkellie.dev)
-@date: 2024 07 25
-@parent: functions_color.scss
-@example: example theming.md
-*/
+// @title: SCSS Variables Color
+// @description: lists containing a range of different color styles for light, dark or any other mode of the website.
+// @author: Grant Kellie (grantkellie.dev)
+// @parent: functions_color.scss
+// @example: example theming.md
 
 $light: (
   primary: hsla(210, 98%, 20%, 1),
@@ -23,9 +20,9 @@ $light: (
   opacity-75: hsla(206, 11%, 7%, 0.75),
   hidden: hsla(0, 0%, 0%, 0),
 
-  success: hsla(146, 69%, 47%, 1),
-  error: hsla(348, 68%, 52%, 1),
-  debug: hsla(265, 92%, 74%, 0.75),  
+  success: hsla(145, 69%, 47%, 1),
+  error: hsla(350, 68%, 52%, 1),
+  debug: hsla(280, 68%, 52%, 0.25),  
 );
 
 $dark: (

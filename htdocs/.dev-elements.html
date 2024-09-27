@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Standard Grammar Catalog : Pages</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="scripts/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container v-align--grid col-2-auto">
+            <a id="logo" href="index.html">
+                <div class="large">SCSS /+/ Block Element Modifier</div> 
+                <div class="small" style="display:initial;">a Framework utilizing SCSS and Block, Element, Modifier</div> 
+            </a>
+
+            <nav> 
+                <input id="toggle--state" type="checkbox"/>
+                <label id="toggle" for="toggle--state">                          
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </label>
+
+
+                <ul id="menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li class="category">
+                        <a href="#">Developer</a>
+                        <ul class="dropdown">                            
+                            <a href=".dev-pages.html"><li>Pages</li></a>                            
+                            <a href=".dev-body.html"><li>Layout</li></a>
+                            <a href=".dev-elements.html"><li>Elements</li></a>
+                            <a href=".dev-style.html"><li>Styleguide</li></a>
+                            <a href=".dev-no-js.html"><li>No JavaScript</li></a>     
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>           
+        <section id="layout" class="container">
+            <table class="none">
+                <h2>Elements</h2>
+                <tr>        
+                    <th>Component</th>
+                </tr>  
+
+                <tr><td><a href="#images">Images</a></td></tr>                
+                <tr><td><a href="#navigation-menus">Menus</a></td></tr>
+                    <tr><td><a href="#form">- Form</a></td></tr>
+                <tr><td><a href="#layout">Layout</a></td></tr>
+                    <tr><td><a href="#columns">- Columns</a></td></tr>
+                    <tr><td><a href="#aspect-ratios">- Aspect Ratios</a></td></tr>
+                    <tr><td><a href="#tables">- Tables</a></td></tr>
+                
+            </table>
+        </section> 
+        
+        <section id="images" class="container">
+            <h2>Images & Icons</h2>
+            <div class="col-4">
+                    <img  id="image" src="content/images/placeholder.png" alt="placeholder"/>
+
+                    <img id="icons" class="icon icon--shrink color--Primary radius-100" src="content/images/placeholder.png" alt="placeholder"/>
+
+                    <div class="icon icon--grow color--Primary radius-100 overflow">
+                        <img src="content/images/placeholder.png" alt="placeholder"/>
+                    </div>
+            </div>
+        </section>
+      
+
+        <section id="navigation-menus" class="container">
+            <h2>Menus</h2>
+        </section>
+
+        <section id="form" class="container container--gap">
+            <h2>Form</h2>
+            <form class="col-6">       
+                <!-- Text input -->
+                <div>  
+                    <label for="text">Text:</label>
+                    <input type="text" id="text" name="text">
+                </div>
+
+                <!-- Password input -->
+                <div>
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password">
+                </div>
+
+                <!-- Email input -->
+                <div>
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email">
+                </div>
+
+                <!-- URL input -->
+                <div>
+                    <label for="url">Input - URL:</label>
+                    <input type="url" id="url" name="url">
+                </div>
+
+                <!-- Telephone input -->
+                <div>
+                    <label for="tel">Input - Telephone:</label>
+                    <input type="tel" id="tel" name="tel">
+                </div>
+
+                <!-- Number input -->
+                <div>
+                    <label for="number">Input - Number:</label>
+                    <input type="number" id="number" name="number" min="1" max="10">
+                </div>
+
+                <!-- Date input -->
+                <div>
+                    <label for="date">Input - Date:</label>
+                    <input type="date" id="date" name="date">
+                </div>
+
+                <!-- Month input -->
+                <div>
+                    <label for="month">Input - Month:</label>
+                    <input type="month" id="month" name="month">
+                </div>
+
+                <!-- Week input -->
+                <div>
+                    <label for="week">Input - Week:</label>
+                    <input type="week" id="week" name="week">
+                </div>
+
+                <!-- Time input -->
+                <div>
+                    <label for="time">Input - Time:</label>
+                    <input type="time" id="time" name="time">
+                </div>
+
+                <!-- Datetime-local input -->
+                <div>
+                    <label for="datetime-local">Input - Datetime-local:</label>
+                    <input type="datetime-local" id="datetime-local" name="datetime-local">
+                </div>
+
+                <!-- sg-preview input -->
+                <div>
+                    <label for="color">Input - Color:</label>
+                    <input type="color" id="color" name="color">
+                </div>
+
+                <!-- Range input -->
+                <div>
+                    <label for="range">Input - Range:</label>
+                    <input type="range" id="range" name="range" min="0" max="100">
+                </div>
+
+                <!-- Search input -->
+                <div>
+                    <label for="search">Input - Search:</label>
+                    <input type="search" id="search" name="search">
+                </div>
+
+                <!-- File input -->
+                <div>
+                    <label for="file">Input - File:</label>
+                    <input type="file" id="file" name="file">
+                </div>
+
+                <!-- Checkbox input -->
+                <div>
+                    <label for="checkbox">Input - Checkbox:</label>
+                    <input type="checkbox" id="checkbox" name="checkbox">
+                </div>
+
+                <!-- Radio input -->
+                <div>
+                    <fieldset>
+                        <legend>Input - Radio:</legend>
+                        
+                        <label for="radio1">Option 1</label>
+                        <input type="radio" id="radio1" name="radio" value="1">          
+
+                        <label for="radio2">Option 2</label>
+                        <input type="radio" id="radio2" name="radio" value="2">          
+                      </fieldset>
+                </div>
+                <!-- Textarea -->
+                <div>
+                    <label for="textarea">Input - Textarea:</label>
+                    <textarea id="textarea" name="textarea" rows="4" cols="32" style="min-height:64px; max-height:128px;  max-width:95%;"></textarea>
+                </div>
+
+                <!-- Select dropdown -->
+                <div>
+                    <label for="select">Input - Select:</label>
+                    <select id="select" name="select">      
+                        <option value="option1">Option 1</option>
+                        <option value="option2">Option 2</option>
+                        <option value="option3">Option 3</option>
+                    </select>
+                </div>
+        
+                <!-- Multiple select dropdown -->
+                <div>
+                    <label for="multiple-select">Multiple Select:</label>
+                    <select id="multiple-select" name="multiple-select" multiple>
+                        <option value="option1">Option 1</option>
+                        <option value="option2">Option 2</option>
+                        <option value="option3">Option 3</option>
+                    </select>
+                </div>
+        
+                <!-- Button -->
+                <div>
+                    <label for="button">Button:</label>
+                    <button type="button" id="button">Button</button>
+                </div>
+
+                <!-- Submit button -->
+                <div>
+                    <label for="submit">Input - Submit:</label>
+                    <input type="submit" id="submit" name="submit" value="Submit">
+                </div>
+
+                <!-- Reset button -->
+                <div>
+                    <label for="reset">Input - Reset:</label>
+                    <input type="reset" id="reset" name="reset" value="Reset">
+                </div>
+            </form>
+
+        </section>
+
+
+        
+    </main>
+
+    <footer>
+        <div class="col-4 container">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </footer>
+
+    <!-- JavaScript Utilities -->
+    <script src="scripts/javascript/developer/debug-overflow.js"></script>
+
+</body>
+</html>

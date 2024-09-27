@@ -1,17 +1,13 @@
-/* 
-@title: Styleguide
-@description: specific elements from within the Styleguide page
-@author: Grant Kellie (grantkellie.dev)
-*/
+// @title: Styleguide
+// @description: specific elements from within the Styleguide page
+// @author: Grant Kellie (grantkellie.dev)
 
 @charset 'utf-8';
 
 @use '../scss/media-queries/mixins_media_queries' as media-queries;
 @use '../scss/color/functions_color' as color;
-/*
-@title: style guide preview
-@description: an element that allows clear preview of the style guide colours 
-*/
+// @title: style guide preview
+// @description: an element that allows clear preview of the style guide colours 
 .sg-preview {
     border: solid 1px;
     border-radius: 10px;
@@ -36,10 +32,8 @@
     justify-content: center;
 }
 
-/*
-@title: top / bottom
-@description: buttons to quickly get you to either the top or bottom of the page.
-*/
+// @title: top / bottom
+// @description: buttons to quickly get you to either the top or bottom of the page.
 #top, #bottom {
     display:none !important;
     z-index:9999;

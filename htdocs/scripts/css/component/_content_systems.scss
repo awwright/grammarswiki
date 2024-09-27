@@ -1,47 +1,66 @@
-/* 
-@title: Content systems
-@description: Components for creating a pagination, load more, infinite scroll and filter menu's
-@author: Grant Kellie (grantkellie.dev)
-
-@contents:
-- Filter
--- Quick search
-- Pagination
-*/
+// @title: Content systems
+// @description: Components for creating a pagination, load more, infinite scroll and filter menu's
+// @author: Grant Kellie (grantkellie.dev)
+// @contents:
+// - Filter
+// -- Quick search
+// - Pagination
 
 @charset 'utf-8';
+@use '../scss/color/functions_color' as color;
 
-/* 
-@title: Filter Menu
-@description: menu system for searching and filterng information.
-*/
-.filter-menu {
+// @title: Filter Menu
+// @description: menu system for searching and filterng information.
+form.filter-menu {
     
-    /* 
-    @title: Quick Search
-    @description: Small filter menu system
-    */
+    // @title: Quick Search
+    // @description: Small filter menu system
     &--quick-search {
-        width:calc(100% - 4px);
-        margin:0 auto;
-        padding:16px 0;       
-        text-align: center;    
-
-        & label {
-            margin:0 0 0 16px;
+        border:none;
+        border: 2px solid color.set('light-medium'); 
+        border-radius: 10px; 
+  
+        & * {
+            display: flex;
         }
+    
+        & > div, span {		
+            flex-wrap: wrap;
+            gap:6px;
+        }        
 
-        & button {
-            min-width:120px;
-            margin:16px 8px 0 8px;
+        // Filter group container (flex layout)
+        .filter-group {
+            gap: 10px;
+
+            // Each individual form field
+            & > * {
+                flex: 1 1 calc(33.333% - 16px);
+                justify-content: center;
+                align-items: center;                     
+
+                & > label {
+                    margin:0 8px 0 0;      
+                }
+                
+                & input, select {
+                    flex: 1;
+                }
+            }
+        }
+     
+        & button {            
+            margin:24px 0px;
+           
+            &:not(:last-child){
+                margin:24px 16px 0px 0px;  
+            }
         }
     }
 }
 
-/* 
-@title: Pagination
-@description: 
-*/
+// @title: Pagination
+// @description: 
 .pagination {
     text-align: center;    
     

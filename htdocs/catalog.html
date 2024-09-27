@@ -45,31 +45,37 @@
         </div>
     </header>
     
-    <main>
-    
-        <div class="container">
-            <form class="filter-menu">
-                <div>
-                    <label for="standards">Standards</label>
-                    <select id="standards" name="standards">
-                        <option value="rfc">RFC</option> 
-                        <option value="iso">ISO</option>
-                        <option value="{option}">{option}}</option>                    
-                    </select>
+    <main>   
+        <section class="container">
+            <form class="filter-menu--quick-search">
+                <h2>Grammar & Format Quick Search</h2>
 
-                    <label for="compliant-code">Compliant code</label>
-                    <input id="compliant-code" type="text" name="compliant-code"/>
+                <div class="filter-group">
+                    <div>
+                        <label for="standards">Standards</label>
+                        <select id="standards" name="standards">
+                            <option value="rfc">RFC</option>
+                            <option value="iso">ISO</option>
+                        </select>
+                    </div>
 
-                    <label for="search">Search by Title / keyword</label>
-                    <input id="search" type="text" name="search"/>
+                    <div>
+                        <label for="compliant-code">Compliant code</label>
+                        <input id="compliant-code" type="text" name="compliant-code"/>
+                    </div>
+
+                    <div>
+                        <label for="search">Search by Title</label>
+                        <input id="search" type="text" name="search"/>
+                    </div>
                 </div>
 
-                <div>
-                    <button name="clear-all">Clear All</button>
-                    <button name="search">Search</button>
+                <div class="h-align--flex--right">
+                    <button class="button--solid" name="clear-all">Clear All</button>
+                    <button class="button--solid" name="search">Search</button>
                 </div>
-            </form>    
-        </div>
+            </form>
+        </section>
 
         <section class="container">
             <h2>Recently Added Grammars & Formats</h2>  
@@ -100,7 +106,6 @@
                     </span>
                     <img src="content/images/placeholder.png" alt="placeholder"/>                       
                 </div>
-
 
                 <div class="ratio-1-1">
                     <span class="overlay overlay--center">
@@ -157,7 +162,6 @@
                     <img src="content/images/placeholder.png" alt="placeholder"/>                       
                 </div>
                 
-
                 <div class="ratio-1-1">
                     <span class="overlay overlay--center">
                         <p>Febuary 09, 2024</p>
@@ -187,8 +191,8 @@
             </div>            
         </section>
 
-        <section class="load load--more container">
-            <button>Load More</button>
+        <section class="load load--more container h-align--flex">
+            <button class="button--solid">Load More</button>
         </section>
             
     </main>

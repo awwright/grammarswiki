@@ -61,22 +61,33 @@
         <section class="container">
             <form class="filter-menu--quick-search">
                 <h2>Grammar & Format Quick Search</h2>
-                <label for="standards">Standards</label>
-                <select id="standards" name="standards">
-                    <option value="rfc">RFC</option> 
-                    <option value="iso">ISO</option>                
-                </select>
 
-                <label for="compliant-code">Compliant code</label>
-                <input id="compliant-code" type="text" name="compliant-code"/>
+                <div class="filter-group">
+                    <div>
+                        <label for="standards">Standards</label>
+                        <select id="standards" name="standards">
+                            <option value="rfc">RFC</option>
+                            <option value="iso">ISO</option>
+                        </select>
+                    </div>
 
-                <label for="search">Search by Title / keyword</label>
-                <input id="search" type="text" name="search"/>
-                <button name="clear-all">Clear All</button>
-                <button name="search">Search</button>
+                    <div>
+                        <label for="compliant-code">Compliant code</label>
+                        <input id="compliant-code" type="text" name="compliant-code"/>
+                    </div>
+
+                    <div>
+                        <label for="search">Search by Title</label>
+                        <input id="search" type="text" name="search"/>
+                    </div>
+                </div>
+
+                <div class="h-align--flex--right">
+                    <button class="button--solid" name="clear-all">Clear All</button>
+                    <button class="button--solid" name="search">Search</button>
+                </div>
             </form>
         </section>
-
 
         <section class="container overflow--buffer">
             <h2>Results</h2>  

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Standard Grammar Catalog</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"> -->
+
+    <!-- https://fonts.google.com/specimen/Open+Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="scripts/css/style.css">
+    <link rel="stylesheet" href="scripts/css/pages/styleguide.css">
+
+</head>
+<body>
+    <header>
+        <div class="container v-align--grid col-2-auto">
+            <a id="logo" href="index.html">
+                <div class="large">SCSS /+/ Block Element Modifier</div> 
+                <div class="small" style="display:initial;">a Framework utilizing SCSS and Block, Element, Modifier</div> 
+            </a>
+
+            <nav> 
+                <input id="toggle--state" type="checkbox"/>
+                <label id="toggle" for="toggle--state">                          
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </label>
+
+
+                <ul id="menu">
+                    <li><a href="index.html">Home</a></li>
+                    <li class="category">
+                        <a href="#">Developer</a>
+                        <ul class="dropdown">
+                            <a href=".dev-pages.html"><li>Pages</li></a>                            
+                            <a href=".dev-body.html"><li>Layout</li></a>
+                            <a href=".dev-elements.html"><li>Elements</li></a>
+                            <a href=".dev-style.html"><li>Styleguide</li></a>
+                            <a href=".dev-no-js.html"><li>No JavaScript</li></a>   
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+
+    <a href="#"><div id="top" class="icon icon--border-full">Top</div></a>
+    <a href="#end"><div id="bottom" class="icon icon--border-full">End</div></a>
+
+    <main>
+        <section class="container">
+            <h1>Style Guide</h1>
+            <p>a structured breakdown of the styles and functionality for the websites HTML & CSS</p>
+
+            <table class="none">
+                <tr>        
+                    <th>Contents</th>
+                </tr>  
+
+                <tr><td><a href="#colors">Colors</a></td></tr>
+                <tr><td><a href="#typography">Font & Typography</a></td></tr>
+                    <tr><td><a href="#paragraph">- Paragraph</a></td></tr> 
+                    <tr><td><a href="#links">- Links</a></td></tr> 
+                    <tr><td><a href="#emphasis">- Emphasis</a></td></tr> 
+                    <tr><td><a href="#heading">- Heading</a></td></tr>  
+                <tr><td><a href="#buttons">Buttons</a></td></tr>        
+            </table>
+        </section>
+
+
+        <section id="colors" class="container container--gap">
+            <h2>Color Styling</h2>
+            <div class="col-3">
+                <div>
+                    <h3>Colors</h3>
+                    <div class="sg-preview color--Primary">Primary</div>
+                    <div class="sg-preview color--Secondary">Secondary</div>
+                    <div class="sg-preview color--Tertiary">Tertiary</div>
+                </div>
+
+                <div>
+                    <h3>Shades</h3>
+                    <div class="sg-preview color--light">Light</div>
+                    <div class="sg-preview color--light-medium">Light-medium</div>
+                    <div class="sg-preview color--medium">Medium</div>
+                    <div class="sg-preview color--medium-dark">Medium-dark</div>
+                    <div class="sg-preview color--dark">Dark</div>
+                </div>
+
+                <div>
+                    <h3>Utility</h3>
+                    <div class="sg-preview color--success">Success</div>
+                    <div class="sg-preview color--warning">Warning</div>
+                </div>                
+            </div>
+        </section>
+
+        <section id="typography" class="container container--gap">
+            <h2>Font & Typography</h2>
+
+            <h3 id="paragraph">Paragraph</h3>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+
+            <h4 id="links">Links</h3>
+            <p>Lorem ipsum dolor sit amet, <a href="#">consectetur adipiscing elit</a>, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in <a href="#">voluptate velit esse cillum</a> dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui <a href="#">officia deserunt</a> mollit anim id est laborum.</p>
+
+            <h3 id="emphasis">Emphasis</h3>
+            <div class="col-3">
+                <div>
+                    <b>Bold</b><br>
+                    <i>Italic</i><br>      
+                    <u>Underline</u><br>              
+                </div>
+
+                <div>                    
+                    <b><i>Bold & Italic</i></b><br>
+                    <b><u>Bold & Underline</u></b><br>
+                </div>
+
+                <div>                  
+                    <i><u>Italic & Underline</u></i><br>
+                    <b><u><i>Bold, Italic & Underline</i></u></b>
+                </div>
+                <br><br>
+            </div>
+
+            <h3 id="heading">H1 - H6 Headings</h3>
+            <h1>Heading 1</h1>
+            <h2>Heading 2</h2>
+            <h3>Heading 3</h3>
+            <h4>Heading 4</h4>
+            <h5>Heading 5</h5>
+            <h6>Heading 6</h6>
+        </section>
+
+        <section id="buttons" class="container">
+            <h2>Buttons</h2>
+
+            <div class="col-2 color--dark">
+                <div>
+                    <h3>Solid</h3>
+                    <button class="button--solid">Primary</button>
+                </div>
+
+                <div>
+                    <h3>Hollow</h3>
+                    <button class="button--hollow">Primary</button>
+                </div>
+            </div>
+   
+            <div class="col-2 color--light">
+                <div>
+                    <h3>Solid</h3>
+                    <button class="button--solid">Primary</button>
+                </div>
+
+                <div>
+                    <h3>Hollow</h3>
+                    <button class="button--hollow">Primary</button>
+                </div>
+            </div>
+                  
+        </section>
+
+
+    </main>
+
+    <footer>
+        <div class="col-4 container">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </footer>
+
+    <!-- JavaScript Utilities -->
+    <script src="scripts/javascript/utilities/debug-overflow.js"></script>
+    
+
+</body>
+</html>

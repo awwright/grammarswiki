@@ -1,29 +1,25 @@
-/* 
-@title: Stylesheet Design
-@description: 
-@author: Grant Kellie (grantkellie.dev)
-
-@contents:
-- Primary Header
-- Header Logo
-- Primary Header Navigation
-- Desktop menu
-- Responsive button state
-- Responsive button
-- Toggle button
-- Toggle button state
-- Responsive menu
-- Checkbox toggle
-- Hover toggle
-- Responsive dropdown
-- Navigation visability
-*/
-
+// @title: Stylesheet Design
+// @description: 
+// @author: Grant Kellie (grantkellie.dev)
+// @contents:
+// - Primary Header
+// - Header Logo
+// - Primary Header Navigation
+// - Desktop menu
+// - Responsive button state
+// - Responsive button
+// - Toggle button
+// - Toggle button state
+// - Responsive menu
+// - Checkbox toggle
+// - Hover toggle
+// - Responsive dropdown
+// - Navigation visability
 @charset 'utf-8';
 @use '../scss/media-queries/mixins_media_queries' as media-queries;
 @use '../scss/color/functions_color' as color;
 
-/* Colour */
+// Colour
 .color--Primary{
     background:color.set('primary');
 }
@@ -40,7 +36,7 @@
     color:color.set('light');
 }
 
-/* Shades */
+// Shades
 .color--light{
     background:color.set('light');
 }
@@ -69,7 +65,7 @@
     color:color.set('light');
 }
 
-/* Misc */
+// Misc
 .color--success{
     background:color.set('success');
 }
@@ -82,7 +78,11 @@
     color:color.set('light');
 }
 
-
 .radius-100 {
     border-radius: 100%;
+}
+
+// @title: center text alignment
+.center {
+    text-align: center;
 }
