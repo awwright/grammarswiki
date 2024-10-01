@@ -243,10 +243,6 @@ input[type="checkbox"] {
 label {
 	line-height: 1;
 	cursor: default;
-
-	&:not(:first-child){
-		margin:10px 0 0 0;  
-	}
 }
 
 // @title: Textarea

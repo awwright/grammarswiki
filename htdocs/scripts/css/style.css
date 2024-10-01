@@ -161,9 +161,6 @@ label {
   line-height: 1;
   cursor: default;
 }
-label:not(:first-child) {
-  margin: 10px 0 0 0;
-}
 
 fieldset * {
   display: grid;
