@@ -36,31 +36,14 @@ header, footer {
     background:color.set('primary');
 }
 
+// @title: Container
+// @description: Contans the page contents, has established sizes for each breakpoint and relative spacing based for each instance.
+// @type: Block
 section {
     &:not(:first-child){
         margin-bottom: 50px;
     }
-}
 
-footer {
-    height:64px;
-    padding:16px 0;
-}
-
-main {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-
-    @include media-queries.responsive {
-        margin-top: 80px;
-    }
-}
- 
-// @title: Container
-// @description: Contans the page contents, has established sizes for each breakpoint and relative spacing based for each instance.
-// @type: Block
-.container {
     @include media-queries.desktop {
         width:1140px;
         margin:0 auto;
@@ -88,6 +71,21 @@ main {
     &:last-child {
         margin: 0 auto 50px auto;
     }  
+}
+
+footer {
+    height:64px;
+    padding:16px 0;
+}
+
+main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+
+    @include media-queries.responsive {
+        margin-top: 80px;
+    }
 }
  
 // @title: Verical Align

@@ -225,6 +225,31 @@ header, footer {
 section:not(:first-child) {
   margin-bottom: 50px;
 }
+@media screen and (min-width: 1140px) {
+  section {
+    width: 1140px;
+    margin: 0 auto;
+  }
+}
+@media screen and (min-width: 960px) and (max-width: 1139px) {
+  section {
+    width: 960px;
+  }
+}
+@media screen and (max-width: 1140px) {
+  section {
+    width: 96%;
+  }
+}
+section:first-child {
+  margin: 0px auto 0 auto;
+}
+section:not(:first-child) {
+  margin: 25px auto 25px auto;
+}
+section:last-child {
+  margin: 0 auto 50px auto;
+}
 
 footer {
   height: 64px;
@@ -240,32 +265,6 @@ main {
   main {
     margin-top: 80px;
   }
-}
-
-@media screen and (min-width: 1140px) {
-  .container {
-    width: 1140px;
-    margin: 0 auto;
-  }
-}
-@media screen and (min-width: 960px) and (max-width: 1139px) {
-  .container {
-    width: 960px;
-  }
-}
-@media screen and (max-width: 1140px) {
-  .container {
-    width: 96%;
-  }
-}
-.container:first-child {
-  margin: 0px auto 0 auto;
-}
-.container:not(:first-child) {
-  margin: 25px auto 25px auto;
-}
-.container:last-child {
-  margin: 0 auto 50px auto;
 }
 
 .v-align--grid {

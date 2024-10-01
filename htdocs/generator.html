@@ -10,7 +10,7 @@
 </head>
 <body>
     <header>
-        <div class="container v-align--grid col-2-auto">
+        <section class="v-align--grid col-2-auto">
             <a id="logo" href="index.html">
                 <div class="large">Standard Grammar Catalog</div> 
                 <div class="small">ABNF Toolchain & Generator</div> 
@@ -37,55 +37,49 @@
                     <li><a href="test-cases.html">Test Cases</a></li>
                 </ul>
             </nav>
-        </div>
+        </section>
     </header>
 
     <main>        
-        <form class="container">
-
-            <label for="title"></label>
-            <input name="title" type="text" maxlength="128"/>            
-
-            <div class="col-2">
-                <textarea id="" name="capture-rules">
-                    
-                </textarea>
-
-                <textarea id="" name="exclude-rules">
-                    
-                </textarea>
-            </div>
-
-            <div class="col-2">
-                <textarea id="" name="capture-rules">
-                    
-                </textarea>
-
-                <textarea id="" name="exclude-rules">
-                    
-                </textarea>
-            </div>
-
-
-            <div class="col-1" style="height:400px; padding:10px; border:solid; border-width: 2px;">
-                Lorem ipsum
-            </div>
-
-            <div>
-                <button type="button">Compose</button>
-                <button type="button">Download</button>
-                <input type="reset" value="Clear"/>
-            </div>
-        </form>                
+        <section>
+            <form>
+                <label for="title"></label>
+                <input name="title" type="text" maxlength="128"/>
+                <div class="col-2">
+                    <textarea id="" name="capture-rules">
+            
+                    </textarea>
+                    <textarea id="" name="exclude-rules">
+            
+                    </textarea>
+                </div>
+                <div class="col-2">
+                    <textarea id="" name="capture-rules">
+            
+                    </textarea>
+                    <textarea id="" name="exclude-rules">
+            
+                    </textarea>
+                </div>
+                <div class="col-1" style="height:400px; padding:10px; border:solid; border-width: 2px;">
+                    Lorem ipsum
+                </div>
+                <div>
+                    <button type="button">Compose</button>
+                    <button type="button">Download</button>
+                    <input type="reset" value="Clear"/>
+                </div>
+            </form>
+        </section>              
     </main>
 
     <footer>
-        <div class="col-4 container">
+        <section class="col-4">
             <span></span>
             <span></span>
             <span></span>
             <span></span>
-        </div>
+        </section>
     </footer>
     
     <!-- Developer -->
