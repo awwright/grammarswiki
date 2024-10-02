@@ -28,7 +28,7 @@ module.exports = makeRoute({
 
 		const title = 'Search Results: ' + query;
 		const main = [
-			'\t\t<h1>' + escapeHTML(toString(title)) + '</h1>',
+			'\t\t<h1>' + escapeHTML(title) + '</h1>',
 			'\t\t<form><input type="search" name="q" value="'+escapeHTML(query)+'"/></form>',
 			'\t\t' + results_html,
 		].join('\r\n') + '\r\n';
