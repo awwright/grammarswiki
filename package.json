@@ -2,6 +2,7 @@
 	"license": "MIT",
 	"dependencies": {
 		"commander": "^11.0.0",
+		"lunr": "^2.3.9",
 		"peggy": "^4.0.3",
 		"regexp-tree": "^0.1.27"
 	},

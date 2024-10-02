@@ -34,25 +34,15 @@ function log(entry) {
 async function getEnvironment() {
 	// Resolve an object that will be used as `this` in handleRequest
 	const env = Object.create(process.env);
-
 	return {
 		docroot,
 		catalogRoot,
 		css: cssPath,
 		html: htmlPath,
-		log
+		log,
+		env,
 	};
 }
-
-const routeIndex = makeRoute({
-	name: 'route_index',
-	uriTemplate: 'http://localhost/',
-	get(req, res, match){
-		const html = fs.readFileSync(this.html);
-		res.setHeader('Content-Type', 'application/xhtml+xml');
-		res.end(html);
-	},
-});
 
 const routeHealthcheck = makeRoute({
 	name: 'route_healthcheck',
@@ -63,38 +53,36 @@ const routeHealthcheck = makeRoute({
 	},
 });
 
-const routeStyle = makeRoute({
-	name: 'route_style',
-	uriTemplate: 'http://localhost/default.css',
-	get(req, res, match){
-		const css = fs.readFileSync(this.css);
-		res.setHeader('Content-Type', 'text/css');
-		res.end(css);
-	},
-});
-
-function file(name, uri, file, ct){
+function staticfile(name, uri, filepath, ct){
 	return makeRoute({
 		name: name,
 		uriTemplate: uri,
 		get(req, res, match) {
-			const content = fs.readFileSync(file);
+			const content = fs.readFileSync(filepath);
 			res.setHeader('Content-Type', ct);
 			res.end(content);
+		},
+		async* enumerate(){
+			yield {uri};
 		},
 	});
 }
 
+const htdocs = __dirname + '/../htdocs';
+
 const router = new Router;
 const routeMap = new Map(
 	[
-		routeIndex,
+		staticfile('route_index.html', 'http://localhost/', htdocs + '/index.html', 'text/html'),  // <http://localhost/>
 		routeHealthcheck,
-		routeStyle,
-		file('route_default_script', 'http://localhost/default.js', __dirname+'/default.js', 'application/ecmascript'),
-		require('./route_catalog_index.js'),
-		require('./route_catalog_filename_abnf.js'),
-		require('./route_catalog_filename_html.js'),
+		staticfile('route_theme_script', 'http://localhost/theme.js', __dirname+'/default.js', 'application/ecmascript'),
+		staticfile('route_theme_style', 'http://localhost/theme.css', htdocs + '/scripts/css/style.css', 'text/css'),
+		require('./route_search_html.js'), // <http://localhost/search.html{?q}>
+		require('./route_search_js.js'), // <http://localhost/search.js>
+		require('./route_search_json.js'), // <http://localhost/search.json>
+		require('./route_catalog_index.js'), // <http://localhost/catalog/>
+		require('./route_catalog_filename_abnf.js'), // <http://localhost/catalog/{filename}.abnf>
+		require('./route_catalog_filename_html.js'), // <http://localhost/catalog/{filename}.html>
 		require('./route_catalog_filename_antlr.js'),
 		require('./route_catalog_filename_parserjs.js'),
 		require('./route_catalog_filename_rulename_html.js'),
@@ -108,7 +96,8 @@ getEnvironment().then(function (env) {
 	server.listen(port, addr);
 
 	// Put a friendly message on the terminal
-	console.log('Server running at http://' + addr + ':' + port + '/');
+	const addrstr = addr.toString().replace('0.0.0.0', 'localhost');
+	console.log(`Server running at http://${addrstr}:${port}/`);
 });
 
 function handleRequest(req, res) {
@@ -138,6 +127,3 @@ function handleRequest(req, res) {
 	res.end('404 Not Found for <' + req.url + '>\r\n');
 	console.log(req.method + ' ' + req.url + ' 404 (Not Found)');
 }
-
-
-

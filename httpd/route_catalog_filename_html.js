@@ -7,14 +7,7 @@ const fp = require('fs').promises;
 const abnf = require('../lib/abnf.js');
 const abnfcore = require('../lib/abnf-core.js');
 const { makeRoute } = require('./route.js');
-
-function escapeHTML(v) {
-	return v
-		.replace(/&/g, '&amp;')
-		.replace(/"/g, '&quot;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;');
-};
+const { theme, escapeHTML } = require('./theme.js');
 
 module.exports = makeRoute({
 	name: 'route_catalog_filename_html',
@@ -22,10 +15,17 @@ module.exports = makeRoute({
 	async get(req, res, match) {
 		const filename = decodeURIComponent(match.params.filename);
 		const filepath = __dirname + '/../catalog/' + filename + '.abnf';
-		const abnf_data = await fp.readFile(filepath, {encoding: 'UTF-8'});
-		const md_data = await fp.readFile(__dirname + '/../catalog/' + filename + '.abnf', {encoding: 'UTF-8'});
-
-		res.setHeader('Content-Type', 'application/xhtml+xml');
+		try {
+			var abnf_data = await fp.readFile(filepath, {encoding: 'UTF-8'});
+			var md_data = await fp.readFile(__dirname + '/../catalog/' + filename + '.abnf', {encoding: 'UTF-8'});
+		} catch(e) {
+			if (e.code === 'ENOENT'){
+				res.statusCode = 404;
+				res.setHeader('Content-Type', 'text/plain');
+				res.end('Not Found\r\n');
+				return;
+			}
+		}
 
 		const rulelist = abnf.parse(abnf_data);
 		rulelist.rules.forEach(function(v){
@@ -90,32 +90,26 @@ module.exports = makeRoute({
 					return '<span class="abnf-val">' + escapeHTML(node.toString()) + '</span>';
 				default:
 					console.dir(node);
-					return '<Unknown node ' + escapeHTML(node.constructor.name) + ' = ' + escapeHTML(node.toString()) + '>';
+					return escapeHTML('Unknown node ' + node.constructor.name + ' = ' + node.toString() + ']');
 			}
 		}
 
-		const html = [
-			'<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" version="XHTML+RDFa 1.0" dir="ltr">',
-			'\t<head profile="http://www.w3.org/1999/xhtml/vocab">',
-			'\t\t<meta http-equiv="Content-Type" content="application/xhtml+xml;charset=utf-8" />',
-			'\t\t<meta name="viewport" content="width=device-width, initial-scale=1" />',
-			'\t\t<meta property="http://purl.org/dc/terms/title" content="Welcome to Grammars.wiki" xmlns="http://www.w3.org/1999/xhtml" />',
-			'\t\t<meta name="description" content="Grammars.wiki homepage" xmlns="http://www.w3.org/1999/xhtml" />',
-			'\t\t<title>' + escapeHTML(filename) + '</title>',
-			'\t\t<link rel="stylesheet" href="/default.css" />',
-			'\t\t<script src="/default.js" id="script" />',
-			'\t\t<script src="' + escapeHTML(filename) +'.parser.js" />',
-			'\t</head>',
-			'\t<body class="pagewidth">',
-			'\t\t<nav><a href="./">Grammars</a> /</nav>',
-			'\t\t\t<h1>' + escapeHTML(filename) + '</h1>',
-			'\t\t<main><pre>' + escapeHTML(md_data) + '</pre>' + rules_html + '</main>',
+		const head = [
+			'\t\t<script src="' + escapeHTML(filename) +'.parser.js" />\r\n',
+		];
+
+		const main = [
+			'<section class="container">',
+			'\t\t<h1>Rule ' + escapeHTML(filename) + '</h1>',
+			'\t\t<pre>' + escapeHTML(md_data) + '</pre>' + rules_html,
 			// '\t\t<pre>' + data + '</pre>',
+			'\t\t<select id="input-lines"><option>CRLF terminated</option><option>LF terminated</option><option>LF separated</option></select>',
 			'\t\t<textarea id="input"></textarea>',
 			'\t\t<pre id="input-results"></pre>',
-			'\t</body>',
-			'</html>',
-		].join('\r\n') + '\r\n';
-		res.end(html);
+			'</section>',
+		];
+
+		res.setHeader('Content-Type', 'application/xhtml+xml');
+		res.end(theme({head, main}));
 	},
 });
