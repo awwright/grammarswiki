@@ -139,12 +139,15 @@ form div, form span, form fieldset {
 }
 
 input, label, textarea, select, option, legend, datalist, output, progress, meter {
-  min-height: 18px;
-  line-height: 18px;
+  min-height: 16px;
+  line-height: 16px;
 }
 
 input, textarea, select, fieldset {
   min-width: 160px;
+  outline: none;
+  border: none;
+  box-shadow: none;
 }
 
 input[type=radio] {
@@ -164,55 +167,6 @@ label {
 
 fieldset * {
   display: grid;
-}
-
-button, input[type=submit], input[type=reset] {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: inherit;
-  font-family: sans-serif;
-  border: none;
-  border-radius: 8px;
-  color: hsl(0, 0%, 100%);
-  background: hsl(210, 98%, 20%);
-  transition: all 0.25s ease-out 0ms;
-}
-@media screen and (min-width: 1140px) {
-  button, input[type=submit], input[type=reset] {
-    min-width: 160px;
-    height: 42px;
-  }
-}
-@media screen and (max-width: 1140px) {
-  button, input[type=submit], input[type=reset] {
-    min-width: 128px;
-    height: 38px;
-  }
-}
-button:hover, input[type=submit]:hover, input[type=reset]:hover {
-  background: hsl(210, 71%, 44%);
-}
-button.button--solid, input[type=submit].button--solid, input[type=reset].button--solid {
-  border: none;
-  color: hsl(0, 0%, 100%);
-  background: hsl(210, 98%, 20%);
-}
-button.button--solid:hover, input[type=submit].button--solid:hover, input[type=reset].button--solid:hover {
-  background: hsl(210, 71%, 44%);
-}
-button.button--hollow, input[type=submit].button--hollow, input[type=reset].button--hollow {
-  color: hsl(210, 71%, 44%);
-  border: 4px solid hsl(210, 71%, 44%);
-  background: hsla(0, 0%, 0%, 0);
-}
-button.button--hollow:hover, input[type=submit].button--hollow:hover, input[type=reset].button--hollow:hover {
-  color: hsl(210, 74%, 69%);
-  border: 4px solid hsl(210, 74%, 69%);
-}
-button:focus, input[type=submit]:focus, input[type=reset]:focus {
-  outline: 0;
-  background: hsl(210, 74%, 69%);
 }
 
 header, footer {
@@ -251,6 +205,21 @@ section:last-child {
   margin: 0 auto 50px auto;
 }
 
+.container-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+  grid-template-rows: auto;
+  gap: 8px;
+}
+.container-auto .column {
+  display: grid;
+  grid-template-rows: repeat(auto-fill, 1fr);
+  gap: 8px;
+}
+.container-auto .row {
+  background: hsl(210, 11%, 95%);
+}
+
 footer {
   height: 64px;
   padding: 16px 0;
@@ -264,6 +233,13 @@ main {
 @media screen and (max-width: 1140px) {
   main {
     margin-top: 80px;
+  }
+}
+
+@media screen and (min-width: 1140px) {
+  body.fullwidth section {
+    width: 92%;
+    margin: 0 auto;
   }
 }
 
@@ -808,6 +784,56 @@ table tr:nth-child(odd) {
   text-align: center;
 }
 
+.button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: inherit;
+  font-family: sans-serif;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  color: hsl(0, 0%, 100%);
+  background: hsl(210, 98%, 20%);
+  transition: all 0.25s ease-out 0ms;
+}
+@media screen and (min-width: 1140px) {
+  .button {
+    min-width: 160px;
+    height: 42px;
+  }
+}
+@media screen and (max-width: 1140px) {
+  .button {
+    min-width: 128px;
+    height: 38px;
+  }
+}
+.button:hover {
+  background: hsl(210, 71%, 44%);
+}
+.button--solid {
+  border: none;
+  color: hsl(0, 0%, 100%);
+  background: hsl(210, 98%, 20%);
+}
+.button--solid:hover {
+  background: hsl(210, 71%, 44%);
+}
+.button--hollow {
+  color: hsl(210, 71%, 44%);
+  border: 4px solid hsl(210, 71%, 44%);
+  background: hsla(0, 0%, 0%, 0);
+}
+.button--hollow:hover {
+  color: hsl(210, 74%, 69%);
+  border: 4px solid hsl(210, 74%, 69%);
+}
+.button:focus {
+  outline: 0;
+  background: hsl(210, 74%, 69%);
+}
+
 a img, img, video {
   border: none;
   outline: none;
@@ -849,6 +875,7 @@ svg {
   height: 64px;
   transition: 500ms;
   margin: 0 auto;
+  border: 0;
 }
 .icon.icon--shrink:hover {
   width: 48px;
@@ -860,6 +887,19 @@ svg {
 }
 .icon.icon--border-full {
   border-radius: 100%;
+}
+.icon__search {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  background: hsl(206, 11%, 75%);
+}
+.icon__search--left {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 0 5% 5% 0;
+  background: hsl(206, 11%, 75%);
 }
 
 .overlay {
@@ -958,35 +998,37 @@ svg {
 }
 form.filter-menu--quick-search {
   border: none;
+  border-radius: unset;
+  display: inline-flex;
+}
+form.filter-menu--quick-search input {
+  padding: 8px;
+}
+form.filter-menu--detailed-search {
+  border: none;
   border: 2px solid hsl(210, 11%, 95%);
   border-radius: 10px;
 }
-form.filter-menu--quick-search * {
+form.filter-menu--detailed-search * {
   display: flex;
 }
-form.filter-menu--quick-search > div, form.filter-menu--quick-search span {
+form.filter-menu--detailed-search > div, form.filter-menu--detailed-search span {
   flex-wrap: wrap;
   gap: 6px;
 }
-form.filter-menu--quick-search .filter-group {
+form.filter-menu--detailed-search .filter-group {
   gap: 10px;
 }
-form.filter-menu--quick-search .filter-group > * {
+form.filter-menu--detailed-search .filter-group > * {
   flex: 1 1 calc(33.333% - 16px);
   justify-content: center;
   align-items: center;
 }
-form.filter-menu--quick-search .filter-group > * > label {
+form.filter-menu--detailed-search .filter-group > * > label {
   margin: 0 8px 0 0;
 }
-form.filter-menu--quick-search .filter-group > * input, form.filter-menu--quick-search .filter-group > * select {
+form.filter-menu--detailed-search .filter-group > * input, form.filter-menu--detailed-search .filter-group > * select {
   flex: 1;
-}
-form.filter-menu--quick-search button {
-  margin: 24px 0px;
-}
-form.filter-menu--quick-search button:not(:last-child) {
-  margin: 24px 16px 0px 0px;
 }
 
 .pagination {

@@ -57,8 +57,7 @@ header {
         @include media-queries.mobile {   
             & .large {
                 font-size:1.48em;
-            }
-        
+            }        
         }
 
         @include media-queries.small-mobile {   

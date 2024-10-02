@@ -3,7 +3,7 @@
 // @author: Grant Kellie (grantkellie.dev)
 // @contents:
 // - Filter
-// -- Quick search
+//  -- Quick search
 // - Pagination
 
 @charset 'utf-8';
@@ -12,10 +12,23 @@
 // @title: Filter Menu
 // @description: menu system for searching and filterng information.
 form.filter-menu {
-    
-    // @title: Quick Search
+
+    // @title: Filter Search
     // @description: Small filter menu system
-    &--quick-search {
+    &--quick-search {    
+        border:none;
+        border-radius: unset;   
+        display:inline-flex;
+
+        & input {
+            padding:8px;
+        }
+        
+    }
+    
+    // @title: Filter Search
+    // @description: Small filter menu system
+    &--detailed-search {
         border:none;
         border: 2px solid color.set('light-medium'); 
         border-radius: 10px; 
@@ -30,7 +43,7 @@ form.filter-menu {
         }        
 
         // Filter group container (flex layout)
-        .filter-group {
+        & .filter-group {
             gap: 10px;
 
             // Each individual form field
@@ -49,13 +62,13 @@ form.filter-menu {
             }
         }
      
-        & button {            
-            margin:24px 0px;
+        // & .button {            
+        //     margin:24px 0px;
            
-            &:not(:last-child){
-                margin:24px 16px 0px 0px;  
-            }
-        }
+        //     &:not(:last-child){
+        //         margin:24px 16px 0px 0px;  
+        //     }
+        // }
     }
 }
 

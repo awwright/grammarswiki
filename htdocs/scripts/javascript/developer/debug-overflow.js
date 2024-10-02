@@ -1,6 +1,7 @@
 /**
+ * @title Debug Overflow
+ * @desc: a JavaScript utility that displays and logs container overflow of elements. 
  * @author: Grant Kellie (grantkellie.dev)
- * @description: a JavaScript utility that displays and logs container overflow of elements. 
  */
 
 function isOverflowing(element) {

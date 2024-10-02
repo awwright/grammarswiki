@@ -1,10 +1,11 @@
 // @title: Structure
 // @description: 
 // @author: Grant Kellie (grantkellie.dev)
-// @date: 2024 08 25
 // @contents:
 // - Structure
+// - Section Container
 // - Container
+// - Container Auto
 // - Verical Align
 // - Horizontal Align
 // - Horizontal / Vertical Align
@@ -28,7 +29,6 @@
 
 // @title: Structure
 // @description: Core base layout components
-// @type: Block
 header, footer {
     flex-grow: 0;
     flex-shrink: 0;
@@ -36,9 +36,8 @@ header, footer {
     background:color.set('primary');
 }
 
-// @title: Container
-// @description: Contans the page contents, has established sizes for each breakpoint and relative spacing based for each instance.
-// @type: Block
+// @title: Section Container
+// @description: Contans the page layout.
 section {
     &:not(:first-child){
         margin-bottom: 50px;
@@ -73,6 +72,32 @@ section {
     }  
 }
 
+// @title: Container
+// @description:
+.container {
+
+}
+
+// @title: Container Auto
+// @description: Automatically caluclates and contans the page contents.
+.container-auto {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(calc(1140px / 12), 1fr));
+    grid-template-rows: auto;
+    gap: 8px;
+
+    & .column {
+        display: grid;
+        grid-template-rows: repeat(auto-fill, 1fr);
+        gap: 8px;
+    }
+    
+    & .row {
+        background: color.set('light-medium');
+    }    
+}
+
+
 footer {
     height:64px;
     padding:16px 0;
@@ -87,6 +112,18 @@ main {
         margin-top: 80px;
     }
 }
+
+// @title: Fullwidth
+// @description: Changes the elements to conform with fullwidth layouts
+body.fullwidth {
+    & section {
+        @include media-queries.desktop {
+            width:92%;
+            margin:0 auto;
+        }
+    }
+}
+
  
 // @title: Verical Align
 // @description: Vertical container contents alignment

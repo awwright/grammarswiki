@@ -1,6 +1,7 @@
 /**
- * @author: Grant Kellie (grantkellie.dev)
+ * @title No JavaScript
  * @description: hides or shows elements that require or don't require javascript enabled in the users browser.
+ * @author: Grant Kellie (grantkellie.dev)
  */
 
 document.addEventListener("DOMContentLoaded", function() {

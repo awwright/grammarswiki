@@ -2,11 +2,10 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Standard Grammar Catalog : JavaScript Enabled/Disabled Example</title>
+    <title>Standard Grammar Catalog</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="scripts/css/style.css">
-
 </head>
 <body>
     <header>
@@ -24,15 +23,15 @@
                     <span></span>
                 </label>
 
-
                 <ul id="menu">
                     <li><a href="index.html">Home</a></li>
                     <li class="category">
                         <a href="#">Developer</a>
-                        <ul class="dropdown">                            
+                        <ul class="dropdown">
                             <a href=".dev-pages.html"><li>Pages</li></a>                            
                             <a href=".dev-body.html"><li>Layout</li></a>
                             <a href=".dev-elements.html"><li>Elements</li></a>
+							<a href=".dev-dynamic-container.html"><li>Dynamic Container</li></a>
                             <a href=".dev-style.html"><li>Styleguide</li></a>
                             <a href=".dev-no-js.html"><li>No JavaScript</li></a>     
                         </ul>
@@ -41,22 +40,43 @@
             </nav>
         </section>
     </header>
-    <main>
-        <section class="hv-align--grid">
-                <div class="center">
-                <h1>No Javascript</h1>
-                <p>This test allows us to determine if javascript is enabled in the browser, giving a user the option to go back to the previous page or return to the home page.</p>
 
-                <br>
-                
-                <!-- This link will only be visible if JavaScript is enabled -->
-                <a class="js-enabled" href="javascript:history.back()">Go Back</a>
-                
-                <!-- This link will only be visible if JavaScript is disabled -->
-                <a class="js-disabled" href="index.html">Go Home</a>    
-            </div>      
-        </section>
+    <main>
+        <section>
+			<div class="container-auto">
+				<div class="column">
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+				</div>
+
+				<div class="column">
+					<div class="row">Content</div>
+				</div>
+				
+				<div class="column">
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+				</div>
+				
+				<div class="column">
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+				</div>
+
+				<div class="column">
+					<div class="row">Content</div>
+					<div class="row">Content</div>
+				</div>
+			</div>
+        </section>        
     </main>
+    
     <footer>
         <section class="col-4">
             <span></span>
@@ -66,9 +86,8 @@
         </section>
     </footer>
 
-    <!-- JavaScript Utilities -->    
+    <!-- JavaScript Utilities -->
     <script src="scripts/javascript/developer/debug-overflow.js"></script>
-    <script src="scripts/javascript/utilities/no-js.js"></script>
 
 </body>
 </html>
