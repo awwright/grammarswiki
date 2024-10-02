@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
 	function onInput(e) {
 		console.log(e);
 		try {
-			const result = parser.parse(input.value);
+			const result = parser.parse(input.value.replace(/\r?\n/g, '\r\n')+'\r\n');
 			results.textContent = JSON.stringify(result, null, "\t");
 		}catch(e){
 			console.error(e);

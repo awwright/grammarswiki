@@ -34,13 +34,13 @@ function log(entry) {
 async function getEnvironment() {
 	// Resolve an object that will be used as `this` in handleRequest
 	const env = Object.create(process.env);
-
 	return {
 		docroot,
 		catalogRoot,
 		css: cssPath,
 		html: htmlPath,
-		log
+		log,
+		env,
 	};
 }
 
@@ -108,7 +108,8 @@ getEnvironment().then(function (env) {
 	server.listen(port, addr);
 
 	// Put a friendly message on the terminal
-	console.log('Server running at http://' + addr + ':' + port + '/');
+	const addrstr = addr.toString().replace('0.0.0.0', 'localhost');
+	console.log(`Server running at http://${addrstr}:${port}/`);
 });
 
 function handleRequest(req, res) {
@@ -138,6 +139,3 @@ function handleRequest(req, res) {
 	res.end('404 Not Found for <' + req.url + '>\r\n');
 	console.log(req.method + ' ' + req.url + ' 404 (Not Found)');
 }
-
-
-
