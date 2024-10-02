@@ -90,7 +90,7 @@ module.exports = makeRoute({
 					return '<span class="abnf-val">' + escapeHTML(node.toString()) + '</span>';
 				default:
 					console.dir(node);
-					return '<Unknown node ' + escapeHTML(node.constructor.name) + ' = ' + escapeHTML(node.toString()) + '>';
+					return escapeHTML('Unknown node ' + node.constructor.name + ' = ' + node.toString() + ']');
 			}
 		}
 
@@ -99,12 +99,14 @@ module.exports = makeRoute({
 		];
 
 		const main = [
+			'<section class="container">',
+			'\t\t<h1>Rule ' + escapeHTML(filename) + '</h1>',
 			'\t\t<pre>' + escapeHTML(md_data) + '</pre>' + rules_html,
 			// '\t\t<pre>' + data + '</pre>',
 			'\t\t<select id="input-lines"><option>CRLF terminated</option><option>LF terminated</option><option>LF separated</option></select>',
 			'\t\t<textarea id="input"></textarea>',
 			'\t\t<pre id="input-results"></pre>',
-
+			'</section>',
 		];
 
 		res.setHeader('Content-Type', 'application/xhtml+xml');

@@ -44,16 +44,6 @@ async function getEnvironment() {
 	};
 }
 
-const routeIndex = makeRoute({
-	name: 'route_index',
-	uriTemplate: 'http://localhost/',
-	get(req, res, match){
-		const html = fs.readFileSync(this.html);
-		res.setHeader('Content-Type', 'application/xhtml+xml');
-		res.end(html);
-	},
-});
-
 const routeHealthcheck = makeRoute({
 	name: 'route_healthcheck',
 	uriTemplate: 'http://localhost/about:health',
@@ -63,38 +53,36 @@ const routeHealthcheck = makeRoute({
 	},
 });
 
-const routeStyle = makeRoute({
-	name: 'route_style',
-	uriTemplate: 'http://localhost/default.css',
-	get(req, res, match){
-		const css = fs.readFileSync(this.css);
-		res.setHeader('Content-Type', 'text/css');
-		res.end(css);
-	},
-});
-
-function file(name, uri, file, ct){
+function staticfile(name, uri, filepath, ct){
 	return makeRoute({
 		name: name,
 		uriTemplate: uri,
 		get(req, res, match) {
-			const content = fs.readFileSync(file);
+			const content = fs.readFileSync(filepath);
 			res.setHeader('Content-Type', ct);
 			res.end(content);
+		},
+		async* enumerate(){
+			yield {uri};
 		},
 	});
 }
 
+const htdocs = __dirname + '/../htdocs';
+
 const router = new Router;
 const routeMap = new Map(
 	[
-		routeIndex,
+		staticfile('route_index.html', 'http://localhost/', htdocs + '/index.html', 'text/html'),  // <http://localhost/>
 		routeHealthcheck,
-		routeStyle,
-		file('route_default_script', 'http://localhost/default.js', __dirname+'/default.js', 'application/ecmascript'),
-		require('./route_catalog_index.js'),
-		require('./route_catalog_filename_abnf.js'),
-		require('./route_catalog_filename_html.js'),
+		staticfile('route_theme_script', 'http://localhost/theme.js', __dirname+'/default.js', 'application/ecmascript'),
+		staticfile('route_theme_style', 'http://localhost/theme.css', htdocs + '/scripts/css/style.css', 'text/css'),
+		require('./route_search_html.js'), // <http://localhost/search.html{?q}>
+		require('./route_search_js.js'), // <http://localhost/search.js>
+		require('./route_search_json.js'), // <http://localhost/search.json>
+		require('./route_catalog_index.js'), // <http://localhost/catalog/>
+		require('./route_catalog_filename_abnf.js'), // <http://localhost/catalog/{filename}.abnf>
+		require('./route_catalog_filename_html.js'), // <http://localhost/catalog/{filename}.html>
 		require('./route_catalog_filename_antlr.js'),
 		require('./route_catalog_filename_parserjs.js'),
 		require('./route_catalog_filename_rulename_html.js'),

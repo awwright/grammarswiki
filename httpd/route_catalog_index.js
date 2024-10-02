@@ -12,8 +12,8 @@ module.exports = makeRoute({
 		const rules = await catalog.listGrammars();
 
 		const rules_html = rules.map(function(v){
-			return '          <li><a href="' + escapeHTML(`${v.name}.html`) +'">'+escapeHTML(v.name)+'</a></li>';
-		}).join('\n');
+			return '\t\t<li><a href="' + escapeHTML(`${v.name}.html`) +'">'+escapeHTML(v.name)+'</a></li>\r\n';
+		}).join('');
 
 		const main = [
 			'<section class="container">',
