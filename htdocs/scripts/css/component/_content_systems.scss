@@ -7,6 +7,7 @@
 // - Pagination
 
 @charset 'utf-8';
+@use '../scss/media-queries/mixins_media_queries' as media-queries;
 @use '../scss/color/functions_color' as color;
 
 // @title: Filter Menu
@@ -20,10 +21,24 @@ form.filter-menu {
         border-radius: unset;   
         display:inline-flex;
 
+        @include media-queries.responsive(){
+           	margin:0 0 20px 0;
+
+            & input {
+                font-size:1em;
+            }    
+        }
+
         & input {
             padding:8px;
-        }
-        
+            outline: none;
+            border: none;
+            box-shadow: none; 
+
+            &.icon {
+                cursor: pointer;
+            }
+        }    
     }
     
     // @title: Filter Search
@@ -40,8 +55,8 @@ form.filter-menu {
         & > div, span {		
             flex-wrap: wrap;
             gap:6px;
-        }        
-
+        } 
+        
         // Filter group container (flex layout)
         & .filter-group {
             gap: 10px;
@@ -49,7 +64,7 @@ form.filter-menu {
             // Each individual form field
             & > * {
                 flex: 1 1 calc(33.333% - 16px);
-                justify-content: center;
+                justify-content: left;
                 align-items: center;                     
 
                 & > label {
@@ -58,17 +73,25 @@ form.filter-menu {
                 
                 & input, select {
                     flex: 1;
+                    // height:clamp(32px, 32px, 32px);
+                }
+
+                & input, select  {
+                    flex: 1;
+                    padding:8px;
+                    outline: none;
+                    box-shadow: none; 
                 }
             }
         }
      
-        // & .button {            
-        //     margin:24px 0px;
+        & .button {            
+            margin:24px 0px;
            
-        //     &:not(:last-child){
-        //         margin:24px 16px 0px 0px;  
-        //     }
-        // }
+            &:not(:last-child){
+                margin:24px 16px 0px 0px;  
+            }
+        }
     }
 }
 

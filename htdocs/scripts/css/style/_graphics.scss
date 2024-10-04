@@ -83,41 +83,42 @@ svg {
 // @title: Icon
 // @description: standard styling for icons that can be used for interractions, e.g. social media links
 .icon {
-    width:64px;
-    height:64px;
-    transition: 500ms;
+    width: 32px;
+    min-width:32px;
+    height: 32px;  
+
+    @include media-queries.responsive(){
+        width: clamp(42px, 42px, 42px);
+        height: 42px;  
+    }
+
     margin:0 auto;
     border:0;    
+    background-color:color.set('medium');
 
     // Icon will shrink 16px
     &.icon--shrink:hover {
-        width:48px;
-        height:48px;
+        width:24px;
+        height:24px;
     }    
 
     // Icon will shrink 16px
     &.icon--grow:hover {
-        width:96px;
-        height:96px;
+        width:48px;
+        height:48px;
     }    
 
     &.icon--border-full{
         border-radius: 100%;
     }
 
-    &__search{
-        width: 32px;
-        min-width:32px;
-        height: 32px;     
-        background:color.set('medium');  
+    &__search{       
+        background:color.set('light-medium') url('../../content/images/icon/magnifying-glass.svg') no-repeat center ;
+        background-size: 24px;
     }
 
-    &__search--left{
-        width: 32px;
-        min-width:32px;
-        height: 32px;    
-        border-radius: 0 5% 5% 0; 
-        background:color.set('medium'); 
+    &--border--left{
+        border-radius: 0 5% 5% 0;  
     }
 }
 

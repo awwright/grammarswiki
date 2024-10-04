@@ -23,8 +23,13 @@
                     <span></span>
                 </label>
 
-
                 <ul id="menu">
+                    <form class="filter-menu filter-menu--quick-search pointer" method="get">
+                        <label for="search" hidden>Search</label>
+                        <input type="text" name="search"/>     
+                        <input class="icon icon__search icon--border--left" type="submit" name="search" value="">                   
+                    </form>
+                    
                     <li><a href="index.html">Home</a></li>
                     <li class="category">
                         <a href="#">Developer</a>
@@ -52,26 +57,28 @@
                 </tr>  
                 
                 <tr>
-                    <td>Index / Landing</td>
-                    <td></td>
+                    <td>Index</td>
+                    <td>The landing page showcasing information about the SGC for what it is, how it works and showcase recently added information.</td>
                     <td><a href="index.html">index.html</a></td>
                 </tr> 
 
                 <tr>
                     <td>Catalog</td>
-                    <td></td>
+                    <td>Recently Added Grammars & Formats with filter search.</td>
                     <td><a href="catalog.html">catalog.html</a></td>
                 </tr>  
 
                 <tr>
                     <td>Grammars & Formats</td>
-                    <td></td>
+                    <td>A singular page that offsets from "Catalog", its an Information page with a Sidebar and Fullwidth layout.</td>
                     <td><a href="grammars-and-formats.html">grammars-and-formats.html</a></td>
                 </tr>
 
                 <tr>
                     <td>Handbook</td>
-                    <td></td>
+                    <td>A page that allows you to have a quick reference and explanation to ABNF format / protocol
+                        translations, to assist with taking the input and processing through the toolchain / generator, and
+                        how to break down and understand the processes involved.</td>
                     <td><a href="handbook.html">handbook.html</a></td>
                 </tr>   
 
@@ -83,19 +90,20 @@
                 
                 <tr>
                     <td>Test Cases</td>
-                    <td></td>
+                    <td>Lists test cases that reference to a singular test case</td>
                     <td><a href="test-cases.html">test-cases.html</a></td>
                 </tr>
 
                 <tr>
                     <td>Test Case</td>
-                    <td></td>
+                    <td>Showcases a single test case generated from grammars/formats and cross-reference other relevant
+                        specifications.</td>
                     <td><a href="test-case.html">test-case.html</a></td>
                 </tr>
 
                 <tr>
                     <td>Error</td>
-                    <td></td>
+                    <td>Throws a relative server error message.</td>
                     <td><a href="error.html">error.html</a></td>
                 </tr>                 
             </table>     
@@ -126,29 +134,6 @@
                     <td><a href=".dev-elements.html">dev-elements.html</a></td>
                 </tr>             
             </table>  
-
-
-            <h2>SCSS Framework - Test Pages</h2>
-            <table class="layout--fixed-off">                   
-                <tr>        
-                    <th>Page</th>
-                    <th>Description</th>
-                    <th>URL</th>
-                </tr>  
-
-                <tr>
-                    <td>Standard: <b>under development</b></td>
-                    <td>Page with general content layout</td>
-                    <td><a href="#.dev-style.html">dev-test-index.html</a></td>
-                </tr> 
-
-                <tr>
-                    <td>Document: <b>under development</b></td>
-                    <td>Page contains side navigation containing table of contents</td>
-                    <td><a href="#.dev-body.html">dev-test-document.html</a></td>
-                </tr>         
-            </table>  
-
         </section>                    
     </main>
 

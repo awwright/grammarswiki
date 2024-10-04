@@ -17,6 +17,9 @@ body {
   line-height: 1.5;
   color: hsl(0, 0%, 5%);
   accent-color: hsl(210, 74%, 69%);
+  -webkit-user-select: text;
+     -moz-user-select: text;
+          user-select: text;
   box-sizing: border-box;
   min-height: 100%;
   display: flex;
@@ -145,9 +148,6 @@ input, label, textarea, select, option, legend, datalist, output, progress, mete
 
 input, textarea, select, fieldset {
   min-width: 160px;
-  outline: none;
-  border: none;
-  box-shadow: none;
 }
 
 input[type=radio] {
@@ -784,6 +784,10 @@ table tr:nth-child(odd) {
   text-align: center;
 }
 
+.pointer {
+  cursor: pointer;
+}
+
 .button {
   display: flex;
   justify-content: center;
@@ -871,35 +875,36 @@ svg {
 }
 
 .icon {
-  width: 64px;
-  height: 64px;
-  transition: 500ms;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
   margin: 0 auto;
   border: 0;
+  background-color: hsl(206, 11%, 75%);
+}
+@media screen and (max-width: 1140px) {
+  .icon {
+    width: 42px;
+    height: 42px;
+  }
 }
 .icon.icon--shrink:hover {
-  width: 48px;
-  height: 48px;
+  width: 24px;
+  height: 24px;
 }
 .icon.icon--grow:hover {
-  width: 96px;
-  height: 96px;
+  width: 48px;
+  height: 48px;
 }
 .icon.icon--border-full {
   border-radius: 100%;
 }
 .icon__search {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  background: hsl(206, 11%, 75%);
+  background: hsl(210, 11%, 95%) url("../../content/images/icon/magnifying-glass.svg") no-repeat center;
+  background-size: 24px;
 }
-.icon__search--left {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
+.icon--border--left {
   border-radius: 0 5% 5% 0;
-  background: hsl(206, 11%, 75%);
 }
 
 .overlay {
@@ -1001,8 +1006,22 @@ form.filter-menu--quick-search {
   border-radius: unset;
   display: inline-flex;
 }
+@media screen and (max-width: 1140px) {
+  form.filter-menu--quick-search {
+    margin: 0 0 20px 0;
+  }
+  form.filter-menu--quick-search input {
+    font-size: 1em;
+  }
+}
 form.filter-menu--quick-search input {
   padding: 8px;
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+form.filter-menu--quick-search input.icon {
+  cursor: pointer;
 }
 form.filter-menu--detailed-search {
   border: none;
@@ -1021,7 +1040,7 @@ form.filter-menu--detailed-search .filter-group {
 }
 form.filter-menu--detailed-search .filter-group > * {
   flex: 1 1 calc(33.333% - 16px);
-  justify-content: center;
+  justify-content: left;
   align-items: center;
 }
 form.filter-menu--detailed-search .filter-group > * > label {
@@ -1029,6 +1048,18 @@ form.filter-menu--detailed-search .filter-group > * > label {
 }
 form.filter-menu--detailed-search .filter-group > * input, form.filter-menu--detailed-search .filter-group > * select {
   flex: 1;
+}
+form.filter-menu--detailed-search .filter-group > * input, form.filter-menu--detailed-search .filter-group > * select {
+  flex: 1;
+  padding: 8px;
+  outline: none;
+  box-shadow: none;
+}
+form.filter-menu--detailed-search .button {
+  margin: 24px 0px;
+}
+form.filter-menu--detailed-search .button:not(:last-child) {
+  margin: 24px 16px 0px 0px;
 }
 
 .pagination {
@@ -1253,12 +1284,12 @@ header #logo .small {
 }
 @media screen and (min-width: 320px) and (max-width: 479px) {
   header #logo .large {
-    font-size: 1.25em;
+    font-size: 1.48em;
   }
 }
 @media screen and (max-width: 319px) {
   header #logo .large {
-    font-size: 1em;
+    font-size: 1.48em;
   }
 }
 
@@ -1294,7 +1325,7 @@ nav #menu * {
   nav #menu li .dropdown {
     display: none;
     position: absolute;
-    top: 32px;
+    top: 31px;
     left: 0;
     min-width: 160px;
     z-index: 1;
@@ -1412,10 +1443,11 @@ nav #menu * {
     width: 94vw;
     min-height: 64px;
     margin: 8px 0;
+    border-radius: 5px;
     align-items: center;
     justify-content: center;
     display: flex;
-    background: hsl(210, 71%, 44%);
+    background: hsla(206, 11%, 7%, 0.5);
   }
   nav #menu ul li.category:hover .dropdown {
     display: block;
