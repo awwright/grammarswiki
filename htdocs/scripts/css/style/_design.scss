@@ -138,13 +138,14 @@
 	
 	// @title: Solid Button	
 	&--hollow {
-		color:color.set('secondary');
-		border: 4px solid color.set('secondary');
+		color:color.set('primary');
+		border: 4px solid color.set('primary');
 		background:color.set('hidden');
 
 		&:hover {
-			color:color.set('tertiary');
-			border: 4px solid color.set('tertiary');
+			color:color.set('secondary');
+			border: 4px solid color.set('secondary');
+			background:color.set('hidden');
 		}
 	}
 

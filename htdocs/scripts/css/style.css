@@ -825,13 +825,14 @@ table tr:nth-child(odd) {
   background: hsl(210, 71%, 44%);
 }
 .button--hollow {
-  color: hsl(210, 71%, 44%);
-  border: 4px solid hsl(210, 71%, 44%);
+  color: hsl(210, 98%, 20%);
+  border: 4px solid hsl(210, 98%, 20%);
   background: hsla(0, 0%, 0%, 0);
 }
 .button--hollow:hover {
-  color: hsl(210, 74%, 69%);
-  border: 4px solid hsl(210, 74%, 69%);
+  color: hsl(210, 71%, 44%);
+  border: 4px solid hsl(210, 71%, 44%);
+  background: hsla(0, 0%, 0%, 0);
 }
 .button:focus {
   outline: 0;
