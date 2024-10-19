@@ -77,6 +77,10 @@ const routeMap = new Map(
 		routeHealthcheck,
 		staticfile('route_theme_script', 'http://localhost/theme.js', __dirname+'/default.js', 'application/ecmascript'),
 		staticfile('route_theme_style', 'http://localhost/theme.css', htdocs + '/scripts/css/style.css', 'text/css'),
+		staticfile('route_scripts/css/style.css', 'http://localhost/scripts/css/style.css', htdocs + '/scripts/css/style.css', 'text/css'),
+		staticfile('route_scripts/javascript/developer/debug-overflow.js', 'http://localhost/scripts/javascript/developer/debug-overflow.js', __dirname +'/../htdocs/scripts/javascript/developer/debug-overflow.js', 'text/css'),
+		staticfile('route_content/images/placeholder.png', 'http://localhost/content/images/placeholder.png', __dirname +'/../htdocs/content/images/placeholder.png', 'image/png'),
+		staticfile('route_content/images/icon/magnifying-glass.svg', 'http://localhost/content/images/icon/magnifying-glass.svg', __dirname +'/../htdocs/content/images/icon/magnifying-glass.svg', 'image/svg'),
 		require('./route_search_html.js'), // <http://localhost/search.html{?q}>
 		require('./route_search_js.js'), // <http://localhost/search.js>
 		require('./route_search_json.js'), // <http://localhost/search.json>
