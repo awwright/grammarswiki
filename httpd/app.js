@@ -1,11 +1,5 @@
 'use strict';
-
-const port = process.env.PORT || 8080;
-const addr = '0.0.0.0';
-const http = require('http');
 const fs = require('fs');
-const fp = require('fs').promises;
-const { dirname } = require('path');
 
 // Welcome to my special fun project.
 // Paths served here generally map to files found in ../catalog/
@@ -14,35 +8,8 @@ const { dirname } = require('path');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const querystring = require('querystring');
 const { Router } = require('uri-template-router');
 const { makeRoute, methods } = require('./route.js');
-
-const docroot = __dirname + '/';
-const catalogRoot = dirname(__dirname) + '/catalog/';
-const cssPath = __dirname + '/default.css';
-const htmlPath = __dirname + '/index.xhtml';
-
-fs.readFileSync(cssPath);
-fs.readFileSync(htmlPath);
-
-function log(entry) {
-	// fs.appendFileSync('/tmp/sample-app.log', new Date().toISOString() + ' - ' + entry + '\n');
-	console.log(entry);
-}
-
-async function getEnvironment() {
-	// Resolve an object that will be used as `this` in handleRequest
-	const env = Object.create(process.env);
-	return {
-		docroot,
-		catalogRoot,
-		css: cssPath,
-		html: htmlPath,
-		log,
-		env,
-	};
-}
 
 const { routeIndexHtml } = require('./route_index_html.js');
 
@@ -95,17 +62,6 @@ const routeMap = new Map(
 	].map(v => [router.addTemplate(v.uriTemplate), v])
 );
 
-getEnvironment().then(function (env) {
-	const server = http.createServer(handleRequest.bind(env));
-
-	// Listen on port 3000, IP defaults to 127.0.0.1
-	server.listen(port, addr);
-
-	// Put a friendly message on the terminal
-	const addrstr = addr.toString().replace('0.0.0.0', 'localhost');
-	console.log(`Server running at http://${addrstr}:${port}/`);
-});
-
 function handleRequest(req, res) {
 	// const { html, log } = this;
 	console.log(req.method + ' ' + req.url);
@@ -133,3 +89,6 @@ function handleRequest(req, res) {
 	res.end('404 Not Found for <' + req.url + '>\r\n');
 	console.log(req.method + ' ' + req.url + ' 404 (Not Found)');
 }
+
+module.exports.handleRequest = handleRequest;
+module.exports.routeMap = routeMap;
