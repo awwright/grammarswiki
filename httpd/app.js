@@ -55,6 +55,7 @@ const routeMap = new Map(
 		require('./route_search_json.js'), // <http://localhost/search.json>
 		require('./route_catalog_index.js'), // <http://localhost/catalog/>
 		require('./route_catalog_filename_abnf.js'), // <http://localhost/catalog/{filename}.abnf>
+		require('./route_catalog_filename_peg.js'), // <http://localhost/catalog/{filename}.peg>
 		require('./route_catalog_filename_html.js'), // <http://localhost/catalog/{filename}.html>
 		require('./route_catalog_filename_antlr.js'),
 		require('./route_catalog_filename_parserjs.js'),
@@ -91,4 +92,5 @@ function handleRequest(req, res) {
 }
 
 module.exports.handleRequest = handleRequest;
+module.exports.router = router;
 module.exports.routeMap = routeMap;
