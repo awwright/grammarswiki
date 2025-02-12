@@ -111,6 +111,33 @@ describe('FSM', function(){
 		});
 	});
 
+	describe('FSM#get', function() {
+		it('get(symbol)', function() {
+			const a = accept_a();
+			assert.deepEqual(a.get(0, 'a'), 1);
+			assert.deepEqual(a.get(0, 'b'), 2);
+			assert.deepEqual(a.get(0, 'c'), undefined);
+		});
+		it('get(Array)', function () {
+			const a = accept_a();
+			assert.deepEqual(a.get([0], 'a'), [1]);
+			assert.deepEqual(a.get([0], 'b'), [2]);
+			assert.deepEqual(a.get([0], 'c'), []);
+			assert.deepEqual(a.get([0,1], 'a'), [1,2]);
+			assert.deepEqual(a.get([0,1], 'b'), [2]);
+			assert.deepEqual(a.get([0,1], 'c'), []);
+		});
+		it('get(Set)', function(){
+			const a = accept_a();
+			assert.deepEqual(a.get(new Set([0]), 'a'), new Set([1]));
+			assert.deepEqual(a.get(new Set([0]), 'b'), new Set([2]));
+			assert.deepEqual(a.get(new Set([0]), 'c'), new Set([]));
+			assert.deepEqual(a.get(new Set([0, 1]), 'a'), new Set([1, 2]));
+			assert.deepEqual(a.get(new Set([0, 1]), 'b'), new Set([2]));
+			assert.deepEqual(a.get(new Set([0, 1]), 'c'), new Set([]));
+		});
+	});
+
 	it('FSM#toString');
 
 	describe('FSM#union', function(){
@@ -380,7 +407,7 @@ describe('FSM', function(){
 				0, // initial
 				[3], // finals
 			).reduce();
-			assert.equal(merged.map.length, 2);
+			assert.equal(merged.states.length, 2);
 		});
 	});
 
