@@ -10,6 +10,32 @@ function FromTop(){
 const ε = null;
 
 describe('PDA', function(){
+	function accept_a() {
+		// Accepts "a", also has "b" in alphabet
+		return new PDA(
+			[ // map
+				{ "a": 1, "b": 2 },
+				{ "a": 2, "b": 2 },
+				{ "a": 2, "b": 2 },
+			],
+			0, // initial
+			[1], // finals
+		);
+	}
+
+	function accept_b() {
+		// accepts "b", also has "a" in alphabet
+		return new PDA(
+			[ // map
+				{ "a": 2, "b": 1 },
+				{ "a": 2, "b": 2 },
+				{ "a": 2, "b": 2 },
+			],
+			0, // initial
+			[1], // finals
+		);
+	}
+
 	it('L_wwr', function test_happy() {
 		const a = new PDA(
 			[0,1,2], // states
@@ -59,8 +85,21 @@ describe('PDA', function(){
 		assert(!a.accepts("1110"));
 	});
 
-	it('PDA#alphabet', function(){
-
+	describe('PDA#alphabet', function () {
+		it('alphabet', function () {
+			const a = accept_a();
+			assert.deepEqual([...a.alphabet()], ["a", "b"]);
+		});
+		it('a', function () {
+			// Right now it returns an im.Set, but maybe it should return a regular Set
+			// Being array-like is good enough for now
+			assert.deepEqual([...accept_a().alphabet()], ['a', 'b']);
+		});
+		it('b', function () {
+			// Right now it returns an im.Set, but maybe it should return a regular Set
+			// Being array-like is good enough for now
+			assert.deepEqual([...accept_b().alphabet()], ['a', 'b']);
+		});
 	});
 
 	it('PDA#union', function(){
