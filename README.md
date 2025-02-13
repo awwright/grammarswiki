@@ -58,6 +58,24 @@ Output targets:
 - Translations to languages, e.g. YACC
 - Normalization function (in a variety of programming languages)
 
+## Usage
+
+A grammar is provided as a file on the filesystem. When identifying a grammar, provide a file path.
+
+Grammars can contain many rules, which are themselves languages. If no rule name is provided, by default the first rule defined in the grammar will be used.
+
+
+## parse-abnf
+
+Parse an abnf file for rules. Extracts a (minimal) syntax tree that can be used to initialize a grammar.
+The parser strictly implements ABNF, which requires CRLF line endings (including on the last line).
+The parser is a bare-bones recursive descent parser so it will fail to parse the entire file if it can't parse any part of it.
+
+```
+$ node bin/parse-abnf.js catalog/abnf-syntax.abnf
+```
+
+
 
 # Catalog
 
