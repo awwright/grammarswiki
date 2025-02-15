@@ -182,7 +182,7 @@ describe('NFA', function(){
 			// Convert between decimal and binary-coded-decimal (a format found e.g. in SMPTE timecode)
 			const homomorphism = new Map;
 			for (var i = 0; i < 10; i++) {
-				homomorphism.set(i.toString(10), i.toString(2).padStart(4, '0'));
+				homomorphism.set(i.toString(10).split(''), i.toString(2).padStart(4, '0').split(''));
 			}
 
 			// Take a strategy where we try to convert individual components of the regex,
@@ -243,6 +243,64 @@ describe('NFA', function(){
 				strings.push(string.join(''));
 			}
 			assert.deepEqual(strings, ['x', 'xy', 'xz', 'xyz', 'xzz', 'xyzz', 'xzzz', 'xyzzz', 'xzzzz']);
+		});
+
+		it('Mapping many to single', function () {
+			const language = singleton("aa");
+			// console.log(language.toString());
+			assert.equal(language.accepts(""), false);
+			assert.equal(language.accepts("a"), false);
+			assert.equal(language.accepts("aa"), true);
+			assert.equal(language.accepts("ab"), false);
+
+			// h(a) => xy
+			// h(b) => xyz
+			const homomorphism = language.homomorphism(new Map([
+				[ ['a', 'a'], ['a'] ],
+				[ ['b', 'b'], ['b'] ],
+				[ ['c', 'c'], ['c'] ],
+			]));
+			// console.log(homomorphism.toString());
+			assert.equal(homomorphism.accepts(""), false);
+			assert.equal(homomorphism.accepts("a"), true);
+			assert.equal(homomorphism.accepts("aa"), false);
+			assert.equal(homomorphism.accepts("ab"), false);
+
+			const dfa = FSM.fromNFA(homomorphism);
+			// console.log(dfa.toString());
+			const strings = [];
+			for(var string of dfa.strings()){
+				if(string.length > 5) break;
+				strings.push(string.join(''));
+			}
+			assert.deepEqual(strings, ['a']);
+		});
+
+		it('Mapping epsilon to single', function () {
+			const language = singleton("aa");
+			// console.log(language.toString());
+			assert.equal(language.accepts(""), false);
+			assert.equal(language.accepts("a"), false);
+			assert.equal(language.accepts("aa"), true);
+			assert.equal(language.accepts("ab"), false);
+
+			// h(a) => xy
+			// h(b) => xyz
+			const homomorphism = language.homomorphism(new Map([
+				[ [], ['_'] ],
+				[ ['a'], ['a'] ],
+			]));
+			// console.log(homomorphism.toString());
+			assert.equal(homomorphism.accepts(""), false);
+			assert.equal(homomorphism.accepts("_"), false);
+			assert.equal(homomorphism.accepts("a"), false);
+			assert.equal(homomorphism.accepts("aa"), true);
+			assert.equal(homomorphism.accepts("_a"), false);
+			assert.equal(homomorphism.accepts("_aa"), true);
+			assert.equal(homomorphism.accepts("a_a"), true);
+			assert.equal(homomorphism.accepts("aa_"), true);
+			assert.equal(homomorphism.accepts("_aa_"), true);
+			assert.equal(homomorphism.accepts("_a_a_"), true);
 		});
 
 	});
