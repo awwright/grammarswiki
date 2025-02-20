@@ -294,6 +294,39 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
 
+	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
+	static func concatenate(_ languages: Array<Self>) -> Self {
+		if(languages.count == 0){
+			return Self();
+		} else if(languages.count == 1) {
+			return languages[0];
+		}
+		return languages[1...].reduce(languages[0], {
+			previous, other in
+			let offset = previous.states.count;
+			// Remap all of the state IDs
+			let newStates = other.states.map { $0.mapValues { Set($0.map { $0  + offset }) } }
+			// Remap all of the state IDs, adding an epsilon transition from the previous final states to the current initial states
+			let newEpsilon = other.epsilon.enumerated().map {
+				stateNo, set in
+				let remapped = Set(set.map { $0  + offset });
+				return previous.finals.contains(stateNo) ? remapped.union(other.initials) : remapped;
+			}
+			let newInitials = previous.initials
+			return Self(
+				states: previous.states + newStates,
+				epsilon: previous.epsilon + newEpsilon,
+				initials: previous.initials,
+				finals: Set(other.finals.map { $0  + offset })
+			)
+		});
+	}
+
+	func concatenate(_ other: Self) -> Self {
+		return Self.concatenate([self, other]);
+	}
+
+
 	func homomorphism<Target>(mapping: [(Element, Target)]) -> NFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
 		typealias TargetSymbol = Target.Element;
 		var newStates: [[TargetSymbol: Set<Int>]] = self.states.map { _ in [:] }

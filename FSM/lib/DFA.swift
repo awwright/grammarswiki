@@ -109,6 +109,10 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 //		return false;
 //	}
 
+    var alphabet: Set<Symbol> {
+        Set(self.states.flatMap(\.keys))
+    }
+
 	func toViz() -> String {
 		var viz = "";
 		viz += "digraph G {\n";
@@ -123,6 +127,29 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		}
 		viz += "}\n";
 		return viz;
+	}
+
+	func nextState(state: StateNo, symbol: Symbol) -> States {
+		return self.states[state][symbol];
+	}
+
+	func nextState(state: StateNo, input: Element) -> States {
+		var currentState = state;
+		for char in input {
+			guard currentState < self.states.count,
+					let nextState = self.states[currentState][char]
+			else {
+				return nil
+			}
+			currentState = nextState
+		}
+
+		return currentState;
+	}
+
+	// TODO: IMPLEMENT
+	var cardinality: Int {
+		return 0;
 	}
 
 	/// Derive a new FSM by crawling all the different possible combinations of states that can be reached from every possible input.
@@ -158,7 +185,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 			var newStateTransitions = Dictionary<Symbol, StateNo>();
 			let inStates = backward[newStateId];
 			var alphabets = Set<Symbol>();
-			// enumerate over inStates and get the index
+			// enumerate over inStates and build the alphabet for the new state
 			for (fsm, state) in zip(fsms, inStates) {
 				if let state {
 					alphabets.formUnion(fsm.states[state].keys);
@@ -218,6 +245,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 
 	}
 
+    // SetAlgebra implementation
 	func union(_ other: __owned DFA<Element>) -> DFA<Element> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] });
 	}
@@ -230,31 +258,19 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
 
-	var alphabet: Set<Symbol> {
-		Set(self.states.flatMap(\.keys))
-	}
-
-	// TODO: IMPLEMENT
-	var cardinality: Int {
-		return 0;
-	}
-
-	func nextState(state: StateNo, symbol: Symbol) -> States {
-		return self.states[state][symbol];
-	}
-
-	func nextState(state: StateNo, input: Element) -> States {
-		var currentState = state;
-		for char in input {
-			guard currentState < self.states.count,
-					let nextState = self.states[currentState][char]
-			else {
-				return nil
-			}
-			currentState = nextState
+	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
+	static func concatenate(_ languages: Array<DFA<Element>>) -> DFA<Element> {
+		if(languages.count == 0){
+			return DFA<Element>();
+		} else if(languages.count == 1) {
+			return languages[0];
 		}
+		let nfa = NFA<Element>.concatenate(languages.map { NFA<Element>(dfa: $0) })
+		return DFA(nfa: nfa);
+	}
 
-		return currentState;
+	func concatenate(_ other: DFA<Element>) -> DFA<Element> {
+		return Self.concatenate([self, other]);
 	}
 
 	/// Now we're getting into alchemy land
