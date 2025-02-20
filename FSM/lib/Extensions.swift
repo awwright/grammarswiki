@@ -47,3 +47,12 @@ extension Array: Comparable where Element: Comparable {
 		return lhs.count < rhs.count
 	}
 }
+
+extension Character: Strideable {
+	public func distance(to: Character) -> Int {
+		return Int(to.unicodeScalars.first!.value - self.unicodeScalars.first!.value);
+	}
+	public func advanced(by n: Int) -> Character {
+		return Character(UnicodeScalar(Int(self.asciiValue!) + n)!)
+	}
+}

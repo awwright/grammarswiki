@@ -18,6 +18,16 @@ import Testing
 		#expect(!dfa.contains("abcd"))
 	}
 
+	@Test("Character range")
+	func test_from_ClosedRange() {
+		let dfa = DFA<String>(range: "a"..."f")
+		#expect(!dfa.contains(""))
+		#expect(dfa.contains("a"))
+		#expect(dfa.contains("f"))
+		#expect(!dfa.contains("g"))
+		#expect(!dfa.contains("aa"))
+	}
+
 	@Test("Import from NFA")
 	func testDFAFromNFA() {
 		let nfa = NFA<String>(["a", "abc", "abcde", "123456"])

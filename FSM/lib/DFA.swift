@@ -63,6 +63,33 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		)
 	}
 
+	init(range: Range<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
+		// Map each element in verbatim to a key in a new dictionary with value 1
+		let table: Dictionary<Symbol, StateNo> = range.reduce(into: [:]) { result, key in
+			result[key] = 1
+		}
+		let states = range.enumerated().map { [ $1: $0 + 1 ] } + [[:]]
+		self.init(
+			states: [ table, [:] ],
+			initial: 0,
+			finals: [ 1 ]
+		)
+	}
+
+	init(range: ClosedRange<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
+		// Map each element in verbatim to a key in a new dictionary with value 1
+		var table: Dictionary<Symbol, StateNo> = [:];
+		for char in range {
+			table[char] = 1;
+		}
+		let states = range.enumerated().map { [ $1: $0 + 1 ] } + [[:]]
+		self.init(
+			states: [ table, [:] ],
+			initial: 0,
+			finals: [ 1 ]
+		)
+	}
+
 	init(nfa: NFA<Element>){
 		let translation = NFA<Element>.parallel(fsms: [nfa], merge: { $0[0] });
 		self.states = translation.states.map { $0.mapValues { $0.first! } }
@@ -530,3 +557,6 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 	}
 
 }
+
+// Conditional protocol compliance
+extension DFA: Sendable where Symbol: Sendable {}

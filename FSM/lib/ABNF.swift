@@ -84,21 +84,19 @@ struct hex_val: Production {
 	}
 
 	static func match(_ input: String) throws -> (Self, String) {
-		let pattern = /^([0-9a-fA-F]+)(?:-([0-9a-fA-F]+))?/.ignoresCase();
-
+		typealias Pat = DFA<String>;
+		let ws = DFA<String>(range: "a"..."b");
 		// Try to match the pattern at the start of the input string
-		guard let match = try! pattern.firstMatch(in: input) else {
+		guard let match = ws.match(input) else {
 			// If no match is found, return nil for Rulename and the entire input string
 			throw ParseError(0)
 		}
-//		print("0:", match.0);
-//		print("1:", match.1);
 
 		// Calculate the remainder of the string after the match
-		let remainder = String(input.dropFirst(match.0.count))
+		let remainder = String(input.dropFirst(match))
 
 		// Extract the matched rulename
-		let node = Self.init(lower: Int(String(match.1))!, upper: Int(String(match.2!))!)
+		let node = Self.init(lower: Int(String(match))!, upper: Int(String(match))!)
 
 		// Return the Rulename struct with the name and the remaining part of the string
 		return (node, remainder)
@@ -125,23 +123,33 @@ struct prose_val: Production {
 	}
 
 	static func match(_ input: String) throws -> (Self, String) {
-		let pattern = /^<([ -=\x3f@\x5b-~]*)>/.ignoresCase();
+		let pattern = DFA<String>.concatenate([
 
-		// Try to match the pattern at the start of the input string
-		guard let match = try! pattern.firstMatch(in: input) else {
-			// If no match is found, return nil for Rulename and the entire input string
-			throw ParseError(0)
-		}
-//		print("0:", match.0);
-//		print("1:", match.1);
+		]);
 
-		// Calculate the remainder of the string after the match
-		let remainder = String(input.dropFirst(match.0.count))
-
-		// Extract the matched rulename
-		let node = Self.init(remark: String(match.1))
+		let node = prose_val(remark: String(input))
+		let remainder = ""
 
 		// Return the Rulename struct with the name and the remaining part of the string
 		return (node, remainder)
 	}
+}
+
+struct Terminals {
+	static let ALPHA  = DFA<String>(range: "A"..."Z").union(DFA<String>(range: "a"..."z")); // %x41-5A / %x61-7A   ; A-Z / a-z
+	static let BIT    = DFA<String>(["0", "1"]); // "0" / "1"
+	static let CHAR   = DFA<String>(range: "\u{1}"..."\u{7F}"); // %x01-7F
+	static let CR     = DFA<String>(["\u{D}"]); // %x0D
+	static let CRLF   = DFA<String>(["\r\n"]); // CR LF
+	static let CTL    = DFA<String>(range: "\u{0}"..."\u{1F}").union(["\u{7F}"]); // %x00-1F / %x7F
+	static let DIGIT  = DFA<String>(range: "0"..."9"); // %x30-39
+	static let DQUOTE = DFA<String>([""]); // %x22
+	static let HEXDIG = DFA<String>([""]); // DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+	static let HTAB   = DFA<String>(["\u{9}"]); // %x09
+	static let LF     = DFA<String>(["\u{A}"]); // %x0A
+//	static let LWSP   = DFA<String>([""]); // *(WSP / CRLF WSP)
+	static let OCTET  = DFA<String>(range: "\u{0}"..."\u{FF}"); // %x00-FF
+	static let SP     = DFA<String>(["\u{20}"]); // %x20
+	static let VCHAR  = DFA<String>(range: "\u{21}"..."\u{7E}"); // %x21-7E
+	static let WSP    = DFA<String>([" ", "\t"]); // SP / HTAB
 }
