@@ -361,26 +361,12 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 ////		return Self.init(states: self.states, initial: currentState, finals: self.finals);
 //	}
 
-	func makeIterator() -> ElementIterator {
-		return ElementIterator(self);
+	func makeIterator() -> Iterator {
+		return Iterator(self);
 	}
 
 	// TODO: Implement sort order
 	// TODO: Implement state/stack filtering
-
-	struct SequenceView: Sequence {
-		let fsm: DFA<Element>;
-		let filter: ((DFA<Element>.ID) -> Bool)?;
-
-		init(_ fsm: DFA<Element>, filter: ((DFA<Element>.ID) -> Bool)? = nil){
-			self.fsm = fsm;
-			self.filter = filter;
-		}
-
-		func makeIterator() -> ElementIterator {
-			return ElementIterator(self);
-		}
-	}
 
 	/// An iterator that can iterate over all of the elements of the FSM.
 	/// Indefinitely, if need be.
@@ -391,11 +377,6 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		var stack: Array<(state: StateNo, index: Int)>;
 		var visited: Set<StateNo>?;
 		var started = false;
-
-		init(_ options: DFA<Element>.SequenceView) {
-			self.init(options.fsm);
-//			self.filter = options.filter;
-		}
 
 		init(_ fsm: DFA<Element>) {
 			//			let fsm = options.fsm;
@@ -424,11 +405,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 			// Precomputed values
 			// Map the dictionary to an array of tuples, filter out transitions to dead states
 			self.states = fsm.states.map { $0.map { (symbol: $0.key, toState: $0.value) }.filter { live.contains($0.toState) }.sorted { $0.0 < $1.0 } };
-			//				for (i, row) in self.states.enumerated() {
-			//					print(i, row);
-			//				}
 
-			// Iterator state
 			self.stack = [];
 		}
 
@@ -440,12 +417,24 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 				return [];
 			}
 			let previous = stack.last;
-			if let previous {
-				let currentState = states[previous.state][previous.index].toState;
-				if states[currentState].count > 0 {
+			guard let previous else {
+				// There's nothing on the stack, so we're currently on the initial state,
+				// and need to begin iterating over its transitions.
+				if states[fsm.initial].count > 0 {
 					// Follow the first state from the current state, if there is one
-					stack.append((currentState, 0));
-				} else {
+					stack.append((fsm.initial, 0));
+					return stack;
+				}else{
+					// The unlikely case where the initial state is the only state
+					return nil;
+				}
+			}
+			let currentState = states[previous.state][previous.index].toState;
+			if states[currentState].count > 0 {
+				// Follow the first state from the current state, if there is one
+				stack.append((currentState, 0));
+			} else {
+				repeat {
 					// Prepare to increment the index by one, carrying down if necessary
 					// Remove final elements that are on the last index
 					while(stack.last!.index >= states[stack.last!.state].count - 1){
@@ -454,116 +443,36 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 							return nil;
 						}
 					}
-					// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
 					stack[stack.count-1].index += 1;
-				}
-			}else{
-				if states[fsm.initial].count > 0 {
-					// Follow the first state from the current state, if there is one
-					stack.append((fsm.initial, 0));
-				}else{
-					return nil;
-				}
+					// TODO: test if this state should be skipped, repeat this loop if so
+				} while(stack.count > 0 && false);
 			}
 			return stack;
 		}
 	}
 
-	struct ElementIterator: IteratorProtocol {
+	struct Iterator: IteratorProtocol {
 		let fsm: DFA<Element>;
-		let states: Array<Array<(symbol: Element.Element, toState: StateNo)>>
-
-		var stack: Array<(state: StateNo, index: Int)>;
-		var visited: Set<StateNo>?;
-		var started = false;
-
-		init(_ options: DFA<Element>.SequenceView) {
-			self.init(options.fsm);
-//			self.filter = options.filter;
-		}
+		var iterator: StateIterator;
 
 		init(_ fsm: DFA<Element>) {
 			// let fsm = options.fsm;
 			self.fsm = fsm;
-
-			// First we want to figure out the "live" states, the states from where it's still possible to reach a final state
-			var reverse = Array<Set<StateNo>>(repeating: [], count: fsm.states.count);
-			for(i, state) in fsm.states.enumerated() {
-				for j in state.values {
-					reverse[j].insert(i);
-				}
-			}
-
-			var live = fsm.finals;
-			var nextFinals = fsm.finals;
-			repeat {
-				// Find all of the states that reach a final
-				nextFinals = Set(nextFinals.flatMap{ reverse[$0] }).subtracting(live);
-				// If there's no new states, then we're done
-				if(nextFinals.count == 0){
-					break;
-				}
-				live.formUnion(nextFinals);
-			} while true;
-
-			// Precomputed values
-			// Map the dictionary to an array of tuples, filter out transitions to dead states
-			self.states = fsm.states.map { $0.map { (symbol: $0.key, toState: $0.value) }.filter { live.contains($0.toState) }.sorted { $0.0 < $1.0 } };
-			//				for (i, row) in self.states.enumerated() {
-			//					print(i, row);
-			//				}
-
-			// Iterator state
-			self.stack = [];
+			self.iterator = StateIterator(fsm);
 		}
 
 		mutating func next() -> Element? {
 			repeat {
-				if let stack = self.nextState() {
-					let state = stack.isEmpty ? fsm.initial : states[stack.last!.state][stack.last!.index].toState;
+				// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
+				if let stack = iterator.next() {
+					let state = stack.isEmpty ? fsm.initial : iterator.states[stack.last!.state][stack.last!.index].toState;
 					if fsm.finals.contains(state) {
-						return stack.reduce(Element.empty, { $0.appendElement(states[$1.state][$1.index].symbol) });
+						return stack.reduce(Element.empty, { $0.appendElement(iterator.states[$1.state][$1.index].symbol) });
 					}
 				} else {
 					return nil;
 				}
 			} while true;
-		}
-
-		// This needs a `filter` function to determine if we descend into the current state or not.
-		// A `false` might be used to prevent loops, or to zskip over entire trees of uninteresting values.
-		mutating private func nextState() -> Array<(state: Int, index: Int)>? {
-			if started == false {
-				started = true;
-				return [];
-			}
-			let previous = stack.last;
-			if let previous {
-				let currentState = states[previous.state][previous.index].toState;
-				if states[currentState].count > 0 {
-					// Follow the first state from the current state, if there is one
-					stack.append((currentState, 0));
-				} else {
-					// Prepare to increment the index by one, carrying down if necessary
-					// Remove final elements that are on the last index
-					while(stack.last!.index >= states[stack.last!.state].count - 1){
-						stack.removeLast();
-						if(stack.count == 0){
-							return nil;
-						}
-					}
-					// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
-					stack[stack.count-1].index += 1;
-				}
-			}else{
-				if states[fsm.initial].count > 0 {
-					// Follow the first state from the current state, if there is one
-					stack.append((fsm.initial, 0));
-				}else{
-					return nil;
-				}
-			}
-			return stack;
 		}
 	}
 
