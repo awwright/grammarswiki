@@ -15,127 +15,115 @@ final class ParseError : Error {
 //	return instance;
 //}
 
-protocol Production: LosslessStringConvertible, Equatable {
-	static func match(_ string: String) throws -> (Self, String);
+protocol Production: Equatable { //LosslessStringConvertible,  {
+	typealias Element = Array<UInt8>;
+//	associatedtype Element: Collection;
+//	static func match(_: any Collection<Element.Element>) throws -> (Self, Array<Element.Element>.SubSequence);
+	static func match(_: any Collection<Element.Element>) -> (Self, Int)?;
 }
 
-//struct Rulelist: Production {
-//	var rules: [Rule]
-//
-//	init(rules: [Rule] = []) {
-//		self.rules = rules
-//	}
-//
-//	func toString() -> String {
-//		return rules.map { $0.toString() }.joined()
-//	}
-//
-//	static func match(_ string: String.SubSequence) throws -> (Rulelist, String.SubSequence) {
-//	}
-//}
-//
-//class Rule : Production {
-//	let name: Rulename;
-//	let definedAs: String;
-//	let alternatives: [Alternative];
-//
-//	init(name: Rulename, definedAs: String, alternatives: [Alternative]) {
-//		self.name = name
-//		self.definedAs = definedAs
-//		self.alternatives = alternatives
-//	}
-//
-//	func toString() -> String {
-//
-//	}
-//
-//	static func match(_ string: String, _ offset: Int) throws -> (Self, Int) {
-//		<#code#>
-//	}
-//}
-//
-//class Rulename : Production {
-//	let name: String;
-//
-//	func toString() -> String {
-//
-//	}
-//	static func match(_ string: String, _ offset: Int) throws -> (Self, Int) {
-//		<#code#>
-//	}
-//}
+/// Represents an ABNF rulelist, which is a list of rules.
+struct Rulelist: Production {
+	var rules: [Rule]
+
+	init(rules: [Rule] = []) {
+		self.rules = rules
+	}
+
+	func toString() -> String {
+		return rules.map { $0.toString() }.joined()
+	}
+
+	static func match(_: any Collection<Element.Element>) -> (Rulelist, Int)? {
+		return (Rulelist(rules: []), 0);
+	}
+}
+
+struct Rule: Production {
+	let name: String;
+	let definedAs: String;
+	let alternatives: [String];
+
+	init(name: String, definedAs: String, alternatives: [String]) {
+		self.name = name
+		self.definedAs = definedAs
+		self.alternatives = alternatives
+	}
+
+	func toString() -> String {
+		return ""
+	}
+
+	static func match(_ string: any Collection<UInt8>) -> (Rule, Int)? {
+		return (Rule(name: "", definedAs: "", alternatives: [""]), 2);
+	}
+}
+
+struct Rulename : Production {
+	let name: String;
+
+	func toString() -> String {
+		return ""
+	}
+	static func match(_ input: any Collection<UInt8>) -> (Rulename, Int)? {
+		return (Rulename(name: ""), 2);
+	}
+}
 
 struct hex_val: Production {
 	let lower: Int;
 	let upper: Int?;
-
-	init(lower: Int, upper: Int) {
-		self.lower = lower;
-		self.upper = upper;
-	}
-
-	init(_ description: String) {
-		self = try! Self.match(description).0;
-	}
 
 	var description: String {
 		// return lower as a hex string
 		String(lower, radix: 16) + (upper != nil ? "-" + String(upper!, radix: 16) : "");
 	}
 
-	static func match(_ input: String) throws -> (Self, String) {
+	static func match(_ input: any Collection<Element.Element>) -> (hex_val, Int)? {
 		typealias Pat = DFA<String>;
-		let ws = DFA<String>(range: "a"..."b");
+		let ws = DFA<Array<UInt8>>(range: 0x20...0x20);
 		// Try to match the pattern at the start of the input string
 		guard let match = ws.match(input) else {
 			// If no match is found, return nil for Rulename and the entire input string
-			throw ParseError(0)
+//			throw ParseError(0)
+			return nil;
 		}
-
-		// Calculate the remainder of the string after the match
-		let remainder = String(input.dropFirst(match))
-
 		// Extract the matched rulename
 		let node = Self.init(lower: Int(String(match))!, upper: Int(String(match))!)
 
 		// Return the Rulename struct with the name and the remaining part of the string
-		return (node, remainder)
+		return (node, 0)
 	}
 }
 
 struct prose_val: Production {
 	let remark: String;
-	let length: Int;
 
 	init(remark: String) {
 		self.remark = remark;
-		self.length = remark.count;
-	}
-
-	init(_ description: String) {
-		let match = try! Self.match(description);
-		self.remark = String(match.0.remark);
-		self.length = description.count;
+		//self.length = remark.count;
 	}
 
 	var description: String {
 		"<\(remark)>"
 	}
 
-	static func match(_ input: String) throws -> (Self, String) {
-		let pattern = DFA<String>.concatenate([
-			DFA(["<"]),
-			DFA(range: "\u{20}"..."\u{7E}").subtracting(DFA([">"])),
-			DFA([">"]),
+	static func match(_ input: any Collection<Element.Element>) -> (prose_val, Int)? {
+		let pattern = DFA<Array<UInt8>>.concatenate([
+			DFA([[0x3C]]),
+			DFA(range: 0x20...0x7E).subtracting(DFA([[0x3E]])).star(),
+			DFA([[0x3E]]),
 		]);
+		print(pattern.toViz());
 		guard let match = pattern.match(input) else {
-			throw ParseError(0);
+//			throw ParseError(0);
+			return nil
 		}
 
 		let node = prose_val(remark: String(match))
 
 		// Return the Rulename struct with the name and the remaining part of the string
-		return (node, String(input.dropFirst(match)))
+		return (node, match)
 	}
 }
 

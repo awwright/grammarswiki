@@ -224,12 +224,14 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 	}
 
 	/// Tries to match as many characters from input as possible, returning the last final state
-	func match(_ input: Element) -> Int? {
+	func match(_ input: any Collection<Element.Element>) -> Int? {
+		var index = 0;
 		var length: Int? = nil;
 		var currentState = self.initial;
 
 		// If we reach the end or nil, then there can be no more final states.
-		for (index, symbol) in input.enumerated() {
+		for symbol in input {
+			index += 1;
 			guard currentState < self.states.count,
 				let nextState = self.states[currentState][symbol]
 			else {

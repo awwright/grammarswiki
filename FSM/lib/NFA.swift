@@ -1,5 +1,6 @@
 
 // TODO: LosslessStringConvertible
+// TODO: CustomDebugStringConvertible
 
 protocol NFAProtocol {
 	associatedtype Element;
