@@ -29,6 +29,19 @@ import Testing
 		#expect(!dfa.contains("abcd"))
 	}
 
+	@Test("Greedy match")
+	func test_match() {
+		let dfa = DFA<String>(["a", "aa", "bb"])
+		#expect(dfa.match("xxx") == nil)
+		#expect(dfa.match("") == nil)
+		#expect(dfa.match("a") == 0)
+		#expect(dfa.match("aa") == 1)
+		#expect(dfa.match("aaa") == 1)
+		#expect(dfa.match("b") == nil)
+		#expect(dfa.match("bb") == 1)
+		#expect(dfa.match("bbb") == 1)
+	}
+
 	@Test("Union of DFAs")
 	func testDFAUnion() {
 		let dfa1 = DFA<String>(verbatim: "a")

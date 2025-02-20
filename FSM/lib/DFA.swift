@@ -169,6 +169,28 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return self.finals.contains(currentState)
 	}
 
+	/// Tries to match as many characters from input as possible, returning the last final state
+	func match(_ input: Element) -> Int? {
+		var length: Int? = nil;
+		var currentState = self.initial;
+
+		// If we reach the end or nil, then there can be no more final states.
+		for (index, symbol) in input.enumerated() {
+			guard currentState < self.states.count,
+				let nextState = self.states[currentState][symbol]
+			else {
+				return length;
+			}
+			if(self.finals.contains(nextState)){
+				length = index
+			}
+			currentState = nextState
+		}
+
+		return length
+
+	}
+
 	func union(_ other: __owned DFA<Element>) -> DFA<Element> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] });
 	}
