@@ -273,6 +273,38 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return Self.concatenate([self, other]);
 	}
 
+	func optional() -> DFA<Element> {
+		return Self(
+			states: self.states,
+			initial: self.initial,
+			finals: self.finals.union([self.initial])
+		);
+	}
+
+	func plus() -> DFA<Element> {
+		let nfa = NFA<Element>(
+			states: self.states.map { $0.mapValues { Set([$0]) } },
+			// Add an epsilon transition from the final states to the initial state
+			epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? [self.initial] : [] },
+			initial: self.initial,
+			finals: self.finals
+		);
+		return DFA(nfa: nfa);
+	}
+
+	func star() -> DFA<Element> {
+		return self.plus().optional();
+		// Should be equal to:
+		//let nfa = NFA<Element>(
+		//	states: self.states.map { $0.mapValues { Set([$0]) } },
+		//	// Add an epsilon transition from the final states to the initial state
+		//	epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? [self.initial] : [] },
+		//	initial: self.initial,
+		//	finals: self.finals.union([self.initial])
+		//);
+		//return DFA(nfa: nfa);
+	}
+
 	/// Now we're getting into alchemy land
 	/// This function takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
 //	func nextStates(state: StateNo, input: DFA<Element>) -> Set<StateNo> {

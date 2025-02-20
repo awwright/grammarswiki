@@ -124,32 +124,37 @@ struct prose_val: Production {
 
 	static func match(_ input: String) throws -> (Self, String) {
 		let pattern = DFA<String>.concatenate([
-
+			DFA(["<"]),
+			DFA(range: "\u{20}"..."\u{7E}").subtracting(DFA([">"])),
+			DFA([">"]),
 		]);
+		guard let match = pattern.match(input) else {
+			throw ParseError(0);
+		}
 
-		let node = prose_val(remark: String(input))
-		let remainder = ""
+		let node = prose_val(remark: String(match))
 
 		// Return the Rulename struct with the name and the remaining part of the string
-		return (node, remainder)
+		return (node, String(input.dropFirst(match)))
 	}
 }
 
 struct Terminals {
-	static let ALPHA  = DFA<String>(range: "A"..."Z").union(DFA<String>(range: "a"..."z")); // %x41-5A / %x61-7A   ; A-Z / a-z
-	static let BIT    = DFA<String>(["0", "1"]); // "0" / "1"
-	static let CHAR   = DFA<String>(range: "\u{1}"..."\u{7F}"); // %x01-7F
-	static let CR     = DFA<String>(["\u{D}"]); // %x0D
-	static let CRLF   = DFA<String>(["\r\n"]); // CR LF
-	static let CTL    = DFA<String>(range: "\u{0}"..."\u{1F}").union(["\u{7F}"]); // %x00-1F / %x7F
-	static let DIGIT  = DFA<String>(range: "0"..."9"); // %x30-39
-	static let DQUOTE = DFA<String>([""]); // %x22
-	static let HEXDIG = DFA<String>([""]); // DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
-	static let HTAB   = DFA<String>(["\u{9}"]); // %x09
-	static let LF     = DFA<String>(["\u{A}"]); // %x0A
-//	static let LWSP   = DFA<String>([""]); // *(WSP / CRLF WSP)
-	static let OCTET  = DFA<String>(range: "\u{0}"..."\u{FF}"); // %x00-FF
-	static let SP     = DFA<String>(["\u{20}"]); // %x20
-	static let VCHAR  = DFA<String>(range: "\u{21}"..."\u{7E}"); // %x21-7E
-	static let WSP    = DFA<String>([" ", "\t"]); // SP / HTAB
+	typealias Rule = DFA<Array<UInt8>>;
+	static let ALPHA : Rule = Rule(range: 0x41...0x5A).union(Rule(range: 0x61...0x7A)); // %x41-5A / %x61-7A   ; A-Z / a-z
+	static let BIT   : Rule = [[0x30], [0x31]]; // "0" / "1"
+	static let CHAR  : Rule = Rule(range: 0x1...0x7F); // %x01-7F
+	static let CR    : Rule = [[0xD]]; // %x0D
+	static let CRLF  : Rule = [[0xD], [0xA]]; // CR LF
+	static let CTL   : Rule = Rule(range: 0...0x1F).union([[0x7F]]); // %x00-1F / %x7F
+	static let DIGIT : Rule = Rule(range: 0x30...0x39); // %x30-39
+	static let DQUOTE: Rule = [[0x22]]; // %x22
+	static let HEXDIG: Rule = [[0x30], [0x31], [0x32], [0x33], [0x34], [0x35], [0x36], [0x37], [0x38], [0x39], [0x41], [0x42], [0x43], [0x44], [0x45], [0x46]]; // DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+	static let HTAB  : Rule = [[0x9]]; // %x09
+	static let LF    : Rule = [[0xA]]; // %x0A
+	static let LWSP  : Rule = WSP.union(CRLF.concatenate(WSP)).star(); // *(WSP / CRLF WSP)
+	static let OCTET : Rule = Rule(range: 0...0xFF); // %x00-FF
+	static let SP    : Rule = [[0x20]]; // %x20
+	static let VCHAR : Rule = Rule(range: 0x21...0x7E); // %x21-7E
+	static let WSP   : Rule = [[0x20, 0x9]]; // SP / HTAB
 }
