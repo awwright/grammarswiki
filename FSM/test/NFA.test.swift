@@ -38,6 +38,40 @@ import Testing
 		#expect(!nfa.contains("ab"))
 	}
 
+	@Test("Follow epsilon function")
+	func test_followε() {
+		let nfa = NFA<String>(
+			states: [
+				[:],
+				[:],
+				[ "x": [5] ],
+				[ "y": [5] ],
+				[ "z": [5] ],
+				[:],
+				[ "0": [0]], // Unreachable state just because
+			],
+			epsilon: [
+				[2],
+				[3],
+				[],
+				[4],
+				[],
+				[],
+				[],
+			],
+			initials: [0, 1],
+			finals: [3, 5, 6]
+		);
+		#expect(nfa.followε(states: [0]) == [0, 2]);
+		#expect(nfa.followε(states: [1]) == [1, 3, 4]);
+		#expect(nfa.followε(states: [2]) == [2]);
+		#expect(nfa.followε(states: [3]) == [3, 4]);
+		#expect(nfa.followε(states: [4]) == [4]);
+		#expect(nfa.followε(states: [5]) == [5]);
+		#expect(nfa.followε(states: [6]) == [6]);
+		#expect(nfa.followε(states: [0, 1]) == [0, 1, 2, 3, 4]);
+	}
+
 	@Test("Next States Calculation") func Initialization5() {
 		let nfa = NFA<String>(states: [["a": [1]], ["b": [0]]], epsilon: [[], []], initial: 0, finals: [1])
 		#expect(nfa.nextStates(states: [0], symbol: "a") == [1])

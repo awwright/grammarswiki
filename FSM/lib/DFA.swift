@@ -92,6 +92,8 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 
 	init(nfa: NFA<Element>){
 		let translation = NFA<Element>.parallel(fsms: [nfa], merge: { $0[0] });
+		// Sanity check
+		translation.states.forEach { $0.forEach { assert($0.value.count == 1); } }
 		self.states = translation.states.map { $0.mapValues { $0.first! } }
 		self.initial = translation.initials.first!;
 		self.finals = translation.finals;

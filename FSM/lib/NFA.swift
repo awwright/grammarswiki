@@ -70,22 +70,9 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 			assert(state < epsilon.count);
 		}
 
-		// Include all the epsilon transitions on the initial set
-		var expanded = initials;
-		var expandedList = Array(initials);
-		// Iterate over every state in states
-		for state in expandedList {
-			for next in epsilon[state] {
-				if(!expanded.contains(next)){
-					expanded.insert(next);
-					expandedList.append(next);
-				}
-			}
-		}
-
 		self.states = states;
 		self.epsilon = epsilon;
-		self.initials = expanded;
+		self.initials = initials;
 		self.finals = finals;
 	}
 
@@ -172,7 +159,7 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 
 	func nextStates(states: States, symbol: Symbol) -> States {
 		// Map each element in `states` to the next symbol in states[state][symbol], if it exists
-		return Set(states.flatMap { self.states[$0][symbol] ?? [] })
+		return Set(self.followε(states: states).flatMap { self.states[$0][symbol] ?? [] })
 	}
 
 	func nextStates(states: States, string: Element) -> States {
@@ -185,11 +172,13 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 
 	/// Get a list of states after following epsilon transitions,
 	/// i.e. get a list of all the states equivalent to any of the given
-	func all(states: States) -> States{
+	func followε(states: States) -> States {
 		var expanded = states;
 		var list = Array(states);
 		// Iterate over every state in states
-		for state in states {
+		var i = 0;
+		while i < list.count {
+			let state = list[i];
 			let transitions = self.epsilon[state];
 			for next in transitions {
 				if(!expanded.contains(next)){
@@ -197,6 +186,7 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 					list.append(next);
 				}
 			}
+			i += 1;
 		}
 		return expanded;
 	}
