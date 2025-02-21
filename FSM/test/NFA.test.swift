@@ -123,9 +123,7 @@ import Testing
 		#expect(nfa.contains("abc"))
 		#expect(!nfa.contains("def"))
 
-		print(nfa.toViz());
 		nfa.formSymmetricDifference(NFA(verbatim: "def"))
-		print(nfa.toViz());
 		#expect(nfa.contains("abc"))
 		#expect(nfa.contains("def"))
 
@@ -197,9 +195,6 @@ import Testing
 		let language = NFA<String>(verbatim: "abc")
 		let mapping: [(String, String)] = [("a", "x"), ("b", "b"), ("c", "c")]
 		let translation = language.homomorphism(mapping: mapping)
-		print(language.toViz())
-		print(translation.toViz())
-
 		#expect(translation.contains("xbc"))
 		#expect(!translation.contains("abc"))
 		#expect(!translation.contains("xb"))

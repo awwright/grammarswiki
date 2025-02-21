@@ -114,7 +114,6 @@ struct prose_val: Production {
 			DFA(range: 0x20...0x7E).subtracting(DFA([[0x3E]])).star(),
 			DFA([[0x3E]]),
 		]);
-		print(pattern.toViz());
 		guard let match = pattern.match(input) else {
 //			throw ParseError(0);
 			return nil

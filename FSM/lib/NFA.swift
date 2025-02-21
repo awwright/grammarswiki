@@ -129,11 +129,14 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		viz += "digraph G {\n";
 		viz += "\t_initial [shape=point];\n";
 		for i in initials {
-			viz += "\t_initial -> \(i);\n";
+			viz += "\t_initial -> \(i) [style=\"dashed\"];\n";
 		}
 		for (i, transitions) in states.enumerated() {
 			let shape = finals.contains(i) ? "doublecircle" : "circle";
 			viz += "\t\(i) [label=\"\(i)\", shape=\"\(shape)\"];\n";
+			for target in epsilon[i] {
+				viz += "\t\(i) -> \(target) [style=\"dashed\"];\n";
+			}
 			for (symbol, states) in transitions {
 //				viz += "\t\(symbol) \(states)\n";
 				for target in states {
@@ -159,7 +162,7 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 
 	func nextStates(states: States, symbol: Symbol) -> States {
 		// Map each element in `states` to the next symbol in states[state][symbol], if it exists
-		return Set(self.followε(states: states).flatMap { self.states[$0][symbol] ?? [] })
+		return self.followε(states: Set(self.followε(states: states).flatMap { self.states[$0][symbol] ?? [] }))
 	}
 
 	func nextStates(states: States, string: Element) -> States {
@@ -209,7 +212,7 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		}
 
 		// The initial state of the new FSM maps to the initial state of the original FSMs
-		let initialStates = fsms.map { $0.initials }
+		let initialStates = fsms.map { $0.followε(states: $0.initials) }
 		let newInitialState = forwardStateId(inStates: initialStates);
 		assert(newInitialState == 0);
 		assert(backward.count == 1);
@@ -297,19 +300,21 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 			let offset = previous.states.count;
 			// Remap all of the state IDs
 			let newStates = other.states.map { $0.mapValues { Set($0.map { $0  + offset }) } }
+			let newEpsilon = other.epsilon.map { Set($0.map { $0  + offset }) };
+			let newInitials = Set(other.initials.map { $0  + offset });
+			let newFinals = Set(other.finals.map { $0  + offset });
+
 			// Remap all of the state IDs, adding an epsilon transition from the previous final states to the current initial states
-			let newEpsilon = other.epsilon.enumerated().map {
+			let combinedEpsilon = previous.epsilon.enumerated().map {
 				stateNo, set in
-				let remapped = Set(set.map { $0  + offset });
-				return previous.finals.contains(stateNo) ? remapped.union(other.initials) : remapped;
-			}
-			let newInitials = previous.initials
+				return previous.finals.contains(stateNo) ? set.union(newInitials) : set;
+			};
 			return Self(
 				states: previous.states + newStates,
-				epsilon: previous.epsilon + newEpsilon,
+				epsilon: combinedEpsilon + newEpsilon,
 				initials: previous.initials,
-				finals: Set(other.finals.map { $0  + offset })
-			)
+				finals: newFinals
+			);
 		});
 	}
 

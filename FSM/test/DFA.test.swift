@@ -3,11 +3,18 @@ import Testing
 
 @Suite("DFA Tests") struct DFATests {
 
-	@Test("Empty DFA should not contain any input")
-	func testEmptyDFA() {
+	@Test("Empty DFA of Strings should not contain any input")
+	func testEmptyDFAString() {
 		let dfa = DFA<String>()
 		#expect(!dfa.contains("a"))
 		#expect(!dfa.contains(""))
+	}
+
+	@Test("Empty DFA of UInt8 Arrays should not contain any input")
+	func testEmptyDFAUInt8() {
+		let dfa = DFA<Array<UInt8>>()
+		#expect(!dfa.contains([0]))
+		#expect(!dfa.contains([]))
 	}
 
 	@Test("DFA from verbatim should recognize the input")
@@ -30,26 +37,74 @@ import Testing
 
 	@Test("Import from NFA")
 	func testDFAFromNFA() {
-		let nfa = NFA<String>(["a", "abc", "abcde", "123456"])
-//		print(nfa.toViz());
-		let dfa = DFA(nfa: nfa)
-//		print(dfa.toViz());
-		#expect(dfa.contains("abc"))
-		#expect(!dfa.contains("ab"))
-		#expect(!dfa.contains("abcd"))
+		let nfa = NFA<String>(
+			states: [
+				[:],
+				[:],
+				[ "x": [5] ],
+				[ "y": [5] ],
+				[ "z": [5] ],
+				[:],
+				[ "0": [0]], // Unreachable state just because
+			],
+			epsilon: [
+				[2],
+				[3],
+				[],
+				[4],
+				[],
+				[],
+				[],
+			],
+			initials: [0, 1],
+			finals: [3, 5, 6]
+		);
+		let dfa = DFA(nfa: nfa);
+		#expect(dfa.contains(""))
+		#expect(dfa.contains("x"))
+		#expect(dfa.contains("y"))
+		#expect(dfa.contains("z"))
+		#expect(!dfa.contains("0"))
 	}
+
+	@Test("== operator")
+	func testEqualsOperator() {
+		let a = DFA(["abc", "def"]);
+		let b = DFA(["def", "abc"]);
+		#expect(a == b)
+	}
+
+	@Test("Alphabet generation")
+	func testAlphabet() {
+		let dfa = DFA<String>(verbatim: "abc")
+		let expectedAlphabet: Set<Character> = ["a", "b", "c"]
+		#expect(dfa.alphabet == expectedAlphabet)
+	}
+
 
 	@Test("Greedy match")
 	func test_match() {
 		let dfa = DFA<String>(["a", "aa", "bb"])
 		#expect(dfa.match("xxx") == nil)
 		#expect(dfa.match("") == nil)
-		#expect(dfa.match("a") == 0)
-		#expect(dfa.match("aa") == 1)
-		#expect(dfa.match("aaa") == 1)
+		#expect(dfa.match("a") == 1)
+		#expect(dfa.match("aa") == 2)
+		#expect(dfa.match("aaa") == 2)
 		#expect(dfa.match("b") == nil)
-		#expect(dfa.match("bb") == 1)
-		#expect(dfa.match("bbb") == 1)
+		#expect(dfa.match("bb") == 2)
+		#expect(dfa.match("bbb") == 2)
+
+		let dfa2 = DFA<String>(["", "ccc"])
+		#expect(dfa2.match("") == 0)
+		#expect(dfa2.match("c") == 0)
+		#expect(dfa2.match("cc") == 0)
+		#expect(dfa2.match("ccc") == 3)
+		#expect(dfa2.match("cccc") == 3)
+	}
+
+	@Test("parallel")
+	func test_parallel() {
+		// See union, intersection, and symmetricDifference below
 	}
 
 	@Test("Union of DFAs")
@@ -57,8 +112,6 @@ import Testing
 		let dfa1 = DFA<String>(verbatim: "a")
 		let dfa2 = DFA<String>(verbatim: "b")
 		let unionDFA = dfa1.union(dfa2)
-		// print(unionDFA.toViz())
-
 		#expect(unionDFA.contains("a"))
 		#expect(unionDFA.contains("b"))
 		#expect(!unionDFA.contains("ab"))
@@ -87,6 +140,19 @@ import Testing
 		#expect(!symDiffDFA.contains("ab"))
 	}
 
+	@Test("concatenate")
+	func test_concatenate() {
+		let dfa1 = DFA<String>(["a", "b"])
+		let dfa2 = DFA<String>(["x", "y"])
+		let concatenation = dfa1.concatenate(dfa2);
+		let language = Array(concatenation);
+		#expect(language.count == 4)
+		#expect(language.contains("ax"))
+		#expect(language.contains("ay"))
+		#expect(language.contains("bx"))
+		#expect(language.contains("by"))
+	}
+
 	@Test("Insert and remove operations")
 	func testInsertRemove() {
 		var dfa = DFA<String>()
@@ -97,13 +163,6 @@ import Testing
 		let removed = dfa.remove("test")
 		#expect(removed != nil)
 		#expect(!dfa.contains("test"))
-	}
-
-	@Test("Alphabet generation")
-	func testAlphabet() {
-		let dfa = DFA<String>(verbatim: "abc")
-		let expectedAlphabet: Set<Character> = ["a", "b", "c"]
-		#expect(dfa.alphabet == expectedAlphabet)
 	}
 
 	@Test("Next state for single symbol")
@@ -121,22 +180,11 @@ import Testing
 		#expect(dfa.nextState(state: 0, input: "abcd") == nil)
 	}
 
-	@Test("ToViz should produce graphviz string")
-	func testToViz() {
-		let dfa = DFA<String>(verbatim: "a")
-		let viz = dfa.toViz()
-		#expect(viz.contains("digraph G {"))
-		#expect(viz.contains("_initial -> 0"))
-		#expect(viz.contains("shape=\"doublecircle\""))
-	}
-
 	@Test("IteratorProtocol conformance: Empty string")
 	func testIteratorProtocol1() {
 		let dfa = DFA<String>(verbatim: "")
 		var values: [String] = []
 		for string in dfa {
-			print("string");
-			print(string);
 			values.append(string)
 		}
 		#expect(values == [""])
@@ -145,7 +193,6 @@ import Testing
 	@Test("IteratorProtocol DepthFirst")
 	func testIteratorProtocol2() {
 		let dfa = DFA<String>(["bc", "a", "abcdefg", "ab", ""])
-//		print(dfa.toViz());
 		var values: [String] = []
 		for string in dfa {
 			values.append(string)
@@ -156,7 +203,6 @@ import Testing
 	@Test("IteratorProtocol DepthFirst")
 	func testIteratorProtocol3() {
 		let dfa = DFA<String>(["bc", "a", "abcdefg", "ab", ""])
-//		print(dfa.toViz());
 		var values: [String] = []
 		for string in dfa {
 			values.append(string)

@@ -99,17 +99,17 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		self.finals = translation.finals;
 	}
 
-//	static func == (lhs: Self, rhs: Self) -> Bool {
-//		if(
-//			lhs.states == rhs.states &&
-//			lhs.initial == rhs.initial &&
-//			lhs.finals == rhs.finals
-//		){
-//			return true;
-//		}
-//		// TODO also determine if the languages are equivalent
-//		return false;
-//	}
+	static func == (lhs: Self, rhs: Self) -> Bool {
+		if(
+			lhs.states == rhs.states &&
+			lhs.initial == rhs.initial &&
+			lhs.finals == rhs.finals
+		){
+			return true;
+		}
+		let difference = lhs.symmetricDifference(rhs);
+		return difference.finals.isEmpty;
+	}
 
     var alphabet: Set<Symbol> {
         Set(self.states.flatMap(\.keys))
@@ -149,9 +149,34 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return currentState;
 	}
 
-	// TODO: IMPLEMENT
-	var cardinality: Int {
-		return 0;
+	/// Tries to match as many characters from input as possible, returning the last final state
+	func match(_ input: any Collection<Element.Element>) -> Int? {
+		var index = 0;
+		var length: Int? = nil;
+		var currentState = self.initial;
+
+		// Test the initial condition
+		if(self.finals.contains(currentState)){
+			length = index
+		}
+
+		// If we reach the end or nil, then there can be no more final states.
+		for symbol in input {
+			index += 1;
+			guard currentState < self.states.count,
+					let nextState = self.states[currentState][symbol]
+			else {
+				return length;
+			}
+			currentState = nextState;
+			if(self.finals.contains(currentState)){
+				length = index
+			}
+			currentState = nextState
+		}
+
+		return length
+
 	}
 
 	/// Derive a new FSM by crawling all the different possible combinations of states that can be reached from every possible input.
@@ -225,30 +250,6 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return self.finals.contains(currentState)
 	}
 
-	/// Tries to match as many characters from input as possible, returning the last final state
-	func match(_ input: any Collection<Element.Element>) -> Int? {
-		var index = 0;
-		var length: Int? = nil;
-		var currentState = self.initial;
-
-		// If we reach the end or nil, then there can be no more final states.
-		for symbol in input {
-			index += 1;
-			guard currentState < self.states.count,
-				let nextState = self.states[currentState][symbol]
-			else {
-				return length;
-			}
-			if(self.finals.contains(nextState)){
-				length = index
-			}
-			currentState = nextState
-		}
-
-		return length
-
-	}
-
     // SetAlgebra implementation
 	func union(_ other: __owned DFA<Element>) -> DFA<Element> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] });
@@ -269,7 +270,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
-		let nfa = NFA<Element>.concatenate(languages.map { NFA<Element>(dfa: $0) })
+		let nfa = NFA<Element>.concatenate(languages.map { NFA<Element>(dfa: $0) });
 		return DFA(nfa: nfa);
 	}
 
@@ -277,6 +278,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return Self.concatenate([self, other]);
 	}
 
+	/// Adds the empty string to the set of accepted elements
 	func optional() -> DFA<Element> {
 		return Self(
 			states: self.states,
@@ -385,6 +387,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 			self.fsm = fsm;
 
 			// First we want to figure out the "live" states, the states from where it's still possible to reach a final state
+			// Usually all states in a FSM struct are live, unless the user did something funny in its construction.
 			var reverse = Array<Set<StateNo>>(repeating: [], count: fsm.states.count);
 			for(i, state) in fsm.states.enumerated() {
 				for j in state.values {
