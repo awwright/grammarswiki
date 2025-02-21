@@ -1,7 +1,7 @@
 import Testing
 @testable import FSM
 
-@Suite("DFA Tests") struct NFATests {
+@Suite("NFA Tests") struct NFATests {
 	@Test("Initialization") func Initialization() {
 		let nfa = NFA<String>()
 		#expect(nfa.states.count == 1)
