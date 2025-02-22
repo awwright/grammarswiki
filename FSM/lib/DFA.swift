@@ -1,6 +1,8 @@
 
 /// An optimized form of NFA where each state has exactly one "next" state.
 /// States are represented by an Int, or nil, the oblivion state.
+infix operator ++: AdditionPrecedence;
+
 struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, Sequence, NFAProtocol where Element.Element: Hashable & Comparable {
 	typealias Symbol = Element.Element where Element.Element: Hashable;
 	typealias StateNo = Int;
@@ -150,33 +152,34 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 	}
 
 	/// Tries to match as many characters from input as possible, returning the last final state
-	func match(_ input: any Collection<Element.Element>) -> Int? {
-		var index = 0;
-		var length: Int? = nil;
+	func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Element.Element> {
 		var currentState = self.initial;
+		var finalIndex: T.Index? = nil;
 
 		// Test the initial condition
 		if(self.finals.contains(currentState)){
-			length = index
+			finalIndex = input.startIndex;
 		}
 
 		// If we reach the end or nil, then there can be no more final states.
-		for symbol in input {
-			index += 1;
-			guard currentState < self.states.count,
-					let nextState = self.states[currentState][symbol]
-			else {
-				return length;
+		for currentIndex in input.indices {
+			let symbol = input[currentIndex];
+			if let nextState = self.states[currentState][symbol] {
+				currentState = nextState;
+			} else {
+				break;
 			}
-			currentState = nextState;
+			assert(currentState < self.states.count);
 			if(self.finals.contains(currentState)){
-				length = index
+				finalIndex = input.index(after: currentIndex)
 			}
-			currentState = nextState
 		}
 
-		return length
+		guard let finalIndex else { return nil; }
+		precondition(finalIndex >= input.startIndex, "Index is too low");
+		precondition(finalIndex <= input.endIndex, "Index is too high");
 
+		return (input[input.startIndex..<finalIndex], input[finalIndex...])
 	}
 
 	/// Derive a new FSM by crawling all the different possible combinations of states that can be reached from every possible input.
@@ -520,6 +523,19 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		self = self.symmetricDifference(other);
 	}
 
+	// Operator shortcuts
+	// Concatenation
+	static func ++ (lhs: Self, rhs: Self) -> Self {
+		return DFA<Element>.concatenate([lhs, rhs]);
+	}
+	// Union/alternation
+	static func | (lhs: Self, rhs: Self) -> Self {
+		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] || $0[1] });
+	}
+	// Subtract
+	static func - (lhs: Self, rhs: Self) -> Self {
+		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
+	}
 }
 
 // Conditional protocol compliance
