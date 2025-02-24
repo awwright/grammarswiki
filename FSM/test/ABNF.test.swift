@@ -49,21 +49,40 @@ import Testing;
 		#expect(CHAR_string(remainder) == " ");
 	}
 
-	@Test("repetition")
-	func test_repetition() async throws {
-		let abnf = "2foo ";
+	@Test("repetition 1")
+	func test_repetition_1() async throws {
+		let (foo, _) = Element.match("foo".utf8)!;
+		let abnf = "foo ";
 		let (rule, remainder) = Repetition.match(abnf.utf8)!
-		let (inner, _) = Element.match("foo".utf8)!
-		#expect(rule == Repetition(min: 2, max: 2, element: inner));
+		#expect(rule == Repetition(min: 1, max: 1, element: foo));
 		#expect(CHAR_string(remainder) == " ");
 	}
 
-	@Test("repeat")
-	func test_repeat() async throws {
-		let abnf = "2*4foo";
-		let (rule, remainder) = Repeat.match(abnf.utf8)!
-		#expect(rule == Repeat(min: 2, max: 4));
-		#expect(CHAR_string(remainder) == "foo");
+	@Test("repetition min")
+	func test_repetition_2() async throws {
+		let (foo, _) = Element.match("foo".utf8)!;
+		let abnf = "1*foo ";
+		let (rule, remainder) = Repetition.match(abnf.utf8)!
+		#expect(rule == Repetition(min: 1, max: nil, element: foo));
+		#expect(CHAR_string(remainder) == " ");
+	}
+
+	@Test("repetition max")
+	func test_repetition_3() async throws {
+		let (foo, _) = Element.match("foo".utf8)!;
+		let abnf = "*4foo ";
+		let (rule, remainder) = Repetition.match(abnf.utf8)!
+		#expect(rule == Repetition(min: 0, max: 4, element: foo));
+		#expect(CHAR_string(remainder) == " ");
+	}
+
+	@Test("repetition min/max")
+	func test_repetition_4() async throws {
+		let (foo, _) = Element.match("foo".utf8)!;
+		let abnf = "2*4foo ";
+		let (rule, remainder) = Repetition.match(abnf.utf8)!
+		#expect(rule == Repetition(min: 2, max: 4, element: foo));
+		#expect(CHAR_string(remainder) == " ");
 	}
 
 	// element        =  rulename / group / option / char-val / num-val / prose-val
@@ -100,7 +119,7 @@ import Testing;
 		"foo"
 		""";
 		let (rule, remainder) = Char_val.match(abnf.utf8)!
-		#expect(rule == Char_val(value: "foo"));
+		#expect(rule == Char_val(sequence: "foo".utf8.map{ UInt($0) }));
 		#expect(CHAR_string(remainder) == "");
 	}
 

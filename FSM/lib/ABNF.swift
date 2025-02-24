@@ -65,7 +65,7 @@ struct Rule: Production {
 	}
 
 	func toString() -> String {
-		return rulename.toString() + definedAs + alternation.toString() + "\r\n"
+		return rulename.toString() + " " + definedAs + " " + alternation.toString() + "\r\n"
 	}
 
 	static let defined_pattern = Terminals.c_wsp.star() ++ Terminals["="] ++ Terminals.c_wsp.star();
@@ -97,7 +97,7 @@ struct Rule: Production {
 struct Rulename : Production {
 	let label: String;
 	func toString() -> String {
-		return ""
+		return label;
 	}
 
 	static let pattern = Terminals.ALPHA ++ (Terminals.ALPHA | Terminals.DIGIT | Terminals["-"]).star();
@@ -188,78 +188,53 @@ struct Concatenation: Production {
 }
 
 // repetition     =  [repeat] element
+// repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
 struct Repetition: Production {
-	let min: Int?
-	let max: Int?
+	let min: UInt
+	let max: UInt?
 	let element: Element
 
-	init(min: Int?, max: Int?, element: Element) {
+	init(min: UInt, max: UInt?, element: Element) {
 		self.min = min
 		self.max = max
+		if let max {
+			precondition(min <= max)
+		}
 		self.element = element
 	}
 
 	func toString() -> String {
-		var repeatStr = ""
-		if let min = min, let max = max {
-			repeatStr = min == max ? "\(min)" : "\(min)*\(max)"
-		} else if let min = min {
-			repeatStr = min == 0 ? "*" : "\(min)*"
-		} else if let max = max {
-			repeatStr = "*\(max)"
+		let repeatStr =
+		if let max {
+			if min == 1 && max == 1 { "" }
+			else if(min == max){ "\(min)" }
+			else{ "\(min)*\(max)" }
+		} else {
+			if min == 0 { "*" }
+			else{ "\(min)*" }
 		}
 		return repeatStr + element.toString()
-	}
-
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		// Match optional "repeat" rule
-		if let (repeatSpecifier, remainder1) = Repeat.match(input) {
-			// Match element
-			guard let (element, remainder) = Element.match(remainder1) else { return nil }
-			return (Repetition(min: repeatSpecifier.min, max: repeatSpecifier.max, element: element), remainder)
-		}else{
-			// Match element
-			guard let (element, remainder) = Element.match(input) else { return nil }
-			// If there's no repetition given, then it's exactly one
-			return (Repetition(min: 1, max: 1, element: element), remainder)
-		}
-	}
-}
-
-// repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
-struct Repeat: Production {
-	let min: Int?
-	let max: Int?
-
-	init(min: Int?, max: Int?) {
-		self.min = min
-		self.max = max
-	}
-
-	func toString() -> String {
-		if let min, let max {
-			return min == max ? "\(min)" : "\(min)*\(max)"
-		} else if let min {
-			return min == 0 ? "*" : "\(min)*"
-		} else if let max {
-			return "*\(max)"
-		}
-		return ""
 	}
 
 	static let rangePattern = Terminals.DIGIT.star() ++ Terminals["*"];
 	static let minPattern = Terminals.DIGIT.plus();
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		if let (match, remainder1) = rangePattern.match(input) {
+			// (*DIGIT "*" *DIGIT) element
+			// match = *DIGIT "*"
 			let (minStr, _) = Terminals.DIGIT.star().match(match)!
-			let (maxStr, remainder) = Terminals.DIGIT.star().match(remainder1)!
-			return (Repeat(min: DIGIT_value(minStr), max: maxStr.isEmpty ? nil : DIGIT_value(maxStr)), remainder)
+			let (maxStr, remainder2) = Terminals.DIGIT.star().match(remainder1)!
+			guard let (element, remainder) = Element.match(remainder2) else { return nil }
+			return (Repetition(min: DIGIT_value(minStr), max: maxStr.isEmpty ? nil : DIGIT_value(maxStr), element: element), remainder)
 		} else if let (exactStr, remainder1) = minPattern.match(input) {
-			// No star, the number is an exact count
+			// 1*DIGIT element
 			let count = DIGIT_value(exactStr);
-			return (Repeat(min: count, max: count), remainder1)
+			guard let (element, remainder) = Element.match(remainder1) else { return nil }
+			return (Repetition(min: count, max: count, element: element), remainder)
 		} else {
-			return nil;
+			// element
+			guard let (element, remainder) = Element.match(input) else { return nil }
+			return (Repetition(min: 1, max: 1, element: element), remainder)
 		}
 	}
 }
@@ -302,10 +277,6 @@ enum Element: Production {
 struct Group: Production {
 	let alternation: Alternation
 
-	init(alternation: Alternation) {
-		self.alternation = alternation
-	}
-
 	func toString() -> String {
 		return "(\(alternation.toString()))"
 	}
@@ -326,10 +297,6 @@ struct Group: Production {
 struct Option: Production {
 	let alternation: Alternation
 
-	init(alternation: Alternation) {
-		self.alternation = alternation
-	}
-
 	func toString() -> String {
 		return "[\(alternation.toString())]"
 	}
@@ -346,14 +313,12 @@ struct Option: Production {
 
 // char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
 struct Char_val: Production {
-	let value: String
-
-	init(value: String) {
-		self.value = value
-	}
+	let sequence: Array<UInt>
 
 	func toString() -> String {
-		return "\"\(value)\""
+		sequence.forEach { assert($0 < 128); }
+		let seq = sequence.map{ UInt8($0) }
+		return "\"\(CHAR_string(seq))\""
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -361,8 +326,7 @@ struct Char_val: Production {
 		let charPattern = DFA<Array<UInt8>>(range: 0x20...0x21) | DFA<Array<UInt8>>(range: 0x23...0x7E)
 		guard let (chars, remainder2) = charPattern.star().match(remainder1) else { return nil }
 		guard let (_, remainder3) = Terminals.DQUOTE.match(remainder2) else { return nil }
-		let value = String(decoding: chars, as: UTF8.self)
-		return (Char_val(value: value), remainder3)
+		return (Char_val(sequence: chars.map { UInt($0) }), remainder3)
 	}
 }
 
@@ -377,7 +341,7 @@ struct Num_val: Production {
 		case dec = 10;
 		case hex = 16;
 
-		func parseNum<T> (_ input: T) -> Int? where T: Collection, T.Element == UInt8 {
+		func parseNum<T> (_ input: T) -> UInt? where T: Collection, T.Element == UInt8 {
 			return switch self {
 				case Base.bin: BIT_value(input);
 				case Base.dec: DIGIT_value(input);
@@ -395,8 +359,8 @@ struct Num_val: Production {
 	let base: Base;
 
 	enum Value: Equatable {
-		case sequence(Array<Int>);
-		case range(Int, Int);
+		case sequence(Array<UInt>);
+		case range(UInt, UInt);
 
 		func toString(base: Int) -> String {
 			switch self {
@@ -429,7 +393,7 @@ struct Num_val: Production {
 
 		guard let (firstDigits, remainder2) = base.numPattern.match(remainder1) else { return nil }
 		let firstStr = base.parseNum(firstDigits)!
-		var values: [Int] = [firstStr]
+		var values: [UInt] = [firstStr]
 		var remainder = remainder2
 		while true {
 			if let (_, remainder3) = Terminals["."].match(remainder) {
@@ -516,38 +480,38 @@ struct Terminals {
 	}
 }
 
-func BIT_value(_ input: any Sequence<UInt8>) -> Int {
-	var currentValue = 0;
+func BIT_value(_ input: any Sequence<UInt8>) -> UInt {
+	var currentValue: UInt = 0;
 	for c in input {
 		currentValue *= 2;
 		switch(c){
-			case 0x30...0x31: currentValue += Int(c-0x30) // 0-1
+			case 0x30...0x31: currentValue += UInt(c-0x30) // 0-1
 			default: fatalError("Invalid input")
 		}
 	}
 	return currentValue;
 }
 
-func DIGIT_value(_ input: any Sequence<UInt8>) -> Int {
-	var currentValue = 0;
+func DIGIT_value(_ input: any Sequence<UInt8>) -> UInt {
+	var currentValue: UInt = 0;
 	for c in input {
 		currentValue *= 10;
 		switch(c){
-			case 0x30...0x39: currentValue += Int(c-0x30) // 0-9
+			case 0x30...0x39: currentValue += UInt(c-0x30) // 0-9
 			default: fatalError("Invalid input")
 		}
 	}
 	return currentValue;
 }
 
-func HEXDIG_value(_ input: any Sequence<UInt8>) -> Int {
-	var currentValue = 0;
+func HEXDIG_value(_ input: any Sequence<UInt8>) -> UInt {
+	var currentValue: UInt = 0;
 	for c in input {
 		currentValue *= 16;
 		switch(c){
-			case 0x30...0x39: currentValue += Int(c-0x30) // 0-9
-			case 0x41...0x46: currentValue += Int(c-0x41+10) // A-F
-			case 0x61...0x46: currentValue += Int(c-0x61+10) // a-f
+			case 0x30...0x39: currentValue += UInt(c-0x30) // 0-9
+			case 0x41...0x46: currentValue += UInt(c-0x41+10) // A-F
+			case 0x61...0x46: currentValue += UInt(c-0x61+10) // a-f
 			default: fatalError("Invalid input")
 		}
 	}
