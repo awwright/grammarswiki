@@ -266,6 +266,16 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
 
+	// Also provide a static implementation of union since it applies to any number of inputs
+	static func union(_ languages: Array<DFA<Element>>) -> DFA<Element> {
+		if(languages.count == 0){
+			return DFA<Element>();
+		} else if(languages.count == 1) {
+			return languages[0];
+		}
+		return Self.parallel(fsms: languages, merge: { $0.contains(where: { $0 }) });
+	}
+
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
 	static func concatenate(_ languages: Array<DFA<Element>>) -> DFA<Element> {
 		if(languages.count == 0){

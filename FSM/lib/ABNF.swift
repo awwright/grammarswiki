@@ -18,6 +18,39 @@ struct Rulelist: Production {
 		return rules.map { $0.toString() }.joined()
 	}
 
+	var referencedRules: Set<String> {
+		return Set(rules.flatMap(\.referencedRules))
+	}
+
+	func toFSM(rules ruleMap: Dictionary<String, DFA<Array<UInt>>>) -> Dictionary<String, DFA<Array<UInt>>> {
+		// Get a Dictionary of each rule by its name to its referencedRules
+		let requiredRules = Dictionary<String, Set<String>>(uniqueKeysWithValues: rules.map {
+			($0.rulename.label, $0.referencedRules)
+		}).filter { $0.1.contains($0.0) == false }
+
+		let rulesByName = Dictionary<String, Rule>(uniqueKeysWithValues: rules.compactMap {
+			if requiredRules[$0.rulename.label] == nil {
+				return nil
+			} else {
+				return ($0.rulename.label, $0)
+			}
+		})
+
+		var resolvedRules = ruleMap;
+		main: repeat {
+			for (rulename, referenced) in requiredRules {
+				print("test", rulename, referenced, "is subset of", resolvedRules.keys);
+				if resolvedRules[rulename] == nil && referenced.isSubset(of: resolvedRules.keys) {
+					print("resolve", rulename, referenced, resolvedRules.keys);
+					resolvedRules[rulename] = rulesByName[rulename]!.alternation.toFSM(rules: resolvedRules);
+					continue main;
+				}
+			}
+			break main;
+		} while true;
+		return resolvedRules;
+	}
+
 	// Errata 3076 provides an updated ABNF for this production
 	// See <https://www.rfc-editor.org/errata/eid3076>
 	static let ws_pattern = Terminals.WSP.star() ++ Terminals.c_nl;
@@ -44,6 +77,19 @@ struct Rulelist: Production {
 			return (Rulelist(rules: rules), remainder);
 		} while true;
 	}
+
+	static func parse<T>(_ input: T) -> Self? where T: Collection<UInt8> {
+		let match = Self.match(input)
+		guard let (rulelist, remainder) = match else {
+			assertionFailure("Could not parse input")
+			return nil;
+		}
+		guard remainder.isEmpty else {
+			assertionFailure("Could not parse input past \(remainder.count)")
+			return nil;
+		}
+		return rulelist;
+	}
 }
 
 // Errata 2968 provides an updates ABNF for this production
@@ -66,6 +112,10 @@ struct Rule: Production {
 
 	func toString() -> String {
 		return rulename.toString() + " " + definedAs + " " + alternation.toString() + "\r\n"
+	}
+
+	var referencedRules: Set<String> {
+		return alternation.referencedRules;
 	}
 
 	static let defined_pattern = Terminals.c_wsp.star() ++ Terminals["="] ++ Terminals.c_wsp.star();
@@ -100,6 +150,15 @@ struct Rulename : Production {
 		return label;
 	}
 
+	var referencedRules: Set<String> {
+		return Set([label])
+	}
+
+	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		return rules[label]!;
+	}
+
 	static let pattern = Terminals.ALPHA ++ (Terminals.ALPHA | Terminals.DIGIT | Terminals["-"]).star();
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		if let (match, remainder) = pattern.match(input) {
@@ -123,6 +182,14 @@ struct Alternation: Production {
 
 	func toString() -> String {
 		return matches.map { $0.toString() }.joined(separator: " / ")
+	}
+
+	var referencedRules: Set<String> {
+		return matches.reduce(Set(), { $0.union($1.referencedRules) })
+	}
+
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		DFA.union(matches.map{ $0.toFSM(rules: rules) })
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -164,6 +231,14 @@ struct Concatenation: Production {
 
 	func toString() -> String {
 		return repetitions.map { $0.toString() }.joined(separator: " ")
+	}
+
+	var referencedRules: Set<String> {
+		return repetitions.reduce(Set(), { $0.union($1.referencedRules) })
+	}
+
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		DFA.concatenate(repetitions.map { $0.toFSM(rules: rules) })
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -216,6 +291,27 @@ struct Repetition: Production {
 		return repeatStr + element.toString()
 	}
 
+	var referencedRules: Set<String> {
+		return element.referencedRules
+	}
+
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		let fsm = element.toFSM(rules: rules);
+		if(min == 0 && max == 1){
+			return fsm.optional();
+		}else if(min == 0 && max == nil){
+			return fsm.star();
+		}else if(min == 1 && max == nil){
+			return fsm.plus();
+		}else{
+			if let max {
+				return DFA.concatenate(Array(repeating: fsm, count: Int(min)) + Array(repeating: fsm.optional(), count: Int(max-min)));
+			}else{
+				return DFA.concatenate(Array(repeating: fsm, count: Int(min)) + [fsm.star()])
+			}
+		}
+	}
+
 	static let rangePattern = Terminals.DIGIT.star() ++ Terminals["*"];
 	static let minPattern = Terminals.DIGIT.plus();
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -259,6 +355,28 @@ enum Element: Production {
 		}
 	}
 
+	var referencedRules: Set<String> {
+		switch self {
+			case .rulename(let r): return r.referencedRules
+			case .group(let g): return g.referencedRules
+			case .option(let o): return o.referencedRules
+			case .charVal(let c): return c.referencedRules
+			case .numVal(let n): return n.referencedRules
+			case .proseVal(let p): return p.referencedRules
+		}
+	}
+
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		switch self {
+			case .rulename(let r): return r.toFSM(rules: rules)
+			case .group(let g): return g.toFSM(rules: rules)
+			case .option(let o): return o.toFSM(rules: rules)
+			case .charVal(let c): return c.toFSM(rules: rules)
+			case .numVal(let n): return n.toFSM(rules: rules)
+			case .proseVal(let p): return p.toFSM(rules: rules)
+		}
+	}
+
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		if let (r, remainder) = Rulename.match(input) { return (.rulename(r), remainder) }
 		if let (g, remainder) = Group.match(input) { return (.group(g), remainder) }
@@ -281,6 +399,14 @@ struct Group: Production {
 		return "(\(alternation.toString()))"
 	}
 
+	var referencedRules: Set<String> {
+		return alternation.referencedRules
+	}
+
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		alternation.toFSM(rules: rules)
+	}
+
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		let prefix = Terminals["("] ++ Terminals.c_wsp.star();
 		guard let (_, remainder1) = prefix.match(input) else { return nil }
@@ -301,6 +427,14 @@ struct Option: Production {
 		return "[\(alternation.toString())]"
 	}
 
+	var referencedRules: Set<String> {
+		return alternation.referencedRules
+	}
+
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		alternation.toFSM(rules: rules).optional()
+	}
+
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		let prefix_pattern = Terminals["["] ++ Terminals.c_wsp.star();
 		guard let (_, remainder1) = prefix_pattern.match(input) else { return nil }
@@ -319,6 +453,14 @@ struct Char_val: Production {
 		sequence.forEach { assert($0 < 128); }
 		let seq = sequence.map{ UInt8($0) }
 		return "\"\(CHAR_string(seq))\""
+	}
+
+	var referencedRules: Set<String> {
+		return []
+	}
+
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		return DFA(verbatim: sequence)
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -380,6 +522,17 @@ struct Num_val: Production {
 		return prefix + value.toString(base: base.rawValue);
 	}
 
+	var referencedRules: Set<String> {
+		return []
+	}
+
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		switch self.value {
+			case .sequence(let seq): return DFA(verbatim: seq)
+			case .range(let low, let high): return DFA(range: low...high)
+		}
+	}
+
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		guard let (_, remainder0) = Terminals["%"].match(input) else { return nil }
 		guard let (basePrefix, remainder1) = Terminals.CHAR.match(remainder0) else { return nil }
@@ -425,8 +578,16 @@ struct Prose_val: Production {
 		//self.length = remark.count;
 	}
 
+	var referencedRules: Set<String> {
+		return []
+	}
+
 	func toString() -> String {
 		"<\(remark)>"
+	}
+
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		fatalError("Cannot convert prose to FSM")
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {

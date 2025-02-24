@@ -154,4 +154,135 @@ import Testing;
 		#expect(prose == Prose_val(remark: "Some message"));
 		#expect(CHAR_string(remainder) == " 123");
 	}
+
+	@Test("expression.toFSM")
+	func test_rulelist_toFSM() async throws {
+		let input = """
+		"A" / "B" / 3"C"
+		""";
+		let (expression, _) = Alternation.match(input.utf8)!
+		print(expression.toString())
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.toViz());
+		#expect(fsm.contains("A".utf8.map{UInt($0)}));
+	}
+
+	@Test("repetition.toFSM optional")
+	func test_repetition_optional_toFSM() async throws {
+		let input = """
+		0*1"C"
+		""";
+		let (expression, _) = Repetition.match(input.utf8)!
+		print(expression.toString())
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.toViz());
+		#expect(fsm.contains("".utf8.map{UInt($0)}));
+		#expect(fsm.contains("C".utf8.map{UInt($0)}));
+		#expect(!fsm.contains("CC".utf8.map{UInt($0)}));
+	}
+
+	@Test("repetition.toFSM plus")
+	func test_repetition_plus_toFSM() async throws {
+		let input = """
+		1*"C"
+		""";
+		let (expression, _) = Repetition.match(input.utf8)!
+		print(expression.toString())
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.toViz());
+		#expect(!fsm.contains("".utf8.map{UInt($0)}));
+		#expect(fsm.contains("C".utf8.map{UInt($0)}));
+		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
+	}
+
+	@Test("repetition.toFSM star")
+	func test_repetition_star_toFSM() async throws {
+		let input = """
+		*"C"
+		""";
+		let (expression, _) = Repetition.match(input.utf8)!
+		print(expression.toString())
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.toViz());
+		#expect(fsm.contains("".utf8.map{UInt($0)}));
+		#expect(fsm.contains("C".utf8.map{UInt($0)}));
+		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
+	}
+
+	@Test("repetition.toFSM min")
+	func test_repetition_min_toFSM() async throws {
+		let input = """
+		2*"C"
+		""";
+		let (expression, _) = Repetition.match(input.utf8)!
+		print(expression.toString())
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.toViz());
+		#expect(!fsm.contains("C".utf8.map{UInt($0)}));
+		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
+		#expect(fsm.contains("CCC".utf8.map{UInt($0)}));
+	}
+
+	@Test("repetition.toFSM max")
+	func test_repetition_max_toFSM() async throws {
+		let input = """
+		*2"C"
+		""";
+		let (expression, _) = Repetition.match(input.utf8)!
+		print(expression.toString())
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.toViz());
+		#expect(fsm.contains("".utf8.map{UInt($0)}));
+		#expect(fsm.contains("C".utf8.map{UInt($0)}));
+		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
+		#expect(!fsm.contains("CCC".utf8.map{UInt($0)}));
+	}
+
+	@Test("repetition.toFSM min/max")
+	func test_repetition_minmax_toFSM() async throws {
+		let input = """
+		2*3"C"
+		""";
+		let (expression, _) = Repetition.match(input.utf8)!
+		print(expression.toString())
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.toViz());
+		#expect(!fsm.contains("C".utf8.map{UInt($0)}));
+		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
+		#expect(fsm.contains("CCC".utf8.map{UInt($0)}));
+		#expect(!fsm.contains("CCCC".utf8.map{UInt($0)}));
+	}
+
+	@Test("element.toFSM")
+	func test_element_toFSM() async throws {
+		let input = """
+		"C"
+		""";
+		let (expression, _) = Element.match(input.utf8)!
+		print(expression.toString())
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.toViz());
+		#expect(fsm.contains("C".utf8.map{UInt($0)}));
+	}
+
+	@Test("char_val.toFSM")
+	func test_char_val_toFSM() async throws {
+		let input = """
+		"C"
+		""";
+		let (expression, _) = Char_val.match(input.utf8)!
+		print(expression.toString())
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.toViz());
+		#expect(fsm.contains("C".utf8.map{UInt($0)}));
+	}
+
+	@Test("rulelist.toFSM with rule")
+	func test_rulelist_toFSM_2() async throws {
+		let input = "Top = 3Rule\r\nRule = \"C\"\r\n";
+		let expression = Rulelist.parse(input.utf8)!
+		let fsm = expression.toFSM(rules: [:]);
+		print(fsm.forEach{ print($0, $1.toViz()) });
+		#expect(fsm["Top"]!.contains("CCC".utf8.map{UInt($0)}));
+	}
 }

@@ -153,6 +153,41 @@ import Testing
 		#expect(language.contains("by"))
 	}
 
+	@Test("optional")
+	func test_optional() {
+		let dfa1 = DFA<String>(["a", "b"])
+		let optional = dfa1.optional();
+		#expect(optional.contains(""))
+		#expect(optional.contains("a"))
+		#expect(optional.contains("b"))
+		let array = Array(optional);
+		#expect(array.count == 3)
+	}
+
+	@Test("plus")
+	func test_plus() {
+		let dfa1 = DFA<String>(["a", "b"])
+		let optional = dfa1.plus();
+		#expect(!optional.contains(""))
+		#expect(optional.contains("a"))
+		#expect(optional.contains("b"))
+		#expect(optional.contains("aa"))
+		#expect(optional.contains("ab"))
+		#expect(optional.contains("ba"))
+	}
+
+	@Test("star")
+	func test_star() {
+		let dfa1 = DFA<String>(["a", "b"])
+		let optional = dfa1.star();
+		#expect(optional.contains(""))
+		#expect(optional.contains("a"))
+		#expect(optional.contains("b"))
+		#expect(optional.contains("aa"))
+		#expect(optional.contains("ab"))
+		#expect(optional.contains("ba"))
+	}
+
 	@Test("Insert and remove operations")
 	func testInsertRemove() {
 		var dfa = DFA<String>()
