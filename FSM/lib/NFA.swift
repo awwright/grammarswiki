@@ -2,7 +2,7 @@
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-protocol NFAProtocol {
+public protocol NFAProtocol {
 	associatedtype Element;
 	associatedtype Symbol;
 	associatedtype StateNo;
@@ -14,10 +14,10 @@ protocol NFAProtocol {
 	init(verbatim: Element);
 }
 
-struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, NFAProtocol where Element.Element: Hashable & Comparable {
-	typealias Symbol = Element.Element where Element.Element: Hashable;
-	typealias StateNo = Int;
-	typealias States = Set<StateNo>;
+public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, NFAProtocol where Element.Element: Hashable & Comparable {
+	public typealias Symbol = Element.Element where Element.Element: Hashable;
+	public typealias StateNo = Int;
+	public typealias States = Set<StateNo>;
 
 	let states: Array<Dictionary<Symbol, Set<Int>>>;
 	let epsilon: Array<Set<Int>>;
@@ -77,12 +77,12 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 	}
 
 	// Empty set constructor, with one initial state and no final states
-	init() {
+	public init() {
 		self.init(states: [[:]], epsilon: [[]], initials: [0], finals: []);
 	}
 
 	// Variation with single initial state
-	init(
+	public init(
 		states: Array<Dictionary<Symbol, States>> = [],
 		epsilon: Array<States> = [],
 		initial: StateNo = 0,
@@ -91,7 +91,7 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		self.init(states: states, epsilon: epsilon, initials: [initial], finals: finals)
 	}
 
-	init(verbatim: Element){
+	public init(verbatim: Element){
 		// Generate one state per symbol in Element, plus a final state
 		let states = verbatim.enumerated().map { [ $1: Set([$0 + 1]) ] } + [[:]]
 		self.init(
@@ -102,7 +102,7 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		);
 	}
 
-	init(dfa: DFA<Element>) {
+	public init(dfa: DFA<Element>) {
 		self.init(
 			states: dfa.states.map { $0.mapValues { [$0] } },
 			epsilon: Array(repeating: [], count: dfa.states.count),
@@ -124,7 +124,7 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 	//	}
 
 
-	func toViz() -> String {
+	public func toViz() -> String {
 		var viz = "";
 		viz += "digraph G {\n";
 		viz += "\t_initial [shape=point];\n";
@@ -152,20 +152,20 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		Set(self.states.flatMap(\.keys))
 	}()
 
-	func nextStates(state: StateNo, symbol: Symbol) -> States {
+	public func nextStates(state: StateNo, symbol: Symbol) -> States {
 		return self.nextStates(states: [state], symbol: symbol);
 	}
 
-	func nextStates(state: StateNo, string: Element) -> States {
+	public func nextStates(state: StateNo, string: Element) -> States {
 		return self.nextStates(states: [state], string: string);
 	}
 
-	func nextStates(states: States, symbol: Symbol) -> States {
+	public func nextStates(states: States, symbol: Symbol) -> States {
 		// Map each element in `states` to the next symbol in states[state][symbol], if it exists
 		return self.followε(states: Set(self.followε(states: states).flatMap { self.states[$0][symbol] ?? [] }))
 	}
 
-	func nextStates(states: States, string: Element) -> States {
+	public func nextStates(states: States, string: Element) -> States {
 		var currentState = states;
 		for symbol in string {
 			currentState = self.nextStates(states: currentState, symbol: symbol)
@@ -194,7 +194,7 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return expanded;
 	}
 
-	static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
+	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
 		var newStates = Array<Dictionary<Symbol, States>>();
 		var newFinals = Set<Int>();
 		var forward = Dictionary<Array<States>, Int>();
@@ -245,12 +245,12 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return Self.init(states: newStates, epsilon: Array(repeating: [], count: newStates.count), initial: newInitialState, finals: newFinals);
 	}
 
-	func contains(_ input: Element) -> Bool {
+	public func contains(_ input: Element) -> Bool {
 		let final = self.nextStates(states: self.initials, string: input)
 		return (final.intersection(self.finals).count) > 0
 	}
 
-	func derive(_ input: Element) -> Self
+	public func derive(_ input: Element) -> Self
 	{
 		var currentState = self.initials;
 
@@ -265,7 +265,7 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return Self.init(states: self.states, epsilon: self.epsilon, initials: currentState, finals: self.finals);
 	}
 
-	func union(_ other: __owned Self) -> Self {
+	public func union(_ other: __owned Self) -> Self {
 //		return Self.parallel(dfas: [self, other], merge: { $0[0] || $0[1] });
 		let offset = self.states.count;
 		let newStates = other.states.map { $0.mapValues { Set($0.map { $0  + offset }) } }
@@ -280,16 +280,16 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		)
 	}
 
-	func intersection(_ other: Self) -> Self {
+	public func intersection(_ other: Self) -> Self {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] });
 	}
 
-	func symmetricDifference(_ other: __owned Self) -> Self {
+	public func symmetricDifference(_ other: __owned Self) -> Self {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
 
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
-	static func concatenate(_ languages: Array<Self>) -> Self {
+	public static func concatenate(_ languages: Array<Self>) -> Self {
 		if(languages.count == 0){
 			return Self();
 		} else if(languages.count == 1) {
@@ -318,12 +318,12 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		});
 	}
 
-	func concatenate(_ other: Self) -> Self {
+	public func concatenate(_ other: Self) -> Self {
 		return Self.concatenate([self, other]);
 	}
 
 
-	func homomorphism<Target>(mapping: [(Element, Target)]) -> NFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
+	public func homomorphism<Target>(mapping: [(Element, Target)]) -> NFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
 		typealias TargetSymbol = Target.Element;
 		var newStates: [[TargetSymbol: Set<Int>]] = self.states.map { _ in [:] }
 		var newEpsilon: [States] = self.states.map { _ in [] }
@@ -376,10 +376,11 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 	}
 
 	/// Convert one NFA to another by translating a FSM to an FSM
-//	func homomorphism<Target>(mapping: [(DFA<Element>, DFA<Target>)]) -> NFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
-//	}
+	public func homomorphism<Target>(mapping: [(DFA<Element>, DFA<Target>)]) -> NFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
+		return NFA<Target>();
+	}
 
-	mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
+	public mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
 		if(contains(newMember)) {
 			return (false, newMember)
 		}
@@ -387,24 +388,24 @@ struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return (true, newMember)
 	}
 
-	mutating func remove(_ member: Element) -> (Element)? {
+	public mutating func remove(_ member: Element) -> (Element)? {
 		self.formSymmetricDifference(Self.init(verbatim: member));
 		return member;
 	}
 
-	mutating func update(with newMember: __owned Element) -> (Element)? {
+	public mutating func update(with newMember: __owned Element) -> (Element)? {
 		return insert(newMember).1
 	}
 
-	mutating func formUnion(_ other: __owned Self) {
+	public mutating func formUnion(_ other: __owned Self) {
 		self = self.union(other);
 	}
 
-	mutating func formIntersection(_ other: Self) {
+	public mutating func formIntersection(_ other: Self) {
 		self = self.intersection(other);
 	}
 
-	mutating func formSymmetricDifference(_ other: __owned Self) {
+	public mutating func formSymmetricDifference(_ other: __owned Self) {
 		self = self.symmetricDifference(other);
 	}
 

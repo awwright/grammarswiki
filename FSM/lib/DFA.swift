@@ -3,15 +3,16 @@
 /// States are represented by an Int, or nil, the oblivion state.
 
 public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, Sequence, NFAProtocol where Element.Element: Hashable & Comparable {
-	typealias Symbol = Element.Element where Element.Element: Hashable;
-	typealias StateNo = Int;
-	typealias States = StateNo?;
+	public typealias Symbol = Element.Element where Element.Element: Hashable;
+	public typealias StateNo = Int;
+	public typealias States = StateNo?;
 
 	let states: Array<Dictionary<Symbol, StateNo>>;
 	let initial: StateNo;
 	let finals: Set<StateNo>;
 
-	struct ID {
+	/// Instant Description
+	public struct ID {
 		let fsm: DFA<Element>
 		let state: StateNo
 
@@ -31,7 +32,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		self.finals = [];
 	}
 
-	init(
+	public init(
 		states: Array<Dictionary<Symbol, StateNo>> = [],
 		initial: StateNo = 0,
 		finals: Set<StateNo> = []
@@ -55,7 +56,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		self.finals = finals;
 	}
 
-	init(verbatim: Element){
+	public init(verbatim: Element){
 		let states = verbatim.enumerated().map { [ $1: $0 + 1 ] } + [[:]]
 		self.init(
 			states: states,
@@ -64,7 +65,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		)
 	}
 
-	init(range: Range<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
+	public init(range: Range<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
 		// Map each element in verbatim to a key in a new dictionary with value 1
 		let table: Dictionary<Symbol, StateNo> = range.reduce(into: [:]) { result, key in
 			result[key] = 1
@@ -77,7 +78,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		)
 	}
 
-	init(range: ClosedRange<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
+	public init(range: ClosedRange<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
 		// Map each element in verbatim to a key in a new dictionary with value 1
 		var table: Dictionary<Symbol, StateNo> = [:];
 		for char in range {
@@ -91,7 +92,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		)
 	}
 
-	init(nfa: NFA<Element>){
+	public init(nfa: NFA<Element>){
 		let translation = NFA<Element>.parallel(fsms: [nfa], merge: { $0[0] });
 		// Sanity check
 		translation.states.forEach { $0.forEach { assert($0.value.count == 1); } }
@@ -112,11 +113,11 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return difference.finals.isEmpty;
 	}
 
-    var alphabet: Set<Symbol> {
+	public var alphabet: Set<Symbol> {
         Set(self.states.flatMap(\.keys))
     }
 
-	func toViz() -> String {
+	public func toViz() -> String {
 		var viz = "";
 		viz += "digraph G {\n";
 		viz += "\t_initial [shape=point];\n";
@@ -132,11 +133,11 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return viz;
 	}
 
-	func nextState(state: StateNo, symbol: Symbol) -> States {
+	public func nextState(state: StateNo, symbol: Symbol) -> States {
 		return self.states[state][symbol];
 	}
 
-	func nextState(state: StateNo, input: Element) -> States {
+	public func nextState(state: StateNo, input: Element) -> States {
 		var currentState = state;
 		for char in input {
 			guard currentState < self.states.count,
@@ -151,7 +152,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	}
 
 	/// Tries to match as many characters from input as possible, returning the last final state
-	func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Element.Element> {
+	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Element.Element> {
 		var currentState = self.initial;
 		var finalIndex: T.Index? = nil;
 
@@ -187,7 +188,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	/// - Parameter merge: Given an array of the states for the respective FSMs, return if this is a final state.
 	/// 	To find a union, return true if any is true. To find the intersection, return true only when all are true.
 	///
-	static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
+	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
 		var newStates = Array<Dictionary<Symbol, StateNo>>();
 		var newFinals = Set<StateNo>();
 		var forward = Dictionary<Array<States>, StateNo>();
@@ -266,7 +267,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	}
 
 	// Also provide a static implementation of union since it applies to any number of inputs
-	static func union(_ languages: Array<DFA<Element>>) -> DFA<Element> {
+	public static func union(_ languages: Array<DFA<Element>>) -> DFA<Element> {
 		if(languages.count == 0){
 			return DFA<Element>();
 		} else if(languages.count == 1) {
@@ -276,7 +277,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	}
 
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
-	static func concatenate(_ languages: Array<DFA<Element>>) -> DFA<Element> {
+	public static func concatenate(_ languages: Array<DFA<Element>>) -> DFA<Element> {
 		if(languages.count == 0){
 			return DFA<Element>();
 		} else if(languages.count == 1) {
@@ -286,12 +287,12 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return DFA(nfa: nfa);
 	}
 
-	func concatenate(_ other: DFA<Element>) -> DFA<Element> {
+	public func concatenate(_ other: DFA<Element>) -> DFA<Element> {
 		return Self.concatenate([self, other]);
 	}
 
 	/// Adds the empty string to the set of accepted elements
-	func optional() -> DFA<Element> {
+	public func optional() -> DFA<Element> {
 		return Self(
 			states: self.states,
 			initial: self.initial,
@@ -299,7 +300,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		);
 	}
 
-	func plus() -> DFA<Element> {
+	public func plus() -> DFA<Element> {
 		let nfa = NFA<Element>(
 			states: self.states.map { $0.mapValues { Set([$0]) } },
 			// Add an epsilon transition from the final states to the initial state
@@ -310,7 +311,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return DFA(nfa: nfa);
 	}
 
-	func star() -> DFA<Element> {
+	public func star() -> DFA<Element> {
 		return self.plus().optional();
 		// Should be equal to:
 		//let nfa = NFA<Element>(
@@ -325,7 +326,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 
 	/// Now we're getting into alchemy land
 	/// This function takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
-//	func nextStates(state: StateNo, input: DFA<Element>) -> Set<StateNo> {
+//	public func nextStates(state: StateNo, input: DFA<Element>) -> Set<StateNo> {
 //		var currentState: Set = [state];
 //		var finalStates: Set<StateNo> = [];
 //
@@ -367,7 +368,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 //		} while true;
 //	}
 
-	func state(_ state: StateNo) -> Self.ID {
+	public func state(_ state: StateNo) -> Self.ID {
 		return Self.ID(fsm: self, state: state)
 	}
 
@@ -386,7 +387,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 
 	/// An iterator that can iterate over all of the elements of the FSM.
 	/// Indefinitely, if need be.
-	struct StateIterator: IteratorProtocol {
+	public struct StateIterator: IteratorProtocol {
 		let fsm: DFA<Element>;
 		let states: Array<Array<(symbol: Element.Element, toState: StateNo)>>
 
@@ -428,7 +429,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 
 		// This needs a `filter` function to determine if we descend into the current state or not.
 		// A `false` might be used to prevent loops, or to zskip over entire trees of uninteresting values.
-		mutating func next() -> Array<(state: Int, index: Int)>? {
+		public mutating func next() -> Array<(state: Int, index: Int)>? {
 			if started == false {
 				started = true;
 				return [];
@@ -493,15 +494,15 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		}
 	}
 
-	func homomorphism<Target>(mapping: [(Element, Target)]) -> DFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
+	public func homomorphism<Target>(mapping: [(Element, Target)]) -> DFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
 		let nfa: NFA<Target> = NFA<Element>(dfa: self).homomorphism(mapping: mapping);
 		return DFA<Target>(nfa: nfa)
 	}
 
-//	func homomorphism<Target>(mapping: [(DFA<Element>, DFA<Target>)]) -> DFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
-//		let nfa: NFA<Target> = NFA<Element>(dfa: self).homomorphism(mapping: mapping);
-//		return DFA<Target>(nfa: nfa)
-//	}
+	public func homomorphism<Target>(mapping: [(DFA<Element>, DFA<Target>)]) -> DFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
+		let nfa: NFA<Target> = NFA<Element>(dfa: self).homomorphism(mapping: mapping);
+		return DFA<Target>(nfa: nfa)
+	}
 
 	public mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
 		if(contains(newMember)) {
@@ -534,15 +535,15 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 
 	// Operator shortcuts
 	// Concatenation
-	static func ++ (lhs: Self, rhs: Self) -> Self {
+	public static func ++ (lhs: Self, rhs: Self) -> Self {
 		return DFA<Element>.concatenate([lhs, rhs]);
 	}
 	// Union/alternation
-	static func | (lhs: Self, rhs: Self) -> Self {
+	public static func | (lhs: Self, rhs: Self) -> Self {
 		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] || $0[1] });
 	}
 	// Subtract
-	static func - (lhs: Self, rhs: Self) -> Self {
+	public static func - (lhs: Self, rhs: Self) -> Self {
 		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
 	}
 }
@@ -551,3 +552,4 @@ infix operator ++: AdditionPrecedence;
 
 // Conditional protocol compliance
 extension DFA: Sendable where Symbol: Sendable {}
+extension DFA: Hashable where Element: Hashable {}

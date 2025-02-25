@@ -14,7 +14,7 @@ public struct Rulelist: Production {
 		self.rules = rules
 	}
 
-	var dictionary: Dictionary<String, Rule> {
+	public var dictionary: Dictionary<String, Rule> {
 		var dict: Dictionary<String, Rule> = [:];
 		rules.forEach {
 			rule in
@@ -40,7 +40,7 @@ public struct Rulelist: Production {
 		return Set(rules.flatMap(\.referencedRules))
 	}
 
-	func toFSM(rules ruleMap: Dictionary<String, DFA<Array<UInt>>>) -> Dictionary<String, DFA<Array<UInt>>> {
+	public func toFSM(rules ruleMap: Dictionary<String, DFA<Array<UInt>>>) -> Dictionary<String, DFA<Array<UInt>>> {
 		// Get a Dictionary of each rule by its name to its referencedRules
 		let requiredRules = Dictionary<String, Set<String>>(uniqueKeysWithValues: rules.map {
 			($0.rulename.label, $0.referencedRules)
@@ -126,6 +126,10 @@ public struct Rule: Production {
 
 	var referencedRules: Set<String> {
 		return alternation.referencedRules;
+	}
+
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+		alternation.toFSM(rules: rules)
 	}
 
 	public func union(_ other: Rule) -> Rule{
@@ -694,7 +698,7 @@ func HEXDIG_value(_ input: any Sequence<UInt8>) -> UInt {
 		switch(c){
 			case 0x30...0x39: currentValue += UInt(c-0x30) // 0-9
 			case 0x41...0x46: currentValue += UInt(c-0x41+10) // A-F
-			case 0x61...0x46: currentValue += UInt(c-0x61+10) // a-f
+			case 0x61...0x66: currentValue += UInt(c-0x61+10) // a-f
 			default: fatalError("Invalid input")
 		}
 	}
