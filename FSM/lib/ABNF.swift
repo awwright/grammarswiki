@@ -7,14 +7,32 @@ protocol Production: Equatable {
 
 /// Represents an ABNF rulelist, which is a list of rules.
 // rulelist       =  1*( rule / (*c-wsp c-nl) )
-struct Rulelist: Production {
-	var rules: [Rule]
+public struct Rulelist: Production {
+	let rules: [Rule]
 
 	init(rules: [Rule] = []) {
 		self.rules = rules
 	}
 
-	func toString() -> String {
+	var dictionary: Dictionary<String, Rule> {
+		var dict: Dictionary<String, Rule> = [:];
+		rules.forEach {
+			rule in
+			let rulename = rule.rulename.label;
+			if let previousRule = dict[rulename] {
+				// If we've already seen this rule, and it's of the correct type, merge it with the previous definition
+				if(rule.definedAs == "/="){
+					dict[rulename] = previousRule.union(rule)
+				}
+			}else{
+				// TODO: Verify definedAs is "="
+				dict[rulename] = rule
+			}
+		}
+		return dict;
+	}
+
+	public func toString() -> String {
 		return rules.map { $0.toString() }.joined()
 	}
 
@@ -28,20 +46,12 @@ struct Rulelist: Production {
 			($0.rulename.label, $0.referencedRules)
 		}).filter { $0.1.contains($0.0) == false }
 
-		let rulesByName = Dictionary<String, Rule>(uniqueKeysWithValues: rules.compactMap {
-			if requiredRules[$0.rulename.label] == nil {
-				return nil
-			} else {
-				return ($0.rulename.label, $0)
-			}
-		})
+		let rulesByName = self.dictionary;
 
 		var resolvedRules = ruleMap;
 		main: repeat {
 			for (rulename, referenced) in requiredRules {
-				print("test", rulename, referenced, "is subset of", resolvedRules.keys);
 				if resolvedRules[rulename] == nil && referenced.isSubset(of: resolvedRules.keys) {
-					print("resolve", rulename, referenced, resolvedRules.keys);
 					resolvedRules[rulename] = rulesByName[rulename]!.alternation.toFSM(rules: resolvedRules);
 					continue main;
 				}
@@ -78,7 +88,7 @@ struct Rulelist: Production {
 		} while true;
 	}
 
-	static func parse<T>(_ input: T) -> Self? where T: Collection<UInt8> {
+	public static func parse<T>(_ input: T) -> Self? where T: Collection<UInt8> {
 		let match = Self.match(input)
 		guard let (rulelist, remainder) = match else {
 			assertionFailure("Could not parse input")
@@ -99,23 +109,31 @@ struct Rulelist: Production {
 // elements       =  alternation *WSP
 // alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
 // c-nl           =  comment / CRLF ; comment or newline
-struct Rule: Production {
-	let rulename: Rulename;
-	let definedAs: String;
-	let alternation: Alternation;
+public struct Rule: Production {
+	public let rulename: Rulename;
+	public let definedAs: String;
+	public let alternation: Alternation;
 
-	init(rulename: Rulename, definedAs: String, alternation: Alternation) {
+	public init(rulename: Rulename, definedAs: String, alternation: Alternation) {
 		self.rulename = rulename
 		self.definedAs = definedAs
 		self.alternation = alternation
 	}
 
-	func toString() -> String {
+	public func toString() -> String {
 		return rulename.toString() + " " + definedAs + " " + alternation.toString() + "\r\n"
 	}
 
 	var referencedRules: Set<String> {
 		return alternation.referencedRules;
+	}
+
+	public func union(_ other: Rule) -> Rule{
+		return self.union(other.alternation);
+	}
+
+	public func union(_ other: Alternation) -> Rule {
+		return Rule(rulename: rulename, definedAs: definedAs, alternation: self.alternation.union(other))
 	}
 
 	static let defined_pattern = Terminals.c_wsp.star() ++ Terminals["="] ++ Terminals.c_wsp.star();
@@ -144,7 +162,7 @@ struct Rule: Production {
 }
 
 // rulename       =  ALPHA *(ALPHA / DIGIT / "-")
-struct Rulename : Production {
+public struct Rulename : Production {
 	let label: String;
 	func toString() -> String {
 		return label;
@@ -173,14 +191,14 @@ struct Rulename : Production {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-struct Alternation: Production {
+public struct Alternation: Production {
 	let matches: [Concatenation]
 
-	init(matches: [Concatenation]) {
+	public init(matches: [Concatenation]) {
 		self.matches = matches
 	}
 
-	func toString() -> String {
+	public func toString() -> String {
 		return matches.map { $0.toString() }.joined(separator: " / ")
 	}
 
@@ -188,8 +206,12 @@ struct Alternation: Production {
 		return matches.reduce(Set(), { $0.union($1.referencedRules) })
 	}
 
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		DFA.union(matches.map{ $0.toFSM(rules: rules) })
+	}
+
+	public func union(_ other: Alternation) -> Alternation {
+		return Alternation(matches: matches + other.matches)
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -222,7 +244,7 @@ struct Alternation: Production {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-struct Concatenation: Production {
+public struct Concatenation: Production {
 	let repetitions: [Repetition]
 
 	init(repetitions: [Repetition]) {
@@ -264,7 +286,7 @@ struct Concatenation: Production {
 
 // repetition     =  [repeat] element
 // repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
-struct Repetition: Production {
+public struct Repetition: Production {
 	let min: UInt
 	let max: UInt?
 	let element: Element
@@ -392,7 +414,7 @@ enum Element: Production {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-struct Group: Production {
+public struct Group: Production {
 	let alternation: Alternation
 
 	func toString() -> String {
@@ -420,7 +442,7 @@ struct Group: Production {
 // option         =  "[" *c-wsp alternation *c-wsp "]"
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
-struct Option: Production {
+public struct Option: Production {
 	let alternation: Alternation
 
 	func toString() -> String {
@@ -446,7 +468,7 @@ struct Option: Production {
 }
 
 // char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
-struct Char_val: Production {
+public struct Char_val: Production {
 	let sequence: Array<UInt>
 
 	func toString() -> String {
@@ -473,8 +495,8 @@ struct Char_val: Production {
 }
 
 // num-val        =  "%" (bin-val / dec-val / hex-val)
-struct Num_val: Production {
-	static func == (lhs: Num_val, rhs: Num_val) -> Bool {
+public struct Num_val: Production {
+	public static func == (lhs: Num_val, rhs: Num_val) -> Bool {
 		return lhs.base == rhs.base && lhs.value == rhs.value
 	}
 	
@@ -570,7 +592,7 @@ struct Num_val: Production {
 }
 
 // prose-val      =  "<" *(%x20-3D / %x3F-7E) ">"
-struct Prose_val: Production {
+public struct Prose_val: Production {
 	let remark: String;
 
 	init(remark: String) {

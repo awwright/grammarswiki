@@ -1,36 +1,36 @@
 
 // Swift doesn't appear to have any way to get an empty sequence of type T where T: Sequence
 // This implements that.
-protocol EmptyInitial {
+public protocol EmptyInitial {
 	associatedtype Element;
 	// An instance of this type that has no elements
 	static var empty: Self { get }
-	func appendElement(_ newElement: Element) -> Self;
+	func appending(_ newElement: Element) -> Self;
 }
 
 extension Array: EmptyInitial {
-	static var empty: Self {
+	public static var empty: Self {
 		return [];
 	}
-	func appendElement(_ newElement: Element) -> Self {
+	public func appending(_ newElement: Element) -> Self {
 		return self + [newElement];
 	}
 }
 
 extension Set: EmptyInitial {
-	static var empty: Self {
+	public static var empty: Self {
 		return [];
 	}
-	func appendElement(_ newElement: Element) -> Self {
+	public func appending(_ newElement: Element) -> Self {
 		return self.union([newElement]);
 	}
 }
 
 extension String: EmptyInitial {
-	static var empty: Self {
+	public static var empty: Self {
 		return "";
 	}
-	func appendElement(_ newElement: Element) -> Self {
+	public func appending(_ newElement: Element) -> Self {
 		return self + String(newElement);
 	}
 }

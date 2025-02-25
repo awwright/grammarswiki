@@ -1,9 +1,8 @@
 
 /// An optimized form of NFA where each state has exactly one "next" state.
 /// States are represented by an Int, or nil, the oblivion state.
-infix operator ++: AdditionPrecedence;
 
-struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, Sequence, NFAProtocol where Element.Element: Hashable & Comparable {
+public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, Sequence, NFAProtocol where Element.Element: Hashable & Comparable {
 	typealias Symbol = Element.Element where Element.Element: Hashable;
 	typealias StateNo = Int;
 	typealias States = StateNo?;
@@ -26,7 +25,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		}
 	}
 
-	init() {
+	public init() {
 		self.states = [ [:] ];
 		self.initial = 0;
 		self.finals = [];
@@ -101,7 +100,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		self.finals = translation.finals;
 	}
 
-	static func == (lhs: Self, rhs: Self) -> Bool {
+	public static func == (lhs: Self, rhs: Self) -> Bool {
 		if(
 			lhs.states == rhs.states &&
 			lhs.initial == rhs.initial &&
@@ -238,7 +237,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return Self.init(states: newStates, initial: newInitialState, finals: newFinals);
 	}
 
-	func contains(_ input: Element) -> Bool {
+	public func contains(_ input: Element) -> Bool {
 		var currentState = self.initial;
 
 		for symbol in input {
@@ -254,15 +253,15 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 	}
 
     // SetAlgebra implementation
-	func union(_ other: __owned DFA<Element>) -> DFA<Element> {
+	public func union(_ other: __owned DFA<Element>) -> DFA<Element> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] });
 	}
 
-	func intersection(_ other: DFA<Element>) -> DFA<Element> {
+	public func intersection(_ other: DFA<Element>) -> DFA<Element> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] });
 	}
 
-	func symmetricDifference(_ other: __owned DFA<Element>) -> DFA<Element> {
+	public func symmetricDifference(_ other: __owned DFA<Element>) -> DFA<Element> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
 
@@ -378,7 +377,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 ////		return Self.init(states: self.states, initial: currentState, finals: self.finals);
 //	}
 
-	func makeIterator() -> Iterator {
+	public func makeIterator() -> Iterator {
 		return Iterator(self);
 	}
 
@@ -469,7 +468,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		}
 	}
 
-	struct Iterator: IteratorProtocol {
+	public struct Iterator: IteratorProtocol {
 		let fsm: DFA<Element>;
 		var iterator: StateIterator;
 
@@ -479,13 +478,13 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 			self.iterator = StateIterator(fsm);
 		}
 
-		mutating func next() -> Element? {
+		public mutating func next() -> Element? {
 			repeat {
 				// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
 				if let stack = iterator.next() {
 					let state = stack.isEmpty ? fsm.initial : iterator.states[stack.last!.state][stack.last!.index].toState;
 					if fsm.finals.contains(state) {
-						return stack.reduce(Element.empty, { $0.appendElement(iterator.states[$1.state][$1.index].symbol) });
+						return stack.reduce(Element.empty, { $0.appending(iterator.states[$1.state][$1.index].symbol) });
 					}
 				} else {
 					return nil;
@@ -504,7 +503,7 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 //		return DFA<Target>(nfa: nfa)
 //	}
 
-	mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
+	public mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
 		if(contains(newMember)) {
 			return (false, newMember)
 		}
@@ -512,24 +511,24 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return (true, newMember)
 	}
 
-	mutating func remove(_ member: Element) -> (Element)? {
+	public mutating func remove(_ member: Element) -> (Element)? {
 		self.formSymmetricDifference(DFA(verbatim: member));
 		return member;
 	}
 
-	mutating func update(with newMember: __owned Element) -> (Element)? {
+	public mutating func update(with newMember: __owned Element) -> (Element)? {
 		return insert(newMember).1
 	}
 
-	mutating func formUnion(_ other: __owned DFA<Element>) {
+	public mutating func formUnion(_ other: __owned DFA<Element>) {
 		self = self.union(other);
 	}
 
-	mutating func formIntersection(_ other: DFA<Element>) {
+	public mutating func formIntersection(_ other: DFA<Element>) {
 		self = self.intersection(other);
 	}
 
-	mutating func formSymmetricDifference(_ other: __owned DFA<Element>) {
+	public mutating func formSymmetricDifference(_ other: __owned DFA<Element>) {
 		self = self.symmetricDifference(other);
 	}
 
@@ -547,6 +546,8 @@ struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra
 		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
 	}
 }
+
+infix operator ++: AdditionPrecedence;
 
 // Conditional protocol compliance
 extension DFA: Sendable where Symbol: Sendable {}
