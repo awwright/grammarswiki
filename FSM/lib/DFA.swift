@@ -70,7 +70,6 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		let table: Dictionary<Symbol, StateNo> = range.reduce(into: [:]) { result, key in
 			result[key] = 1
 		}
-		let states = range.enumerated().map { [ $1: $0 + 1 ] } + [[:]]
 		self.init(
 			states: [ table, [:] ],
 			initial: 0,
@@ -84,7 +83,6 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		for char in range {
 			table[char] = 1;
 		}
-		let states = range.enumerated().map { [ $1: $0 + 1 ] } + [[:]]
 		self.init(
 			states: [ table, [:] ],
 			initial: 0,
@@ -134,10 +132,14 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	}
 
 	public func nextState(state: StateNo, symbol: Symbol) -> States {
+		assert(state >= 0)
+		assert(state < self.states.count)
 		return self.states[state][symbol];
 	}
 
 	public func nextState(state: StateNo, input: Element) -> States {
+		assert(state >= 0)
+		assert(state < self.states.count)
 		var currentState = state;
 		for char in input {
 			guard currentState < self.states.count,
@@ -176,8 +178,8 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		}
 
 		guard let finalIndex else { return nil; }
-		precondition(finalIndex >= input.startIndex, "Index is too low");
-		precondition(finalIndex <= input.endIndex, "Index is too high");
+		assert(finalIndex >= input.startIndex, "Index is too low");
+		assert(finalIndex <= input.endIndex, "Index is too high");
 
 		return (input[input.startIndex..<finalIndex], input[finalIndex...])
 	}
@@ -549,15 +551,23 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	}
 
 	// Operator shortcuts
-	// Concatenation
+	/// Concatenation operator
+	// The selection of symbol for operator is fraught because most of these symbols have been used for most different things
+	// String concatenation is slightly different than language concatenation,
+	// I want to suggest the string concatenation of the cross product of any string from ordered pair languages
 	public static func ++ (lhs: Self, rhs: Self) -> Self {
 		return DFA<Element>.concatenate([lhs, rhs]);
 	}
-	// Union/alternation
+	/// Union/alternation
+	// This is another case where the operator is confusing.
+	// SQL uses || for string concatenation, but in C it would suggest union.
+	// You could also use + to suggest union, but many languages including Swift use it for string concatenation.
 	public static func | (lhs: Self, rhs: Self) -> Self {
 		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] || $0[1] });
 	}
-	// Subtract
+	/// Subtract/difference
+	/// Returns a version of `lhs` but removing any elements in `rhs`
+	// I think (-) is pretty unambiguous here, but some math notation uses \ for this operation.
 	public static func - (lhs: Self, rhs: Self) -> Self {
 		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
 	}

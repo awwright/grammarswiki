@@ -81,6 +81,45 @@ import Testing
 		#expect(dfa.alphabet == expectedAlphabet)
 	}
 
+	@Test("nextState for symbol")
+	func test_nextState_symbol() {
+		let dfa_string = DFA<String>(verbatim: "abc")
+		#expect(dfa_string.nextState(state: 0, symbol: "a") == 1)
+		#expect(dfa_string.nextState(state: 1, symbol: "b") == 2)
+
+		let dfa_int = DFA<Array<Int>>(verbatim: [0, 1, 2])
+		#expect(dfa_int.nextState(state: 0, symbol: 0) == 1)
+		#expect(dfa_int.nextState(state: 1, symbol: 1) == 2)
+		#expect(dfa_int.nextState(state: 2, symbol: 2) == 3)
+		#expect(dfa_int.nextState(state: 3, symbol: 0) == nil)
+
+		let dfa_bool = DFA<Array<Bool>>(verbatim: [true, false, true])
+		#expect(dfa_bool.nextState(state: 0, symbol: true) == 1)
+		#expect(dfa_bool.nextState(state: 1, symbol: false) == 2)
+		#expect(dfa_bool.nextState(state: 2, symbol: true) == 3)
+		#expect(dfa_bool.nextState(state: 3, symbol: false) == nil)
+		#expect(dfa_bool.nextState(state: 3, symbol: true) == nil)
+	}
+
+	@Test("nextState for input string")
+	func test_nextState_string() {
+		let dfa_string = DFA<String>(verbatim: "abc")
+		#expect(dfa_string.nextState(state: 0, input: "a") == 1)
+		#expect(dfa_string.nextState(state: 0, input: "ab") == 2)
+		#expect(dfa_string.nextState(state: 1, input: "bc") == 3)
+		#expect(dfa_string.nextState(state: 1, input: "c") == nil)
+
+		let dfa_int = DFA<Array<Int>>(verbatim: [0, 1, 2])
+		#expect(dfa_int.nextState(state: 0, input: [0, 1]) == 2)
+		#expect(dfa_int.nextState(state: 1, input: [1, 2]) == 3)
+		#expect(dfa_int.nextState(state: 2, input: [2, 3]) == nil)
+		#expect(dfa_int.nextState(state: 3, input: [0]) == nil)
+
+		let dfa = DFA<Array<Bool>>(verbatim: [true, false, true])
+		#expect(dfa.nextState(state: 0, input: [true, false]) == 2)
+		#expect(dfa.nextState(state: 0, input: [true, false, true]) == 3)
+		#expect(dfa.nextState(state: 0, input: [true, false, true, false]) == nil)
+	}
 
 	@Test("Greedy match")
 	func test_match() {
@@ -238,21 +277,6 @@ import Testing
 		let removed = dfa.remove("test")
 		#expect(removed != nil)
 		#expect(!dfa.contains("test"))
-	}
-
-	@Test("Next state for single symbol")
-	func testNextStateSingleSymbol() {
-		let dfa = DFA<String>(verbatim: "abc")
-		#expect(dfa.nextState(state: 0, symbol: "a") == 1)
-		#expect(dfa.nextState(state: 1, symbol: "b") == 2)
-	}
-
-	@Test("Next state for input string")
-	func testNextStateStringInput() {
-		let dfa = DFA<String>(verbatim: "abc")
-		#expect(dfa.nextState(state: 0, input: "ab") == 2)
-		#expect(dfa.nextState(state: 0, input: "abc") == 3)
-		#expect(dfa.nextState(state: 0, input: "abcd") == nil)
 	}
 
 	@Test("IteratorProtocol conformance: Empty string")

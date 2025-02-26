@@ -48,6 +48,12 @@ extension Array: Comparable where Element: Comparable {
 	}
 }
 
+extension Bool: Comparable {
+	public static func < (lhs: Bool, rhs: Bool) -> Bool {
+		return lhs && !rhs;
+	}
+}
+
 extension Character: Strideable {
 	public func distance(to: Character) -> Int {
 		return Int(to.unicodeScalars.first!.value - self.unicodeScalars.first!.value);
