@@ -188,6 +188,46 @@ import Testing
 		#expect(optional.contains("ba"))
 	}
 
+	@Test("repeating(Int)")
+	func test_repeating_int() {
+		let original = DFA<String>(["a", "b"])
+		let repeated = original.repeating(2);
+		#expect(!repeated.contains(""))
+		#expect(!repeated.contains("a"))
+		#expect(!repeated.contains("b"))
+		#expect(repeated.contains("aa"))
+		#expect(repeated.contains("ab"))
+		#expect(repeated.contains("ba"))
+		#expect(!repeated.contains("aaa"))
+	}
+
+	@Test("repeating(ClosedRange)")
+	func test_repeating_closed() {
+		let original = DFA<String>(["a", "b"])
+		let repeated = original.repeating(2...3);
+		#expect(!repeated.contains(""))
+		#expect(!repeated.contains("a"))
+		#expect(!repeated.contains("b"))
+		#expect(repeated.contains("aa"))
+		#expect(repeated.contains("ab"))
+		#expect(repeated.contains("ba"))
+		#expect(repeated.contains("aaa"))
+		#expect(!repeated.contains("aaaa"))
+	}
+
+	@Test("repeating(PartialRangeFrom)")
+	func test_repeating_lower() {
+		let original = DFA<String>(["a", "b"])
+		let repeated = original.repeating(2...);
+		#expect(!repeated.contains(""))
+		#expect(!repeated.contains("a"))
+		#expect(!repeated.contains("b"))
+		#expect(repeated.contains("aa"))
+		#expect(repeated.contains("ab"))
+		#expect(repeated.contains("ba"))
+		#expect(repeated.contains("aaaaaa"))
+	}
+
 	@Test("Insert and remove operations")
 	func testInsertRemove() {
 		var dfa = DFA<String>()

@@ -331,9 +331,9 @@ public struct Repetition: Production {
 			return fsm.plus();
 		}else{
 			if let max {
-				return DFA.concatenate(Array(repeating: fsm, count: Int(min)) + Array(repeating: fsm.optional(), count: Int(max-min)));
+				return fsm.repeating(Int(min)...Int(max));
 			}else{
-				return DFA.concatenate(Array(repeating: fsm, count: Int(min)) + [fsm.star()])
+				return fsm.repeating(Int(min)...);
 			}
 		}
 	}

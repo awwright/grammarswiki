@@ -324,6 +324,21 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		//return DFA(nfa: nfa);
 	}
 
+	public func repeating(_ count: Int) -> DFA<Element> {
+		precondition(count >= 0)
+		return DFA.concatenate(Array(repeating: self, count: count))
+	}
+
+	public func repeating(_ range: ClosedRange<Int>) -> DFA<Element> {
+		precondition(range.lowerBound >= 0)
+		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + Array(repeating: self.optional(), count: Int(range.upperBound-range.lowerBound)));
+	}
+
+	public func repeating(_ range: PartialRangeFrom<Int>) -> DFA<Element> {
+		precondition(range.lowerBound >= 0)
+		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
+	}
+
 	/// Now we're getting into alchemy land
 	/// This function takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
 //	public func nextStates(state: StateNo, input: DFA<Element>) -> Set<StateNo> {
