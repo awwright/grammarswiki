@@ -394,4 +394,32 @@ import Testing
 		}
 		#expect(values == ["", "a", "ab", "abcdefg", "bc"])
 	}
+
+	@Test("nextStates by DFA")
+	func test_nextStates_DFA() {
+		let dfa = DFA(["abcdefghi"]);
+		let pattern = DFA(["abc"])
+			.concatenate(DFA(["d"]).optional())
+			.concatenate(DFA(["e"]).optional())
+			.concatenate(DFA(["f"]).optional());
+		#expect(dfa.nextStates(initial: 0, input: pattern) == [3, 4, 5, 6]);
+	}
+
+	@Test("nextStates by DFA #2")
+	func test_nextStates_DFA_2() {
+		let dfa = DFA(["101001000100"]);
+		print(dfa.toViz())
+		// Follow any number of 0's, then a 1
+		let pattern = DFA(["0"]).star().concatenate(DFA(["1"]));
+		print(pattern.toViz())
+		print(dfa.nextStates(initial: 2, input: pattern))
+		#expect(dfa.nextStates(initial: 0, input: pattern) == [1]);
+		#expect(dfa.nextStates(initial: 1, input: pattern) == [3]);
+		#expect(dfa.nextStates(initial: 2, input: pattern) == [3]);
+		#expect(dfa.nextStates(initial: 3, input: pattern) == [6]);
+		#expect(dfa.nextStates(initial: 4, input: pattern) == [6]);
+		#expect(dfa.nextStates(initial: 5, input: pattern) == [6]);
+		#expect(dfa.nextStates(initial: 6, input: pattern) == [10]);
+		#expect(dfa.nextStates(initial: 7, input: pattern) == [10]);
+	}
 }

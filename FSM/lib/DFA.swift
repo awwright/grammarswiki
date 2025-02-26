@@ -341,50 +341,6 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
 
-	/// Now we're getting into alchemy land
-	/// This function takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
-//	public func nextStates(state: StateNo, input: DFA<Element>) -> Set<StateNo> {
-//		var currentState: Set = [state];
-//		var finalStates: Set<StateNo> = [];
-//
-//		let enumerated = input.states.map { $0.map { (symbol: $0.key, toState: $0.value) }.sorted { $0.0 < $1.0 } };
-//
-//
-//		// Basis
-//		if(input.finals.contains(input.initial)){
-//			finalStates.insert(input.initial);
-//		}
-//		let stack: Array<(Int, Int)> = [];
-//
-//		repeat {
-//			let previous = stack.last;
-//			if let previous {
-//				let currentState = states[previous.state][previous.index].toState;
-//				if states[currentState].count > 0 {
-//					// Follow the first state from the current state, if there is one
-//					stack.append((currentState, 0));
-//				} else {
-//					// Prepare to increment the index by one, carrying down if necessary
-//					// Remove final elements that are on the last index
-//					while(stack.last!.index >= states[stack.last!.state].count - 1){
-//						stack.removeLast();
-//						if(stack.count == 0){
-//							return nil;
-//						}
-//					}
-//					stack[stack.count-1].index += 1;
-//				}
-//			}else{
-//				if states[fsm.initial].count > 0 {
-//					// Follow the first state from the current state, if there is one
-//					stack.append((fsm.initial, 0));
-//				}else{
-//					return finalStates;
-//				}
-//			}
-//		} while true;
-//	}
-
 	public func state(_ state: StateNo) -> Self.ID {
 		return Self.ID(fsm: self, state: state)
 	}
@@ -560,6 +516,41 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 				}
 			} while true;
 		}
+	}
+
+	// Now we're really getting into alchemy land
+	/// This follows all the paths walked by a set of strings provided as another DFA
+	/// It takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
+	public func nextStates(initial: StateNo, input: DFA<Element>) -> Set<StateNo> {
+		var finalStates: Set<StateNo> = [];
+		//var derivative = DFA<Element>(
+		//	states: self.states,
+		//	initial: state,
+		//	finals: self.finals
+		//);
+		func filter(iterator: PathIterator, path: PathIterator.Path) -> Bool {
+			var current = initial;
+			for segment in path {
+				guard let nextState = self.states[current][segment.symbol] else { return false }
+				current = nextState;
+			}
+			return true;
+		}
+		var iterator = PathIterator(input, filter: filter)
+		loop: while let path = iterator.next() {
+			print(path);
+			let inputState = path.isEmpty ? input.initial : path.last!.target;
+			if input.finals.contains(inputState) {
+				// Compute the cooresponding state in self
+				var current = initial;
+				for segment in path {
+					guard let nextState = self.states[current][segment.symbol] else { continue loop }
+					current = nextState;
+				}
+				finalStates.insert(current);
+			}
+		}
+		return finalStates;
 	}
 
 	public func homomorphism<Target>(mapping: [(Element, Target)]) -> DFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
