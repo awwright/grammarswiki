@@ -279,6 +279,102 @@ import Testing
 		#expect(!dfa.contains("test"))
 	}
 
+	@Test("DFA#paths Iterator: Single initial state, empty set")
+	func test_paths_0() {
+		let dfa = DFA<String>(
+			states: [
+				[:],
+			],
+			initial: 0,
+			finals: []
+		)
+		let paths = Array(dfa.paths);
+		#expect(paths == [[]])
+	}
+
+	@Test("DFA#paths iterator: Single initial state, empty string final")
+	func test_paths_1() {
+		let dfa = DFA<String>(
+			states: [
+				[:],
+			],
+			initial: 0,
+			finals: [0]
+		)
+		let paths = Array(dfa.paths);
+		#expect(paths == [[]])
+	}
+
+	@Test("DFA#paths iterator: Single initial state, empty string final")
+	func test_paths_2() {
+		let dfa = DFA<String>(
+			states: [
+				["x": 1],
+				[:],
+			],
+			initial: 0,
+			finals: [1]
+		)
+		let paths = Array(dfa.paths);
+		#expect(paths == [
+			[],
+			[DFA<String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 1)],
+		])
+	}
+
+	@Test("DFA#paths filtered: Single initial state, single character star, path length less than 3")
+	func test_paths_filter_0() {
+		let dfa = DFA<String>(
+			states: [
+				["x": 0],
+			],
+			initial: 0,
+			finals: [0]
+		)
+		func filter(iterator: DFA<String>.PathIterator, path: DFA<String>.PathIterator.Path) -> Bool {
+			return path.count < 3;
+		}
+		var array: Array<DFA<String>.PathIterator.Path> = [];
+		for path in dfa.pathIterator(filter: filter) {
+			array.append(path);
+		}
+		#expect(array == [
+			[],
+			[DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 0)],
+			[DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 0), DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 0)]
+		]);
+	}
+
+	@Test("DFA#paths filtered: No revisiting states (no cycles)")
+	func test_paths_filter_2() {
+		let dfa = DFA<String>(
+			states: [
+				["x": 1],
+				["y": 2],
+				["z": 0],
+			],
+			initial: 0,
+			finals: [0, 1, 2]
+		)
+		func filter(iterator: DFA<String>.PathIterator, path: DFA<String>.PathIterator.Path) -> Bool {
+			var seenTargets = Set([0])
+			for segment in path {
+				if seenTargets.insert(segment.target).inserted == false {
+					// If insert returns false, we’ve seen this target before; skip it
+					return false
+				}
+			}
+			return true
+		}
+		let paths = Array(dfa.pathIterator(filter: filter));
+		#expect(paths == [
+			[],
+			[DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 1)],
+			[DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 1), DFA<Swift.String>.PathIterator.Segment(source: 1, index: 0, symbol: "y", target: 2)],
+			// No transition to "z" because that targets the origin, which we've always previously "visited"
+		]);
+	}
+
 	@Test("IteratorProtocol conformance: Empty string")
 	func testIteratorProtocol1() {
 		let dfa = DFA<String>(verbatim: "")
@@ -287,16 +383,6 @@ import Testing
 			values.append(string)
 		}
 		#expect(values == [""])
-	}
-
-	@Test("IteratorProtocol DepthFirst")
-	func testIteratorProtocol2() {
-		let dfa = DFA<String>(["bc", "a", "abcdefg", "ab", ""])
-		var values: [String] = []
-		for string in dfa {
-			values.append(string)
-		}
-		#expect(values == ["", "a", "ab", "abcdefg", "bc"])
 	}
 
 	@Test("IteratorProtocol DepthFirst")

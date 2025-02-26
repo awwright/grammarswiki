@@ -400,21 +400,56 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	}
 
 	// TODO: Implement sort order
-	// TODO: Implement state/stack filtering
+	/// A simple way to create a view on a struct to change how it is iterated or enumerated
+	public struct IteratorFactory<T>: Sequence where T: IteratorProtocol {
+		let dfa: DFA<Element>;
+		let constructor: (DFA<Element>) -> T;
+		init(_ dfa: DFA<Element>, constructor: @escaping (DFA<Element>) -> T) {
+			self.dfa = dfa;
+			self.constructor = constructor;
+		}
+		public func makeIterator() -> T {
+			return constructor(dfa)
+		}
+	}
+
+	// A sequence that walks over all of the different paths
+	public var paths: IteratorFactory<PathIterator> {
+		return IteratorFactory(self) {
+			PathIterator($0)
+		}
+	};
+
+	/// Returns an iterator that walks over all of the possible of the paths in the state graph.
+	/// - Parameter filter: A function that decides if the paths in the given state should be walked. This is for filtering out paths that have already been visited or otherwise don't mean anything.
+	public func pathIterator(filter: @escaping (PathIterator, PathIterator.Path) -> Bool) -> IteratorFactory<PathIterator> {
+		return IteratorFactory(self) {
+			PathIterator($0, filter: filter);
+		};
+	}
 
 	/// An iterator that can iterate over all of the elements of the FSM.
 	/// Indefinitely, if need be.
-	public struct StateIterator: IteratorProtocol {
+	public struct PathIterator: IteratorProtocol {
+		public struct Segment: Equatable {
+			var source: StateNo
+			var index: Int
+			var symbol: Element.Element
+			var target: StateNo
+		};
+		public typealias Path = Array<Segment>;
 		let fsm: DFA<Element>;
 		let states: Array<Array<(symbol: Element.Element, toState: StateNo)>>
+		let filter: (Self, Path) -> Bool;
 
-		var stack: Array<(state: StateNo, index: Int)>;
+		var stack: Path;
 		var visited: Set<StateNo>?;
 		var started = false;
 
-		init(_ fsm: DFA<Element>) {
-			//			let fsm = options.fsm;
+		init(_ fsm: DFA<Element>, filter: @escaping (Self, Path) -> Bool) {
+			// let fsm = options.fsm;
 			self.fsm = fsm;
+			self.filter = filter;
 
 			// First we want to figure out the "live" states, the states from where it's still possible to reach a final state
 			// Usually all states in a FSM struct are live, unless the user did something funny in its construction.
@@ -444,65 +479,81 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 			self.stack = [];
 		}
 
+		init(_ fsm: DFA<Element>) {
+			self.init(fsm, filter: { _, _ in true });
+		}
+
 		// This needs a `filter` function to determine if we descend into the current state or not.
 		// A `false` might be used to prevent loops, or to zskip over entire trees of uninteresting values.
-		public mutating func next() -> Array<(state: Int, index: Int)>? {
+		public mutating func next() -> Path? {
 			if started == false {
 				started = true;
+				// An empty path is implicitly the inital state, where no segments have been followed
 				return [];
 			}
-			let previous = stack.last;
-			guard let previous else {
+			if(stack.isEmpty){
 				// There's nothing on the stack, so we're currently on the initial state,
 				// and need to begin iterating over its transitions.
 				if states[fsm.initial].count > 0 {
 					// Follow the first state from the current state, if there is one
-					stack.append((fsm.initial, 0));
-					return stack;
+					stack.append(Segment(source: fsm.initial, index: 0, symbol: self.states[fsm.initial][0].symbol, target: self.states[fsm.initial][0].toState));
 				}else{
 					// The unlikely case where the initial state is the only state
 					return nil;
 				}
-			}
-			let currentState = states[previous.state][previous.index].toState;
-			if states[currentState].count > 0 {
+			} else if let previous = stack.last, states[previous.target].count > 0 {
 				// Follow the first state from the current state, if there is one
-				stack.append((currentState, 0));
+				stack.append(Segment(source: previous.target, index: 0, symbol: self.states[previous.target][0].symbol, target: self.states[previous.target][0].toState));
 			} else {
-				repeat {
-					// Prepare to increment the index by one, carrying down if necessary
-					// Remove final elements that are on the last index
-					while(stack.last!.index >= states[stack.last!.state].count - 1){
-						stack.removeLast();
-						if(stack.count == 0){
-							return nil;
-						}
+				// Prepare to increment the index by one, carrying down if necessary
+				// Remove final elements that are on the last index
+				while(stack.last!.index >= states[stack.last!.source].count - 1){
+					stack.removeLast();
+					if(stack.count == 0){
+						return nil;
 					}
-					stack[stack.count-1].index += 1;
-					// TODO: test if this state should be skipped, repeat this loop if so
-				} while(stack.count > 0 && false);
+				}
+				if(stack.count == 0){ return nil };
+				stack[stack.count-1].index += 1;
+				stack[stack.count-1].symbol = self.states[stack[stack.count-1].source][stack[stack.count-1].index].symbol;
+				stack[stack.count-1].target = self.states[stack[stack.count-1].source][stack[stack.count-1].index].toState;
 			}
+			// Run `filter` to see if we want to visit this state (true), or skipping it and all of its children (false)
+			// If skip, then increment the index and carry up as necessary until we find a state to stay on
+			while stack.isEmpty==false && filter(self, stack)==false {
+				// Prepare to increment the index by one, carrying down if necessary
+				// Remove final elements that are on the last index
+				while(stack.last!.index >= states[stack.last!.source].count - 1){
+					stack.removeLast();
+					if(stack.count == 0){ return nil }
+				}
+				if(stack.count == 0){ return nil };
+				stack[stack.count-1].index += 1;
+				stack[stack.count-1].symbol = self.states[stack[stack.count-1].source][stack[stack.count-1].index].symbol;
+				stack[stack.count-1].target = self.states[stack[stack.count-1].source][stack[stack.count-1].index].toState;
+			}
+
 			return stack;
 		}
 	}
 
 	public struct Iterator: IteratorProtocol {
 		let fsm: DFA<Element>;
-		var iterator: StateIterator;
+		var iterator: PathIterator;
 
 		init(_ fsm: DFA<Element>) {
 			// let fsm = options.fsm;
 			self.fsm = fsm;
-			self.iterator = StateIterator(fsm);
+			self.iterator = PathIterator(fsm);
 		}
 
 		public mutating func next() -> Element? {
 			repeat {
 				// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
 				if let stack = iterator.next() {
-					let state = stack.isEmpty ? fsm.initial : iterator.states[stack.last!.state][stack.last!.index].toState;
+					let state = stack.isEmpty ? fsm.initial : stack.last!.target;
 					if fsm.finals.contains(state) {
-						return stack.reduce(Element.empty, { $0.appending(iterator.states[$1.state][$1.index].symbol) });
+						return stack.reduce(Element.empty, { $0.appending(iterator.states[$1.source][$1.index].symbol) });
 					}
 				} else {
 					return nil;
