@@ -1,6 +1,6 @@
 
-;
-JSON-text = ws value ws %x0A
+; <https://www.rfc-editor.org/rfc/rfc8259.html>
+JSON-text = ws value ws
 
 begin-array     = ws %x5B ws  ; [ left square bracket
 

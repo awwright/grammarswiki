@@ -52,7 +52,10 @@ public struct Rulelist: Production {
 		main: repeat {
 			for (rulename, referenced) in requiredRules {
 				if resolvedRules[rulename] == nil && referenced.isSubset(of: resolvedRules.keys) {
-					resolvedRules[rulename] = rulesByName[rulename]!.alternation.toFSM(rules: resolvedRules);
+					guard let rule = rulesByName[rulename] else {
+						fatalError("Could not resolve \(rulename)")
+					}
+					resolvedRules[rulename] = rule.toFSM(rules: resolvedRules);
 					continue main;
 				}
 			}
