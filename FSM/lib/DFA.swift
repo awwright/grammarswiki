@@ -1,7 +1,7 @@
 
 /// An optimized form of NFA where each state has exactly one "next" state.
 /// States are represented by an Int, or nil, the oblivion state.
-
+/// A DFA is essentially a special case of an NFA where a state can transition into at most one state, instead of any number of states.
 public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, Sequence, NFAProtocol where Element.Element: Hashable & Comparable {
 	public typealias Symbol = Element.Element where Element.Element: Hashable;
 	public typealias StateNo = Int;
@@ -10,21 +10,6 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	let states: Array<Dictionary<Symbol, StateNo>>;
 	let initial: StateNo;
 	let finals: Set<StateNo>;
-
-	/// Instant Description
-	public struct ID {
-		let fsm: DFA<Element>
-		let state: StateNo
-
-		subscript(symbol: Symbol) -> Self? {
-			let state = self.fsm.states[self.state][symbol];
-			if let state {
-				return Self.init(fsm: self.fsm, state: state)
-			}else{
-				return nil;
-			}
-		}
-	}
 
 	public init() {
 		self.states = [ [:] ];
@@ -184,6 +169,31 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return (input[input.startIndex..<finalIndex], input[finalIndex...])
 	}
 
+	/// Instant Description (ID), describes a FSM and its specific state during execution
+	public struct ID {
+		let fsm: DFA<Element>
+		let state: StateNo
+
+		subscript(symbol: Symbol) -> Self? {
+			let state = self.fsm.states[self.state][symbol];
+			if let state {
+				return Self.init(fsm: self.fsm, state: state)
+			}else{
+				return nil;
+			}
+		}
+	}
+
+	/// Get the ID of the state machine without any input
+	var initialDescription: ID {
+		return ID(fsm: self, state: initial);
+	}
+
+	/// Get the ID of the state machine at a specific state
+	subscript(state: StateNo) -> Self.ID {
+		return Self.ID(fsm: self, state: state)
+	}
+
 	/// Derive a new FSM by crawling all the different possible combinations of states that can be reached from every possible input.
 	/// - Parameter dfas: The DFAs to merge together.
 	///
@@ -339,10 +349,6 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	public func repeating(_ range: PartialRangeFrom<Int>) -> DFA<Element> {
 		precondition(range.lowerBound >= 0)
 		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
-	}
-
-	public func state(_ state: StateNo) -> Self.ID {
-		return Self.ID(fsm: self, state: state)
 	}
 
 //	func derive(_ input: Element) -> Self
