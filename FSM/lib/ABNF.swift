@@ -1,21 +1,21 @@
 /// Some minimal rules for parsing an ABNF document
 
-protocol Production: Equatable {
+protocol ABNFProduction: Equatable {
 	func toString() -> String
 //	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8>
 }
 
 /// Represents an ABNF rulelist, which is a list of rules.
 // rulelist       =  1*( rule / (*c-wsp c-nl) )
-public struct Rulelist: Production {
-	let rules: [Rule]
+public struct ABNFRulelist: ABNFProduction {
+	let rules: [ABNFRule]
 
-	init(rules: [Rule] = []) {
+	init(rules: [ABNFRule] = []) {
 		self.rules = rules
 	}
 
-	public var dictionary: Dictionary<String, Rule> {
-		var dict: Dictionary<String, Rule> = [:];
+	public var dictionary: Dictionary<String, ABNFRule> {
+		var dict: Dictionary<String, ABNFRule> = [:];
 		rules.forEach {
 			rule in
 			let rulename = rule.rulename.label;
@@ -70,10 +70,10 @@ public struct Rulelist: Production {
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Initialize a SubSequence starting at the beginning of input
 		var remainder = input[input.startIndex...]
-		var rules: Array<Rule> = [];
+		var rules: Array<ABNFRule> = [];
 		repeat {
 			// First try to parse as a rule
-			if let (rule, remainder1) = Rule.match(remainder) {
+			if let (rule, remainder1) = ABNFRule.match(remainder) {
 				remainder = remainder1
 				rules.append(rule);
 				continue;
@@ -87,7 +87,7 @@ public struct Rulelist: Production {
 			}
 
 			// Couldn't be parsed either as a rule or whitespace, end of parsing.
-			return (Rulelist(rules: rules), remainder);
+			return (ABNFRulelist(rules: rules), remainder);
 		} while true;
 	}
 
@@ -112,12 +112,12 @@ public struct Rulelist: Production {
 // elements       =  alternation *WSP
 // alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
 // c-nl           =  comment / CRLF ; comment or newline
-public struct Rule: Production {
-	public let rulename: Rulename;
+public struct ABNFRule: ABNFProduction {
+	public let rulename: ABNFRulename;
 	public let definedAs: String;
-	public let alternation: Alternation;
+	public let alternation: ABNFAlternation;
 
-	public init(rulename: Rulename, definedAs: String, alternation: Alternation) {
+	public init(rulename: ABNFRulename, definedAs: String, alternation: ABNFAlternation) {
 		self.rulename = rulename
 		self.definedAs = definedAs
 		self.alternation = alternation
@@ -135,12 +135,12 @@ public struct Rule: Production {
 		alternation.toFSM(rules: rules)
 	}
 
-	public func union(_ other: Rule) -> Rule{
+	public func union(_ other: ABNFRule) -> ABNFRule{
 		return self.union(other.alternation);
 	}
 
-	public func union(_ other: Alternation) -> Rule {
-		return Rule(rulename: rulename, definedAs: definedAs, alternation: self.alternation.union(other))
+	public func union(_ other: ABNFAlternation) -> ABNFRule {
+		return ABNFRule(rulename: rulename, definedAs: definedAs, alternation: self.alternation.union(other))
 	}
 
 	static let defined_pattern = Terminals.c_wsp.star() ++ Terminals["="] ++ Terminals.c_wsp.star();
@@ -148,18 +148,18 @@ public struct Rule: Production {
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Parse rulename
-		guard let (rulename, remainder1) = Rulename.match(input) else { return nil }
+		guard let (rulename, remainder1) = ABNFRulename.match(input) else { return nil }
 
 		// Parse defined-as
 		guard let (_, remainder2) = defined_pattern.match(remainder1) else { return nil }
 
 		// Parse alternation
-		guard let (alternation, remainder3) = Alternation.match(remainder2) else { return nil }
+		guard let (alternation, remainder3) = ABNFAlternation.match(remainder2) else { return nil }
 
 		// Parse *WSP c-nl
 		guard let (_, remainder) = ws_pattern.match(remainder3) else { return nil }
 
-		let rule = Rule(
+		let rule = ABNFRule(
 			rulename: rulename,
 			definedAs: "=",
 			alternation: alternation
@@ -169,7 +169,7 @@ public struct Rule: Production {
 }
 
 // rulename       =  ALPHA *(ALPHA / DIGIT / "-")
-public struct Rulename : Production {
+public struct ABNFRulename : ABNFProduction {
 	let label: String;
 	func toString() -> String {
 		return label;
@@ -187,7 +187,7 @@ public struct Rulename : Production {
 	static let pattern = Terminals.ALPHA ++ (Terminals.ALPHA | Terminals.DIGIT | Terminals["-"]).star();
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		if let (match, remainder) = pattern.match(input) {
-			return (Rulename(label: CHAR_string(match)), remainder);
+			return (ABNFRulename(label: CHAR_string(match)), remainder);
 		}else{
 			return nil;
 		}
@@ -198,10 +198,10 @@ public struct Rulename : Production {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-public struct Alternation: Production {
-	let matches: [Concatenation]
+public struct ABNFAlternation: ABNFProduction {
+	let matches: [ABNFConcatenation]
 
-	public init(matches: [Concatenation]) {
+	public init(matches: [ABNFConcatenation]) {
 		self.matches = matches
 	}
 
@@ -217,16 +217,16 @@ public struct Alternation: Production {
 		DFA.union(matches.map{ $0.toFSM(rules: rules) })
 	}
 
-	public func union(_ other: Alternation) -> Alternation {
-		return Alternation(matches: matches + other.matches)
+	public func union(_ other: ABNFAlternation) -> ABNFAlternation {
+		return ABNFAlternation(matches: matches + other.matches)
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		var remainder = input[input.startIndex...]
-		var concatenations: [Concatenation] = []
+		var concatenations: [ABNFConcatenation] = []
 
 		// Match first concatenation
-		guard let (firstConcat, remainder1) = Concatenation.match(remainder) else { return nil }
+		guard let (firstConcat, remainder1) = ABNFConcatenation.match(remainder) else { return nil }
 		concatenations.append(firstConcat)
 		remainder = remainder1
 
@@ -238,12 +238,12 @@ public struct Alternation: Production {
 			remainder = remainder2
 
 			// Parse concatenation
-			guard let (concat, remainder3) = Concatenation.match(remainder) else { break }
+			guard let (concat, remainder3) = ABNFConcatenation.match(remainder) else { break }
 			remainder = remainder3
 			concatenations.append(concat)
 		}
 
-		return (Alternation(matches: concatenations), remainder)
+		return (ABNFAlternation(matches: concatenations), remainder)
 	}
 }
 
@@ -251,10 +251,10 @@ public struct Alternation: Production {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-public struct Concatenation: Production {
-	let repetitions: [Repetition]
+public struct ABNFConcatenation: ABNFProduction {
+	let repetitions: [ABNFRepetition]
 
-	init(repetitions: [Repetition]) {
+	init(repetitions: [ABNFRepetition]) {
 		self.repetitions = repetitions
 	}
 
@@ -271,10 +271,10 @@ public struct Concatenation: Production {
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		var reps: [Repetition] = []
+		var reps: [ABNFRepetition] = []
 
 		// Match first repetition
-		guard let (firstRep, remainder1) = Repetition.match(input) else { return nil }
+		guard let (firstRep, remainder1) = ABNFRepetition.match(input) else { return nil }
 		reps.append(firstRep)
 
 		// Match zero or more (1*c-wsp repetition)
@@ -282,23 +282,23 @@ public struct Concatenation: Production {
 		while true {
 			// Consume whitespace
 			guard let (_, remainder2) = Terminals.c_wsp.plus().match(remainder) else { break }
-			guard let (rep, remainder3) = Repetition.match(remainder2) else { break }
+			guard let (rep, remainder3) = ABNFRepetition.match(remainder2) else { break }
 			remainder = remainder3
 			reps.append(rep)
 		}
 
-		return (Concatenation(repetitions: reps), remainder)
+		return (ABNFConcatenation(repetitions: reps), remainder)
 	}
 }
 
 // repetition     =  [repeat] element
 // repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
-public struct Repetition: Production {
+public struct ABNFRepetition: ABNFProduction {
 	let min: UInt
 	let max: UInt?
-	let element: Element
+	let element: ABNFElement
 
-	init(min: UInt, max: UInt?, element: Element) {
+	init(min: UInt, max: UInt?, element: ABNFElement) {
 		self.min = min
 		self.max = max
 		if let max {
@@ -349,29 +349,29 @@ public struct Repetition: Production {
 			// match = *DIGIT "*"
 			let (minStr, _) = Terminals.DIGIT.star().match(match)!
 			let (maxStr, remainder2) = Terminals.DIGIT.star().match(remainder1)!
-			guard let (element, remainder) = Element.match(remainder2) else { return nil }
-			return (Repetition(min: DIGIT_value(minStr), max: maxStr.isEmpty ? nil : DIGIT_value(maxStr), element: element), remainder)
+			guard let (element, remainder) = ABNFElement.match(remainder2) else { return nil }
+			return (ABNFRepetition(min: DIGIT_value(minStr), max: maxStr.isEmpty ? nil : DIGIT_value(maxStr), element: element), remainder)
 		} else if let (exactStr, remainder1) = minPattern.match(input) {
 			// 1*DIGIT element
 			let count = DIGIT_value(exactStr);
-			guard let (element, remainder) = Element.match(remainder1) else { return nil }
-			return (Repetition(min: count, max: count, element: element), remainder)
+			guard let (element, remainder) = ABNFElement.match(remainder1) else { return nil }
+			return (ABNFRepetition(min: count, max: count, element: element), remainder)
 		} else {
 			// element
-			guard let (element, remainder) = Element.match(input) else { return nil }
-			return (Repetition(min: 1, max: 1, element: element), remainder)
+			guard let (element, remainder) = ABNFElement.match(input) else { return nil }
+			return (ABNFRepetition(min: 1, max: 1, element: element), remainder)
 		}
 	}
 }
 
 // element        =  rulename / group / option / char-val / num-val / prose-val
-enum Element: Production {
-	case rulename(Rulename)
-	case group(Group)
-	case option(Option)
-	case charVal(Char_val)
-	case numVal(Num_val)
-	case proseVal(Prose_val)
+public enum ABNFElement: ABNFProduction {
+	case rulename(ABNFRulename)
+	case group(ABNFGroup)
+	case option(ABNFOption)
+	case charVal(ABNFCharVal)
+	case numVal(ABNFNumVal)
+	case proseVal(ABNFProseVal)
 
 	func toString() -> String {
 		switch self {
@@ -407,12 +407,12 @@ enum Element: Production {
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		if let (r, remainder) = Rulename.match(input) { return (.rulename(r), remainder) }
-		if let (g, remainder) = Group.match(input) { return (.group(g), remainder) }
-		if let (o, remainder) = Option.match(input) { return (.option(o), remainder) }
-		if let (c, remainder) = Char_val.match(input) { return (.charVal(c), remainder) }
-		if let (n, remainder) = Num_val.match(input) { return (.numVal(n), remainder) }
-		if let (p, remainder) = Prose_val.match(input) { return (.proseVal(p), remainder) }
+		if let (r, remainder) = ABNFRulename.match(input) { return (.rulename(r), remainder) }
+		if let (g, remainder) = ABNFGroup.match(input) { return (.group(g), remainder) }
+		if let (o, remainder) = ABNFOption.match(input) { return (.option(o), remainder) }
+		if let (c, remainder) = ABNFCharVal.match(input) { return (.charVal(c), remainder) }
+		if let (n, remainder) = ABNFNumVal.match(input) { return (.numVal(n), remainder) }
+		if let (p, remainder) = ABNFProseVal.match(input) { return (.proseVal(p), remainder) }
 		return nil
 	}
 }
@@ -421,8 +421,8 @@ enum Element: Production {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-public struct Group: Production {
-	let alternation: Alternation
+public struct ABNFGroup: ABNFProduction {
+	let alternation: ABNFAlternation
 
 	func toString() -> String {
 		return "(\(alternation.toString()))"
@@ -439,18 +439,18 @@ public struct Group: Production {
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		let prefix = Terminals["("] ++ Terminals.c_wsp.star();
 		guard let (_, remainder1) = prefix.match(input) else { return nil }
-		guard let (alternation, remainder2) = Alternation.match(remainder1) else { return nil }
+		guard let (alternation, remainder2) = ABNFAlternation.match(remainder1) else { return nil }
 		let suffix = Terminals.c_wsp.star() ++ Terminals[")"];
 		guard let (_, remainder) = suffix.match(remainder2) else { return nil }
-		return (Group(alternation: alternation), remainder)
+		return (ABNFGroup(alternation: alternation), remainder)
 	}
 }
 
 // option         =  "[" *c-wsp alternation *c-wsp "]"
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
-public struct Option: Production {
-	let alternation: Alternation
+public struct ABNFOption: ABNFProduction {
+	let alternation: ABNFAlternation
 
 	func toString() -> String {
 		return "[\(alternation.toString())]"
@@ -467,15 +467,15 @@ public struct Option: Production {
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		let prefix_pattern = Terminals["["] ++ Terminals.c_wsp.star();
 		guard let (_, remainder1) = prefix_pattern.match(input) else { return nil }
-		guard let (alternation, remainder2) = Alternation.match(remainder1) else { return nil }
+		guard let (alternation, remainder2) = ABNFAlternation.match(remainder1) else { return nil }
 		let suffix_pattern = Terminals.c_wsp.star() ++ Terminals["]"];
 		guard let (_, remainder) = suffix_pattern.match(remainder2) else { return nil }
-		return (Option(alternation: alternation), remainder)
+		return (ABNFOption(alternation: alternation), remainder)
 	}
 }
 
 // char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
-public struct Char_val: Production {
+public struct ABNFCharVal: ABNFProduction {
 	let sequence: Array<UInt>
 
 	func toString() -> String {
@@ -497,13 +497,13 @@ public struct Char_val: Production {
 		let charPattern = DFA<Array<UInt8>>(range: 0x20...0x21) | DFA<Array<UInt8>>(range: 0x23...0x7E)
 		guard let (chars, remainder2) = charPattern.star().match(remainder1) else { return nil }
 		guard let (_, remainder3) = Terminals.DQUOTE.match(remainder2) else { return nil }
-		return (Char_val(sequence: chars.map { UInt($0) }), remainder3)
+		return (ABNFCharVal(sequence: chars.map { UInt($0) }), remainder3)
 	}
 }
 
 // num-val        =  "%" (bin-val / dec-val / hex-val)
-public struct Num_val: Production {
-	public static func == (lhs: Num_val, rhs: Num_val) -> Bool {
+public struct ABNFNumVal: ABNFProduction {
+	public static func == (lhs: ABNFNumVal, rhs: ABNFNumVal) -> Bool {
 		return lhs.base == rhs.base && lhs.value == rhs.value
 	}
 	
@@ -591,15 +591,15 @@ public struct Num_val: Production {
 			guard let (endDigits, remainder6) = base.numPattern.match(remainder5) else { return nil }
 			let endStr = base.parseNum(endDigits)
 			guard let endStr else { return nil }
-			return (Num_val(base: base, value: Value.range(values.first!, endStr)), remainder6)
+			return (ABNFNumVal(base: base, value: Value.range(values.first!, endStr)), remainder6)
 		}
 
-		return (Num_val(base: base, value: Value.sequence(values)), remainder)
+		return (ABNFNumVal(base: base, value: Value.sequence(values)), remainder)
 	}
 }
 
 // prose-val      =  "<" *(%x20-3D / %x3F-7E) ">"
-public struct Prose_val: Production {
+public struct ABNFProseVal: ABNFProduction {
 	let remark: String;
 
 	init(remark: String) {
@@ -627,7 +627,7 @@ public struct Prose_val: Production {
 		guard let (match, input__) = pattern.match(input_) else { return nil }
 		guard let (_, remainder) = Terminals[">"].match(input__) else { return nil; }
 
-		let node = Prose_val(remark: CHAR_string(match))
+		let node = ABNFProseVal(remark: CHAR_string(match))
 		return (node, remainder)
 	}
 }
