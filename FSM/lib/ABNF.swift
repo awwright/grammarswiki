@@ -1,6 +1,6 @@
 /// Some minimal rules for parsing an ABNF document
 
-protocol ABNFProduction: Equatable {
+protocol ABNFProduction: Equatable, Comparable, Hashable {
 	func toString() -> String
 //	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8>
 }
@@ -12,6 +12,10 @@ public struct ABNFRulelist: ABNFProduction {
 
 	init(rules: [ABNFRule] = []) {
 		self.rules = rules
+	}
+
+	public static func < (lhs: ABNFRulelist, rhs: ABNFRulelist) -> Bool {
+		return lhs.rules < rhs.rules;
 	}
 
 	public var dictionary: Dictionary<String, ABNFRule> {
@@ -123,6 +127,12 @@ public struct ABNFRule: ABNFProduction {
 		self.alternation = alternation
 	}
 
+	public static func < (lhs: ABNFRule, rhs: ABNFRule) -> Bool {
+		if lhs.rulename < rhs.rulename { return true }
+		if lhs.rulename > rhs.rulename { return false }
+		return lhs.alternation < rhs.alternation;
+	}
+
 	public func toString() -> String {
 		return rulename.toString() + " " + definedAs + " " + alternation.toString() + "\r\n"
 	}
@@ -171,6 +181,11 @@ public struct ABNFRule: ABNFProduction {
 // rulename       =  ALPHA *(ALPHA / DIGIT / "-")
 public struct ABNFRulename : ABNFProduction {
 	let label: String;
+
+	public static func < (lhs: ABNFRulename, rhs: ABNFRulename) -> Bool {
+		return lhs.label < rhs.label;
+	}
+
 	func toString() -> String {
 		return label;
 	}
@@ -198,11 +213,26 @@ public struct ABNFRulename : ABNFProduction {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-public struct ABNFAlternation: ABNFProduction {
-	let matches: [ABNFConcatenation]
+public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
+
+	// An implementation for CustomDebugStringConvertible
+	public var debugDescription: String {
+		return self.toString();
+	}
+
+	public let matches: [ABNFConcatenation]
 
 	public init(matches: [ABNFConcatenation]) {
 		self.matches = matches
+	}
+
+	/// Create an expression that matches exactly a single codepoint
+	public init(symbol: any UnsignedInteger) {
+		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: ABNFElement.numVal(ABNFNumVal(base: .hex, value: .sequence([UInt(symbol)]))))])];
+	}
+
+	public static func < (lhs: ABNFAlternation, rhs: ABNFAlternation) -> Bool {
+		return lhs.matches < rhs.matches;
 	}
 
 	public func toString() -> String {
@@ -219,6 +249,10 @@ public struct ABNFAlternation: ABNFProduction {
 
 	public func union(_ other: ABNFAlternation) -> ABNFAlternation {
 		return ABNFAlternation(matches: matches + other.matches)
+	}
+
+	public func sorted() -> ABNFAlternation {
+		return ABNFAlternation(matches: matches.sorted())
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -258,6 +292,10 @@ public struct ABNFConcatenation: ABNFProduction {
 		self.repetitions = repetitions
 	}
 
+	public static func < (lhs: ABNFConcatenation, rhs: ABNFConcatenation) -> Bool {
+		return lhs.repetitions < rhs.repetitions;
+	}
+
 	func toString() -> String {
 		return repetitions.map { $0.toString() }.joined(separator: " ")
 	}
@@ -268,6 +306,14 @@ public struct ABNFConcatenation: ABNFProduction {
 
 	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		DFA.concatenate(repetitions.map { $0.toFSM(rules: rules) })
+	}
+
+	public func concatenate(_ other: ABNFConcatenation) -> ABNFConcatenation {
+		return ABNFConcatenation(repetitions: repetitions + other.repetitions)
+	}
+
+	public func concatenate(_ other: ABNFRepetition) -> ABNFConcatenation {
+		return ABNFConcatenation(repetitions: repetitions + [other])
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -305,6 +351,12 @@ public struct ABNFRepetition: ABNFProduction {
 			precondition(min <= max)
 		}
 		self.element = element
+	}
+
+	public static func < (lhs: ABNFRepetition, rhs: ABNFRepetition) -> Bool {
+		// FIXME: This may not be entirely accurate, may need to loop element and compare that
+		return lhs.element < rhs.element;
+//		return lhs.hashValue < rhs.hashValue;
 	}
 
 	func toString() -> String {
@@ -424,6 +476,10 @@ public enum ABNFElement: ABNFProduction {
 public struct ABNFGroup: ABNFProduction {
 	let alternation: ABNFAlternation
 
+	public static func < (lhs: ABNFGroup, rhs: ABNFGroup) -> Bool {
+		return lhs.alternation < rhs.alternation;
+	}
+
 	func toString() -> String {
 		return "(\(alternation.toString()))"
 	}
@@ -452,6 +508,10 @@ public struct ABNFGroup: ABNFProduction {
 public struct ABNFOption: ABNFProduction {
 	let alternation: ABNFAlternation
 
+	public static func < (lhs: ABNFOption, rhs: ABNFOption) -> Bool {
+		return lhs.alternation < rhs.alternation;
+	}
+
 	func toString() -> String {
 		return "[\(alternation.toString())]"
 	}
@@ -477,6 +537,10 @@ public struct ABNFOption: ABNFProduction {
 // char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
 public struct ABNFCharVal: ABNFProduction {
 	let sequence: Array<UInt>
+
+	public static func < (lhs: ABNFCharVal, rhs: ABNFCharVal) -> Bool {
+		return lhs.sequence < rhs.sequence;
+	}
 
 	func toString() -> String {
 		sequence.forEach { assert($0 < 128); }
@@ -506,7 +570,11 @@ public struct ABNFNumVal: ABNFProduction {
 	public static func == (lhs: ABNFNumVal, rhs: ABNFNumVal) -> Bool {
 		return lhs.base == rhs.base && lhs.value == rhs.value
 	}
-	
+
+	public static func < (lhs: ABNFNumVal, rhs: ABNFNumVal) -> Bool {
+		return lhs.value < rhs.value;
+	}
+
 	enum Base: Int {
 		case bin = 2;
 		case dec = 10;
@@ -529,9 +597,22 @@ public struct ABNFNumVal: ABNFProduction {
 	}
 	let base: Base;
 
-	enum Value: Equatable {
+	enum Value: Equatable, Comparable, Hashable {
 		case sequence(Array<UInt>);
 		case range(UInt, UInt);
+
+		public static func < (lhs: Value, rhs: Value) -> Bool {
+			// If lhs and rhs are both a sequence, compare their values
+			let lhsVal = switch lhs {
+				case .sequence(let seq): seq[0];
+				case .range(let min, let max): min;
+			}
+			let rhsVal = switch rhs {
+				case .sequence(let seq): seq[0];
+				case .range(let min, let max): min;
+			}
+			return lhsVal < rhsVal;
+		}
 
 		func toString(base: Int) -> String {
 			switch self {
@@ -605,6 +686,10 @@ public struct ABNFProseVal: ABNFProduction {
 	init(remark: String) {
 		self.remark = remark;
 		//self.length = remark.count;
+	}
+
+	public static func < (lhs: ABNFProseVal, rhs: ABNFProseVal) -> Bool {
+		return lhs.remark < rhs.remark;
 	}
 
 	var referencedRules: Set<String> {

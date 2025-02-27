@@ -7,9 +7,9 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	public typealias StateNo = Int;
 	public typealias States = StateNo?;
 
-	let states: Array<Dictionary<Symbol, StateNo>>;
-	let initial: StateNo;
-	let finals: Set<StateNo>;
+	public let states: Array<Dictionary<Symbol, StateNo>>;
+	public let initial: StateNo;
+	public let finals: Set<StateNo>;
 
 	public init() {
 		self.states = [ [:] ];
