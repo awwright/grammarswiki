@@ -146,6 +146,21 @@ import Testing
 		// See union, intersection, and symmetricDifference below
 	}
 
+	@Test("mapTransitions")
+	func test_mapTransitions() {
+		// Map symbols from ASCII UInt8 to Character
+		let dfa1 = DFA<Array<UInt8>>([ [0x61], [0x61, 0x62], [0x63, 0x64] ]);
+		let dfa2: DFA<String> = dfa1.mapTransitions({
+			symbol in
+			// Read `symbol` as an ASCII character and convert it to a Character
+			return Character(UnicodeScalar(Int(symbol))!)
+		})
+		#expect(!dfa2.contains(""))
+		#expect(dfa2.contains("a"))
+		#expect(dfa2.contains("ab"))
+		#expect(dfa2.contains("cd"))
+	}
+
 	@Test("Union of DFAs")
 	func testDFAUnion() {
 		let dfa1 = DFA<String>(verbatim: "a")

@@ -250,6 +250,21 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return Self.init(states: newStates, initial: newInitialState, finals: newFinals);
 	}
 
+	/// Return an equivalent DFA, remapping the symbols at each transition
+	public func mapTransitions<Target>(_ transform: (Element.Element) -> Target.Element) -> DFA<Target> {
+		let newStates = states.map {
+			// Map the key of the dictionary using `transform`
+			Dictionary(uniqueKeysWithValues: $0.map { (key, value) in
+				(transform(key), value)
+			})
+		}
+		return DFA<Target>(
+			states: newStates,
+			initial: self.initial,
+			finals: self.finals
+		)
+	}
+
 	public func contains(_ input: Element) -> Bool {
 		var currentState = self.initial;
 
