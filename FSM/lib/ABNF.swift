@@ -1,7 +1,22 @@
 /// Some minimal rules for parsing an ABNF document
 
-protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringConvertible {
-//	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8>
+public protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringConvertible {
+	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8>
+}
+
+extension ABNFProduction {
+	public static func parse<T>(_ input: T) -> Self? where T: Collection<UInt8> {
+		let match = Self.match(input)
+		guard let (rulelist, remainder) = match else {
+			assertionFailure("Could not parse input")
+			return nil;
+		}
+		guard remainder.isEmpty else {
+			assertionFailure("Could not parse input past \(remainder.count)")
+			return nil;
+		}
+		return rulelist;
+	}
 }
 
 /// Represents an ABNF rulelist, which is a list of rules.
@@ -70,41 +85,24 @@ public struct ABNFRulelist: ABNFProduction {
 	// Errata 3076 provides an updated ABNF for this production
 	// See <https://www.rfc-editor.org/errata/eid3076>
 	static let ws_pattern = Terminals.WSP.star() ++ Terminals.c_nl;
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Initialize a SubSequence starting at the beginning of input
-		var remainder = input[input.startIndex...]
-		var rules: Array<ABNFRule> = [];
-		repeat {
-			// First try to parse as a rule
+		var remainder = input[...]
+		var rules: [ABNFRule] = []
+		while !remainder.isEmpty {
 			if let (rule, remainder1) = ABNFRule.match(remainder) {
+				// First try to parse as a rule
+				rules.append(rule)
 				remainder = remainder1
-				rules.append(rule);
-				continue;
+			} else if let (_, remainder1) = ws_pattern.match(remainder) {
+				// ws_pattern matches a zero-length string so this should never fail... in theory...
+				remainder = remainder1
+			} else {
+				// Couldn't be parsed either as a rule or whitespace, end of parsing.
+				break;
 			}
-
-			// ws_pattern matches a zero-length string so this should never fail... in theory...
-			if let (_, remainder1) = ws_pattern.match(remainder) {
-				// Parse the rule, if any
-				remainder = remainder1;
-				continue;
-			}
-
-			// Couldn't be parsed either as a rule or whitespace, end of parsing.
-			return (ABNFRulelist(rules: rules), remainder);
-		} while true;
-	}
-
-	public static func parse<T>(_ input: T) -> Self? where T: Collection<UInt8> {
-		let match = Self.match(input)
-		guard let (rulelist, remainder) = match else {
-			assertionFailure("Could not parse input")
-			return nil;
 		}
-		guard remainder.isEmpty else {
-			assertionFailure("Could not parse input past \(remainder.count)")
-			return nil;
-		}
-		return rulelist;
+		return (ABNFRulelist(rules: rules), remainder);
 	}
 }
 
@@ -155,7 +153,7 @@ public struct ABNFRule: ABNFProduction {
 	static let defined_pattern = Terminals.c_wsp.star() ++ Terminals["="] ++ Terminals.c_wsp.star();
 	static let ws_pattern = Terminals.c_wsp.star() ++ Terminals.c_nl;
 
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Parse rulename
 		guard let (rulename, remainder1) = ABNFRulename.match(input) else { return nil }
 
@@ -210,7 +208,7 @@ public struct ABNFRulename : ABNFProduction {
 	}
 
 	static let pattern = Terminals.ALPHA ++ (Terminals.ALPHA | Terminals.DIGIT | Terminals["-"]).star();
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		if let (match, remainder) = pattern.match(input) {
 			return (ABNFRulename(label: CHAR_string(match)), remainder);
 		}else{
@@ -321,7 +319,7 @@ public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
 		return ABNFAlternation(matches: matches.sorted())
 	}
 
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		var remainder = input[input.startIndex...]
 		var concatenations: [ABNFConcatenation] = []
 
@@ -426,7 +424,7 @@ public struct ABNFConcatenation: ABNFProduction {
 		return nil;
 	}
 
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		var reps: [ABNFRepetition] = []
 
 		// Match first repetition
@@ -547,7 +545,7 @@ public struct ABNFRepetition: ABNFProduction {
 
 	static let rangePattern = Terminals.DIGIT.star() ++ Terminals["*"];
 	static let minPattern = Terminals.DIGIT.plus();
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		if let (match, remainder1) = rangePattern.match(input) {
 			// (*DIGIT "*" *DIGIT) element
 			// match = *DIGIT "*"
@@ -596,7 +594,7 @@ public enum ABNFElement: ABNFProduction {
 		return ABNFRepetition(min: range.lowerBound, max: nil, element: self)
 	}
 
-	func toString() -> String {
+	public var description: String {
 		switch self {
 			case .rulename(let r): return r.description
 			case .group(let g): return g.description
@@ -665,7 +663,7 @@ public enum ABNFElement: ABNFProduction {
 		return nil;
 	}
 
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		if let (r, remainder) = ABNFRulename.match(input) { return (.rulename(r), remainder) }
 		if let (g, remainder) = ABNFGroup.match(input) { return (.group(g), remainder) }
 		if let (o, remainder) = ABNFOption.match(input) { return (.option(o), remainder) }
@@ -707,7 +705,7 @@ public struct ABNFGroup: ABNFProduction {
 		return nil
 	}
 
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		let prefix = Terminals["("] ++ Terminals.c_wsp.star();
 		guard let (_, remainder1) = prefix.match(input) else { return nil }
 		guard let (alternation, remainder2) = ABNFAlternation.match(remainder1) else { return nil }
@@ -747,7 +745,7 @@ public struct ABNFOption: ABNFProduction {
 		return nil
 	}
 
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		let prefix_pattern = Terminals["["] ++ Terminals.c_wsp.star();
 		guard let (_, remainder1) = prefix_pattern.match(input) else { return nil }
 		guard let (alternation, remainder2) = ABNFAlternation.match(remainder1) else { return nil }
@@ -787,7 +785,7 @@ public struct ABNFCharVal: ABNFProduction {
 		return nil
 	}
 
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		guard let (_, remainder1) = Terminals.DQUOTE.match(input) else { return nil }
 		let charPattern = DFA<Array<UInt8>>(range: 0x20...0x21) | DFA<Array<UInt8>>(range: 0x23...0x7E)
 		guard let (chars, remainder2) = charPattern.star().match(remainder1) else { return nil }
@@ -924,7 +922,7 @@ public struct ABNFNumVal: ABNFProduction {
 		return nil
 	}
 
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		guard let (_, remainder0) = Terminals["%"].match(input) else { return nil }
 		guard let (basePrefix, remainder1) = Terminals.CHAR.match(remainder0) else { return nil }
 		let base: Base? = switch(basePrefix[basePrefix.startIndex]){
@@ -994,7 +992,7 @@ public struct ABNFProseVal: ABNFProduction {
 		return nil
 	}
 
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		// 0x20...0x7E - 0x3E
 		let pattern: DFA<Array<UInt8>> = (DFA(range: 0x20...0x3D) | DFA(range: 0x3F...0x7E)).star();
 
