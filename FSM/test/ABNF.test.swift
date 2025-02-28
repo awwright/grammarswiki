@@ -271,7 +271,7 @@ import Testing;
 	func test_abnf_upcast() async throws {
 		let abnf = "%x20";
 		let (rule, _) = ABNFNumVal.match(abnf.utf8)!
-		#expect(rule.element.repetition.concatenation.alternation.toString() == abnf);
+		#expect(rule.element.repetition.concatenation.alternation.description == abnf);
 	}
 
 	@Test("ABNFAlternation#union")
@@ -279,7 +279,7 @@ import Testing;
 		// Put it out of order just to see if it matches them
 		let matches = [0x20, 0x29, 0x22, 0x27, 0x24, 0x25, 0x26, 0x23, 0x28, 0x21].map { ABNFNumVal(base: .hex, value: .sequence([$0])).element.repetition.concatenation }
 		let expression = ABNFAlternation(matches:[]).union(ABNFAlternation(matches: matches))
-		#expect(expression.toString() == "%x20-29");
+		#expect(expression.description == "%x20-29");
 	}
 
 	@Test("num-val hasUnion")
@@ -288,6 +288,6 @@ import Testing;
 		let (rule2, _) = ABNFNumVal.match("%x21".utf8)!
 		let (union, _) = ABNFNumVal.match("%x20-21".utf8)!
 		#expect(rule1.hasUnion(rule2) == union);
-		#expect(rule1.hasUnion(rule2)!.toString() == "%x20-21");
+		#expect(rule1.hasUnion(rule2)!.description == "%x20-21");
 	}
 }

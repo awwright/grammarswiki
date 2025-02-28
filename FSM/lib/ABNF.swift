@@ -1,7 +1,6 @@
 /// Some minimal rules for parsing an ABNF document
 
-protocol ABNFProduction: Equatable, Comparable, Hashable {
-	func toString() -> String
+protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringConvertible {
 //	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8>
 }
 
@@ -36,8 +35,8 @@ public struct ABNFRulelist: ABNFProduction {
 		return dict;
 	}
 
-	public func toString() -> String {
-		return rules.map { $0.toString() }.joined()
+	public var description: String {
+		return rules.map { $0.description }.joined()
 	}
 
 	var referencedRules: Set<String> {
@@ -133,8 +132,8 @@ public struct ABNFRule: ABNFProduction {
 		return lhs.alternation < rhs.alternation;
 	}
 
-	public func toString() -> String {
-		return rulename.toString() + " " + definedAs + " " + alternation.toString() + "\r\n"
+	public var description: String {
+		return "\(rulename.description) \(definedAs) \(alternation.description)\r\n"
 	}
 
 	var referencedRules: Set<String> {
@@ -190,7 +189,7 @@ public struct ABNFRulename : ABNFProduction {
 		ABNFElement.rulename(self)
 	}
 
-	func toString() -> String {
+	public var description: String {
 		return label;
 	}
 
@@ -228,7 +227,7 @@ public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
 
 	// An implementation for CustomDebugStringConvertible
 	public var debugDescription: String {
-		return self.toString();
+		return self.description;
 	}
 
 	public let matches: [ABNFConcatenation]
@@ -282,8 +281,8 @@ public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
 		return lhs.matches < rhs.matches;
 	}
 
-	public func toString() -> String {
-		return matches.map { $0.toString() }.joined(separator: " / ")
+	public var description: String {
+		return matches.map { $0.description }.joined(separator: " / ")
 	}
 
 	var referencedRules: Set<String> {
@@ -395,8 +394,8 @@ public struct ABNFConcatenation: ABNFProduction {
 		return lhs.repetitions < rhs.repetitions;
 	}
 
-	func toString() -> String {
-		return repetitions.map { $0.toString() }.joined(separator: " ")
+	public var description: String {
+		return repetitions.map { $0.description }.joined(separator: " ")
 	}
 
 	var referencedRules: Set<String> {
@@ -512,7 +511,7 @@ public struct ABNFRepetition: ABNFProduction {
 		return nil;
 	}
 
-	func toString() -> String {
+	public var description: String {
 		let repeatStr =
 		if let max {
 			if min == 1 && max == 1 { "" }
@@ -522,7 +521,7 @@ public struct ABNFRepetition: ABNFProduction {
 			if min == 0 { "*" }
 			else{ "\(min)*" }
 		}
-		return repeatStr + element.toString()
+		return repeatStr + element.description
 	}
 
 	var referencedRules: Set<String> {
@@ -599,12 +598,12 @@ public enum ABNFElement: ABNFProduction {
 
 	func toString() -> String {
 		switch self {
-			case .rulename(let r): return r.toString()
-			case .group(let g): return g.toString()
-			case .option(let o): return o.toString()
-			case .charVal(let c): return c.toString()
-			case .numVal(let n): return n.toString()
-			case .proseVal(let p): return p.toString()
+			case .rulename(let r): return r.description
+			case .group(let g): return g.description
+			case .option(let o): return o.description
+			case .charVal(let c): return c.description
+			case .numVal(let n): return n.description
+			case .proseVal(let p): return p.description
 		}
 	}
 
@@ -692,8 +691,8 @@ public struct ABNFGroup: ABNFProduction {
 		ABNFElement.group(self)
 	}
 
-	func toString() -> String {
-		return "(\(alternation.toString()))"
+	public var description: String {
+		return "(\(alternation.description))"
 	}
 
 	var referencedRules: Set<String> {
@@ -732,8 +731,8 @@ public struct ABNFOption: ABNFProduction {
 		ABNFElement.option(self)
 	}
 
-	func toString() -> String {
-		return "[\(alternation.toString())]"
+	public var description: String {
+		return "[\(alternation.description)]"
 	}
 
 	var referencedRules: Set<String> {
@@ -770,7 +769,7 @@ public struct ABNFCharVal: ABNFProduction {
 		ABNFElement.charVal(self)
 	}
 
-	func toString() -> String {
+	public var description: String {
 		sequence.forEach { assert($0 < 128); }
 		let seq = sequence.map{ UInt8($0) }
 		return "\"\(CHAR_string(seq))\""
@@ -859,7 +858,7 @@ public struct ABNFNumVal: ABNFProduction {
 	}
 	let value: Value;
 
-	func toString() -> String {
+	public var description: String {
 		let prefix = switch base {
 			case Base.bin: "%b";
 			case Base.dec: "%d";
@@ -982,7 +981,7 @@ public struct ABNFProseVal: ABNFProduction {
 		return []
 	}
 
-	func toString() -> String {
+	public var description: String {
 		"<\(remark)>"
 	}
 
