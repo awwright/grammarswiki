@@ -19,6 +19,39 @@ extension ABNFProduction {
 	}
 }
 
+/// Any ABNF production that has an equivalent representation as an ABNFGroup
+public protocol ABNFExpression: ABNFProduction {
+//	/// Get the smallest equivalent ``ABNFAlternation``
+//	var alternation: ABNFAlternation {get}
+//	/// Get the smallest equivalent ``ABNFConcatenation``
+//	var concatenation: ABNFConcatenation {get}
+//	/// Get the smallest equivalent ``ABNFRepetition``
+//	var repetition: ABNFRepetition {get}
+	/// Get the smallest equivalent ``ABNFElement``
+	var element: ABNFElement {get}
+//	/// Get the smallest equivalent ``ABNFGroup``
+//	var group: ABNFGroup {get}
+//	/// Get the smallest equivalent ``ABNFOption``
+//	var option: ABNFOption {get}
+}
+
+extension ABNFExpression {
+	/// Get this expression repeated `count` times
+	public func repeating(_ count: UInt) -> ABNFRepetition {
+		self.element.repeating(count)
+	}
+
+	/// Get this expression repeated `min...max` times (inclusive)
+	public func repeating(_ range: ClosedRange<UInt>) -> ABNFRepetition {
+		self.element.repeating(range)
+	}
+
+	/// Get this expression repeated `min` or more times
+	public func repeating(_ range: PartialRangeFrom<UInt>) -> ABNFRepetition {
+		self.element.repeating(range)
+	}
+}
+
 /// Represents an ABNF rulelist, which is a list of rules.
 // rulelist       =  1*( rule / (*c-wsp c-nl) )
 public struct ABNFRulelist: ABNFProduction {
@@ -176,15 +209,15 @@ public struct ABNFRule: ABNFProduction {
 }
 
 // rulename       =  ALPHA *(ALPHA / DIGIT / "-")
-public struct ABNFRulename : ABNFProduction {
+public struct ABNFRulename : ABNFExpression {
 	let label: String;
 
 	public static func < (lhs: ABNFRulename, rhs: ABNFRulename) -> Bool {
 		return lhs.label < rhs.label;
 	}
 
-	var element: ABNFElement {
-		ABNFElement.rulename(self)
+	public var element: ABNFElement {
+		return ABNFElement.rulename(self)
 	}
 
 	public var description: String {
@@ -221,50 +254,11 @@ public struct ABNFRulename : ABNFProduction {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
-
-	// An implementation for CustomDebugStringConvertible
-	public var debugDescription: String {
-		return self.description;
-	}
-
+public struct ABNFAlternation: ABNFExpression {
 	public let matches: [ABNFConcatenation]
 
 	public init(matches: [ABNFConcatenation]) {
 		self.matches = matches
-	}
-
-	//
-	public init(_ concatenation: ABNFConcatenation) {
-		self.matches = [concatenation];
-	}
-
-	public init(_ repetition: ABNFRepetition) {
-		self.matches = [ABNFConcatenation(repetitions: [repetition])];
-	}
-
-	public init(_ element: ABNFElement) {
-		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: element)])];
-	}
-
-	public init(_ option: ABNFOption) {
-		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: option.element)])];
-	}
-
-	public init(_ group: ABNFGroup) {
-		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: group.element)])];
-	}
-
-	public init(_ charVal: ABNFCharVal) {
-		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: charVal.element)])];
-	}
-
-	public init(_ numVal: ABNFNumVal) {
-		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: numVal.element)])];
-	}
-
-	public init(_ prose: ABNFProseVal) {
-		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: prose.element)])];
 	}
 
 	/// Create an expression that matches exactly a single codepoint
@@ -279,8 +273,20 @@ public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
 		return lhs.matches < rhs.matches;
 	}
 
+	public var element: ABNFElement {
+		if(matches.count == 1){
+			return matches[0].element;
+		}
+		return ABNFElement.group(ABNFGroup(alternation: self))
+	}
+
 	public var description: String {
 		return matches.map { $0.description }.joined(separator: " / ")
+	}
+
+	// An implementation for CustomDebugStringConvertible
+	public var debugDescription: String {
+		return self.description;
 	}
 
 	var referencedRules: Set<String> {
@@ -349,47 +355,22 @@ public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-public struct ABNFConcatenation: ABNFProduction {
+public struct ABNFConcatenation: ABNFExpression {
 	let repetitions: [ABNFRepetition]
 
 	public init(repetitions: [ABNFRepetition]) {
 		self.repetitions = repetitions
 	}
 
-	public init(_ repetition: ABNFRepetition) {
-		self.repetitions = [repetition];
-	}
-
-	public init(_ element: ABNFElement) {
-		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: element)];
-	}
-
-	public init(_ option: ABNFOption) {
-		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: option.element)];
-	}
-
-	public init(_ group: ABNFGroup) {
-		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: group.element)];
-	}
-
-	public init(_ charVal: ABNFCharVal) {
-		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: charVal.element)];
-	}
-
-	public init(_ numVal: ABNFNumVal) {
-		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: numVal.element)];
-	}
-
-	public init(_ prose: ABNFProseVal) {
-		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: prose.element)];
-	}
-
-	public var alternation: ABNFAlternation {
-		ABNFAlternation(matches: [self])
-	}
-
 	public static func < (lhs: ABNFConcatenation, rhs: ABNFConcatenation) -> Bool {
 		return lhs.repetitions < rhs.repetitions;
+	}
+
+	public var element: ABNFElement {
+		if(repetitions.count == 1){
+			return repetitions[0].element;
+		}
+		return ABNFElement.group(ABNFGroup(alternation: ABNFAlternation(matches: [self])))
 	}
 
 	public var description: String {
@@ -447,10 +428,10 @@ public struct ABNFConcatenation: ABNFProduction {
 
 // repetition     =  [repeat] element
 // repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
-public struct ABNFRepetition: ABNFProduction {
-	let min: UInt
-	let max: UInt?
-	let element: ABNFElement
+public struct ABNFRepetition: ABNFExpression {
+	public let min: UInt
+	public let max: UInt?
+	public let repeating: ABNFElement
 
 	public init(min: UInt, max: UInt?, element: ABNFElement) {
 		self.min = min
@@ -458,51 +439,32 @@ public struct ABNFRepetition: ABNFProduction {
 		if let max {
 			precondition(min <= max)
 		}
-		self.element = element
-	}
-
-	public init(_ element: ABNFElement) {
-		self.init(min: 1, max: 1, element: element);
-	}
-
-	public init(_ option: ABNFOption) {
-		self.init(min: 1, max: 1, element: option.element);
-	}
-
-	public init(_ group: ABNFGroup) {
-		self.init(min: 1, max: 1, element: group.element);
-	}
-
-	public init(_ charVal: ABNFCharVal) {
-		self.init(min: 1, max: 1, element: charVal.element);
-	}
-
-	public init(_ numVal: ABNFNumVal) {
-		self.init(min: 1, max: 1, element: numVal.element);
-	}
-
-	public init(_ prose: ABNFProseVal) {
-		self.init(min: 1, max: 1, element: prose.element);
+		self.repeating = element
 	}
 
 	public static func < (lhs: ABNFRepetition, rhs: ABNFRepetition) -> Bool {
 		// FIXME: This may not be entirely accurate, may need to loop element and compare that
-		return lhs.element < rhs.element;
+		return lhs.repeating < rhs.repeating;
 //		return lhs.hashValue < rhs.hashValue;
 	}
 
-	public var concatenation: ABNFConcatenation {
-		ABNFConcatenation(repetitions: [self])
+	public var element: ABNFElement {
+		// If the repeated element is only repeated once, then the whole expression is equivalent to its inner repeating element
+		if(min == 1 && max == 1){
+			return repeating;
+		}
+		// Otherwise, wrap the repetition in a group
+		return ABNFElement.group(ABNFGroup(alternation: ABNFAlternation(matches: [ABNFConcatenation(repetitions: [self])])))
 	}
 
 	public func hasUnion(_ other: ABNFRepetition) -> ABNFRepetition? {
-		if self.element == other.element {
+		if self.repeating == other.repeating {
 			let newMin = Swift.min(self.min, other.min);
 			let newMax = self.max==nil || other.max==nil ? nil : Swift.max(self.max!, other.max!);
-			return ABNFRepetition(min: newMin, max: newMax, element: self.element)
+			return ABNFRepetition(min: newMin, max: newMax, element: self.repeating)
 		}
-		if(self.min == other.min && self.max == other.max && self.element != other.element){
-			if let replacement = self.element.hasUnion(other.element) {
+		if(self.min == other.min && self.max == other.max && self.repeating != other.repeating){
+			if let replacement = self.repeating.hasUnion(other.repeating) {
 				return ABNFRepetition(min: self.min, max: self.max, element: replacement)
 			}
 		}
@@ -519,15 +481,15 @@ public struct ABNFRepetition: ABNFProduction {
 			if min == 0 { "*" }
 			else{ "\(min)*" }
 		}
-		return repeatStr + element.description
+		return repeatStr + repeating.description
 	}
 
 	var referencedRules: Set<String> {
-		return element.referencedRules
+		return repeating.referencedRules
 	}
 
 	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
-		let fsm = element.toFSM(rules: rules);
+		let fsm = repeating.toFSM(rules: rules);
 		if(min == 0 && max == 1){
 			return fsm.optional();
 		}else if(min == 0 && max == nil){
@@ -567,7 +529,7 @@ public struct ABNFRepetition: ABNFProduction {
 }
 
 // element        =  rulename / group / option / char-val / num-val / prose-val
-public enum ABNFElement: ABNFProduction {
+public enum ABNFElement: ABNFExpression {
 	case rulename(ABNFRulename)
 	case group(ABNFGroup)
 	case option(ABNFOption)
@@ -575,8 +537,8 @@ public enum ABNFElement: ABNFProduction {
 	case numVal(ABNFNumVal)
 	case proseVal(ABNFProseVal)
 
-	public var repetition: ABNFRepetition {
-		return ABNFRepetition(min: 1, max: 1, element: self)
+	public var element: ABNFElement {
+		self
 	}
 
 	public func repeating(_ count: UInt) -> ABNFRepetition {
@@ -678,14 +640,14 @@ public enum ABNFElement: ABNFProduction {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-public struct ABNFGroup: ABNFProduction {
-	let alternation: ABNFAlternation
+public struct ABNFGroup: ABNFExpression {
+	public let alternation: ABNFAlternation
 
 	public static func < (lhs: ABNFGroup, rhs: ABNFGroup) -> Bool {
 		return lhs.alternation < rhs.alternation;
 	}
 
-	var element: ABNFElement {
+	public var element: ABNFElement {
 		ABNFElement.group(self)
 	}
 
@@ -718,14 +680,14 @@ public struct ABNFGroup: ABNFProduction {
 // option         =  "[" *c-wsp alternation *c-wsp "]"
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
-public struct ABNFOption: ABNFProduction {
+public struct ABNFOption: ABNFExpression {
 	let alternation: ABNFAlternation
 
 	public static func < (lhs: ABNFOption, rhs: ABNFOption) -> Bool {
 		return lhs.alternation < rhs.alternation;
 	}
 
-	var element: ABNFElement {
+	public var element: ABNFElement {
 		ABNFElement.option(self)
 	}
 
@@ -756,14 +718,14 @@ public struct ABNFOption: ABNFProduction {
 }
 
 // char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
-public struct ABNFCharVal: ABNFProduction {
+public struct ABNFCharVal: ABNFExpression {
 	let sequence: Array<UInt>
 
 	public static func < (lhs: ABNFCharVal, rhs: ABNFCharVal) -> Bool {
 		return lhs.sequence < rhs.sequence;
 	}
 
-	var element: ABNFElement {
+	public var element: ABNFElement {
 		ABNFElement.charVal(self)
 	}
 
@@ -795,7 +757,7 @@ public struct ABNFCharVal: ABNFProduction {
 }
 
 // num-val        =  "%" (bin-val / dec-val / hex-val)
-public struct ABNFNumVal: ABNFProduction {
+public struct ABNFNumVal: ABNFExpression {
 	public static func == (lhs: ABNFNumVal, rhs: ABNFNumVal) -> Bool {
 		return lhs.base == rhs.base && lhs.value == rhs.value
 	}
@@ -804,7 +766,7 @@ public struct ABNFNumVal: ABNFProduction {
 		return lhs.value < rhs.value;
 	}
 
-	var element: ABNFElement {
+	public var element: ABNFElement {
 		ABNFElement.numVal(self)
 	}
 
@@ -959,7 +921,7 @@ public struct ABNFNumVal: ABNFProduction {
 }
 
 // prose-val      =  "<" *(%x20-3D / %x3F-7E) ">"
-public struct ABNFProseVal: ABNFProduction {
+public struct ABNFProseVal: ABNFExpression {
 	let remark: String;
 
 	init(remark: String) {
@@ -967,12 +929,12 @@ public struct ABNFProseVal: ABNFProduction {
 		//self.length = remark.count;
 	}
 
-	var element: ABNFElement {
-		ABNFElement.proseVal(self)
-	}
-
 	public static func < (lhs: ABNFProseVal, rhs: ABNFProseVal) -> Bool {
 		return lhs.remark < rhs.remark;
+	}
+
+	public var element: ABNFElement {
+		ABNFElement.proseVal(self)
 	}
 
 	var referencedRules: Set<String> {
