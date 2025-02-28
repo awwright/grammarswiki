@@ -186,6 +186,10 @@ public struct ABNFRulename : ABNFProduction {
 		return lhs.label < rhs.label;
 	}
 
+	var element: ABNFElement {
+		ABNFElement.rulename(self)
+	}
+
 	func toString() -> String {
 		return label;
 	}
@@ -197,6 +201,13 @@ public struct ABNFRulename : ABNFProduction {
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
 	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		return rules[label]!;
+	}
+
+	public func hasUnion(_ other: ABNFRulename) -> ABNFRulename? {
+		if self == other {
+			return self;
+		}
+		return nil;
 	}
 
 	static let pattern = Terminals.ALPHA ++ (Terminals.ALPHA | Terminals.DIGIT | Terminals["-"]).star();
@@ -226,8 +237,44 @@ public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
 		self.matches = matches
 	}
 
+	//
+	public init(_ concatenation: ABNFConcatenation) {
+		self.matches = [concatenation];
+	}
+
+	public init(_ repetition: ABNFRepetition) {
+		self.matches = [ABNFConcatenation(repetitions: [repetition])];
+	}
+
+	public init(_ element: ABNFElement) {
+		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: element)])];
+	}
+
+	public init(_ option: ABNFOption) {
+		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: option.element)])];
+	}
+
+	public init(_ group: ABNFGroup) {
+		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: group.element)])];
+	}
+
+	public init(_ charVal: ABNFCharVal) {
+		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: charVal.element)])];
+	}
+
+	public init(_ numVal: ABNFNumVal) {
+		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: numVal.element)])];
+	}
+
+	public init(_ prose: ABNFProseVal) {
+		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: prose.element)])];
+	}
+
 	/// Create an expression that matches exactly a single codepoint
 	public init(symbol: any UnsignedInteger) {
+//		if(Int(symbol) >= 0x21 && Int(symbol) <= 0x7E){
+//			self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: ABNFElement.charVal(ABNFCharVal(sequence: [UInt(symbol)])))])];
+//		}
 		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: ABNFElement.numVal(ABNFNumVal(base: .hex, value: .sequence([UInt(symbol)]))))])];
 	}
 
@@ -248,7 +295,27 @@ public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
 	}
 
 	public func union(_ other: ABNFAlternation) -> ABNFAlternation {
-		return ABNFAlternation(matches: matches + other.matches)
+		// Iterate over other and try to merge it with an existing element if possible, otherwise append to the end.
+		var newMatches = self.matches;
+		// For every element in `other`, append it to the end.
+		// Then see if the last element can be merged in with an existing element before it.
+		// If so, check that element and so on.
+		// Try to preserve the order as much as possible because sometimes that is significant.
+		other: for otherConcat in other.matches {
+			var i = newMatches.count;
+			newMatches.append(otherConcat);
+			var search = newMatches.last!;
+			while i > 0 {
+				i -= 1;
+				if let replacementConcat = newMatches[i].hasUnion(search) {
+					newMatches[i] = replacementConcat;
+					// remove elements matching `search`
+					newMatches.removeAll(where: {$0 == search});
+					search = replacementConcat;
+				}
+			}
+		}
+		return ABNFAlternation(matches: newMatches)
 	}
 
 	public func sorted() -> ABNFAlternation {
@@ -288,8 +355,40 @@ public struct ABNFAlternation: ABNFProduction, CustomDebugStringConvertible {
 public struct ABNFConcatenation: ABNFProduction {
 	let repetitions: [ABNFRepetition]
 
-	init(repetitions: [ABNFRepetition]) {
+	public init(repetitions: [ABNFRepetition]) {
 		self.repetitions = repetitions
+	}
+
+	public init(_ repetition: ABNFRepetition) {
+		self.repetitions = [repetition];
+	}
+
+	public init(_ element: ABNFElement) {
+		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: element)];
+	}
+
+	public init(_ option: ABNFOption) {
+		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: option.element)];
+	}
+
+	public init(_ group: ABNFGroup) {
+		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: group.element)];
+	}
+
+	public init(_ charVal: ABNFCharVal) {
+		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: charVal.element)];
+	}
+
+	public init(_ numVal: ABNFNumVal) {
+		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: numVal.element)];
+	}
+
+	public init(_ prose: ABNFProseVal) {
+		self.repetitions = [ABNFRepetition(min: 1, max: 1, element: prose.element)];
+	}
+
+	public var alternation: ABNFAlternation {
+		ABNFAlternation(matches: [self])
 	}
 
 	public static func < (lhs: ABNFConcatenation, rhs: ABNFConcatenation) -> Bool {
@@ -314,6 +413,18 @@ public struct ABNFConcatenation: ABNFProduction {
 
 	public func concatenate(_ other: ABNFRepetition) -> ABNFConcatenation {
 		return ABNFConcatenation(repetitions: repetitions + [other])
+	}
+
+	public func hasUnion(_ other: ABNFConcatenation) -> ABNFConcatenation? {
+		if self == other {
+			return self;
+		}
+		if(repetitions.count == 1 && other.repetitions.count == 1){
+			if let replacement = repetitions[0].hasUnion(other.repetitions[0]) {
+				return ABNFConcatenation(repetitions: [replacement]);
+			}
+		}
+		return nil;
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -344,7 +455,7 @@ public struct ABNFRepetition: ABNFProduction {
 	let max: UInt?
 	let element: ABNFElement
 
-	init(min: UInt, max: UInt?, element: ABNFElement) {
+	public init(min: UInt, max: UInt?, element: ABNFElement) {
 		self.min = min
 		self.max = max
 		if let max {
@@ -353,10 +464,52 @@ public struct ABNFRepetition: ABNFProduction {
 		self.element = element
 	}
 
+	public init(_ element: ABNFElement) {
+		self.init(min: 1, max: 1, element: element);
+	}
+
+	public init(_ option: ABNFOption) {
+		self.init(min: 1, max: 1, element: option.element);
+	}
+
+	public init(_ group: ABNFGroup) {
+		self.init(min: 1, max: 1, element: group.element);
+	}
+
+	public init(_ charVal: ABNFCharVal) {
+		self.init(min: 1, max: 1, element: charVal.element);
+	}
+
+	public init(_ numVal: ABNFNumVal) {
+		self.init(min: 1, max: 1, element: numVal.element);
+	}
+
+	public init(_ prose: ABNFProseVal) {
+		self.init(min: 1, max: 1, element: prose.element);
+	}
+
 	public static func < (lhs: ABNFRepetition, rhs: ABNFRepetition) -> Bool {
 		// FIXME: This may not be entirely accurate, may need to loop element and compare that
 		return lhs.element < rhs.element;
 //		return lhs.hashValue < rhs.hashValue;
+	}
+
+	public var concatenation: ABNFConcatenation {
+		ABNFConcatenation(repetitions: [self])
+	}
+
+	public func hasUnion(_ other: ABNFRepetition) -> ABNFRepetition? {
+		if self.element == other.element {
+			let newMin = Swift.min(self.min, other.min);
+			let newMax = self.max==nil || other.max==nil ? nil : Swift.max(self.max!, other.max!);
+			return ABNFRepetition(min: newMin, max: newMax, element: self.element)
+		}
+		if(self.min == other.min && self.max == other.max && self.element != other.element){
+			if let replacement = self.element.hasUnion(other.element) {
+				return ABNFRepetition(min: self.min, max: self.max, element: replacement)
+			}
+		}
+		return nil;
 	}
 
 	func toString() -> String {
@@ -425,6 +578,25 @@ public enum ABNFElement: ABNFProduction {
 	case numVal(ABNFNumVal)
 	case proseVal(ABNFProseVal)
 
+	public var repetition: ABNFRepetition {
+		return ABNFRepetition(min: 1, max: 1, element: self)
+	}
+
+	public func repeating(_ count: UInt) -> ABNFRepetition {
+		precondition(count >= 0)
+		return ABNFRepetition(min: count, max: count, element: self)
+	}
+
+	public func repeating(_ range: ClosedRange<UInt>) -> ABNFRepetition {
+		precondition(range.lowerBound >= 0)
+		return ABNFRepetition(min: range.lowerBound, max: range.upperBound, element: self);
+	}
+
+	public func repeating(_ range: PartialRangeFrom<UInt>) -> ABNFRepetition {
+		precondition(range.lowerBound >= 0)
+		return ABNFRepetition(min: range.lowerBound, max: nil, element: self)
+	}
+
 	func toString() -> String {
 		switch self {
 			case .rulename(let r): return r.toString()
@@ -458,6 +630,42 @@ public enum ABNFElement: ABNFProduction {
 		}
 	}
 
+	public func hasUnion(_ other: ABNFElement) -> ABNFElement? {
+		switch self {
+			case .rulename(let r):
+				switch other {
+					case .rulename(let ro): if let replacement = r.hasUnion(ro) { return ABNFElement.rulename(replacement) }
+					default: return nil;
+				}
+			case .group(let g):
+				switch other {
+					case .group(let go): if let replacement = g.hasUnion(go) { return ABNFElement.group(replacement) }
+					default: return nil;
+				}
+			case .option(let o):
+				switch other {
+					case .option(let oo): if let replacement = o.hasUnion(oo) { return ABNFElement.option(replacement) }
+					default: return nil;
+				}
+			case .charVal(let c):
+				switch other {
+					case .charVal(let co): if let replacement = c.hasUnion(co) { return ABNFElement.charVal(replacement) }
+					default: return nil;
+				}
+			case .numVal(let n):
+				switch other {
+					case .numVal(let no): if let replacement = n.hasUnion(no) { return ABNFElement.numVal(replacement) }
+					default: return nil;
+				}
+			case .proseVal(let p):
+				switch other {
+					case .proseVal(let po): if let replacement = p.hasUnion(po) { return ABNFElement.proseVal(replacement) }
+					default: return nil;
+				}
+		}
+		return nil;
+	}
+
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		if let (r, remainder) = ABNFRulename.match(input) { return (.rulename(r), remainder) }
 		if let (g, remainder) = ABNFGroup.match(input) { return (.group(g), remainder) }
@@ -480,6 +688,10 @@ public struct ABNFGroup: ABNFProduction {
 		return lhs.alternation < rhs.alternation;
 	}
 
+	var element: ABNFElement {
+		ABNFElement.group(self)
+	}
+
 	func toString() -> String {
 		return "(\(alternation.toString()))"
 	}
@@ -490,6 +702,10 @@ public struct ABNFGroup: ABNFProduction {
 
 	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		alternation.toFSM(rules: rules)
+	}
+
+	public func hasUnion(_ other: ABNFGroup) -> ABNFGroup? {
+		return nil
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -512,6 +728,10 @@ public struct ABNFOption: ABNFProduction {
 		return lhs.alternation < rhs.alternation;
 	}
 
+	var element: ABNFElement {
+		ABNFElement.option(self)
+	}
+
 	func toString() -> String {
 		return "[\(alternation.toString())]"
 	}
@@ -522,6 +742,10 @@ public struct ABNFOption: ABNFProduction {
 
 	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		alternation.toFSM(rules: rules).optional()
+	}
+
+	public func hasUnion(_ other: ABNFOption) -> ABNFOption? {
+		return nil
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -542,6 +766,10 @@ public struct ABNFCharVal: ABNFProduction {
 		return lhs.sequence < rhs.sequence;
 	}
 
+	var element: ABNFElement {
+		ABNFElement.charVal(self)
+	}
+
 	func toString() -> String {
 		sequence.forEach { assert($0 < 128); }
 		let seq = sequence.map{ UInt8($0) }
@@ -554,6 +782,10 @@ public struct ABNFCharVal: ABNFProduction {
 
 	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		return DFA(verbatim: sequence)
+	}
+
+	public func hasUnion(_ other: ABNFCharVal) -> ABNFCharVal? {
+		return nil
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -573,6 +805,10 @@ public struct ABNFNumVal: ABNFProduction {
 
 	public static func < (lhs: ABNFNumVal, rhs: ABNFNumVal) -> Bool {
 		return lhs.value < rhs.value;
+	}
+
+	var element: ABNFElement {
+		ABNFElement.numVal(self)
 	}
 
 	enum Base: Int {
@@ -643,6 +879,52 @@ public struct ABNFNumVal: ABNFProduction {
 		}
 	}
 
+	public func hasUnion(_ other: ABNFNumVal) -> ABNFNumVal? {
+		// Extract range bounds from self
+		let (selfLow, selfHigh): (UInt, UInt)
+		switch self.value {
+			case .sequence(let seq):
+				// Only single-element sequences can be merged
+				guard seq.count == 1, let value = seq.first else {
+					return nil
+				}
+				selfLow = value
+				selfHigh = value
+			case .range(let low, let high):
+				selfLow = low
+				selfHigh = high
+		}
+
+		// Extract range bounds from other
+		let (otherLow, otherHigh): (UInt, UInt)
+		switch other.value {
+			case .sequence(let seq):
+				guard seq.count == 1, let value = seq.first else {
+					return nil
+				}
+				otherLow = value
+				otherHigh = value
+			case .range(let low, let high):
+				otherLow = low
+				otherHigh = high
+		}
+
+		// Check if ranges overlap or are adjacent
+		// Overlap: one range’s low is <= other’s high AND one’s high >= other’s low
+		// Adjacent: one range’s high + 1 = other’s low OR vice versa
+		let overlaps = selfLow <= otherHigh && selfHigh >= otherLow
+		let adjacent = selfHigh + 1 == otherLow || otherHigh + 1 == selfLow
+
+		if overlaps || adjacent {
+			// Combine into a new range with the min low and max high
+			let newLow = min(selfLow, otherLow)
+			let newHigh = max(selfHigh, otherHigh)
+			return ABNFNumVal(base: self.base, value: .range(newLow, newHigh))
+		}
+
+		return nil
+	}
+
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		guard let (_, remainder0) = Terminals["%"].match(input) else { return nil }
 		guard let (basePrefix, remainder1) = Terminals.CHAR.match(remainder0) else { return nil }
@@ -688,6 +970,10 @@ public struct ABNFProseVal: ABNFProduction {
 		//self.length = remark.count;
 	}
 
+	var element: ABNFElement {
+		ABNFElement.proseVal(self)
+	}
+
 	public static func < (lhs: ABNFProseVal, rhs: ABNFProseVal) -> Bool {
 		return lhs.remark < rhs.remark;
 	}
@@ -702,6 +988,11 @@ public struct ABNFProseVal: ABNFProduction {
 
 	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		fatalError("Cannot convert prose to FSM")
+	}
+
+	public func hasUnion(_ other: ABNFProseVal) -> ABNFProseVal? {
+		// This never has a union, even with an identical prose-val (probably)
+		return nil
 	}
 
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {

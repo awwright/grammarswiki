@@ -161,9 +161,7 @@ import Testing;
 		"A" / "B" / 3"C"
 		""";
 		let (expression, _) = ABNFAlternation.match(input.utf8)!
-		print(expression.toString())
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.toViz());
 		#expect(fsm.contains("A".utf8.map{UInt($0)}));
 	}
 
@@ -173,9 +171,7 @@ import Testing;
 		0*1"C"
 		""";
 		let (expression, _) = ABNFRepetition.match(input.utf8)!
-		print(expression.toString())
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.toViz());
 		#expect(fsm.contains("".utf8.map{UInt($0)}));
 		#expect(fsm.contains("C".utf8.map{UInt($0)}));
 		#expect(!fsm.contains("CC".utf8.map{UInt($0)}));
@@ -187,9 +183,7 @@ import Testing;
 		1*"C"
 		""";
 		let (expression, _) = ABNFRepetition.match(input.utf8)!
-		print(expression.toString())
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.toViz());
 		#expect(!fsm.contains("".utf8.map{UInt($0)}));
 		#expect(fsm.contains("C".utf8.map{UInt($0)}));
 		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
@@ -201,9 +195,7 @@ import Testing;
 		*"C"
 		""";
 		let (expression, _) = ABNFRepetition.match(input.utf8)!
-		print(expression.toString())
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.toViz());
 		#expect(fsm.contains("".utf8.map{UInt($0)}));
 		#expect(fsm.contains("C".utf8.map{UInt($0)}));
 		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
@@ -215,9 +207,7 @@ import Testing;
 		2*"C"
 		""";
 		let (expression, _) = ABNFRepetition.match(input.utf8)!
-		print(expression.toString())
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.toViz());
 		#expect(!fsm.contains("C".utf8.map{UInt($0)}));
 		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
 		#expect(fsm.contains("CCC".utf8.map{UInt($0)}));
@@ -229,9 +219,7 @@ import Testing;
 		*2"C"
 		""";
 		let (expression, _) = ABNFRepetition.match(input.utf8)!
-		print(expression.toString())
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.toViz());
 		#expect(fsm.contains("".utf8.map{UInt($0)}));
 		#expect(fsm.contains("C".utf8.map{UInt($0)}));
 		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
@@ -244,9 +232,7 @@ import Testing;
 		2*3"C"
 		""";
 		let (expression, _) = ABNFRepetition.match(input.utf8)!
-		print(expression.toString())
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.toViz());
 		#expect(!fsm.contains("C".utf8.map{UInt($0)}));
 		#expect(fsm.contains("CC".utf8.map{UInt($0)}));
 		#expect(fsm.contains("CCC".utf8.map{UInt($0)}));
@@ -259,9 +245,7 @@ import Testing;
 		"C"
 		""";
 		let (expression, _) = ABNFElement.match(input.utf8)!
-		print(expression.toString())
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.toViz());
 		#expect(fsm.contains("C".utf8.map{UInt($0)}));
 	}
 
@@ -271,9 +255,7 @@ import Testing;
 		"C"
 		""";
 		let (expression, _) = ABNFCharVal.match(input.utf8)!
-		print(expression.toString())
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.toViz());
 		#expect(fsm.contains("C".utf8.map{UInt($0)}));
 	}
 
@@ -282,7 +264,30 @@ import Testing;
 		let input = "Top = 3Rule\r\nRule = \"C\"\r\n";
 		let expression = ABNFRulelist.parse(input.utf8)!
 		let fsm = expression.toFSM(rules: [:]);
-		print(fsm.forEach{ print($0, $1.toViz()) });
 		#expect(fsm["Top"]!.contains("CCC".utf8.map{UInt($0)}));
+	}
+
+	@Test("ABNFAlternation#union")
+	func test_abnf_upcast() async throws {
+		let abnf = "%x20";
+		let (rule, _) = ABNFNumVal.match(abnf.utf8)!
+		#expect(rule.element.repetition.concatenation.alternation.toString() == abnf);
+	}
+
+	@Test("ABNFAlternation#union")
+	func test_alternation_union() async throws {
+		// Put it out of order just to see if it matches them
+		let matches = [0x20, 0x29, 0x22, 0x27, 0x24, 0x25, 0x26, 0x23, 0x28, 0x21].map { ABNFNumVal(base: .hex, value: .sequence([$0])).element.repetition.concatenation }
+		let expression = ABNFAlternation(matches:[]).union(ABNFAlternation(matches: matches))
+		#expect(expression.toString() == "%x20-29");
+	}
+
+	@Test("num-val hasUnion")
+	func test_numVal_hasUnion() async throws {
+		let (rule1, _) = ABNFNumVal.match("%x20".utf8)!
+		let (rule2, _) = ABNFNumVal.match("%x21".utf8)!
+		let (union, _) = ABNFNumVal.match("%x20-21".utf8)!
+		#expect(rule1.hasUnion(rule2) == union);
+		#expect(rule1.hasUnion(rule2)!.toString() == "%x20-21");
 	}
 }
