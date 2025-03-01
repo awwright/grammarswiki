@@ -36,7 +36,11 @@ public protocol ABNFExpression: ABNFProduction {
 	/// Get the smallest equivalent ``ABNFGroup``
 	var group: ABNFGroup {get}
 
+	/// If this will accept only the empty string
 	var isEmpty: Bool {get}
+
+	/// If this will accept the empty string (maybe among other values)
+	var isOptional: Bool {get}
 }
 
 extension ABNFExpression {
@@ -60,7 +64,7 @@ extension ABNFExpression {
 	}
 
 	public func concatenate(_ other: any ABNFExpression) -> ABNFConcatenation {
-		ABNFConcatenation(repetitions: [self.repetition, other.repetition])
+		ABNFConcatenation(repetitions: [self.repetition]).concatenate(ABNFConcatenation(repetitions: [other.repetition]))
 	}
 }
 
@@ -247,6 +251,10 @@ public struct ABNFRulename : ABNFExpression {
 		// At least, not _necessarially_ empty
 		return false
 	}
+	public var isOptional: Bool {
+		// Not necessarially empty
+		false
+	}
 
 	public var description: String {
 		return label;
@@ -315,6 +323,9 @@ public struct ABNFAlternation: ABNFExpression {
 		if(matches.count == 1){
 			return matches[0].element;
 		}
+		if(matches.contains(where: { $0.isEmpty })){
+			return ABNFElement.option(ABNFOption(optionalAlternation: ABNFAlternation(matches: matches.filter{ !$0.isEmpty })))
+		}
 		return ABNFElement.group(ABNFGroup(alternation: self))
 	}
 	public var group: ABNFGroup {
@@ -322,6 +333,10 @@ public struct ABNFAlternation: ABNFExpression {
 	}
 	public var isEmpty: Bool {
 		return matches.allSatisfy({$0.isEmpty})
+	}
+	public var isOptional: Bool {
+		// If any of the elements can be empty, the whole alternation accepts empty
+		matches.contains(where: { $0.isEmpty })
 	}
 
 	public var description: String {
@@ -410,7 +425,6 @@ public struct ABNFConcatenation: ABNFExpression {
 		return lhs.repetitions < rhs.repetitions;
 	}
 
-
 	public var alternation: ABNFAlternation {
 		ABNFAlternation(matches: [self])
 	}
@@ -433,6 +447,9 @@ public struct ABNFConcatenation: ABNFExpression {
 	public var isEmpty: Bool {
 		repetitions.allSatisfy { $0.isEmpty }
 	}
+	public var isOptional: Bool {
+		repetitions.allSatisfy { $0.isOptional }
+	}
 
 	public var description: String {
 		return repetitions.map { $0.description }.joined(separator: " ")
@@ -447,11 +464,15 @@ public struct ABNFConcatenation: ABNFExpression {
 	}
 
 	public func concatenate(_ other: ABNFConcatenation) -> ABNFConcatenation {
-		return ABNFConcatenation(repetitions: repetitions + other.repetitions)
+		let allRepetitions = (repetitions + other.repetitions)
+		let newRepetitions = allRepetitions.filter { !$0.isEmpty };
+		return ABNFConcatenation(repetitions: newRepetitions.isEmpty ? [allRepetitions[0]] : newRepetitions)
 	}
 
 	public func concatenate(_ other: ABNFRepetition) -> ABNFConcatenation {
-		return ABNFConcatenation(repetitions: repetitions + [other])
+		let allRepetitions = (repetitions + [other])
+		let newRepetitions = allRepetitions.filter { !$0.isEmpty };
+		return ABNFConcatenation(repetitions: newRepetitions.isEmpty ? [allRepetitions[0]] : newRepetitions)
 	}
 
 	public func hasUnion(_ other: ABNFConcatenation) -> ABNFConcatenation? {
@@ -518,7 +539,6 @@ public struct ABNFRepetition: ABNFExpression {
 	public var repetition: ABNFRepetition {
 		self
 	}
-
 	public var element: ABNFElement {
 		(min == 1 && max == 1) ? repeating : ABNFElement.group(self.group)
 	}
@@ -527,6 +547,9 @@ public struct ABNFRepetition: ABNFExpression {
 	}
 	public var isEmpty: Bool {
 		max == 0 || repeating.isEmpty
+	}
+	public var isOptional: Bool {
+		min == 0 || repeating.isOptional
 	}
 
 	public func hasUnion(_ other: ABNFRepetition) -> ABNFRepetition? {
@@ -632,6 +655,16 @@ public enum ABNFElement: ABNFExpression {
 			case .charVal(let c): return c.isEmpty
 			case .numVal(let n): return n.isEmpty
 			case .proseVal(let p): return p.isEmpty
+		}
+	}
+	public var isOptional: Bool {
+		switch self {
+			case .rulename(let r): return r.isOptional
+			case .group(let g): return g.isOptional
+			case .option(let o): return o.isOptional
+			case .charVal(let c): return c.isOptional
+			case .numVal(let n): return n.isOptional
+			case .proseVal(let p): return p.isOptional
 		}
 	}
 
@@ -765,6 +798,9 @@ public struct ABNFGroup: ABNFExpression {
 	public var isEmpty: Bool {
 		alternation.isEmpty
 	}
+	public var isOptional: Bool {
+		alternation.isOptional
+	}
 
 	public var description: String {
 		return "(\(alternation.description))"
@@ -819,6 +855,10 @@ public struct ABNFOption: ABNFExpression {
 	}
 	public var isEmpty: Bool {
 		optionalAlternation.isEmpty
+	}
+	public var isOptional: Bool {
+		// Defitionally
+		true
 	}
 
 	public var description: String {
@@ -877,6 +917,9 @@ public struct ABNFCharVal: ABNFExpression {
 	public var isEmpty: Bool {
 		sequence.isEmpty
 	}
+	public var isOptional: Bool {
+		sequence.isEmpty
+	}
 
 	public var description: String {
 		sequence.forEach { assert($0 < 128); }
@@ -932,6 +975,12 @@ public struct ABNFNumVal: ABNFExpression {
 	}
 	public var isEmpty: Bool {
 		// You can't actually notate an empty num_val sequence in ABNF, but if you could, it would be empty
+		switch self.value {
+			case .sequence(let seq): return seq.isEmpty
+			case .range(let _, let _): return false
+		}
+	}
+	public var isOptional: Bool {
 		switch self.value {
 			case .sequence(let seq): return seq.isEmpty
 			case .range(let _, let _): return false
@@ -1117,6 +1166,10 @@ public struct ABNFProseVal: ABNFExpression {
 		ABNFGroup(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
+		// Not necessarially empty
+		false
+	}
+	public var isOptional: Bool {
 		// Not necessarially empty
 		false
 	}

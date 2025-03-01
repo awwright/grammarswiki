@@ -109,7 +109,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 			let shape = finals.contains(i) ? "doublecircle" : "circle";
 			viz += "\t\(i) [label=\"\(i)\", shape=\"\(shape)\"];\n";
 			for (symbol, target) in transitions {
-				viz += "\t\(i) -> \(target) [label=\"\(symbol)\"];\n";
+				viz += "\t\(i) -> \(target) [label=\(graphvizLabelEscapedString(String(describing: symbol)))];\n";
 			}
 		}
 		viz += "}\n";

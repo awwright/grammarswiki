@@ -140,7 +140,7 @@ public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 			for (symbol, states) in transitions {
 //				viz += "\t\(symbol) \(states)\n";
 				for target in states {
-					viz += "\t\(i) -> \(target) [label=\"\(symbol)\"];\n";
+					viz += "\t\(i) -> \(target) [label=\(graphvizLabelEscapedString(String(describing: symbol)))];\n";
 				}
 			}
 		}
