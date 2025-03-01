@@ -34,6 +34,7 @@ import Testing;
 		#expect(rulename.repetition == ABNFRepetition(min: 1, max: 1, element: rulename.element))
 		#expect(rulename.element == ABNFElement.rulename(rulename))
 		#expect(rulename.group == ABNFGroup(alternation: rulename.alternation))
+		#expect(rulename.isEmpty == false)
 	}
 
 	@Test("alternation of single rulename")
@@ -48,6 +49,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.rulename(ABNFRulename(label: "foo"))) // Unwrap the alternation
 		#expect(rule.group == ABNFGroup(alternation: rule))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("alternation of two rulenames")
@@ -62,6 +64,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.group(rule.group))
 		#expect(rule.group == ABNFGroup(alternation: rule))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("concatenation of single rulename")
@@ -76,6 +79,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.rulename(ABNFRulename(label: "foo"))) // Unwrap the concatenation
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("concatenation of two rulenames")
@@ -91,6 +95,21 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.group(rule.group))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
+	}
+
+	@Test("repetition 0")
+	func test_repetition_0() async throws {
+		let abnf = "0foo ...";
+		let (rule, remainder) = ABNFRepetition.match(abnf.utf8)!
+		#expect(rule == ABNFRepetition(min: 0, max: 0, element: ABNFRulename(label: "foo").element));
+		#expect(CHAR_string(remainder) == " ...");
+		#expect(rule.alternation == ABNFAlternation(matches: [rule.concatenation]))
+		#expect(rule.concatenation == ABNFConcatenation(repetitions: [rule.repetition]))
+		#expect(rule.repetition == rule)
+		#expect(rule.element == ABNFElement.group(ABNFGroup(alternation: rule.alternation))) // Unwrap the repetition instead of wrapping it
+		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == true)
 	}
 
 	@Test("repetition 1")
@@ -105,6 +124,7 @@ import Testing;
 		#expect(rule.repetition == rule)
 		#expect(rule.element == ABNFRulename(label: "foo").element) // Unwrap the repetition instead of wrapping it
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("repetition min")
@@ -119,6 +139,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: nil, element: ABNFRulename.parse("foo".utf8)!.element))
 		#expect(rule.element == ABNFElement.group(rule.group))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("repetition max")
@@ -133,6 +154,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 0, max: 4, element: ABNFRulename.parse("foo".utf8)!.element))
 		#expect(rule.element == ABNFElement.group(rule.group))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("repetition min/max")
@@ -147,6 +169,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 2, max: 4, element: ABNFRulename.parse("foo".utf8)!.element))
 		#expect(rule.element == ABNFElement.group(rule.group))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	// element        =  rulename / group / option / char-val / num-val / prose-val
@@ -161,6 +184,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == rule)
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("element of group")
@@ -174,6 +198,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == rule)
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("element of option")
@@ -187,6 +212,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == rule)
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("element of charVal")
@@ -200,6 +226,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == rule)
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("element of numval")
@@ -213,6 +240,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == rule)
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("element of proseVal")
@@ -241,6 +269,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.rulename(ABNFRulename(label: "foo"))) // Unwrap the group
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("group of alternation")
@@ -256,6 +285,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.group(rule.group))
 		#expect(rule.group == ABNFGroup(alternation: inner))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("group of concatenation")
@@ -271,6 +301,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.group(rule.group))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("option")
@@ -285,6 +316,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.option(rule))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	// char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
@@ -301,6 +333,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.charVal(rule))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("num-val w/ bin-val")
@@ -314,6 +347,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.numVal(rule))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("num-val w/ dec-val")
@@ -327,6 +361,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.numVal(rule))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("num-val w/ hex-val")
@@ -340,6 +375,7 @@ import Testing;
 		#expect(rule.repetition == ABNFRepetition(min: 1, max: 1, element: rule.element))
 		#expect(rule.element == ABNFElement.numVal(rule))
 		#expect(rule.group == ABNFGroup(alternation: rule.alternation))
+		#expect(rule.isEmpty == false)
 	}
 
 	@Test("prose_val")
@@ -353,6 +389,7 @@ import Testing;
 		#expect(prose.repetition == ABNFRepetition(min: 1, max: 1, element: prose.element))
 		#expect(prose.element == ABNFElement.proseVal(prose))
 		#expect(prose.group == ABNFGroup(alternation: prose.alternation))
+		#expect(prose.isEmpty == false)
 	}
 
 	@Test("expression.toFSM")

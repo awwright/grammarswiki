@@ -36,6 +36,7 @@ public protocol ABNFExpression: ABNFProduction {
 	/// Get the smallest equivalent ``ABNFGroup``
 	var group: ABNFGroup {get}
 
+	var isEmpty: Bool {get}
 }
 
 extension ABNFExpression {
@@ -242,6 +243,10 @@ public struct ABNFRulename : ABNFExpression {
 	public var group: ABNFGroup {
 		return ABNFGroup(alternation: self.alternation)
 	}
+	public var isEmpty: Bool {
+		// At least, not _necessarially_ empty
+		return false
+	}
 
 	public var description: String {
 		return label;
@@ -314,6 +319,9 @@ public struct ABNFAlternation: ABNFExpression {
 	}
 	public var group: ABNFGroup {
 		return ABNFGroup(alternation: self)
+	}
+	public var isEmpty: Bool {
+		return matches.allSatisfy({$0.isEmpty})
 	}
 
 	public var description: String {
@@ -422,6 +430,9 @@ public struct ABNFConcatenation: ABNFExpression {
 	public var group: ABNFGroup {
 		return ABNFGroup(alternation: self.alternation)
 	}
+	public var isEmpty: Bool {
+		repetitions.allSatisfy { $0.isEmpty }
+	}
 
 	public var description: String {
 		return repetitions.map { $0.description }.joined(separator: " ")
@@ -513,6 +524,9 @@ public struct ABNFRepetition: ABNFExpression {
 	}
 	public var group: ABNFGroup {
 		return ABNFGroup(alternation: self.alternation)
+	}
+	public var isEmpty: Bool {
+		max == 0 || repeating.isEmpty
 	}
 
 	public func hasUnion(_ other: ABNFRepetition) -> ABNFRepetition? {
@@ -609,6 +623,16 @@ public enum ABNFElement: ABNFExpression {
 	}
 	public var group: ABNFGroup {
 		return ABNFGroup(alternation: self.alternation)
+	}
+	public var isEmpty: Bool {
+		switch self {
+			case .rulename(let r): return r.isEmpty
+			case .group(let g): return g.isEmpty
+			case .option(let o): return o.isEmpty
+			case .charVal(let c): return c.isEmpty
+			case .numVal(let n): return n.isEmpty
+			case .proseVal(let p): return p.isEmpty
+		}
 	}
 
 	public func repeating(_ count: UInt) -> ABNFRepetition {
@@ -738,6 +762,9 @@ public struct ABNFGroup: ABNFExpression {
 	public var group: ABNFGroup {
 		self
 	}
+	public var isEmpty: Bool {
+		alternation.isEmpty
+	}
 
 	public var description: String {
 		return "(\(alternation.description))"
@@ -790,6 +817,9 @@ public struct ABNFOption: ABNFExpression {
 	public var group: ABNFGroup {
 		ABNFGroup(alternation: self.alternation)
 	}
+	public var isEmpty: Bool {
+		optionalAlternation.isEmpty
+	}
 
 	public var description: String {
 		return "[\(optionalAlternation.description)]"
@@ -821,6 +851,10 @@ public struct ABNFOption: ABNFExpression {
 public struct ABNFCharVal: ABNFExpression {
 	let sequence: Array<UInt>
 
+	public init(sequence: Array<UInt>) {
+		self.sequence = sequence
+	}
+
 	public static func < (lhs: ABNFCharVal, rhs: ABNFCharVal) -> Bool {
 		return lhs.sequence < rhs.sequence;
 	}
@@ -839,6 +873,9 @@ public struct ABNFCharVal: ABNFExpression {
 	}
 	public var group: ABNFGroup {
 		ABNFGroup(alternation: self.alternation)
+	}
+	public var isEmpty: Bool {
+		sequence.isEmpty
 	}
 
 	public var description: String {
@@ -892,6 +929,13 @@ public struct ABNFNumVal: ABNFExpression {
 	}
 	public var group: ABNFGroup {
 		ABNFGroup(alternation: self.alternation)
+	}
+	public var isEmpty: Bool {
+		// You can't actually notate an empty num_val sequence in ABNF, but if you could, it would be empty
+		switch self.value {
+			case .sequence(let seq): return seq.isEmpty
+			case .range(let _, let _): return false
+		}
 	}
 
 	enum Base: Int {
@@ -1046,9 +1090,9 @@ public struct ABNFNumVal: ABNFExpression {
 
 // prose-val      =  "<" *(%x20-3D / %x3F-7E) ">"
 public struct ABNFProseVal: ABNFExpression {
-	let remark: String;
+	public let remark: String;
 
-	init(remark: String) {
+	public init(remark: String) {
 		self.remark = remark;
 		//self.length = remark.count;
 	}
@@ -1071,6 +1115,10 @@ public struct ABNFProseVal: ABNFExpression {
 	}
 	public var group: ABNFGroup {
 		ABNFGroup(alternation: self.alternation)
+	}
+	public var isEmpty: Bool {
+		// Not necessarially empty
+		false
 	}
 
 	var referencedRules: Set<String> {
