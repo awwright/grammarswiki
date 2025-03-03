@@ -2,19 +2,8 @@
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public protocol NFAProtocol {
-	associatedtype Element;
-	associatedtype Symbol;
-	associatedtype StateNo;
-	associatedtype States;
+public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: FSMProtocol where Element.Element: Hashable & Comparable {
 
-//	var alphabet: Set<Symbol> { get };
-
-	init();
-	init(verbatim: Element);
-}
-
-public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, NFAProtocol where Element.Element: Hashable & Comparable {
 	public typealias Symbol = Element.Element where Element.Element: Hashable;
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
@@ -338,6 +327,20 @@ public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
 
+
+	// Also provide a static implementation of union since it applies to any number of inputs
+	public static func union(_ languages: Array<Self>) -> Self {
+		if(languages.count == 0){
+			return Self();
+		} else if(languages.count == 1) {
+			return languages[0];
+		}
+		// In this case just reduce over the union,
+		// that should be about as performant as looping over all of them,
+		// and slightly simpler to reason about.
+		return languages[1...].reduce(languages[0], { $0.union($1) })
+	}
+
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
 	public static func concatenate(_ languages: Array<Self>) -> Self {
 		if(languages.count == 0){
@@ -500,4 +503,15 @@ public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		self = self.symmetricDifference(other);
 	}
 
+	public static func ++ (lhs: Self, rhs: Self) -> Self {
+		return Self.concatenate([lhs, rhs]);
+	}
+
+	public static func | (lhs: Self, rhs: Self) -> Self {
+		return Self.parallel(fsms: [lhs, rhs], merge: { $0[0] || $0[1] });
+	}
+
+	public static func - (lhs: Self, rhs: Self) -> Self {
+		return Self.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
+	}
 }

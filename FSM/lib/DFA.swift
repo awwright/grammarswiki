@@ -15,7 +15,7 @@
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, Sequence, NFAProtocol where Element.Element: Hashable & Comparable {
+public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, Sequence, FSMProtocol where Element.Element: Hashable & Comparable {
 	/// The type of symbols in the DFA’s alphabet.
 	public typealias Symbol = Element.Element where Element.Element: Hashable;
 	/// The type used to index states
@@ -241,10 +241,12 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		public let fsm: DFA<Element>
 		public let state: StateNo
 
+		/// Indicates if the current state of the ID is a final state
 		public var isFinal: Bool {
 			fsm.isFinal(state)
 		}
 
+		/// Returns new ID after consuming the given symbol
 		public subscript(symbol: Symbol) -> Self? {
 			let state = self.fsm.states[self.state][symbol];
 			if let state {
@@ -252,6 +254,15 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 			}else{
 				return nil;
 			}
+		}
+
+		/// Returns a new DFA whose initial state is the current state
+		public var derived: DFA<Element> {
+			DFA<Element>(
+				states: self.fsm.states,
+				initial: self.state,
+				finals: self.fsm.finals
+			)
 		}
 	}
 
@@ -739,8 +750,6 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
 	}
 }
-
-infix operator ++: AdditionPrecedence;
 
 // Conditional protocol compliance
 extension DFA: Sendable where Symbol: Sendable {}
