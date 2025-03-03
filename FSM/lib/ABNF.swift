@@ -1,10 +1,38 @@
-/// Some minimal rules for parsing an ABNF document
 
+/// A protocol representing a production in an ABNF (Augmented Backus-Naur Form) grammar.
+///
+/// Conforming types represent syntactic units defined in RFC 5234 that vary with respect to their parent production,
+/// such as rules, alternations, or groups. This protocol provides the foundation for parsing ABNF structures by
+/// requiring a static `match` method to parse input and extract the corresponding production.
+///
+/// Conformance to `Equatable`, `Comparable`, `Hashable`, and `CustomStringConvertible` ensures
+/// that productions can be compared, sorted, hashed into collections, and converted to human-readable
+/// strings, facilitating their use in parsing and grammar manipulation.
+///
+/// - Note: Implementors should ensure that the `match` method correctly handles the ABNF syntax
+///   for their specific production type, returning `nil` if the input cannot be parsed.
 public protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringConvertible {
+	/// Attempts to parse the given input to produce an instance of this production.
+	///
+	/// - Parameter input: A collection of `UInt8` values representing the input to parse,
+	///   typically an ASCII-encoded string.
+	/// - Returns: A tuple containing the parsed production and the remaining unparsed input,
+	///   or `nil` if parsing fails.
 	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8>
+
+	/// The `description` property required by `CustomStringConvertible` is expected to produce valid ABNF.
+	var description: String {get}
 }
 
+
+/// Extension providing a convenience methods for ABNFProduction
 extension ABNFProduction {
+	/// Parses the entire input into an instance of this production, ensuring no input remains.
+	///
+	/// - Parameter input: A collection of `UInt8` values representing the full input to parse.
+	/// - Returns: The parsed production if successful and the entire input is consumed.
+	/// - Throws: `ABNFError.parseFailure` if parsing fails or unparsed input remains.
+	/// - Note: This method is stricter than `match`, requiring complete consumption of the input.
 	public static func parse<T>(_ input: T) -> Self? where T: Collection<UInt8> {
 		let match = Self.match(input)
 		guard let (rulelist, remainder) = match else {
@@ -19,7 +47,15 @@ extension ABNFProduction {
 	}
 }
 
-/// Any ABNF production that has an equivalent representation as an ABNFGroup
+/// A protocol representing an expression within an ABNF grammar, extending `ABNFProduction`.
+///
+/// Expressions are the building blocks of ABNF rules, such as alternations, concatenations,
+/// repetitions, elements, or groups. This protocol provides properties to access the smallest
+/// equivalent representation of the expression in various forms and to check its properties,
+/// such as whether it is empty or optional.
+///
+/// - Note: Conforming types must implement these properties to reflect their structure as
+///   defined in RFC 5234, ensuring accurate conversion between equivalent forms.
 public protocol ABNFExpression: ABNFProduction {
 	/// Get the smallest equivalent ``ABNFAlternation``
 	var alternation: ABNFAlternation {get}
@@ -41,6 +77,19 @@ public protocol ABNFExpression: ABNFProduction {
 
 	/// If this will accept the empty string (maybe among other values)
 	var isOptional: Bool {get}
+
+	/// Gets a list of the rules referenced by leaf ``ABNFRulename`` productions.
+	/// All of the rules given must be provided to ``toFSM``.
+	var referencedRules: Set<String> {get}
+
+	/// Converts the rule to a deterministic finite automaton (DFA).
+	///
+	/// - Note: If the rule contains a rulename, the definition must be provided in the parameters, otherwise the function will fail.
+	/// 	This list can be acquired from ``referencedRules``
+	///
+	/// - Parameter rules: A dictionary of resolved rulenames to their DFAs.
+	/// - Returns: The DFA equivalent to the definition of this rule.
+	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>>
 }
 
 extension ABNFExpression {
@@ -59,20 +108,53 @@ extension ABNFExpression {
 		self.element.repeating(range)
 	}
 
+	/// Produce an ABNF expression equivalent to the union of this rule and the provided one.
+	///
+	/// Typically this just joins the two expressions together with an alternation.
+	/// In some cases, optimizations will be performed.
+	/// For example, overlapping ranges are merged together.
+	///
+	/// - Parameter other: The expression to union with.
+	/// - Returns: A new ABNFAlternation with the combined alternation.
 	public func union(_ other: any ABNFExpression) -> ABNFAlternation {
-		ABNFAlternation(matches: [self.concatenation, other.concatenation])
+		self.alternation.union(other.alternation)
 	}
 
+	/// Concatenates this element with another by appending their repetitions.
+	///
+	/// Typically this just concatenates the two expressions together with a concatenation.
+	/// In some cases, optimizations will be performed.
+	/// For example, repetitions with the same inner elements may be joined.
+	///
+	/// - Parameter other: The expression to union with.
+	/// - Returns: A new ABNFAlternation with the combined alternation.
 	public func concatenate(_ other: any ABNFExpression) -> ABNFConcatenation {
-		ABNFConcatenation(repetitions: [self.repetition]).concatenate(ABNFConcatenation(repetitions: [other.repetition]))
+		self.concatenation.concatenate(other.concatenation)
 	}
 }
 
-/// Represents an ABNF rulelist, which is a list of rules.
-// rulelist       =  1*( rule / (*c-wsp c-nl) )
+/// Represents a list of rules in an ABNF grammar, as defined in RFC 5234 with Errata 3076.
+///
+/// A rulelist is the top-level structure in an ABNF document, consisting of one or more rules
+/// separated by whitespace and comments.
+/// This struct provides methods to convert the rulelist into a dictionary mapping rulenames to
+/// rules and to generate finite state machines (FSMs) for parsing.
+///
+/// Rules within the list may reference each other, and incremental definitions (`=/`)
+/// are supported by merging rules with the same name.
+///
+/// Implements `rulelist` as updated by [errata 3076](<https://www.rfc-editor.org/errata/eid3076>):
+///
+/// ```abnf
+/// rulelist       =  1*( rule / (*WSP c-nl) )
+/// ```
 public struct ABNFRulelist: ABNFProduction {
+	/// The array of rules comprising this rulelist.
 	let rules: [ABNFRule]
 
+	/// Initializes a rulelist with an array of rules.
+	///
+	/// - Parameter rules: The rules to include in the rulelist.
 	init(rules: [ABNFRule] = []) {
 		self.rules = rules
 	}
@@ -81,14 +163,21 @@ public struct ABNFRulelist: ABNFProduction {
 		return lhs.rules < rhs.rules;
 	}
 
+	/// Converts the rulelist into a dictionary mapping rulenames to their corresponding rules.
+	///
+	/// Incremental definitions (`=/`) are handled by merging rules with the same rulename using
+	/// their union operation, respecting ABNF's case-insensitive rulenames.
+	///
+	/// - Returns: A dictionary where keys are lowercase rulenames and values are the merged rules.
 	public var dictionary: Dictionary<String, ABNFRule> {
 		var dict: Dictionary<String, ABNFRule> = [:];
 		rules.forEach {
 			rule in
 			let rulename = rule.rulename.label;
+			// FIXME: Test with case-insensitive comparison
 			if let previousRule = dict[rulename] {
 				// If we've already seen this rule, and it's of the correct type, merge it with the previous definition
-				if(rule.definedAs == "/="){
+				if(rule.definedAs == .incremental){
 					dict[rulename] = previousRule.union(rule)
 				}
 			}else{
@@ -103,10 +192,20 @@ public struct ABNFRulelist: ABNFProduction {
 		return rules.map { $0.description }.joined()
 	}
 
-	var referencedRules: Set<String> {
+	/// The rules referenced by all the rules in this rule list.
+	/// See ``ABNFExpression``.
+	///
+	/// - Example: To determine the externally defined rules, try
+	/// `rulelist.referencedRules.subtracting(rulelist.dictionary.keys)`
+	public var referencedRules: Set<String> {
 		return Set(rules.flatMap(\.referencedRules))
 	}
 
+	/// Generates a dictionary of deterministic finite automata (DFAs) for each rule in the list.
+	///
+	/// - Parameter ruleMap: An optional map of pre-resolved rules to their DFAs, used for external references.
+	/// - Returns: A dictionary mapping lowercase rulenames to their corresponding DFAs.
+	/// - Note: Rules with circular dependencies that cannot be converted to a DFA will be excluded from the return value without any other warning.
 	public func toFSM(rules ruleMap: Dictionary<String, DFA<Array<UInt>>>) -> Dictionary<String, DFA<Array<UInt>>> {
 		// Get a Dictionary of each rule by its name to its referencedRules
 		let requiredRules = Dictionary<String, Set<String>>(uniqueKeysWithValues: rules.map {
@@ -116,6 +215,7 @@ public struct ABNFRulelist: ABNFProduction {
 		let rulesByName = self.dictionary;
 
 		var resolvedRules = ruleMap;
+		// TODO: Detect head/tail recursion, that can be converted
 		main: repeat {
 			for (rulename, referenced) in requiredRules {
 				if resolvedRules[rulename] == nil && referenced.isSubset(of: resolvedRules.keys) {
@@ -131,9 +231,10 @@ public struct ABNFRulelist: ABNFProduction {
 		return resolvedRules;
 	}
 
-	// Errata 3076 provides an updated ABNF for this production
-	// See <https://www.rfc-editor.org/errata/eid3076>
-	static let ws_pattern = Terminals.WSP.star() ++ Terminals.c_nl;
+	/// Parses an input string into a rulelist.
+	///
+	/// - Parameter input: A collection of `UInt8` values representing the ABNF grammar text.
+	/// - Returns: A tuple containing the parsed rulelist and remaining input, or `nil` if parsing fails.
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Initialize a SubSequence starting at the beginning of input
 		var remainder = input[...]
@@ -143,7 +244,7 @@ public struct ABNFRulelist: ABNFProduction {
 				// First try to parse as a rule
 				rules.append(rule)
 				remainder = remainder1
-			} else if let (_, remainder1) = ws_pattern.match(remainder) {
+			} else if let (_, remainder1) = Terminals.WSP_star_c_nl.match(remainder) {
 				// ws_pattern matches a zero-length string so this should never fail... in theory...
 				remainder = remainder1
 			} else {
@@ -155,22 +256,45 @@ public struct ABNFRulelist: ABNFProduction {
 	}
 }
 
-// Errata 2968 provides an updates ABNF for this production
-// See <https://www.rfc-editor.org/errata/eid2968>
-// rule           =  rulename defined-as elements c-nl
-// defined-as     =  *c-wsp ("=" / "=/") *c-wsp
-// elements       =  alternation *WSP
-// alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
-// c-nl           =  comment / CRLF ; comment or newline
+/// Represents a single rule in an ABNF grammar, as defined in RFC 5234 with Errata 2968.
+///
+/// A rule consists of a rulename, a definition operator (`=` or `=/`), and an alternation defining
+/// its structure. Rules can be converted to finite state machines for parsing and combined with
+/// other rules via union operations.
+///
+/// - Example: `digit = "0" / "1" / "2"` defines a rule named "digit" with an alternation.
+///
+/// Errata 2968 provides an updates ABNF for this production
+/// See <https://www.rfc-editor.org/errata/eid2968>
+///
+/// ```abnf
+/// rule           =  rulename defined-as elements c-nl
+/// defined-as     =  *c-wsp ("=" / "=/") *c-wsp
+/// elements       =  alternation *WSP
+/// alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
+/// c-nl           =  comment / CRLF ; comment or newline
+/// ```
 public struct ABNFRule: ABNFProduction {
+	/// Specifies if the rule was defined using `=` or as an additional alternation `=/`
+	public enum DefinedAs: String {
+		case equal = "="
+		case incremental = "/="
+	}
+
 	public let rulename: ABNFRulename;
-	public let definedAs: String;
+	public let definedAs: DefinedAs;
 	public let alternation: ABNFAlternation;
 
-	public init(rulename: ABNFRulename, definedAs: String, alternation: ABNFAlternation) {
+	public init(rulename: ABNFRulename, definedAs: DefinedAs, alternation: ABNFAlternation) {
 		self.rulename = rulename
 		self.definedAs = definedAs
 		self.alternation = alternation
+	}
+
+	public init(rulename: ABNFRulename, definedAs: DefinedAs, expression: any ABNFExpression) {
+		self.rulename = rulename
+		self.definedAs = definedAs
+		self.alternation = expression.alternation
 	}
 
 	public static func < (lhs: ABNFRule, rhs: ABNFRule) -> Bool {
@@ -199,32 +323,48 @@ public struct ABNFRule: ABNFProduction {
 		return ABNFRule(rulename: rulename, definedAs: definedAs, alternation: self.alternation.union(other))
 	}
 
-	static let defined_pattern = Terminals.c_wsp.star() ++ Terminals["="] ++ Terminals.c_wsp.star();
-	static let ws_pattern = Terminals.c_wsp.star() ++ Terminals.c_nl;
-
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Parse rulename
 		guard let (rulename, remainder1) = ABNFRulename.match(input) else { return nil }
 
 		// Parse defined-as
-		guard let (_, remainder2) = defined_pattern.match(remainder1) else { return nil }
+		guard let (_, remainder2) = Terminals.c_wsp_star.match(remainder1) else { return nil }
+		guard let (definedAs, remainder3) = Terminals.defined_as_inner.match(remainder2) else { return nil }
+		guard let (_, remainder4) = Terminals.c_wsp_star.match(remainder3) else { return nil }
+
+		var op: DefinedAs;
+		switch(definedAs.count){
+			case 1: op = .equal;
+			case 2: op = .incremental;
+			default: fatalError();
+		}
 
 		// Parse alternation
-		guard let (alternation, remainder3) = ABNFAlternation.match(remainder2) else { return nil }
+		guard let (alternation, remainder5) = ABNFAlternation.match(remainder4) else { return nil }
 
 		// Parse *WSP c-nl
-		guard let (_, remainder) = ws_pattern.match(remainder3) else { return nil }
+		guard let (_, remainder) = Terminals.c_wsp_star_c_nl.match(remainder5) else { return nil }
 
 		let rule = ABNFRule(
 			rulename: rulename,
-			definedAs: "=",
+			definedAs: op,
 			alternation: alternation
 		);
 		return (rule, remainder);
 	}
 }
 
-// rulename       =  ALPHA *(ALPHA / DIGIT / "-")
+/// Represents a rulename in an ABNF grammar, which is a case-insensitive identifier.
+///
+/// Rulenames are used to name rules and reference them within expressions. Per RFC 5234,
+/// rulenames are case-insensitive, so "DIGIT" and "digit" are equivalent.
+///
+/// Implements the ABNF `rulename` production:
+/// ```abnf
+/// rulename       =  ALPHA *(ALPHA / DIGIT / "-")
+/// ```
+///
+/// - Example: In `digit = "0"`, "digit" is the rulename.
 public struct ABNFRulename : ABNFExpression {
 	let label: String;
 
@@ -260,12 +400,13 @@ public struct ABNFRulename : ABNFExpression {
 		return label;
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		return Set([label])
 	}
 
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	// This is also a clever way of preventing recursive loops
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		return rules[label]!;
 	}
 
@@ -276,9 +417,8 @@ public struct ABNFRulename : ABNFExpression {
 		return nil;
 	}
 
-	static let pattern = Terminals.ALPHA ++ (Terminals.ALPHA | Terminals.DIGIT | Terminals["-"]).star();
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
-		if let (match, remainder) = pattern.match(input) {
+		if let (match, remainder) = Terminals.rulename.match(input) {
 			return (ABNFRulename(label: CHAR_string(match)), remainder);
 		}else{
 			return nil;
@@ -286,10 +426,19 @@ public struct ABNFRulename : ABNFExpression {
 	}
 }
 
-// alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
-// c-wsp          =  WSP / (c-nl WSP)
-// c-nl           =  comment / CRLF ; comment or newline
-// comment        =  ";" *(WSP / VCHAR) CRLF
+/// Represents an alternation of concatenations in an ABNF grammar (e.g., `a / b / c`).
+///
+/// An alternation specifies a choice between multiple concatenations, where any one of them
+/// can match the input.
+///
+/// ```abnf
+/// alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
+/// c-wsp          =  WSP / (c-nl WSP)
+/// c-nl           =  comment / CRLF ; comment or newline
+/// comment        =  ";" *(WSP / VCHAR) CRLF
+/// ```
+///
+/// - Example: `"0" / "1" / "2"` is an alternation of three concatenations.
 public struct ABNFAlternation: ABNFExpression {
 	public let matches: [ABNFConcatenation]
 
@@ -303,6 +452,10 @@ public struct ABNFAlternation: ABNFExpression {
 //			self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: ABNFElement.charVal(ABNFCharVal(sequence: [UInt(symbol)])))])];
 //		}
 		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: ABNFElement.numVal(ABNFNumVal(base: .hex, value: .sequence([UInt(symbol)]))))])];
+	}
+
+	public init(expression: any ABNFExpression) {
+		self = expression.alternation
 	}
 
 	public static func < (lhs: ABNFAlternation, rhs: ABNFAlternation) -> Bool {
@@ -348,7 +501,7 @@ public struct ABNFAlternation: ABNFExpression {
 		return self.description;
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		return matches.reduce(Set(), { $0.union($1.referencedRules) })
 	}
 
@@ -394,7 +547,7 @@ public struct ABNFAlternation: ABNFExpression {
 		remainder = remainder1
 
 		// Match zero or more *c_wsp "/" *c_wsp concatenation
-		let pattern = Terminals.c_wsp.star() ++ Terminals["/"] ++ Terminals.c_wsp.star();
+		let pattern = Terminals.c_wsp_star ++ Terminals["/"] ++ Terminals.c_wsp_star;
 		while true {
 			// Consume *c_wsp "/" *c_wsp
 			guard let (_, remainder2) = pattern.match(remainder) else { break }
@@ -410,10 +563,18 @@ public struct ABNFAlternation: ABNFExpression {
 	}
 }
 
-// concatenation  =  repetition *(1*c-wsp repetition)
-// c-wsp          =  WSP / (c-nl WSP)
-// c-nl           =  comment / CRLF ; comment or newline
-// comment        =  ";" *(WSP / VCHAR) CRLF
+/// Represents a concatenation of repetitions in an ABNF grammar (e.g., `1*a *b 2c`).
+///
+/// A concatenation specifies a sequence where all repetitions must match in order.
+///
+/// ```abnf
+/// concatenation  =  repetition *(1*c-wsp repetition)
+/// c-wsp          =  WSP / (c-nl WSP)
+/// c-nl           =  comment / CRLF ; comment or newline
+/// comment        =  ";" *(WSP / VCHAR) CRLF
+/// ```
+///
+/// - Example: `"a" "b"` is a concatenation of two repetitions.
 public struct ABNFConcatenation: ABNFExpression {
 	let repetitions: [ABNFRepetition]
 
@@ -455,22 +616,16 @@ public struct ABNFConcatenation: ABNFExpression {
 		return repetitions.map { $0.description }.joined(separator: " ")
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		return repetitions.reduce(Set(), { $0.union($1.referencedRules) })
 	}
 
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		DFA.concatenate(repetitions.map { $0.toFSM(rules: rules) })
 	}
 
 	public func concatenate(_ other: ABNFConcatenation) -> ABNFConcatenation {
 		let allRepetitions = (repetitions + other.repetitions)
-		let newRepetitions = allRepetitions.filter { !$0.isEmpty };
-		return ABNFConcatenation(repetitions: newRepetitions.isEmpty ? [allRepetitions[0]] : newRepetitions)
-	}
-
-	public func concatenate(_ other: ABNFRepetition) -> ABNFConcatenation {
-		let allRepetitions = (repetitions + [other])
 		let newRepetitions = allRepetitions.filter { !$0.isEmpty };
 		return ABNFConcatenation(repetitions: newRepetitions.isEmpty ? [allRepetitions[0]] : newRepetitions)
 	}
@@ -498,7 +653,7 @@ public struct ABNFConcatenation: ABNFExpression {
 		var remainder = remainder1
 		while true {
 			// Consume whitespace
-			guard let (_, remainder2) = Terminals.c_wsp.plus().match(remainder) else { break }
+			guard let (_, remainder2) = Terminals.c_wsp_plus.match(remainder) else { break }
 			guard let (rep, remainder3) = ABNFRepetition.match(remainder2) else { break }
 			remainder = remainder3
 			reps.append(rep)
@@ -508,8 +663,18 @@ public struct ABNFConcatenation: ABNFExpression {
 	}
 }
 
-// repetition     =  [repeat] element
-// repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
+/// Represents a repetition of an element in an ABNF grammar (e.g., `*element` or `3*5element`).
+///
+/// Repetitions specify how many times an element can or must occur, with optional minimum and
+/// maximum bounds. They exist in between ``ABNFConcatenation`` and ``ABNFElement``.
+/// An element with no repetition modifiers exists as an ABNFRepetition with a min and max of 1.
+///
+/// ```abnf
+/// repetition     =  [repeat] element
+/// repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
+/// ```
+///
+/// - Example: `2*3"a"` means "a" must appear between 2 and 3 times.
 public struct ABNFRepetition: ABNFExpression {
 	public let min: UInt
 	public let max: UInt?
@@ -579,11 +744,11 @@ public struct ABNFRepetition: ABNFExpression {
 		return repeatStr + repeating.description
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		return repeating.referencedRules
 	}
 
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		let fsm = repeating.toFSM(rules: rules);
 		if(min == 0 && max == 1){
 			return fsm.optional();
@@ -600,17 +765,15 @@ public struct ABNFRepetition: ABNFExpression {
 		}
 	}
 
-	static let rangePattern = Terminals.DIGIT.star() ++ Terminals["*"];
-	static let minPattern = Terminals.DIGIT.plus();
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		if let (match, remainder1) = rangePattern.match(input) {
+		if let (match, remainder1) = Terminals.repeat_range.match(input) {
 			// (*DIGIT "*" *DIGIT) element
 			// match = *DIGIT "*"
-			let (minStr, _) = Terminals.DIGIT.star().match(match)!
-			let (maxStr, remainder2) = Terminals.DIGIT.star().match(remainder1)!
+			let (minStr, _) = Terminals.DIGIT_star.match(match)!
+			let (maxStr, remainder2) = Terminals.DIGIT_star.match(remainder1)!
 			guard let (element, remainder) = ABNFElement.match(remainder2) else { return nil }
 			return (ABNFRepetition(min: DIGIT_value(minStr), max: maxStr.isEmpty ? nil : DIGIT_value(maxStr), element: element), remainder)
-		} else if let (exactStr, remainder1) = minPattern.match(input) {
+		} else if let (exactStr, remainder1) = Terminals.repeat_min.match(input) {
 			// 1*DIGIT element
 			let count = DIGIT_value(exactStr);
 			guard let (element, remainder) = ABNFElement.match(remainder1) else { return nil }
@@ -623,7 +786,15 @@ public struct ABNFRepetition: ABNFExpression {
 	}
 }
 
-// element        =  rulename / group / option / char-val / num-val / prose-val
+/// An enumeration representing a basic element in an ABNF grammar.
+///
+/// Elements are the atomic units of ABNF expressions, such as rulenames, groups, or terminal values.
+///
+/// ```abnf
+/// element        =  rulename / group / option / char-val / num-val / prose-val
+/// ```
+///
+/// - Note: The order of cases in `match` reflects ABNF parsing precedence.
 public enum ABNFElement: ABNFExpression {
 	case rulename(ABNFRulename)
 	case group(ABNFGroup)
@@ -698,7 +869,7 @@ public enum ABNFElement: ABNFExpression {
 		}
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		switch self {
 			case .rulename(let r): return r.referencedRules
 			case .group(let g): return g.referencedRules
@@ -709,7 +880,7 @@ public enum ABNFElement: ABNFExpression {
 		}
 	}
 
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		switch self {
 			case .rulename(let r): return r.toFSM(rules: rules)
 			case .group(let g): return g.toFSM(rules: rules)
@@ -721,37 +892,15 @@ public enum ABNFElement: ABNFExpression {
 	}
 
 	public func hasUnion(_ other: ABNFElement) -> ABNFElement? {
+		// TODO: numVal can sometimes be unioned with charVal
+		// TODO: group and option too
 		switch self {
-			case .rulename(let r):
-				switch other {
-					case .rulename(let ro): if let replacement = r.hasUnion(ro) { return ABNFElement.rulename(replacement) }
-					default: return nil;
-				}
-			case .group(let g):
-				switch other {
-					case .group(let go): if let replacement = g.hasUnion(go) { return ABNFElement.group(replacement) }
-					default: return nil;
-				}
-			case .option(let o):
-				switch other {
-					case .option(let oo): if let replacement = o.hasUnion(oo) { return ABNFElement.option(replacement) }
-					default: return nil;
-				}
-			case .charVal(let c):
-				switch other {
-					case .charVal(let co): if let replacement = c.hasUnion(co) { return ABNFElement.charVal(replacement) }
-					default: return nil;
-				}
-			case .numVal(let n):
-				switch other {
-					case .numVal(let no): if let replacement = n.hasUnion(no) { return ABNFElement.numVal(replacement) }
-					default: return nil;
-				}
-			case .proseVal(let p):
-				switch other {
-					case .proseVal(let po): if let replacement = p.hasUnion(po) { return ABNFElement.proseVal(replacement) }
-					default: return nil;
-				}
+			case .rulename(let s): if case .rulename(let o) = other, let r = s.hasUnion(o) { return ABNFElement.rulename(r) }
+			case .group(let s): if case .group(let o) = other, let r = s.hasUnion(o) { return ABNFElement.group(r) }
+			case .option(let s): if case .option(let o) = other, let r = s.hasUnion(o) { return ABNFElement.option(r) }
+			case .charVal(let s): if case .charVal(let o) = other, let r = s.hasUnion(o) { return ABNFElement.charVal(r) }
+			case .numVal(let s): if case .numVal(let o) = other, let r = s.hasUnion(o) { return ABNFElement.numVal(r) }
+			case .proseVal(let s): if case .proseVal(let o) = other, let r = s.hasUnion(o) { return ABNFElement.proseVal(r) }
 		}
 		return nil;
 	}
@@ -806,11 +955,11 @@ public struct ABNFGroup: ABNFExpression {
 		return "(\(alternation.description))"
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		return alternation.referencedRules
 	}
 
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		alternation.toFSM(rules: rules)
 	}
 
@@ -819,10 +968,10 @@ public struct ABNFGroup: ABNFExpression {
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		let prefix = Terminals["("] ++ Terminals.c_wsp.star();
+		let prefix = Terminals["("] ++ Terminals.c_wsp_star;
 		guard let (_, remainder1) = prefix.match(input) else { return nil }
 		guard let (alternation, remainder2) = ABNFAlternation.match(remainder1) else { return nil }
-		let suffix = Terminals.c_wsp.star() ++ Terminals[")"];
+		let suffix = Terminals.c_wsp_star ++ Terminals[")"];
 		guard let (_, remainder) = suffix.match(remainder2) else { return nil }
 		return (ABNFGroup(alternation: alternation), remainder)
 	}
@@ -833,6 +982,10 @@ public struct ABNFGroup: ABNFExpression {
 // c-nl           =  comment / CRLF ; comment or newline
 public struct ABNFOption: ABNFExpression {
 	public let optionalAlternation: ABNFAlternation
+
+	public init(optionalAlternation: ABNFAlternation) {
+		self.optionalAlternation = optionalAlternation
+	}
 
 	public static func < (lhs: ABNFOption, rhs: ABNFOption) -> Bool {
 		return lhs.optionalAlternation < rhs.optionalAlternation;
@@ -865,11 +1018,11 @@ public struct ABNFOption: ABNFExpression {
 		return "[\(optionalAlternation.description)]"
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		return optionalAlternation.referencedRules
 	}
 
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		optionalAlternation.toFSM(rules: rules).optional()
 	}
 
@@ -878,10 +1031,10 @@ public struct ABNFOption: ABNFExpression {
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		let prefix_pattern = Terminals["["] ++ Terminals.c_wsp.star();
+		let prefix_pattern = Terminals["["] ++ Terminals.c_wsp_star;
 		guard let (_, remainder1) = prefix_pattern.match(input) else { return nil }
 		guard let (alternation, remainder2) = ABNFAlternation.match(remainder1) else { return nil }
-		let suffix_pattern = Terminals.c_wsp.star() ++ Terminals["]"];
+		let suffix_pattern = Terminals.c_wsp_star ++ Terminals["]"];
 		guard let (_, remainder) = suffix_pattern.match(remainder2) else { return nil }
 		return (ABNFOption(optionalAlternation: alternation), remainder)
 	}
@@ -927,11 +1080,11 @@ public struct ABNFCharVal: ABNFExpression {
 		return "\"\(CHAR_string(seq))\""
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		return []
 	}
 
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		return DFA(verbatim: sequence)
 	}
 
@@ -977,13 +1130,13 @@ public struct ABNFNumVal: ABNFExpression {
 		// You can't actually notate an empty num_val sequence in ABNF, but if you could, it would be empty
 		switch self.value {
 			case .sequence(let seq): return seq.isEmpty
-			case .range(let _, let _): return false
+			case .range: return false
 		}
 	}
 	public var isOptional: Bool {
 		switch self.value {
 			case .sequence(let seq): return seq.isEmpty
-			case .range(let _, let _): return false
+			case .range: return false
 		}
 	}
 
@@ -1013,17 +1166,14 @@ public struct ABNFNumVal: ABNFExpression {
 		case sequence(Array<UInt>);
 		case range(UInt, UInt);
 
-		public static func < (lhs: Value, rhs: Value) -> Bool {
-			// If lhs and rhs are both a sequence, compare their values
-			let lhsVal = switch lhs {
-				case .sequence(let seq): seq[0];
-				case .range(let min, let max): min;
+		static func < (lhs: Value, rhs: Value) -> Bool {
+			switch (lhs, rhs) {
+				case (.sequence(let l), .sequence(let r)): return l < r
+				case (.range(let lMin, let lMax), .range(let rMin, let rMax)):
+					return lMin < rMin || (lMin == rMin && lMax < rMax)
+				case (.sequence(let l), .range(let rMin, _)): return l[0] < rMin
+				case (.range(let lMin, _), .sequence(let r)): return lMin < r[0]
 			}
-			let rhsVal = switch rhs {
-				case .sequence(let seq): seq[0];
-				case .range(let min, let max): min;
-			}
-			return lhsVal < rhsVal;
 		}
 
 		func toString(base: Int) -> String {
@@ -1044,11 +1194,11 @@ public struct ABNFNumVal: ABNFExpression {
 		return prefix + value.toString(base: base.rawValue);
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		return []
 	}
 
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		switch self.value {
 			case .sequence(let seq): return DFA(verbatim: seq)
 			case .range(let low, let high): return DFA(range: low...high)
@@ -1174,15 +1324,15 @@ public struct ABNFProseVal: ABNFExpression {
 		false
 	}
 
-	var referencedRules: Set<String> {
-		return []
-	}
-
 	public var description: String {
 		"<\(remark)>"
 	}
 
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public var referencedRules: Set<String> {
+		return []
+	}
+
+	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
 		fatalError("Cannot convert prose to FSM")
 	}
 
@@ -1223,14 +1373,28 @@ struct Terminals {
 	static let VCHAR : Rule = Rule(range: 0x21...0x7E); // %x21-7E
 	static let WSP   : Rule = SP | HTAB; // SP / HTAB
 
+	// And now various other expressions used within the rules...
 	// c-wsp          =  WSP / (c-nl WSP)
 	static let c_wsp : Rule = WSP | (c_nl ++ WSP)
+	static let c_wsp_plus: Rule = c_wsp.plus()
+	static let c_wsp_star: Rule = c_wsp.star()
 
 	// c-nl           =  comment / CRLF ; comment or newline
 	static let c_nl  : Rule = comment | CRLF;
+	static let WSP_star_c_nl: Rule = WSP.star() ++ c_nl
+	static let c_wsp_star_c_nl: Rule = c_wsp_star ++ c_nl
 
 	// comment        =  ";" *(WSP / VCHAR) CRLF
 	static let comment : Rule = Rule([[0x3B]]) ++ (WSP | VCHAR).star() ++ CRLF
+
+	// The important part of defined-as
+	// defined-as     =  *c-wsp ("=" / "=/") *c-wsp
+	static let defined_as_inner = Terminals["="] | Terminals["=/"];
+
+	static let rulename = ALPHA ++ (ALPHA | DIGIT | Terminals["-"]).star();
+	static let repeat_min = DIGIT.plus();
+	static let repeat_range = DIGIT.star() ++ Terminals["*"];
+	static let DIGIT_star = DIGIT.star();
 
 	// And a generic way to get an arbitrary character sequence as a Rule
 	static subscript (string: String) -> Rule {

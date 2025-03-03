@@ -1,22 +1,49 @@
-
-/// An optimized form of NFA where each state has exactly one "next" state.
+/// A Deterministic Finite Automaton (DFA) that recognizes a set of sequences over a given alphabet.
+/// It is an optimized form of ``NFA`` where each state has at most one "next" state.
+/// It represents a set of strings (possibily infinitely large), where each string is a finitely long sequence of symbols, from a finitely large alphabet.
+/// It can represent any such set of strings that are "regular" (describable with a finite state machine).
+///
+/// An element of the set is also known as a "string".
+/// A character in the string/element is also known as a "symbol".
+/// The set of possible symbols that can be used is called the "alphabnet". In this implementation, the alphabet is computed implicitly.
+///
 /// States are represented by an Int, or nil, the oblivion state.
-/// A DFA is essentially a special case of an NFA where a state can transition into at most one state, instead of any number of states.
+/// The initial state cannot be `nil`, so at least one state must be provided.
+///
+/// - Type Parameters:
+///   - `Element`: The type of sequence (e.g., `Array<UInt8>`), which must conform to `Hashable`, `Sequence`, `EmptyInitial`, and `Comparable`.
+///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
+///
+/// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
 public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, Sequence, NFAProtocol where Element.Element: Hashable & Comparable {
+	/// The type of symbols in the DFA’s alphabet.
 	public typealias Symbol = Element.Element where Element.Element: Hashable;
+	/// The type used to index states
 	public typealias StateNo = Int;
+	/// The type of a set of states, which in the case of a DFA is optional to include the oblivion state (`nil`).
 	public typealias States = StateNo?;
 
+	/// The transition table, mapping each state to a dictionary of symbol-to-next-state transitions.
 	public let states: Array<Dictionary<Symbol, StateNo>>;
+	/// The initial state of the DFA.
 	public let initial: StateNo;
+	/// The set of accepting (final) states.
 	public let finals: Set<StateNo>;
 
+	/// Creates an empty DFA that accepts no sequences.
 	public init() {
 		self.states = [ [:] ];
 		self.initial = 0;
 		self.finals = [];
 	}
 
+	/// Creates a DFA with specified states, initial state, and final states.
+	///
+	/// - Parameters:
+	///   - states: The transition table; defaults to an empty state if not provided.
+	///   - initial: The starting state; must be within `states` bounds.
+	///   - finals: The set of accepting states; all must be within `states` bounds.
+	/// - Precondition: All referenced states must exist within `states`.
 	public init(
 		states: Array<Dictionary<Symbol, StateNo>> = [],
 		initial: StateNo = 0,
@@ -41,6 +68,11 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		self.finals = finals;
 	}
 
+	/// Creates a DFA that accepts exactly the given sequence.
+	///
+	/// - Parameter verbatim: The sequence to recognize (e.g., `[UInt8(97), UInt8(98)]` for "ab").
+	///
+	/// You can also provide an array literal, e.g. `DFA([element])`
 	public init(verbatim: Element){
 		let states = verbatim.enumerated().map { [ $1: $0 + 1 ] } + [[:]]
 		self.init(
@@ -50,6 +82,9 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		)
 	}
 
+	/// Creates a DFA that accepts any single symbol within the given range (exclusive upper bound).
+	///
+	/// - Parameter range: The range of symbols (e.g., `0..<10`).
 	public init(range: Range<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
 		// Map each element in verbatim to a key in a new dictionary with value 1
 		let table: Dictionary<Symbol, StateNo> = range.reduce(into: [:]) { result, key in
@@ -62,6 +97,9 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		)
 	}
 
+	/// Creates a DFA that accepts any single symbol within the given closed range.
+	///
+	/// - Parameter range: The closed range of symbols (e.g., `0...9`).
 	public init(range: ClosedRange<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
 		// Map each element in verbatim to a key in a new dictionary with value 1
 		var table: Dictionary<Symbol, StateNo> = [:];
@@ -75,10 +113,13 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		)
 	}
 
+	/// Creates a DFA out of an NFA.
+	///
+	/// - Parameter nfa: The NFA to convert.
+	/// - Precondition: The NFA must have at most one transition per symbol per state.
 	public init(nfa: NFA<Element>){
 		let translation = NFA<Element>.parallel(fsms: [nfa], merge: { $0[0] });
-		// Sanity check
-		translation.states.forEach { $0.forEach { assert($0.value.count == 1); } }
+		assert(translation.states.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
 		self.states = translation.states.map { $0.mapValues { $0.first! } }
 		self.initial = translation.initials.first!;
 		self.finals = translation.finals;
@@ -97,9 +138,12 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	}
 
 	public var alphabet: Set<Symbol> {
-        Set(self.states.flatMap(\.keys))
-    }
+		Set(self.states.flatMap(\.keys))
+	}
 
+	/// Generates a Graphviz DOT representation of the DFA for visualization.
+	///
+	/// - Returns: A string in DOT format, viewable with tools like Graphviz.
 	public func toViz() -> String {
 		var viz = "";
 		viz += "digraph G {\n";
@@ -116,12 +160,24 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return viz;
 	}
 
+	/// Transitions from a state on a given symbol.
+	///
+	/// - Parameters:
+	///   - state: The state to compute a transition from.
+	///   - symbol: The input symbol.
+	/// - Returns: The next state, or `nil` if no transition exists.
 	public func nextState(state: StateNo, symbol: Symbol) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
 		return self.states[state][symbol];
 	}
 
+	/// Compute multiple transitions over a whole sequence.
+	///
+	/// - Parameters:
+	///   - state: The starting state.
+	///   - input: The sequence to process.
+	/// - Returns: The resulting state, or `nil` if any transition fails.
 	public func nextState(state: StateNo, input: Element) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
@@ -138,15 +194,26 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return currentState;
 	}
 
-	/// Tries to match as many characters from input as possible, returning the last final state
+	/// Checks if a state is accepting.
+	///
+	/// - Parameter state: The state to check (may be `nil`).
+	/// - Returns: `true` if the state is final, `false` otherwise (always `false` for `nil`).
+	public func isFinal(_ state: States) -> Bool {
+		// The oblivion state (nil) is never final
+		guard let state else {return false};
+		return self.finals.contains(state);
+	}
+
+	/// Attempts to match the longest prefix of the input that reaches a final state.
+	///
+	/// This is particularly useful for writing tokenizers.
+	///
+	/// - Parameter input: The input collection to match against.
+	/// - Returns: A tuple of the matched prefix and remaining input, or `nil` if no match exists.
 	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Element.Element> {
 		var currentState = self.initial;
-		var finalIndex: T.Index? = nil;
-
 		// Test the initial condition
-		if(self.finals.contains(currentState)){
-			finalIndex = input.startIndex;
-		}
+		var finalIndex: T.Index? = self.isFinal(currentState) ? input.startIndex : nil;
 
 		// If we reach the end or nil, then there can be no more final states.
 		for currentIndex in input.indices {
@@ -157,7 +224,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 				break;
 			}
 			assert(currentState < self.states.count);
-			if(self.finals.contains(currentState)){
+			if(self.isFinal(currentState)){
 				finalIndex = input.index(after: currentIndex)
 			}
 		}
@@ -171,10 +238,14 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 
 	/// Instant Description (ID), describes a FSM and its specific state during execution
 	public struct ID {
-		let fsm: DFA<Element>
-		let state: StateNo
+		public let fsm: DFA<Element>
+		public let state: StateNo
 
-		subscript(symbol: Symbol) -> Self? {
+		public var isFinal: Bool {
+			fsm.isFinal(state)
+		}
+
+		public subscript(symbol: Symbol) -> Self? {
 			let state = self.fsm.states[self.state][symbol];
 			if let state {
 				return Self.init(fsm: self.fsm, state: state)
@@ -194,9 +265,11 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return Self.ID(fsm: self, state: state)
 	}
 
-	/// Derive a new FSM by crawling all the different possible combinations of states that can be reached from every possible input.
-	/// - Parameter dfas: The DFAs to merge together.
+	/// Derive a new FSM using a parallel construction
 	///
+	/// This crawls all the different possible combinations of states that can be reached from every possible input.
+	///
+	/// - Parameter fsms: The DFAs to merge together.
 	/// - Parameter merge: Given an array of the states for the respective FSMs, return if this is a final state.
 	/// 	To find a union, return true if any is true. To find the intersection, return true only when all are true.
 	///
@@ -205,6 +278,9 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		var newFinals = Set<StateNo>();
 		var forward = Dictionary<Array<States>, StateNo>();
 		var backward = Array<Array<States>>();
+
+		// TODO: See if using the FSM-wide alphabet is cheaper
+		// e.g. let alphabet = fsms.reduce(Set<Symbol>()) { $0.union($1.alphabet) }
 
 		func forwardStateId(inStates: Array<States>) -> StateNo {
 			if let next = forward[inStates] {
@@ -250,8 +326,17 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return Self.init(states: newStates, initial: newInitialState, finals: newFinals);
 	}
 
-	/// Return an equivalent DFA, remapping the symbols at each transition
-	public func mapTransitions<Target>(_ transform: (Element.Element) -> Target.Element) -> DFA<Target> {
+	/// Minimizes this DFA by merging equivalent states.
+	public func minimized() -> DFA<Element> {
+		// Take a look at Hopcroft’s algorithm
+		return self
+	}
+
+	/// Maps the DFA’s symbols to a new type.
+	///
+	/// - Parameter transform: A function mapping each symbol to a new symbol type.
+	/// - Returns: A new DFA with transformed transitions.
+	public func mapSymbols<Target>(_ transform: (Element.Element) -> Target.Element) -> DFA<Target> {
 		let newStates = states.map {
 			// Map the key of the dictionary using `transform`
 			Dictionary(uniqueKeysWithValues: $0.map { (key, value) in
@@ -265,6 +350,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		)
 	}
 
+	/// Checks if the DFA accepts a given sequence (element of the language)
 	public func contains(_ input: Element) -> Bool {
 		var currentState = self.initial;
 
@@ -280,15 +366,21 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return self.finals.contains(currentState)
 	}
 
-    // SetAlgebra implementation
+	/// Returns a DFA accepting the union of this DFA’s language and another’s.
+	/// Implements ``SetAlgebra``
 	public func union(_ other: __owned DFA<Element>) -> DFA<Element> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] });
 	}
 
+	/// Returns a DFA accepting the intersection of this DFA’s language and another’s.
+	/// Implements ``SetAlgebra``
 	public func intersection(_ other: DFA<Element>) -> DFA<Element> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] });
 	}
 
+	/// Returns a DFA accepting the symmetric difference of this DFA’s language and another’s.
+	/// That is, the set of elements in exactly one set or the other set, and not both.
+	/// To only remove elements, see ``subtracting(_:)`` or the ``-(lhs:rhs:)`` operator
 	public func symmetricDifference(_ other: __owned DFA<Element>) -> DFA<Element> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
@@ -318,7 +410,8 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return Self.concatenate([self, other]);
 	}
 
-	/// Adds the empty string to the set of accepted elements
+	/// Return a DFA that also accepts the empty sequence
+	/// i.e. adds the initial state to the set of final states
 	public func optional() -> DFA<Element> {
 		return Self(
 			states: self.states,
@@ -327,6 +420,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		);
 	}
 
+	/// Returns a DFA accepting one or more repetitions of its language.
 	public func plus() -> DFA<Element> {
 		let nfa = NFA<Element>(
 			states: self.states.map { $0.mapValues { Set([$0]) } },
@@ -338,6 +432,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return DFA(nfa: nfa);
 	}
 
+	/// Returns a DFA accepting zero or more repetitions of its language.
 	public func star() -> DFA<Element> {
 		return self.plus().optional();
 		// Should be equal to:
@@ -351,16 +446,19 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		//return DFA(nfa: nfa);
 	}
 
+	/// Returns a DFA accepting exactly `count` repetitions of its language.
 	public func repeating(_ count: Int) -> DFA<Element> {
 		precondition(count >= 0)
 		return DFA.concatenate(Array(repeating: self, count: count))
 	}
 
+	/// Returns a DFA accepting between `range.lowerBound` and `range.upperBound` repetitions.
 	public func repeating(_ range: ClosedRange<Int>) -> DFA<Element> {
 		precondition(range.lowerBound >= 0)
 		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + Array(repeating: self.optional(), count: Int(range.upperBound-range.lowerBound)));
 	}
 
+	/// Returns a DFA accepting `range.lowerBound` or more repetitions.
 	public func repeating(_ range: PartialRangeFrom<Int>) -> DFA<Element> {
 		precondition(range.lowerBound >= 0)
 		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
@@ -372,6 +470,13 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 ////		return Self.init(states: self.states, initial: currentState, finals: self.finals);
 //	}
 
+	/// An iterator over all accepted sequences. Implements ``Sequence``.
+	///
+	/// Example:
+	///
+	/// ```
+	/// for element in dfa { print(element) }
+	/// ```
 	public func makeIterator() -> Iterator {
 		return Iterator(self);
 	}
@@ -525,17 +630,14 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		}
 
 		public mutating func next() -> Element? {
-			repeat {
+			while let stack = iterator.next() {
 				// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
-				if let stack = iterator.next() {
-					let state = stack.isEmpty ? fsm.initial : stack.last!.target;
-					if fsm.finals.contains(state) {
-						return stack.reduce(Element.empty, { $0.appending(iterator.states[$1.source][$1.index].symbol) });
-					}
-				} else {
-					return nil;
+				let state = stack.isEmpty ? fsm.initial : stack.last!.target;
+				if fsm.finals.contains(state) {
+					return stack.reduce(Element.empty, { $0.appending(iterator.states[$1.source][$1.index].symbol) });
 				}
-			} while true;
+			}
+			return nil;
 		}
 	}
 
@@ -614,6 +716,7 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	}
 
 	// Operator shortcuts
+
 	/// Concatenation operator
 	// The selection of symbol for operator is fraught because most of these symbols have been used for most different things
 	// String concatenation is slightly different than language concatenation,
@@ -630,7 +733,8 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	}
 	/// Subtract/difference
 	/// Returns a version of `lhs` but removing any elements in `rhs`
-	// I think (-) is pretty unambiguous here, but some math notation uses \ for this operation.
+	///
+	/// Note: I think (-) is pretty unambiguous here, but some math notation uses \ for this operation.
 	public static func - (lhs: Self, rhs: Self) -> Self {
 		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
 	}

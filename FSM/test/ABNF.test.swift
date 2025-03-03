@@ -8,8 +8,8 @@ import Testing;
 		let (rule, remainder) = ABNFRulelist.match(abnf.utf8)!
 		let (inner, _) = ABNFAlternation.match("foo".utf8)!
 		#expect(rule == ABNFRulelist(rules: [
-			ABNFRule(rulename: ABNFRulename(label: "rule1"), definedAs: "=", alternation: inner),
-			ABNFRule(rulename: ABNFRulename(label: "rule2"), definedAs: "=", alternation: inner),
+			ABNFRule(rulename: ABNFRulename(label: "rule1"), definedAs: .equal, alternation: inner),
+			ABNFRule(rulename: ABNFRulename(label: "rule2"), definedAs: .equal, alternation: inner),
 		]));
 		#expect(CHAR_string(remainder) == "another");
 	}
@@ -19,7 +19,7 @@ import Testing;
 		let abnf = "foo = bar\r\nanother"; // Must contain trailing \r\n, escape this for cross-platform reasons
 		let (rule, remainder) = ABNFRule.match(abnf.utf8)!
 		let (inner, _) = ABNFAlternation.match("bar".utf8)!
-		#expect(rule == ABNFRule(rulename: ABNFRulename(label: "foo"), definedAs: "=", alternation: inner));
+		#expect(rule == ABNFRule(rulename: ABNFRulename(label: "foo"), definedAs: .equal, alternation: inner));
 		#expect(CHAR_string(remainder) == "another");
 	}
 

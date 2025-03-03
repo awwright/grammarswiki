@@ -114,6 +114,96 @@ import Testing
 		#expect(symDiff.contains("ddd"))
 	}
 
+	@Test("concatenate")
+	func test_concatenate() {
+		let dfa1 = NFA<String>(["a", "b"])
+		let dfa2 = NFA<String>(["x", "y"])
+		let concatenation = dfa1.concatenate(dfa2);
+//		let language = Array(concatenation);
+//		#expect(language.count == 4)
+		#expect(concatenation.contains("ax"))
+		#expect(concatenation.contains("ay"))
+		#expect(concatenation.contains("bx"))
+		#expect(concatenation.contains("by"))
+	}
+
+	@Test("optional")
+	func test_optional() {
+		let dfa1 = NFA<String>(["a", "b"])
+		let optional = dfa1.optional();
+		#expect(optional.contains(""))
+		#expect(optional.contains("a"))
+		#expect(optional.contains("b"))
+//		let array = Array(optional);
+//		#expect(array.count == 3)
+	}
+
+	@Test("plus")
+	func test_plus() {
+		let dfa1 = NFA<String>(["a", "b"])
+		let optional = dfa1.plus();
+		#expect(!optional.contains(""))
+		#expect(optional.contains("a"))
+		#expect(optional.contains("b"))
+		#expect(optional.contains("aa"))
+		#expect(optional.contains("ab"))
+		#expect(optional.contains("ba"))
+	}
+
+	@Test("star")
+	func test_star() {
+		let dfa1 = NFA<String>(["a", "b"])
+		let optional = dfa1.star();
+		#expect(optional.contains(""))
+		#expect(optional.contains("a"))
+		#expect(optional.contains("b"))
+		#expect(optional.contains("aa"))
+		#expect(optional.contains("ab"))
+		#expect(optional.contains("ba"))
+	}
+
+	@Test("repeating(Int)")
+	func test_repeating_int() {
+		let original = NFA<String>(["a", "b"])
+		let repeated = original.repeating(2);
+		#expect(!repeated.contains(""))
+		#expect(!repeated.contains("a"))
+		#expect(!repeated.contains("b"))
+		#expect(repeated.contains("aa"))
+		#expect(repeated.contains("ab"))
+		#expect(repeated.contains("ba"))
+		#expect(!repeated.contains("aaa"))
+	}
+
+	@Test("repeating(ClosedRange)")
+	func test_repeating_closed() {
+		let original = NFA<String>(["a", "b"])
+		let repeated = original.repeating(2...3);
+		#expect(!repeated.contains(""))
+		#expect(!repeated.contains("a"))
+		#expect(!repeated.contains("b"))
+		#expect(repeated.contains("aa"))
+		#expect(repeated.contains("ab"))
+		#expect(repeated.contains("ba"))
+		#expect(repeated.contains("aaa"))
+		#expect(!repeated.contains("aaaa"))
+	}
+
+	@Test("repeating(PartialRangeFrom)")
+	func test_repeating_lower() {
+		let original = NFA<String>(["a", "b"])
+		let repeated = original.repeating(2...);
+		#expect(!repeated.contains(""))
+		#expect(!repeated.contains("a"))
+		#expect(!repeated.contains("b"))
+		#expect(repeated.contains("aa"))
+		#expect(repeated.contains("ab"))
+		#expect(repeated.contains("ba"))
+		#expect(repeated.contains("aaaaaa"))
+	}
+
+
+
 	@Test("Set Operations") func Initialization0() {
 		var nfa = NFA<String>(["abc", "def"])
 		#expect(nfa.contains("abc"))

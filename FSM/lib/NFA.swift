@@ -25,16 +25,6 @@ public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	let initials: Set<Int>;
 	let finals: Set<Int>;
 
-	struct ID {
-		let fsm: NFA<Element>
-		let states: States
-
-		subscript(symbol: Symbol) -> ID {
-			let nextStates = self.fsm.nextStates(states: self.states, symbol: symbol)
-			return ID(fsm: self.fsm, states: nextStates)
-		}
-	}
-
 	init(
 		states: Array<Dictionary<Symbol, States>> = [ [:] ],
 		epsilon: Array<States> = [ [] ],
@@ -123,7 +113,6 @@ public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 	//		return false;
 	//	}
 
-
 	public func toViz() -> String {
 		var viz = "";
 		viz += "digraph G {\n";
@@ -171,6 +160,67 @@ public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 			currentState = self.nextStates(states: currentState, symbol: symbol)
 		}
 		return currentState;
+	}
+
+	public func isFinal(_ state: States) -> Bool {
+		return self.finals.intersection(state).isEmpty == false
+	}
+
+	/// Tries to match as many characters from input as possible, returning the last final state
+	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Element.Element> {
+		var currentState = self.initials;
+		var finalIndex: T.Index? = nil;
+
+		// Test the initial condition
+		if(self.isFinal(currentState)){
+			finalIndex = input.startIndex;
+		}
+
+		// If we reach the end or nil, then there can be no more final states.
+		for currentIndex in input.indices {
+			let symbol = input[currentIndex];
+			let nextState = self.nextStates(states: currentState, symbol: symbol)
+			if nextState.isEmpty == false {
+				currentState = nextState;
+			} else {
+				break;
+			}
+//			assert(currentState < self.states.count);
+			if(self.isFinal(currentState)){
+				finalIndex = input.index(after: currentIndex)
+			}
+		}
+
+		guard let finalIndex else { return nil; }
+		assert(finalIndex >= input.startIndex, "Index is too low");
+		assert(finalIndex <= input.endIndex, "Index is too high");
+
+		return (input[input.startIndex..<finalIndex], input[finalIndex...])
+	}
+
+	/// Get the ID of the state machine without any input
+	public struct ID {
+		public let fsm: NFA<Element>
+		public let states: States
+
+		public var isFinal: Bool {
+			fsm.isFinal(states)
+		}
+
+		public subscript(symbol: Symbol) -> ID {
+			let nextStates = self.fsm.nextStates(states: self.states, symbol: symbol)
+			return ID(fsm: self.fsm, states: nextStates)
+		}
+	}
+
+	/// Get the ID of the state machine at a specific state
+	subscript(state: StateNo) -> Self.ID {
+		return Self.ID(fsm: self, states: [state])
+	}
+
+	/// Get the ID of the state machine evaluating a set of states
+	subscript(state: States) -> Self.ID {
+		return Self.ID(fsm: self, states: state)
 	}
 
 	/// Get a list of states after following epsilon transitions,
@@ -247,7 +297,7 @@ public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 
 	public func contains(_ input: Element) -> Bool {
 		let final = self.nextStates(states: self.initials, string: input)
-		return (final.intersection(self.finals).count) > 0
+		return self.isFinal(final)
 	}
 
 	public func derive(_ input: Element) -> Self
@@ -322,6 +372,47 @@ public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return Self.concatenate([self, other]);
 	}
 
+	/// Adds the empty string to the set of accepted elements
+	public func optional() -> Self {
+		// Append a single state that is both a start and final state.
+		// It has no transitions, so it won't match any other input.
+		let lastNo = self.states.count;
+		return Self.init(
+			states: self.states + [[:]],
+			epsilon: self.epsilon + [[]],
+			initials: self.initials.union([lastNo]),
+			finals: self.finals.union([lastNo])
+		);
+	}
+
+	public func plus() -> Self {
+		Self.init(
+			states: self.states,
+			// Add an epsilon transition from the final states to the initial states
+			epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? self.initials : [] },
+			initials: self.initials,
+			finals: self.finals
+		);
+	}
+
+	public func star() -> Self {
+		return self.plus().optional();
+	}
+
+	public func repeating(_ count: Int) -> Self {
+		precondition(count >= 0)
+		return Self.concatenate(Array(repeating: self, count: count))
+	}
+
+	public func repeating(_ range: ClosedRange<Int>) -> Self {
+		precondition(range.lowerBound >= 0)
+		return Self.concatenate(Array(repeating: self, count: range.lowerBound) + Array(repeating: self.optional(), count: Int(range.upperBound-range.lowerBound)));
+	}
+
+	public func repeating(_ range: PartialRangeFrom<Int>) -> Self {
+		precondition(range.lowerBound >= 0)
+		return Self.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
+	}
 
 	public func homomorphism<Target>(mapping: [(Element, Target)]) -> NFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
 		typealias TargetSymbol = Target.Element;

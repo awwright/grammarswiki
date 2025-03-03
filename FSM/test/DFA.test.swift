@@ -150,7 +150,7 @@ import Testing
 	func test_mapTransitions() {
 		// Map symbols from ASCII UInt8 to Character
 		let dfa1 = DFA<Array<UInt8>>([ [0x61], [0x61, 0x62], [0x63, 0x64] ]);
-		let dfa2: DFA<String> = dfa1.mapTransitions({
+		let dfa2: DFA<String> = dfa1.mapSymbols({
 			symbol in
 			// Read `symbol` as an ASCII character and convert it to a Character
 			return Character(UnicodeScalar(Int(symbol))!)
