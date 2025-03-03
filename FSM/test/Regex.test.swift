@@ -5,7 +5,6 @@ import RegexBuilder;
 @Test("Regex") func regex() async throws {
 	func testSequence<T: Sequence>(sequence: T) where T.Element == Int {
 		let emptySeq: [T.Element] = [];
-		print("Empty sequence of type \(T.self): \(emptySeq)")
 	}
 
 	// Testing with Array

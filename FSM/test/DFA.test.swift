@@ -423,11 +423,8 @@ import Testing
 	@Test("nextStates by DFA #2")
 	func test_nextStates_DFA_2() {
 		let dfa = DFA(["101001000100"]);
-		print(dfa.toViz())
 		// Follow any number of 0's, then a 1
 		let pattern = DFA(["0"]).star().concatenate(DFA(["1"]));
-		print(pattern.toViz())
-		print(dfa.nextStates(initial: 2, input: pattern))
 		#expect(dfa.nextStates(initial: 0, input: pattern) == [1]);
 		#expect(dfa.nextStates(initial: 1, input: pattern) == [3]);
 		#expect(dfa.nextStates(initial: 2, input: pattern) == [3]);

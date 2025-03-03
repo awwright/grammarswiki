@@ -12,6 +12,14 @@
 /// - Note: Implementors should ensure that the `match` method correctly handles the ABNF syntax
 ///   for their specific production type, returning `nil` if the input cannot be parsed.
 public protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringConvertible {
+	// `Element.Element.Stride: SignedInteger` is for iterating over a range of symbols, e.g. (0x20...0x7F)
+	/// The type of value that this ABNF is describing
+	/// This will typically be ``Array<UInt8>`` or ``Array<Uint32>``
+	associatedtype Element: Sequence & Comparable & EmptyInitial & Hashable where Element.Element: BinaryInteger & Comparable, Element.Element.Stride: SignedInteger;
+	/// A single character of a document that will be matched by the ABNF.
+	/// In ABNF itself, this is UInt8 for ASCII characters. For Unicode documents, this will be UInt16 or UInt32.
+	typealias Symbol = Element.Element;
+
 	/// Attempts to parse the given input to produce an instance of this production.
 	///
 	/// - Parameter input: A collection of `UInt8` values representing the input to parse,
@@ -58,19 +66,19 @@ extension ABNFProduction {
 ///   defined in RFC 5234, ensuring accurate conversion between equivalent forms.
 public protocol ABNFExpression: ABNFProduction {
 	/// Get the smallest equivalent ``ABNFAlternation``
-	var alternation: ABNFAlternation {get}
+	var alternation: ABNFAlternation<Symbol> {get}
 
 	/// Get the smallest equivalent ``ABNFConcatenation``
-	var concatenation: ABNFConcatenation {get}
+	var concatenation: ABNFConcatenation<Symbol> {get}
 
 	/// Get the smallest equivalent ``ABNFRepetition``
-	var repetition: ABNFRepetition {get}
+	var repetition: ABNFRepetition<Symbol> {get}
 
 	/// Get the smallest equivalent ``ABNFElement``
-	var element: ABNFElement {get}
+	var element: ABNFElement<Symbol> {get}
 
 	/// Get the smallest equivalent ``ABNFGroup``
-	var group: ABNFGroup {get}
+	var group: ABNFGroup<Symbol> {get}
 
 	/// If this will accept only the empty string
 	var isEmpty: Bool {get}
@@ -89,22 +97,22 @@ public protocol ABNFExpression: ABNFProduction {
 	///
 	/// - Parameter rules: A dictionary of resolved rulenames to their DFAs.
 	/// - Returns: The DFA equivalent to the definition of this rule.
-	func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>>
+	func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element>
 }
 
 extension ABNFExpression {
 	/// Get this expression repeated `count` times
-	public func repeating(_ count: UInt) -> ABNFRepetition {
+	public func repeating(_ count: UInt) -> ABNFRepetition<Symbol> {
 		self.element.repeating(count)
 	}
 
 	/// Get this expression repeated `min...max` times (inclusive)
-	public func repeating(_ range: ClosedRange<UInt>) -> ABNFRepetition {
+	public func repeating(_ range: ClosedRange<UInt>) -> ABNFRepetition<Symbol> {
 		self.element.repeating(range)
 	}
 
 	/// Get this expression repeated `min` or more times
-	public func repeating(_ range: PartialRangeFrom<UInt>) -> ABNFRepetition {
+	public func repeating(_ range: PartialRangeFrom<UInt>) -> ABNFRepetition<Symbol> {
 		self.element.repeating(range)
 	}
 
@@ -116,7 +124,7 @@ extension ABNFExpression {
 	///
 	/// - Parameter other: The expression to union with.
 	/// - Returns: A new ABNFAlternation with the combined alternation.
-	public func union(_ other: any ABNFExpression) -> ABNFAlternation {
+	public func union<T>(_ other: T) -> ABNFAlternation<Symbol> where T: ABNFExpression, T.Symbol == Symbol {
 		self.alternation.union(other.alternation)
 	}
 
@@ -128,7 +136,7 @@ extension ABNFExpression {
 	///
 	/// - Parameter other: The expression to union with.
 	/// - Returns: A new ABNFAlternation with the combined alternation.
-	public func concatenate(_ other: any ABNFExpression) -> ABNFConcatenation {
+	public func concatenate(_ other: some ABNFExpression) -> ABNFConcatenation<Symbol> {
 		self.concatenation.concatenate(other.concatenation)
 	}
 }
@@ -148,18 +156,20 @@ extension ABNFExpression {
 /// ```abnf
 /// rulelist       =  1*( rule / (*WSP c-nl) )
 /// ```
-public struct ABNFRulelist: ABNFProduction {
+public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
+
 	/// The array of rules comprising this rulelist.
-	let rules: [ABNFRule]
+	let rules: [ABNFRule<Symbol>]
 
 	/// Initializes a rulelist with an array of rules.
 	///
 	/// - Parameter rules: The rules to include in the rulelist.
-	init(rules: [ABNFRule] = []) {
+	init(rules: [ABNFRule<Symbol>] = []) {
 		self.rules = rules
 	}
 
-	public static func < (lhs: ABNFRulelist, rhs: ABNFRulelist) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.rules < rhs.rules;
 	}
 
@@ -169,8 +179,8 @@ public struct ABNFRulelist: ABNFProduction {
 	/// their union operation, respecting ABNF's case-insensitive rulenames.
 	///
 	/// - Returns: A dictionary where keys are lowercase rulenames and values are the merged rules.
-	public var dictionary: Dictionary<String, ABNFRule> {
-		var dict: Dictionary<String, ABNFRule> = [:];
+	public var dictionary: Dictionary<String, ABNFRule<Symbol>> {
+		var dict: Dictionary<String, ABNFRule<Symbol>> = [:];
 		rules.forEach {
 			rule in
 			let rulename = rule.rulename.label;
@@ -206,7 +216,7 @@ public struct ABNFRulelist: ABNFProduction {
 	/// - Parameter ruleMap: An optional map of pre-resolved rules to their DFAs, used for external references.
 	/// - Returns: A dictionary mapping lowercase rulenames to their corresponding DFAs.
 	/// - Note: Rules with circular dependencies that cannot be converted to a DFA will be excluded from the return value without any other warning.
-	public func toFSM(rules ruleMap: Dictionary<String, DFA<Array<UInt>>>) -> Dictionary<String, DFA<Array<UInt>>> {
+	public func toFSM(rules ruleMap: Dictionary<String, DFA<Element>>) -> Dictionary<String, DFA<Element>> {
 		// Get a Dictionary of each rule by its name to its referencedRules
 		let requiredRules = Dictionary<String, Set<String>>(uniqueKeysWithValues: rules.map {
 			($0.rulename.label, $0.referencedRules)
@@ -238,9 +248,9 @@ public struct ABNFRulelist: ABNFProduction {
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Initialize a SubSequence starting at the beginning of input
 		var remainder = input[...]
-		var rules: [ABNFRule] = []
+		var rules: [ABNFRule<Symbol>] = []
 		while !remainder.isEmpty {
-			if let (rule, remainder1) = ABNFRule.match(remainder) {
+			if let (rule, remainder1) = ABNFRule<Symbol>.match(remainder) {
 				// First try to parse as a rule
 				rules.append(rule)
 				remainder = remainder1
@@ -274,30 +284,32 @@ public struct ABNFRulelist: ABNFProduction {
 /// alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
 /// c-nl           =  comment / CRLF ; comment or newline
 /// ```
-public struct ABNFRule: ABNFProduction {
+public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
+
 	/// Specifies if the rule was defined using `=` or as an additional alternation `=/`
 	public enum DefinedAs: String {
 		case equal = "="
 		case incremental = "/="
 	}
 
-	public let rulename: ABNFRulename;
+	public let rulename: ABNFRulename<Symbol>;
 	public let definedAs: DefinedAs;
-	public let alternation: ABNFAlternation;
+	public let alternation: ABNFAlternation<Symbol>;
 
-	public init(rulename: ABNFRulename, definedAs: DefinedAs, alternation: ABNFAlternation) {
+	public init(rulename: ABNFRulename<Symbol>, definedAs: DefinedAs, alternation: ABNFAlternation<Symbol>) {
 		self.rulename = rulename
 		self.definedAs = definedAs
 		self.alternation = alternation
 	}
 
-	public init(rulename: ABNFRulename, definedAs: DefinedAs, expression: any ABNFExpression) {
+	public init<T>(rulename: ABNFRulename<Symbol>, definedAs: DefinedAs, expression: T) where T: ABNFExpression, T.Symbol == Symbol {
 		self.rulename = rulename
 		self.definedAs = definedAs
 		self.alternation = expression.alternation
 	}
 
-	public static func < (lhs: ABNFRule, rhs: ABNFRule) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		if lhs.rulename < rhs.rulename { return true }
 		if lhs.rulename > rhs.rulename { return false }
 		return lhs.alternation < rhs.alternation;
@@ -311,21 +323,21 @@ public struct ABNFRule: ABNFProduction {
 		return alternation.referencedRules;
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		alternation.toFSM(rules: rules)
 	}
 
-	public func union(_ other: ABNFRule) -> ABNFRule{
+	public func union(_ other: ABNFRule<Symbol>) -> ABNFRule<Symbol> {
 		return self.union(other.alternation);
 	}
 
-	public func union(_ other: ABNFAlternation) -> ABNFRule {
-		return ABNFRule(rulename: rulename, definedAs: definedAs, alternation: self.alternation.union(other))
+	public func union(_ other: ABNFAlternation<Symbol>) -> ABNFRule<Symbol> {
+		return ABNFRule<Symbol>(rulename: rulename, definedAs: definedAs, alternation: self.alternation.union(other))
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Parse rulename
-		guard let (rulename, remainder1) = ABNFRulename.match(input) else { return nil }
+		guard let (rulename, remainder1) = ABNFRulename<Symbol>.match(input) else { return nil }
 
 		// Parse defined-as
 		guard let (_, remainder2) = Terminals.c_wsp_star.match(remainder1) else { return nil }
@@ -340,7 +352,7 @@ public struct ABNFRule: ABNFProduction {
 		}
 
 		// Parse alternation
-		guard let (alternation, remainder5) = ABNFAlternation.match(remainder4) else { return nil }
+		guard let (alternation, remainder5) = ABNFAlternation<Symbol>.match(remainder4) else { return nil }
 
 		// Parse *WSP c-nl
 		guard let (_, remainder) = Terminals.c_wsp_star_c_nl.match(remainder5) else { return nil }
@@ -365,27 +377,29 @@ public struct ABNFRule: ABNFProduction {
 /// ```
 ///
 /// - Example: In `digit = "0"`, "digit" is the rulename.
-public struct ABNFRulename : ABNFExpression {
+public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
+
 	let label: String;
 
-	public static func < (lhs: ABNFRulename, rhs: ABNFRulename) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.label < rhs.label;
 	}
 
-	public var alternation: ABNFAlternation {
+	public var alternation: ABNFAlternation<Symbol> {
 		return ABNFAlternation(matches: [self.concatenation])
 	}
-	public var concatenation: ABNFConcatenation {
-		return ABNFConcatenation(repetitions: [self.repetition])
+	public var concatenation: ABNFConcatenation<Symbol> {
+		return ABNFConcatenation<Symbol>(repetitions: [self.repetition])
 	}
-	public var repetition: ABNFRepetition {
-		return ABNFRepetition(min: 1, max: 1, element: self.element)
+	public var repetition: ABNFRepetition<Symbol> {
+		return ABNFRepetition<Symbol>(min: 1, max: 1, element: self.element)
 	}
-	public var element: ABNFElement {
-		return ABNFElement.rulename(self)
+	public var element: ABNFElement<Symbol> {
+		return ABNFElement<Symbol>.rulename(self)
 	}
-	public var group: ABNFGroup {
-		return ABNFGroup(alternation: self.alternation)
+	public var group: ABNFGroup<Symbol> {
+		return ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
 		// At least, not _necessarially_ empty
@@ -406,11 +420,11 @@ public struct ABNFRulename : ABNFExpression {
 
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
 	// This is also a clever way of preventing recursive loops
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		return rules[label]!;
 	}
 
-	public func hasUnion(_ other: ABNFRulename) -> ABNFRulename? {
+	public func hasUnion(_ other: Self) -> Self? {
 		if self == other {
 			return self;
 		}
@@ -439,50 +453,52 @@ public struct ABNFRulename : ABNFExpression {
 /// ```
 ///
 /// - Example: `"0" / "1" / "2"` is an alternation of three concatenations.
-public struct ABNFAlternation: ABNFExpression {
-	public let matches: [ABNFConcatenation]
+public struct ABNFAlternation<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
 
-	public init(matches: [ABNFConcatenation]) {
+	public let matches: [ABNFConcatenation<Symbol>]
+
+	public init(matches: [ABNFConcatenation<Symbol>]) {
 		self.matches = matches
 	}
 
 	/// Create an expression that matches exactly a single codepoint
-	public init(symbol: any UnsignedInteger) {
+	public init(symbol: Symbol) {
 //		if(Int(symbol) >= 0x21 && Int(symbol) <= 0x7E){
 //			self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: ABNFElement.charVal(ABNFCharVal(sequence: [UInt(symbol)])))])];
 //		}
-		self.matches = [ABNFConcatenation(repetitions: [ABNFRepetition(min: 1, max: 1, element: ABNFElement.numVal(ABNFNumVal(base: .hex, value: .sequence([UInt(symbol)]))))])];
+		self.matches = [ABNFNumVal<Symbol>(base: .hex, value: .sequence([symbol])).concatenation];
 	}
 
-	public init(expression: any ABNFExpression) {
+	public init<T>(expression: T) where T: ABNFExpression, T.Symbol == Symbol {
 		self = expression.alternation
 	}
 
-	public static func < (lhs: ABNFAlternation, rhs: ABNFAlternation) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.matches < rhs.matches;
 	}
 
-	public var alternation: ABNFAlternation {
+	public var alternation: ABNFAlternation<Symbol> {
 		self
 	}
-	public var concatenation: ABNFConcatenation {
+	public var concatenation: ABNFConcatenation<Symbol> {
 		// If there's only a single match in the concatenation, unwrap it
-		(matches.count == 1) ? matches[0] : ABNFConcatenation(repetitions: [self.repetition])
+		(matches.count == 1) ? matches[0] : ABNFConcatenation<Symbol>(repetitions: [self.repetition])
 	}
-	public var repetition: ABNFRepetition {
-		return ABNFRepetition(min: 1, max: 1, element: self.element)
+	public var repetition: ABNFRepetition<Symbol> {
+		return ABNFRepetition<Symbol>(min: 1, max: 1, element: self.element)
 	}
-	public var element: ABNFElement {
+	public var element: ABNFElement<Symbol> {
 		if(matches.count == 1){
 			return matches[0].element;
 		}
 		if(matches.contains(where: { $0.isEmpty })){
-			return ABNFElement.option(ABNFOption(optionalAlternation: ABNFAlternation(matches: matches.filter{ !$0.isEmpty })))
+			return ABNFElement<Symbol>.option(ABNFOption<Symbol>(optionalAlternation: ABNFAlternation(matches: matches.filter{ !$0.isEmpty })))
 		}
-		return ABNFElement.group(ABNFGroup(alternation: self))
+		return ABNFElement<Symbol>.group(ABNFGroup<Symbol>(alternation: self))
 	}
-	public var group: ABNFGroup {
-		return ABNFGroup(alternation: self)
+	public var group: ABNFGroup<Symbol> {
+		return ABNFGroup<Symbol>(alternation: self)
 	}
 	public var isEmpty: Bool {
 		return matches.allSatisfy({$0.isEmpty})
@@ -505,7 +521,7 @@ public struct ABNFAlternation: ABNFExpression {
 		return matches.reduce(Set(), { $0.union($1.referencedRules) })
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		DFA.union(matches.map{ $0.toFSM(rules: rules) })
 	}
 
@@ -539,10 +555,10 @@ public struct ABNFAlternation: ABNFExpression {
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		var remainder = input[input.startIndex...]
-		var concatenations: [ABNFConcatenation] = []
+		var concatenations: [ABNFConcatenation<Symbol>] = []
 
 		// Match first concatenation
-		guard let (firstConcat, remainder1) = ABNFConcatenation.match(remainder) else { return nil }
+		guard let (firstConcat, remainder1) = ABNFConcatenation<Symbol>.match(remainder) else { return nil }
 		concatenations.append(firstConcat)
 		remainder = remainder1
 
@@ -554,7 +570,7 @@ public struct ABNFAlternation: ABNFExpression {
 			remainder = remainder2
 
 			// Parse concatenation
-			guard let (concat, remainder3) = ABNFConcatenation.match(remainder) else { break }
+			guard let (concat, remainder3) = ABNFConcatenation<Symbol>.match(remainder) else { break }
 			remainder = remainder3
 			concatenations.append(concat)
 		}
@@ -575,35 +591,37 @@ public struct ABNFAlternation: ABNFExpression {
 /// ```
 ///
 /// - Example: `"a" "b"` is a concatenation of two repetitions.
-public struct ABNFConcatenation: ABNFExpression {
-	let repetitions: [ABNFRepetition]
+public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
 
-	public init(repetitions: [ABNFRepetition]) {
+	let repetitions: [ABNFRepetition<Symbol>]
+
+	public init(repetitions: [ABNFRepetition<Symbol>]) {
 		self.repetitions = repetitions
 	}
 
-	public static func < (lhs: ABNFConcatenation, rhs: ABNFConcatenation) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.repetitions < rhs.repetitions;
 	}
 
-	public var alternation: ABNFAlternation {
+	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self])
 	}
-	public var concatenation: ABNFConcatenation {
+	public var concatenation: ABNFConcatenation<Symbol> {
 		self
 	}
-	public var repetition: ABNFRepetition {
+	public var repetition: ABNFRepetition<Symbol> {
 		// If there's only a single repetition in the string, unwrap it
-		(repetitions.count == 1) ? repetitions[0] : ABNFRepetition(min: 1, max: 1, element: self.element)
+		(repetitions.count == 1) ? repetitions[0] : ABNFRepetition<Symbol>(min: 1, max: 1, element: self.element)
 	}
-	public var element: ABNFElement {
+	public var element: ABNFElement<Symbol> {
 		if(repetitions.count == 1){
 			return repetitions[0].element;
 		}
-		return ABNFElement.group(ABNFGroup(alternation: ABNFAlternation(matches: [self])))
+		return ABNFElement<Symbol>.group(ABNFGroup<Symbol>(alternation: ABNFAlternation(matches: [self])))
 	}
-	public var group: ABNFGroup {
-		return ABNFGroup(alternation: self.alternation)
+	public var group: ABNFGroup<Symbol> {
+		return ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
 		repetitions.allSatisfy { $0.isEmpty }
@@ -620,7 +638,7 @@ public struct ABNFConcatenation: ABNFExpression {
 		return repetitions.reduce(Set(), { $0.union($1.referencedRules) })
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		DFA.concatenate(repetitions.map { $0.toFSM(rules: rules) })
 	}
 
@@ -630,7 +648,7 @@ public struct ABNFConcatenation: ABNFExpression {
 		return ABNFConcatenation(repetitions: newRepetitions.isEmpty ? [allRepetitions[0]] : newRepetitions)
 	}
 
-	public func hasUnion(_ other: ABNFConcatenation) -> ABNFConcatenation? {
+	public func hasUnion(_ other: Self) -> Self? {
 		if self == other {
 			return self;
 		}
@@ -643,10 +661,10 @@ public struct ABNFConcatenation: ABNFExpression {
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		var reps: [ABNFRepetition] = []
+		var reps: [ABNFRepetition<Symbol>] = []
 
 		// Match first repetition
-		guard let (firstRep, remainder1) = ABNFRepetition.match(input) else { return nil }
+		guard let (firstRep, remainder1) = ABNFRepetition<Symbol>.match(input) else { return nil }
 		reps.append(firstRep)
 
 		// Match zero or more (1*c-wsp repetition)
@@ -654,7 +672,7 @@ public struct ABNFConcatenation: ABNFExpression {
 		while true {
 			// Consume whitespace
 			guard let (_, remainder2) = Terminals.c_wsp_plus.match(remainder) else { break }
-			guard let (rep, remainder3) = ABNFRepetition.match(remainder2) else { break }
+			guard let (rep, remainder3) = ABNFRepetition<Symbol>.match(remainder2) else { break }
 			remainder = remainder3
 			reps.append(rep)
 		}
@@ -675,12 +693,14 @@ public struct ABNFConcatenation: ABNFExpression {
 /// ```
 ///
 /// - Example: `2*3"a"` means "a" must appear between 2 and 3 times.
-public struct ABNFRepetition: ABNFExpression {
+public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
+
 	public let min: UInt
 	public let max: UInt?
-	public let repeating: ABNFElement
+	public let repeating: ABNFElement<Symbol>
 
-	public init(min: UInt, max: UInt?, element: ABNFElement) {
+	public init(min: UInt, max: UInt?, element: ABNFElement<Symbol>) {
 		self.min = min
 		self.max = max
 		if let max {
@@ -689,26 +709,26 @@ public struct ABNFRepetition: ABNFExpression {
 		self.repeating = element
 	}
 
-	public static func < (lhs: ABNFRepetition, rhs: ABNFRepetition) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		// FIXME: This may not be entirely accurate, may need to loop element and compare that
 		return lhs.repeating < rhs.repeating;
 //		return lhs.hashValue < rhs.hashValue;
 	}
 
-	public var alternation: ABNFAlternation {
+	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
 	}
-	public var concatenation: ABNFConcatenation {
+	public var concatenation: ABNFConcatenation<Symbol> {
 		ABNFConcatenation(repetitions: [self])
 	}
-	public var repetition: ABNFRepetition {
+	public var repetition: ABNFRepetition<Symbol> {
 		self
 	}
-	public var element: ABNFElement {
+	public var element: ABNFElement<Symbol> {
 		(min == 1 && max == 1) ? repeating : ABNFElement.group(self.group)
 	}
-	public var group: ABNFGroup {
-		return ABNFGroup(alternation: self.alternation)
+	public var group: ABNFGroup<Symbol> {
+		return ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
 		max == 0 || repeating.isEmpty
@@ -717,7 +737,7 @@ public struct ABNFRepetition: ABNFExpression {
 		min == 0 || repeating.isOptional
 	}
 
-	public func hasUnion(_ other: ABNFRepetition) -> ABNFRepetition? {
+	public func hasUnion(_ other: Self) -> Self? {
 		if self.repeating == other.repeating {
 			let newMin = Swift.min(self.min, other.min);
 			let newMax = self.max==nil || other.max==nil ? nil : Swift.max(self.max!, other.max!);
@@ -748,7 +768,7 @@ public struct ABNFRepetition: ABNFExpression {
 		return repeating.referencedRules
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		let fsm = repeating.toFSM(rules: rules);
 		if(min == 0 && max == 1){
 			return fsm.optional();
@@ -771,16 +791,16 @@ public struct ABNFRepetition: ABNFExpression {
 			// match = *DIGIT "*"
 			let (minStr, _) = Terminals.DIGIT_star.match(match)!
 			let (maxStr, remainder2) = Terminals.DIGIT_star.match(remainder1)!
-			guard let (element, remainder) = ABNFElement.match(remainder2) else { return nil }
+			guard let (element, remainder) = ABNFElement<Symbol>.match(remainder2) else { return nil }
 			return (ABNFRepetition(min: DIGIT_value(minStr), max: maxStr.isEmpty ? nil : DIGIT_value(maxStr), element: element), remainder)
 		} else if let (exactStr, remainder1) = Terminals.repeat_min.match(input) {
 			// 1*DIGIT element
 			let count = DIGIT_value(exactStr);
-			guard let (element, remainder) = ABNFElement.match(remainder1) else { return nil }
+			guard let (element, remainder) = ABNFElement<Symbol>.match(remainder1) else { return nil }
 			return (ABNFRepetition(min: count, max: count, element: element), remainder)
 		} else {
 			// element
-			guard let (element, remainder) = ABNFElement.match(input) else { return nil }
+			guard let (element, remainder) = ABNFElement<Symbol>.match(input) else { return nil }
 			return (ABNFRepetition(min: 1, max: 1, element: element), remainder)
 		}
 	}
@@ -795,28 +815,30 @@ public struct ABNFRepetition: ABNFExpression {
 /// ```
 ///
 /// - Note: The order of cases in `match` reflects ABNF parsing precedence.
-public enum ABNFElement: ABNFExpression {
-	case rulename(ABNFRulename)
-	case group(ABNFGroup)
-	case option(ABNFOption)
-	case charVal(ABNFCharVal)
-	case numVal(ABNFNumVal)
-	case proseVal(ABNFProseVal)
+public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
 
-	public var alternation: ABNFAlternation {
+	case rulename(ABNFRulename<Symbol>)
+	case group(ABNFGroup<Symbol>)
+	case option(ABNFOption<Symbol>)
+	case charVal(ABNFCharVal<Symbol>)
+	case numVal(ABNFNumVal<Symbol>)
+	case proseVal(ABNFProseVal<Symbol>)
+
+	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
 	}
-	public var concatenation: ABNFConcatenation {
+	public var concatenation: ABNFConcatenation<Symbol> {
 		ABNFConcatenation(repetitions: [self.repetition])
 	}
-	public var repetition: ABNFRepetition {
-		ABNFRepetition(min: 1, max: 1, element: self)
+	public var repetition: ABNFRepetition<Symbol> {
+		ABNFRepetition<Symbol>(min: 1, max: 1, element: self)
 	}
-	public var element: ABNFElement {
+	public var element: ABNFElement<Symbol> {
 		self
 	}
-	public var group: ABNFGroup {
-		return ABNFGroup(alternation: self.alternation)
+	public var group: ABNFGroup<Symbol> {
+		return ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
 		switch self {
@@ -839,21 +861,21 @@ public enum ABNFElement: ABNFExpression {
 		}
 	}
 
-	public func repeating(_ count: UInt) -> ABNFRepetition {
+	public func repeating(_ count: UInt) -> ABNFRepetition<Symbol> {
 		precondition(count >= 0)
 		return ABNFRepetition(min: count, max: count, element: self)
 	}
 
-	public func repeating(_ range: ClosedRange<UInt>) -> ABNFRepetition {
+	public func repeating(_ range: ClosedRange<UInt>) -> ABNFRepetition<Symbol> {
 		precondition(range.lowerBound >= 0)
 		// A simple optimization, in most cases
 		if case .group(let group) = self, range.lowerBound == 0 && range.upperBound == 1 {
-			return ABNFRepetition(min: 1, max: 1, element: ABNFElement.option(ABNFOption(optionalAlternation: group.alternation)));
+			return ABNFRepetition<Symbol>(min: 1, max: 1, element: ABNFElement<Symbol>.option(ABNFOption<Symbol>(optionalAlternation: group.alternation)));
 		}
 		return ABNFRepetition(min: range.lowerBound, max: range.upperBound, element: self);
 	}
 
-	public func repeating(_ range: PartialRangeFrom<UInt>) -> ABNFRepetition {
+	public func repeating(_ range: PartialRangeFrom<UInt>) -> ABNFRepetition<Symbol> {
 		precondition(range.lowerBound >= 0)
 		return ABNFRepetition(min: range.lowerBound, max: nil, element: self)
 	}
@@ -880,7 +902,7 @@ public enum ABNFElement: ABNFExpression {
 		}
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		switch self {
 			case .rulename(let r): return r.toFSM(rules: rules)
 			case .group(let g): return g.toFSM(rules: rules)
@@ -891,7 +913,7 @@ public enum ABNFElement: ABNFExpression {
 		}
 	}
 
-	public func hasUnion(_ other: ABNFElement) -> ABNFElement? {
+	public func hasUnion(_ other: Self) -> Self? {
 		// TODO: numVal can sometimes be unioned with charVal
 		// TODO: group and option too
 		switch self {
@@ -906,12 +928,12 @@ public enum ABNFElement: ABNFExpression {
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		if let (r, remainder) = ABNFRulename.match(input) { return (.rulename(r), remainder) }
-		if let (g, remainder) = ABNFGroup.match(input) { return (.group(g), remainder) }
-		if let (o, remainder) = ABNFOption.match(input) { return (.option(o), remainder) }
-		if let (c, remainder) = ABNFCharVal.match(input) { return (.charVal(c), remainder) }
-		if let (n, remainder) = ABNFNumVal.match(input) { return (.numVal(n), remainder) }
-		if let (p, remainder) = ABNFProseVal.match(input) { return (.proseVal(p), remainder) }
+		if let (r, remainder) = ABNFRulename<Symbol>.match(input) { return (.rulename(r), remainder) }
+		if let (g, remainder) = ABNFGroup<Symbol>.match(input) { return (.group(g), remainder) }
+		if let (o, remainder) = ABNFOption<Symbol>.match(input) { return (.option(o), remainder) }
+		if let (c, remainder) = ABNFCharVal<Symbol>.match(input) { return (.charVal(c), remainder) }
+		if let (n, remainder) = ABNFNumVal<Symbol>.match(input) { return (.numVal(n), remainder) }
+		if let (p, remainder) = ABNFProseVal<Symbol>.match(input) { return (.proseVal(p), remainder) }
 		return nil
 	}
 }
@@ -920,11 +942,13 @@ public enum ABNFElement: ABNFExpression {
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-public struct ABNFGroup: ABNFExpression {
-	// A group always unwraps to an alternation
-	public let alternation: ABNFAlternation
+public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
 
-	public static func < (lhs: ABNFGroup, rhs: ABNFGroup) -> Bool {
+	// A group always unwraps to an alternation
+	public let alternation: ABNFAlternation<Symbol>
+
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.alternation < rhs.alternation;
 	}
 
@@ -932,13 +956,13 @@ public struct ABNFGroup: ABNFExpression {
 	//public var alternation: ABNFAlternation {
 	// ABNFAlternation(matches: [self.concatenation])
 	//}
-	public var concatenation: ABNFConcatenation {
+	public var concatenation: ABNFConcatenation<Symbol> {
 		self.alternation.concatenation;
 	}
-	public var repetition: ABNFRepetition {
+	public var repetition: ABNFRepetition<Symbol> {
 		self.alternation.concatenation.repetition
 	}
-	public var element: ABNFElement {
+	public var element: ABNFElement<Symbol> {
 		self.alternation.concatenation.repetition.element;
 	}
 	public var group: ABNFGroup {
@@ -959,18 +983,18 @@ public struct ABNFGroup: ABNFExpression {
 		return alternation.referencedRules
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		alternation.toFSM(rules: rules)
 	}
 
-	public func hasUnion(_ other: ABNFGroup) -> ABNFGroup? {
+	public func hasUnion(_ other: Self) -> Self? {
 		return nil
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		let prefix = Terminals["("] ++ Terminals.c_wsp_star;
 		guard let (_, remainder1) = prefix.match(input) else { return nil }
-		guard let (alternation, remainder2) = ABNFAlternation.match(remainder1) else { return nil }
+		guard let (alternation, remainder2) = ABNFAlternation<Symbol>.match(remainder1) else { return nil }
 		let suffix = Terminals.c_wsp_star ++ Terminals[")"];
 		guard let (_, remainder) = suffix.match(remainder2) else { return nil }
 		return (ABNFGroup(alternation: alternation), remainder)
@@ -980,31 +1004,33 @@ public struct ABNFGroup: ABNFExpression {
 // option         =  "[" *c-wsp alternation *c-wsp "]"
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
-public struct ABNFOption: ABNFExpression {
-	public let optionalAlternation: ABNFAlternation
+public struct ABNFOption<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
 
-	public init(optionalAlternation: ABNFAlternation) {
+	public let optionalAlternation: ABNFAlternation<Symbol>
+
+	public init(optionalAlternation: ABNFAlternation<Symbol>) {
 		self.optionalAlternation = optionalAlternation
 	}
 
-	public static func < (lhs: ABNFOption, rhs: ABNFOption) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.optionalAlternation < rhs.optionalAlternation;
 	}
 
-	public var alternation: ABNFAlternation {
+	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
 	}
-	public var concatenation: ABNFConcatenation {
+	public var concatenation: ABNFConcatenation<Symbol> {
 		ABNFConcatenation(repetitions: [self.repetition])
 	}
-	public var repetition: ABNFRepetition {
+	public var repetition: ABNFRepetition<Symbol> {
 		ABNFRepetition(min: 1, max: 1, element: self.element)
 	}
-	public var element: ABNFElement {
-		ABNFElement.option(self)
+	public var element: ABNFElement<Symbol> {
+		ABNFElement<Symbol>.option(self)
 	}
-	public var group: ABNFGroup {
-		ABNFGroup(alternation: self.alternation)
+	public var group: ABNFGroup<Symbol> {
+		ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
 		optionalAlternation.isEmpty
@@ -1022,18 +1048,18 @@ public struct ABNFOption: ABNFExpression {
 		return optionalAlternation.referencedRules
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		optionalAlternation.toFSM(rules: rules).optional()
 	}
 
-	public func hasUnion(_ other: ABNFOption) -> ABNFOption? {
+	public func hasUnion(_ other: Self) -> Self? {
 		return nil
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		let prefix_pattern = Terminals["["] ++ Terminals.c_wsp_star;
 		guard let (_, remainder1) = prefix_pattern.match(input) else { return nil }
-		guard let (alternation, remainder2) = ABNFAlternation.match(remainder1) else { return nil }
+		guard let (alternation, remainder2) = ABNFAlternation<Symbol>.match(remainder1) else { return nil }
 		let suffix_pattern = Terminals.c_wsp_star ++ Terminals["]"];
 		guard let (_, remainder) = suffix_pattern.match(remainder2) else { return nil }
 		return (ABNFOption(optionalAlternation: alternation), remainder)
@@ -1041,31 +1067,33 @@ public struct ABNFOption: ABNFExpression {
 }
 
 // char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
-public struct ABNFCharVal: ABNFExpression {
-	let sequence: Array<UInt>
+public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
 
-	public init(sequence: Array<UInt>) {
-		self.sequence = sequence
+	let sequence: Array<S>
+
+	public init<T>(sequence: T) where T: Sequence, T.Element == Symbol {
+		self.sequence = Array(sequence)
 	}
 
-	public static func < (lhs: ABNFCharVal, rhs: ABNFCharVal) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.sequence < rhs.sequence;
 	}
 
-	public var alternation: ABNFAlternation {
+	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
 	}
-	public var concatenation: ABNFConcatenation {
+	public var concatenation: ABNFConcatenation<Symbol> {
 		ABNFConcatenation(repetitions: [self.repetition])
 	}
-	public var repetition: ABNFRepetition {
+	public var repetition: ABNFRepetition<Symbol> {
 		ABNFRepetition(min: 1, max: 1, element: self.element)
 	}
-	public var element: ABNFElement {
-		ABNFElement.charVal(self)
+	public var element: ABNFElement<Symbol> {
+		ABNFElement<Symbol>.charVal(self)
 	}
-	public var group: ABNFGroup {
-		ABNFGroup(alternation: self.alternation)
+	public var group: ABNFGroup<Symbol> {
+		ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
 		sequence.isEmpty
@@ -1084,11 +1112,11 @@ public struct ABNFCharVal: ABNFExpression {
 		return []
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
-		return DFA(verbatim: sequence)
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
+		return DFA(verbatim: sequence.map { Symbol($0) })
 	}
 
-	public func hasUnion(_ other: ABNFCharVal) -> ABNFCharVal? {
+	public func hasUnion(_ other: Self) -> Self? {
 		return nil
 	}
 
@@ -1097,34 +1125,36 @@ public struct ABNFCharVal: ABNFExpression {
 		let charPattern = DFA<Array<UInt8>>(range: 0x20...0x21) | DFA<Array<UInt8>>(range: 0x23...0x7E)
 		guard let (chars, remainder2) = charPattern.star().match(remainder1) else { return nil }
 		guard let (_, remainder3) = Terminals.DQUOTE.match(remainder2) else { return nil }
-		return (ABNFCharVal(sequence: chars.map { UInt($0) }), remainder3)
+		return (ABNFCharVal<Symbol>(sequence: chars.map { Symbol($0) }), remainder3)
 	}
 }
 
 // num-val        =  "%" (bin-val / dec-val / hex-val)
-public struct ABNFNumVal: ABNFExpression {
+public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
+
 	public static func == (lhs: ABNFNumVal, rhs: ABNFNumVal) -> Bool {
 		return lhs.base == rhs.base && lhs.value == rhs.value
 	}
 
-	public static func < (lhs: ABNFNumVal, rhs: ABNFNumVal) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.value < rhs.value;
 	}
 
-	public var alternation: ABNFAlternation {
+	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
 	}
-	public var concatenation: ABNFConcatenation {
+	public var concatenation: ABNFConcatenation<Symbol> {
 		ABNFConcatenation(repetitions: [self.repetition])
 	}
-	public var repetition: ABNFRepetition {
+	public var repetition: ABNFRepetition<Symbol> {
 		ABNFRepetition(min: 1, max: 1, element: self.element)
 	}
-	public var element: ABNFElement {
-		ABNFElement.numVal(self)
+	public var element: ABNFElement<Symbol> {
+		ABNFElement<Symbol>.numVal(self)
 	}
-	public var group: ABNFGroup {
-		ABNFGroup(alternation: self.alternation)
+	public var group: ABNFGroup<Symbol> {
+		ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
 		// You can't actually notate an empty num_val sequence in ABNF, but if you could, it would be empty
@@ -1145,11 +1175,11 @@ public struct ABNFNumVal: ABNFExpression {
 		case dec = 10;
 		case hex = 16;
 
-		func parseNum<T> (_ input: T) -> UInt? where T: Collection, T.Element == UInt8 {
+		func parseNum<T> (_ input: T) -> Symbol? where T: Collection, T.Element == UInt8 {
 			return switch self {
-				case Base.bin: BIT_value(input);
-				case Base.dec: DIGIT_value(input);
-				case Base.hex: HEXDIG_value(input);
+				case Base.bin: Symbol(BIT_value(input));
+				case Base.dec: Symbol(DIGIT_value(input));
+				case Base.hex: Symbol(HEXDIG_value(input));
 			}
 		}
 		var numPattern: DFA<Array<UInt8>> {
@@ -1163,10 +1193,10 @@ public struct ABNFNumVal: ABNFExpression {
 	let base: Base;
 
 	enum Value: Equatable, Comparable, Hashable {
-		case sequence(Array<UInt>);
-		case range(UInt, UInt);
+		case sequence(Array<Symbol>);
+		case range(Symbol, Symbol);
 
-		static func < (lhs: Value, rhs: Value) -> Bool {
+		static func < (lhs: Self, rhs: Self) -> Bool {
 			switch (lhs, rhs) {
 				case (.sequence(let l), .sequence(let r)): return l < r
 				case (.range(let lMin, let lMax), .range(let rMin, let rMax)):
@@ -1198,16 +1228,16 @@ public struct ABNFNumVal: ABNFExpression {
 		return []
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		switch self.value {
 			case .sequence(let seq): return DFA(verbatim: seq)
 			case .range(let low, let high): return DFA(range: low...high)
 		}
 	}
 
-	public func hasUnion(_ other: ABNFNumVal) -> ABNFNumVal? {
+	public func hasUnion(_ other: Self) -> Self? {
 		// Extract range bounds from self
-		let (selfLow, selfHigh): (UInt, UInt)
+		let (selfLow, selfHigh): (Symbol, Symbol)
 		switch self.value {
 			case .sequence(let seq):
 				// Only single-element sequences can be merged
@@ -1222,7 +1252,7 @@ public struct ABNFNumVal: ABNFExpression {
 		}
 
 		// Extract range bounds from other
-		let (otherLow, otherHigh): (UInt, UInt)
+		let (otherLow, otherHigh): (Symbol, Symbol)
 		switch other.value {
 			case .sequence(let seq):
 				guard seq.count == 1, let value = seq.first else {
@@ -1264,7 +1294,7 @@ public struct ABNFNumVal: ABNFExpression {
 
 		guard let (firstDigits, remainder2) = base.numPattern.match(remainder1) else { return nil }
 		let firstStr = base.parseNum(firstDigits)!
-		var values: [UInt] = [firstStr]
+		var values: [Symbol] = [firstStr]
 		var remainder = remainder2
 		while true {
 			if let (_, remainder3) = Terminals["."].match(remainder) {
@@ -1280,15 +1310,17 @@ public struct ABNFNumVal: ABNFExpression {
 			guard let (endDigits, remainder6) = base.numPattern.match(remainder5) else { return nil }
 			let endStr = base.parseNum(endDigits)
 			guard let endStr else { return nil }
-			return (ABNFNumVal(base: base, value: Value.range(values.first!, endStr)), remainder6)
+			return (ABNFNumVal<Symbol>(base: base, value: Value.range(Symbol(values.first!), Symbol(endStr))), remainder6)
 		}
 
-		return (ABNFNumVal(base: base, value: Value.sequence(values)), remainder)
+		return (ABNFNumVal<Symbol>(base: base, value: Value.sequence(values)), remainder)
 	}
 }
 
 // prose-val      =  "<" *(%x20-3D / %x3F-7E) ">"
-public struct ABNFProseVal: ABNFExpression {
+public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+	public typealias Element = Array<S>;
+
 	public let remark: String;
 
 	public init(remark: String) {
@@ -1296,24 +1328,24 @@ public struct ABNFProseVal: ABNFExpression {
 		//self.length = remark.count;
 	}
 
-	public static func < (lhs: ABNFProseVal, rhs: ABNFProseVal) -> Bool {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.remark < rhs.remark;
 	}
 
-	public var alternation: ABNFAlternation {
+	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
 	}
-	public var concatenation: ABNFConcatenation {
+	public var concatenation: ABNFConcatenation<Symbol> {
 		ABNFConcatenation(repetitions: [self.repetition])
 	}
-	public var repetition: ABNFRepetition {
+	public var repetition: ABNFRepetition<Symbol> {
 		ABNFRepetition(min: 1, max: 1, element: self.element)
 	}
-	public var element: ABNFElement {
-		ABNFElement.proseVal(self)
+	public var element: ABNFElement<Symbol> {
+		ABNFElement<Symbol>.proseVal(self)
 	}
-	public var group: ABNFGroup {
-		ABNFGroup(alternation: self.alternation)
+	public var group: ABNFGroup<Symbol> {
+		ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
 		// Not necessarially empty
@@ -1332,11 +1364,11 @@ public struct ABNFProseVal: ABNFExpression {
 		return []
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Array<UInt>>>) -> DFA<Array<UInt>> {
+	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
 		fatalError("Cannot convert prose to FSM")
 	}
 
-	public func hasUnion(_ other: ABNFProseVal) -> ABNFProseVal? {
+	public func hasUnion(_ other: Self) -> Self? {
 		// This never has a union, even with an identical prose-val (probably)
 		return nil
 	}
@@ -1354,6 +1386,8 @@ public struct ABNFProseVal: ABNFExpression {
 	}
 }
 
+/// A set of values for parsing ABNF
+/// Instances of ABNF documents themselves can't refer to these
 struct Terminals {
 	typealias Rule = DFA<Array<UInt8>>;
 	static let ALPHA : Rule = Terminals["A"..."Z"] | Terminals["a"..."z"]; // %x41-5A / %x61-7A   ; A-Z / a-z

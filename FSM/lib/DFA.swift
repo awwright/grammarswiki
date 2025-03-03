@@ -377,6 +377,24 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		return self.finals.contains(currentState)
 	}
 
+	/// Checks if the DFA accepts a given sequence of symbols (not necessarially Element)
+	// This is exactly the same definition as above, but needs to be defined separately otherwise you get infinite loops for some reason
+	// related to how Swift provides a default `Sequence#contains(Element:)`
+	public func contains<T>(_ input: T) -> Bool where T: Sequence, Element.Element == T.Element {
+		var currentState = self.initial;
+
+		for symbol in input {
+			guard currentState < self.states.count,
+					let nextState = self.states[currentState][symbol]
+			else {
+				return false
+			}
+			currentState = nextState
+		}
+
+		return self.finals.contains(currentState)
+	}
+
 	/// Returns a DFA accepting the union of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
 	public func union(_ other: __owned DFA<Element>) -> DFA<Element> {
@@ -672,7 +690,6 @@ public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: Set
 		}
 		var iterator = PathIterator(input, filter: filter)
 		loop: while let path = iterator.next() {
-			print(path);
 			let inputState = path.isEmpty ? input.initial : path.last!.target;
 			if input.finals.contains(inputState) {
 				// Compute the cooresponding state in self
