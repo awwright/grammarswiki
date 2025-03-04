@@ -2,11 +2,18 @@
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct NFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: FSMProtocol where Element.Element: Hashable & Comparable {
+public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.Element: Comparable {
 
 	public typealias Symbol = Element.Element where Element.Element: Hashable;
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
+
+	public static var empty: Self {
+		Self(states: [], initial: 0, finals: [])
+	}
+	public static var epsilon: Self {
+		Self(states: [], initial: 0, finals: [0])
+	}
 
 	let states: Array<Dictionary<Symbol, Set<Int>>>;
 	let epsilon: Array<Set<Int>>;

@@ -15,13 +15,20 @@
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Element: Hashable & Sequence & EmptyInitial & Comparable>: SetAlgebra, Sequence, FSMProtocol where Element.Element: Hashable & Comparable {
+public struct DFA<Element: SymbolSequenceProtocol>: SetAlgebra, Sequence, FSMProtocol where Element.Element: Comparable {
 	/// The type of symbols in the DFA’s alphabet.
-	public typealias Symbol = Element.Element where Element.Element: Hashable;
+	public typealias Symbol = Element.Element;
 	/// The type used to index states
 	public typealias StateNo = Int;
 	/// The type of a set of states, which in the case of a DFA is optional to include the oblivion state (`nil`).
 	public typealias States = StateNo?;
+
+	public static var empty: Self {
+		Self(states: [], initial: 0, finals: [])
+	}
+	public static var epsilon: Self {
+		Self(states: [], initial: 0, finals: [0])
+	}
 
 	/// The transition table, mapping each state to a dictionary of symbol-to-next-state transitions.
 	public let states: Array<Dictionary<Symbol, StateNo>>;

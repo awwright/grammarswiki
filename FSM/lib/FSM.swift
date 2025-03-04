@@ -1,7 +1,7 @@
 
 infix operator ++: AdditionPrecedence;
 
-protocol FSMProtocol: SetAlgebra where Element: Sequence, Element.Element : Hashable & Comparable {
+protocol FSMProtocol: SetAlgebra where Element: SymbolSequenceProtocol {
 	associatedtype Symbol: Hashable;
 	associatedtype StateNo: Hashable;
 	associatedtype States: Hashable;

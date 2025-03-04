@@ -1,3 +1,17 @@
+/// Declares a type of sequence that has an empty sequence, and can be built from the empty sequence by appending elements.
+/// The elements of this sequence are called Symbol. They must be usable as keys for a ``Dictionary``, so Symbol depends on ``Hashable``.
+public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
+	/// An instance of this type that has no elements
+	static var empty: Self { get }
+
+	/// Return a new sequence concatenated with the given sequence
+	/// This is usually implemented by Array and String.
+	static func + (_: Self, _: Self) -> Self;
+
+	/// Return a new sequence with the given alement appended
+	func appending(_ newElement: Element) -> Self;
+}
+
 /// A protocol allowing the construction of regular languages.
 /// It is very flexible and allows constructing a regular expression of any type from any other conforming type.
 ///
@@ -10,7 +24,7 @@
 /// - func toPattern
 public protocol RegularPatternProtocol {
 	/// The type of sequence this pattern operates over, such as an array of symbols.
-	associatedtype Element: Sequence, EmptyInitial where Element.Element == Symbol;
+	associatedtype Element: SymbolSequenceProtocol where Element.Element == Symbol;
 
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
 	associatedtype Symbol;
@@ -119,8 +133,6 @@ extension RegularPatternProtocol {
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.
 indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteger {
-	typealias RawValue = Int
-
 	typealias Element = Array<S>
 	typealias Symbol = S
 

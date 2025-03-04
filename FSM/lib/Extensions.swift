@@ -1,14 +1,4 @@
-
-// Swift doesn't appear to have any way to get an empty sequence of type T where T: Sequence
-// This implements that.
-public protocol EmptyInitial {
-	associatedtype Element;
-	// An instance of this type that has no elements
-	static var empty: Self { get }
-	func appending(_ newElement: Element) -> Self;
-}
-
-extension Array: EmptyInitial {
+extension Array: SymbolSequenceProtocol where Array.Element: Hashable {
 	public static var empty: Self {
 		return [];
 	}
@@ -17,16 +7,7 @@ extension Array: EmptyInitial {
 	}
 }
 
-extension Set: EmptyInitial {
-	public static var empty: Self {
-		return [];
-	}
-	public func appending(_ newElement: Element) -> Self {
-		return self.union([newElement]);
-	}
-}
-
-extension String: EmptyInitial {
+extension String: SymbolSequenceProtocol {
 	public static var empty: Self {
 		return "";
 	}

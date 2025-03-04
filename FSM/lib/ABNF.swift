@@ -15,7 +15,7 @@ public protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringCon
 	// `Element.Element.Stride: SignedInteger` is for iterating over a range of symbols, e.g. (0x20...0x7F)
 	/// The type of value that this ABNF is describing
 	/// This will typically be ``Array<UInt8>`` or ``Array<Uint32>``
-	associatedtype Element: Sequence & Comparable & EmptyInitial & Hashable where Element.Element: BinaryInteger & Comparable, Element.Element.Stride: SignedInteger;
+	associatedtype Element: SymbolSequenceProtocol where Element.Element: BinaryInteger & Comparable, Element.Element.Stride: SignedInteger;
 	/// A single character of a document that will be matched by the ABNF.
 	/// In ABNF itself, this is UInt8 for ASCII characters. For Unicode documents, this will be UInt16 or UInt32.
 	typealias Symbol = Element.Element;
@@ -456,6 +456,9 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 public struct ABNFAlternation<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
 	public typealias Element = Array<S>;
 
+	public static var empty: Self { ABNFAlternation<S>(matches: []) }
+	public static var epsilon: Self { ABNFAlternation<S>(matches: [ABNFConcatenation(repetitions: [])]) }
+
 	public let matches: [ABNFConcatenation<Symbol>]
 
 	public init(matches: [ABNFConcatenation<Symbol>]) {
@@ -525,7 +528,25 @@ public struct ABNFAlternation<S>: ABNFExpression where S: Comparable & BinaryInt
 		DFA.union(matches.map{ $0.toFSM(rules: rules) })
 	}
 
-	public func union(_ other: ABNFAlternation) -> ABNFAlternation {
+	public static func union(_ elements: [Self]) -> Self {
+		if(elements.isEmpty){
+			return Self.empty
+		}else if(elements.count == 1){
+			return elements[0]
+		}
+		return elements[1...].reduce(elements[0], {$0.union($1)})
+	}
+
+	public static func concatenate(_ elements: [Self]) -> Self {
+		if(elements.isEmpty){
+			return Self.epsilon
+		}else if(elements.count == 1){
+			return elements[0]
+		}
+		return elements[1...].reduce(elements[0].concatenation, {$0.concatenate($1.concatenation)}).alternation
+	}
+
+	public func union(_ other: Self) -> Self {
 		// Iterate over other and try to merge it with an existing element if possible, otherwise append to the end.
 		var newMatches = self.matches;
 		// For every element in `other`, append it to the end.
@@ -549,7 +570,15 @@ public struct ABNFAlternation<S>: ABNFExpression where S: Comparable & BinaryInt
 		return ABNFAlternation(matches: newMatches)
 	}
 
-	public func sorted() -> ABNFAlternation {
+	public func concatenate(_ other: Self) -> Self {
+		self.concatenation.concatenate(other.concatenation).alternation
+	}
+
+	public func star() -> Self {
+		self.repetition.repeating(0...).alternation
+	}
+
+	public func sorted() -> Self {
 		return ABNFAlternation(matches: matches.sorted())
 	}
 
