@@ -3,8 +3,6 @@
 // TODO: CustomDebugStringConvertible
 
 public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.Element: Comparable {
-
-	public typealias Symbol = Element.Element where Element.Element: Hashable;
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
 

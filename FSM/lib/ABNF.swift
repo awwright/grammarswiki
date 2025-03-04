@@ -16,6 +16,7 @@ public protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringCon
 	/// The type of value that this ABNF is describing
 	/// This will typically be ``Array<UInt8>`` or ``Array<Uint32>``
 	associatedtype Element: SymbolSequenceProtocol where Element.Element: BinaryInteger & Comparable, Element.Element.Stride: SignedInteger;
+
 	/// A single character of a document that will be matched by the ABNF.
 	/// In ABNF itself, this is UInt8 for ASCII characters. For Unicode documents, this will be UInt16 or UInt32.
 	typealias Symbol = Element.Element;
@@ -98,47 +99,6 @@ public protocol ABNFExpression: ABNFProduction {
 	/// - Parameter rules: A dictionary of resolved rulenames to their DFAs.
 	/// - Returns: The DFA equivalent to the definition of this rule.
 	func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element>
-}
-
-extension ABNFExpression {
-	/// Get this expression repeated `count` times
-	public func repeating(_ count: UInt) -> ABNFRepetition<Symbol> {
-		self.element.repeating(count)
-	}
-
-	/// Get this expression repeated `min...max` times (inclusive)
-	public func repeating(_ range: ClosedRange<UInt>) -> ABNFRepetition<Symbol> {
-		self.element.repeating(range)
-	}
-
-	/// Get this expression repeated `min` or more times
-	public func repeating(_ range: PartialRangeFrom<UInt>) -> ABNFRepetition<Symbol> {
-		self.element.repeating(range)
-	}
-
-	/// Produce an ABNF expression equivalent to the union of this rule and the provided one.
-	///
-	/// Typically this just joins the two expressions together with an alternation.
-	/// In some cases, optimizations will be performed.
-	/// For example, overlapping ranges are merged together.
-	///
-	/// - Parameter other: The expression to union with.
-	/// - Returns: A new ABNFAlternation with the combined alternation.
-	public func union<T>(_ other: T) -> ABNFAlternation<Symbol> where T: ABNFExpression, T.Symbol == Symbol {
-		self.alternation.union(other.alternation)
-	}
-
-	/// Concatenates this element with another by appending their repetitions.
-	///
-	/// Typically this just concatenates the two expressions together with a concatenation.
-	/// In some cases, optimizations will be performed.
-	/// For example, repetitions with the same inner elements may be joined.
-	///
-	/// - Parameter other: The expression to union with.
-	/// - Returns: A new ABNFAlternation with the combined alternation.
-	public func concatenate(_ other: some ABNFExpression) -> ABNFConcatenation<Symbol> {
-		self.concatenation.concatenate(other.concatenation)
-	}
 }
 
 /// Represents a list of rules in an ABNF grammar, as defined in RFC 5234 with Errata 3076.
@@ -453,7 +413,7 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 /// ```
 ///
 /// - Example: `"0" / "1" / "2"` is an alternation of three concatenations.
-public struct ABNFAlternation<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
+public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
 	public typealias Element = Array<S>;
 
 	public static var empty: Self { ABNFAlternation<S>(matches: []) }
@@ -574,8 +534,35 @@ public struct ABNFAlternation<S>: ABNFExpression where S: Comparable & BinaryInt
 		self.concatenation.concatenate(other.concatenation).alternation
 	}
 
+	public func optional() -> Self {
+		self.repeating(0...1)
+	}
+
+	public func plus() -> Self {
+		self.repeating(1...)
+	}
+
 	public func star() -> Self {
-		self.repetition.repeating(0...).alternation
+		ABNFRepetition(min: 0, max: nil, element: self.element).alternation
+	}
+
+	public func repeating(_ count: Int) -> Self {
+		precondition(count >= 0)
+		return ABNFRepetition<Symbol>(min: UInt(count), max: UInt(count), element: self.element).alternation
+	}
+
+	public func repeating(_ range: ClosedRange<Int>) -> Self {
+		precondition(range.lowerBound >= 0)
+		// A simple optimization, in most cases
+		if case .group(let group) = self.element, range.lowerBound == 0 && range.upperBound == 1 {
+			return ABNFElement.option(ABNFOption(optionalAlternation: group.alternation)).alternation
+		}
+		return ABNFRepetition<Symbol>(min: UInt(range.lowerBound), max: UInt(range.upperBound), element: self.element).alternation;
+	}
+
+	public func repeating(_ range: PartialRangeFrom<Int>) -> Self {
+		precondition(range.lowerBound >= 0)
+		return ABNFRepetition<Symbol>(min: UInt(range.lowerBound), max: nil, element: self.element).alternation
 	}
 
 	public func sorted() -> Self {
@@ -689,6 +676,15 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 		return nil;
 	}
 
+	public func hasConcatenation(_ other: Self) -> Self? {
+		if(repetitions.count == 1 && other.repetitions.count == 1){
+			if let replacement = repetitions[0].hasConcatenation(other.repetitions[0]) {
+				return replacement.concatenation
+			}
+		}
+		return nil;
+	}
+
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		var reps: [ABNFRepetition<Symbol>] = []
 
@@ -776,6 +772,15 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 			if let replacement = self.repeating.hasUnion(other.repeating) {
 				return ABNFRepetition(min: self.min, max: self.max, element: replacement)
 			}
+		}
+		return nil;
+	}
+
+	public func hasConcatenation(_ other: Self) -> Self? {
+		if self.repeating == other.repeating {
+			let newMin = self.min + other.min;
+			let newMax = self.max==nil || other.max==nil ? nil : (self.max! + other.max!);
+			return ABNFRepetition(min: newMin, max: newMax, element: self.repeating)
 		}
 		return nil;
 	}
@@ -890,25 +895,6 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		}
 	}
 
-	public func repeating(_ count: UInt) -> ABNFRepetition<Symbol> {
-		precondition(count >= 0)
-		return ABNFRepetition(min: count, max: count, element: self)
-	}
-
-	public func repeating(_ range: ClosedRange<UInt>) -> ABNFRepetition<Symbol> {
-		precondition(range.lowerBound >= 0)
-		// A simple optimization, in most cases
-		if case .group(let group) = self, range.lowerBound == 0 && range.upperBound == 1 {
-			return ABNFRepetition<Symbol>(min: 1, max: 1, element: ABNFElement<Symbol>.option(ABNFOption<Symbol>(optionalAlternation: group.alternation)));
-		}
-		return ABNFRepetition(min: range.lowerBound, max: range.upperBound, element: self);
-	}
-
-	public func repeating(_ range: PartialRangeFrom<UInt>) -> ABNFRepetition<Symbol> {
-		precondition(range.lowerBound >= 0)
-		return ABNFRepetition(min: range.lowerBound, max: nil, element: self)
-	}
-
 	public var description: String {
 		switch self {
 			case .rulename(let r): return r.description
@@ -952,6 +938,16 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 			case .charVal(let s): if case .charVal(let o) = other, let r = s.hasUnion(o) { return ABNFElement.charVal(r) }
 			case .numVal(let s): if case .numVal(let o) = other, let r = s.hasUnion(o) { return ABNFElement.numVal(r) }
 			case .proseVal(let s): if case .proseVal(let o) = other, let r = s.hasUnion(o) { return ABNFElement.proseVal(r) }
+		}
+		return nil;
+	}
+
+	public func hasConcatenation(_ other: Self) -> Self? {
+		switch self {
+			case .group(let s): if case .group(let o) = other, let r = s.hasConcatenation(o) { return ABNFElement.group(r) }
+			case .charVal(let s): if case .charVal(let o) = other, let r = s.hasConcatenation(o) { return ABNFElement.charVal(r) }
+			case .numVal(let s): if case .numVal(let o) = other, let r = s.hasConcatenation(o) { return ABNFElement.numVal(r) }
+			default: return nil;
 		}
 		return nil;
 	}
@@ -1017,6 +1013,14 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
+		return nil
+	}
+
+	public func hasConcatenation(_ other: Self) -> Self? {
+		// If both alternations have a single element, they can be joined
+		if (self.alternation.matches.count == 1 && other.alternation.matches.count == 1){
+			return ABNFGroup(alternation: ABNFAlternation(matches: [ABNFConcatenation(repetitions: self.alternation.matches[0].repetitions + other.alternation.matches[0].repetitions)]))
+		}
 		return nil
 	}
 
@@ -1147,6 +1151,10 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 
 	public func hasUnion(_ other: Self) -> Self? {
 		return nil
+	}
+
+	public func hasConcatenation(_ other: Self) -> Self? {
+		return ABNFCharVal(sequence: self.sequence + other.sequence)
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
@@ -1308,6 +1316,15 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		}
 
 		return nil
+	}
+
+	public func hasConcatenation(_ other: Self) -> Self? {
+		// This never has a union, even with an identical prose-val (probably)
+		if case .sequence(let selfSeq) = self.value, case .sequence(let otherSeq) = other.value {
+			return ABNFNumVal(base: base, value: .sequence(selfSeq + otherSeq))
+		}
+		// One of the two values is a range, which isn't concatenated back into itself
+		return nil;
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {

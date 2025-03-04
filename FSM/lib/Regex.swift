@@ -1,6 +1,8 @@
 /// Declares a type of sequence that has an empty sequence, and can be built from the empty sequence by appending elements.
 /// The elements of this sequence are called Symbol. They must be usable as keys for a ``Dictionary``, so Symbol depends on ``Hashable``.
 public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
+	typealias Symbol = Element;
+
 	/// An instance of this type that has no elements
 	static var empty: Self { get }
 
@@ -9,7 +11,7 @@ public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 	static func + (_: Self, _: Self) -> Self;
 
 	/// Return a new sequence with the given alement appended
-	func appending(_ newElement: Element) -> Self;
+	func appending(_: Symbol) -> Self;
 }
 
 /// A protocol allowing the construction of regular languages.
@@ -24,10 +26,10 @@ public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 /// - func toPattern
 public protocol RegularPatternProtocol {
 	/// The type of sequence this pattern operates over, such as an array of symbols.
-	associatedtype Element: SymbolSequenceProtocol where Element.Element == Symbol;
+	associatedtype Element: SymbolSequenceProtocol;
 
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
-	associatedtype Symbol;
+	typealias Symbol = Element.Symbol;
 
 	/// An instance representing the empty language, which accepts no sequences.
 	static var empty: Self { get }

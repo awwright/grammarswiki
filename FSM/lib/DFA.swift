@@ -15,7 +15,7 @@
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Element: SymbolSequenceProtocol>: SetAlgebra, Sequence, FSMProtocol where Element.Element: Comparable {
+public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where Element.Element: Comparable {
 	/// The type of symbols in the DFA’s alphabet.
 	public typealias Symbol = Element.Element;
 	/// The type used to index states
