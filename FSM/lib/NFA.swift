@@ -380,6 +380,14 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 		return Self.concatenate([self, other]);
 	}
 
+	public static func symbol(_ element: Symbol) -> Self {
+		return Self(
+			states: [[element: [1]], [:]],
+			initials: [ 0 ],
+			finals: [ 1 ]
+		)
+	}
+
 	/// Adds the empty string to the set of accepted elements
 	public func optional() -> Self {
 		// Append a single state that is both a start and final state.

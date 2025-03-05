@@ -38,14 +38,19 @@ public protocol RegularPatternProtocol {
 	static var epsilon: Self { get }
 
 	/// Creates a pattern accepting the union of the languages defined by the given patterns.
-	/// - Parameter other: An array of patterns to union with this one.
+	/// - Parameter elements: An array of patterns to union with this one.
 	/// - Returns: A pattern accepting any sequence accepted by at least one of the input patterns.
 	static func union(_ elements: [Self]) -> Self
 
 	/// Creates a pattern accepting the concatenation of the languages defined by the given patterns.
-	/// - Parameter other: An array of patterns to concatenate with this one.
+	/// - Parameter elements: An array of patterns to concatenate with this one.
 	/// - Returns: A pattern accepting sequences formed by appending sequences from each pattern in order.
 	static func concatenate(_ elements: [Self]) -> Self
+
+	/// Creates a pattern that accepts only a single input with one element of the given symbol
+	/// - Parameter element: The symbol to turn into a regular expression
+	/// - Returns: A pattern accepting the given symbol
+	static func symbol(_ element: Symbol) -> Self
 
 	/// Returns a pattern to also accept the empty sequence, making it optional.
 	/// - Returns: A pattern that accepts either the empty sequence or any sequence this pattern accepts.
@@ -82,7 +87,7 @@ public protocol RegularPatternProtocol {
 	/// Converts this pattern to an equivalent pattern of the specified type.
 	/// - Parameter patternType: The target pattern type to convert to.
 	/// - Returns: An equivalent pattern constructed using the target type's interface.
-//	func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type) -> PatternType
+//	func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type) -> PatternType where PatternType.Symbol == Symbol
 }
 
 extension RegularPatternProtocol {

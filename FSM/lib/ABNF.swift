@@ -506,6 +506,10 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 		return elements[1...].reduce(elements[0].concatenation, {$0.concatenate($1.concatenation)}).alternation
 	}
 
+	public static func symbol(_ element: Symbol) -> ABNFAlternation<S> {
+		return ABNFNumVal<Symbol>(base: .hex, value: .sequence([element])).alternation
+	}
+
 	public func union(_ other: Self) -> Self {
 		// Iterate over other and try to merge it with an existing element if possible, otherwise append to the end.
 		var newMatches = self.matches;

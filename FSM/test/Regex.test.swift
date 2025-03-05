@@ -3,9 +3,6 @@ import Testing;
 
 // Test Suite
 @Suite("SimpleRegex Tests") struct SimpleRegexTests {
-	let a = SimpleRegex.symbol(1)
-	let b = SimpleRegex.symbol(2)
-	let c = SimpleRegex.symbol(3)
 
 	@Test("Empty pattern")
 	func test_SimpleRegex_empty() async throws {
@@ -42,6 +39,8 @@ import Testing;
 
 	@Test("Union of patterns")
 	func test_SimpleRegex_union() async throws {
+		let a = SimpleRegex.symbol(1);
+		let b = SimpleRegex.symbol(2);
 		let union = a.union(b)
 		#expect(union.description == "1|2", "Union should join patterns with '|'")
 		if case .union(let array) = union {
@@ -55,6 +54,9 @@ import Testing;
 
 	@Test("Nested union")
 	func test_SimpleRegex_nestedUnion() async throws {
+		let a = SimpleRegex.symbol(1);
+		let b = SimpleRegex.symbol(2);
+		let c = SimpleRegex.symbol(3);
 		let union1 = a.union(b)
 		let union2 = union1.union(c)
 		#expect(union2.description == "1|2|3", "Nested unions should flatten with '|'")
@@ -65,6 +67,8 @@ import Testing;
 
 	@Test("Concatenation of patterns")
 	func test_SimpleRegex_concatenate() async throws {
+		let a = SimpleRegex.symbol(1);
+		let b = SimpleRegex.symbol(2);
 		let concat = a.concatenate(b)
 		#expect(concat.description == "1.2", "Concatenation should join patterns with '.'")
 		if case .concatenate(let array) = concat {
@@ -78,6 +82,9 @@ import Testing;
 
 	@Test("Nested concatenation")
 	func test_SimpleRegex_nestedConcatenate() async throws {
+		let a = SimpleRegex.symbol(1);
+		let b = SimpleRegex.symbol(2);
+		let c = SimpleRegex.symbol(3);
 		let concat1 = a.concatenate(b)
 		let concat2 = concat1.concatenate(c)
 		#expect(concat2.description == "1.2.3", "Nested concatenations should flatten with '.'")
@@ -88,6 +95,7 @@ import Testing;
 
 	@Test("Kleene star")
 	func test_SimpleRegex_star() async throws {
+		let a = SimpleRegex.symbol(1);
 		let star = a.star()
 		#expect(star.description == "1*", "Star should append '*'")
 		if case .star(let inner) = star {
@@ -99,6 +107,9 @@ import Testing;
 
 	@Test("Precedence: union over concatenation")
 	func test_SimpleRegex_precedenceUnionOverConcat() async throws {
+		let a = SimpleRegex.symbol(1);
+		let b = SimpleRegex.symbol(2);
+		let c = SimpleRegex.symbol(3);
 		let union = a.union(b)
 		let concat = union.concatenate(c)
 		#expect(concat.description == "(1|2).3", "Union should be parenthesized within concatenation")
@@ -106,6 +117,8 @@ import Testing;
 
 	@Test("Precedence: concatenation over star")
 	func test_SimpleRegex_precedenceConcatOverStar() async throws {
+		let a = SimpleRegex.symbol(1);
+		let b = SimpleRegex.symbol(2);
 		let star = b.star()
 		let concat = a.concatenate(star)
 		#expect(concat.description == "1.2*", "Star should not be parenthesized within concatenation")
@@ -113,6 +126,7 @@ import Testing;
 
 	@Test("Optional pattern")
 	func test_SimpleRegex_optional() async throws {
+		let a = SimpleRegex.symbol(1);
 		let opt = a.optional()
 		#expect(opt.description == "ε|1", "Optional should union with epsilon")
 		if case .union(let array) = opt {
@@ -124,6 +138,7 @@ import Testing;
 
 	@Test("Plus pattern")
 	func test_SimpleRegex_plus() async throws {
+		let a = SimpleRegex.symbol(1);
 		let plus = a.plus()
 		print(plus.description)
 		#expect(plus.description == "1.1*", "Plus should be concatenation with star")
@@ -138,6 +153,7 @@ import Testing;
 
 	@Test("Repeating exact count")
 	func test_SimpleRegex_repeatingExact() async throws {
+		let a = SimpleRegex.symbol(1);
 		let repeat3 = a.repeating(3)
 		#expect(repeat3.description == "1.1.1", "Repeating 3 should concatenate three times")
 		if case .concatenate(let array) = repeat3 {
@@ -148,6 +164,7 @@ import Testing;
 
 	@Test("Repeating range")
 	func test_SimpleRegex_repeatingRange() async throws {
+		let a = SimpleRegex.symbol(1);
 		let range = a.repeating(1...3)
 		#expect(range.description == "1.(ε|1).(ε|1)", "Range 1...3 should include optional parts")
 		if case .concatenate(let array) = range {
@@ -160,6 +177,7 @@ import Testing;
 
 	@Test("Repeating at least")
 	func test_SimpleRegex_repeatingAtLeast() async throws {
+		let a = SimpleRegex.symbol(1);
 		let atLeast2 = a.repeating(2...)
 		#expect(atLeast2.description == "1.1.1*", "At least 2 should append star")
 		if case .concatenate(let array) = atLeast2 {

@@ -446,6 +446,14 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		return Self.concatenate([self, other]);
 	}
 
+	public static func symbol(_ element: Symbol) -> DFA<Element> {
+		return Self(
+			states: [[element: 1], [:]],
+			initial: 0,
+			finals: [ 1 ]
+		)
+	}
+
 	/// Return a DFA that also accepts the empty sequence
 	/// i.e. adds the initial state to the set of final states
 	public func optional() -> DFA<Element> {
