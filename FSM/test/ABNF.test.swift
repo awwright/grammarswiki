@@ -435,115 +435,115 @@ import Testing;
 		#expect(prose.isOptional == false)
 	}
 
-	@Test("expression.toFSM")
-	func test_rulelist_toFSM() async throws {
+	@Test("expression.toPattern")
+	func test_rulelist_toPattern() async throws {
 		let input = """
 		"A" / "B" / 3"C"
 		""";
 		let (expression, _) = ABNFAlternation<UInt8>.match(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(fsm.contains("A".utf8));
 	}
 
-	@Test("repetition.toFSM optional")
-	func test_repetition_optional_toFSM() async throws {
+	@Test("repetition.toPattern optional")
+	func test_repetition_optional_toPattern() async throws {
 		let input = """
 		0*1"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(fsm.contains("".utf8));
 		#expect(fsm.contains("C".utf8));
 		#expect(!fsm.contains("CC".utf8));
 	}
 
-	@Test("repetition.toFSM plus")
-	func test_repetition_plus_toFSM() async throws {
+	@Test("repetition.toPattern plus")
+	func test_repetition_plus_toPattern() async throws {
 		let input = """
 		1*"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(!fsm.contains("".utf8));
 		#expect(fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
 	}
 
-	@Test("repetition.toFSM star")
-	func test_repetition_star_toFSM() async throws {
+	@Test("repetition.toPattern star")
+	func test_repetition_star_toPattern() async throws {
 		let input = """
 		*"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(fsm.contains("".utf8));
 		#expect(fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
 	}
 
-	@Test("repetition.toFSM min")
-	func test_repetition_min_toFSM() async throws {
+	@Test("repetition.toPattern min")
+	func test_repetition_min_toPattern() async throws {
 		let input = """
 		2*"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(!fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
 		#expect(fsm.contains("CCC".utf8));
 	}
 
-	@Test("repetition.toFSM max")
-	func test_repetition_max_toFSM() async throws {
+	@Test("repetition.toPattern max")
+	func test_repetition_max_toPattern() async throws {
 		let input = """
 		*2"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(fsm.contains("".utf8));
 		#expect(fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
 		#expect(!fsm.contains("CCC".utf8));
 	}
 
-	@Test("repetition.toFSM min/max")
-	func test_repetition_minmax_toFSM() async throws {
+	@Test("repetition.toPattern min/max")
+	func test_repetition_minmax_toPattern() async throws {
 		let input = """
 		2*3"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(!fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
 		#expect(fsm.contains("CCC".utf8));
 		#expect(!fsm.contains("CCCC".utf8));
 	}
 
-	@Test("element.toFSM")
-	func test_element_toFSM() async throws {
+	@Test("element.toPattern")
+	func test_element_toPattern() async throws {
 		let input = """
 		"C"
 		""";
 		let (expression, _) = ABNFElement<UInt8>.match(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(fsm.contains("C".utf8));
 	}
 
-	@Test("char_val.toFSM")
-	func test_char_val_toFSM() async throws {
+	@Test("char_val.toPattern")
+	func test_char_val_toPattern() async throws {
 		let input = """
 		"C"
 		""";
 		let (expression, _) = ABNFCharVal<UInt8>.match(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(fsm.contains("C".utf8));
 	}
 
-	@Test("rulelist.toFSM with rule")
-	func test_rulelist_toFSM_2() async throws {
+	@Test("rulelist.toPattern with rule")
+	func test_rulelist_toPattern_2() async throws {
 		let input = "Top = 3Rule\r\nRule = \"C\"\r\n";
 		let expression = ABNFRulelist<UInt8>.parse(input.utf8)!
-		let fsm = expression.toFSM(rules: [:]);
+		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
 		#expect(fsm["Top"]!.contains("CCC".utf8));
 	}
 

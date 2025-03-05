@@ -88,17 +88,19 @@ public protocol ABNFExpression: ABNFProduction {
 	var isOptional: Bool {get}
 
 	/// Gets a list of the rules referenced by leaf ``ABNFRulename`` productions.
-	/// All of the rules given must be provided to ``toFSM``.
+	/// All of the rules given must be provided to ``toPattern``.
 	var referencedRules: Set<String> {get}
 
-	/// Converts the rule to a deterministic finite automaton (DFA).
+	/// Converts the rule to a regular expression capable pattern such as ``DFA`` or ``SimpleRegex``.
+	///
+	/// For example, `alternation.toPattern(DFA<UInt8>.self, [:])`
 	///
 	/// - Note: If the rule contains a rulename, the definition must be provided in the parameters, otherwise the function will fail.
 	/// 	This list can be acquired from ``referencedRules``
 	///
 	/// - Parameter rules: A dictionary of resolved rulenames to their DFAs.
 	/// - Returns: The DFA equivalent to the definition of this rule.
-	func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element>
+	func toPattern<PatternType: RegularPatternProtocol>(_: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol
 }
 
 /// Represents a list of rules in an ABNF grammar, as defined in RFC 5234 with Errata 3076.
@@ -176,7 +178,7 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 	/// - Parameter ruleMap: An optional map of pre-resolved rules to their DFAs, used for external references.
 	/// - Returns: A dictionary mapping lowercase rulenames to their corresponding DFAs.
 	/// - Note: Rules with circular dependencies that cannot be converted to a DFA will be excluded from the return value without any other warning.
-	public func toFSM(rules ruleMap: Dictionary<String, DFA<Element>>) -> Dictionary<String, DFA<Element>> {
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules ruleMap: Dictionary<String, PatternType>) -> Dictionary<String, PatternType> where PatternType.Symbol == Symbol {
 		// Get a Dictionary of each rule by its name to its referencedRules
 		let requiredRules = Dictionary<String, Set<String>>(uniqueKeysWithValues: rules.map {
 			($0.rulename.label, $0.referencedRules)
@@ -192,7 +194,7 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 					guard let rule = rulesByName[rulename] else {
 						fatalError("Could not resolve \(rulename)")
 					}
-					resolvedRules[rulename] = rule.toFSM(rules: resolvedRules);
+					resolvedRules[rulename] = rule.toPattern(patternType, rules: resolvedRules);
 					continue main;
 				}
 			}
@@ -283,8 +285,8 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 		return alternation.referencedRules;
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
-		alternation.toFSM(rules: rules)
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
+		alternation.toPattern(patternType, rules: rules)
 	}
 
 	public func union(_ other: ABNFRule<Symbol>) -> ABNFRule<Symbol> {
@@ -380,8 +382,8 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
 	// This is also a clever way of preventing recursive loops
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
-		return rules[label]!;
+	public func toPattern<PatternType: RegularPatternProtocol>(_: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
+		return rules[label]!
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -484,8 +486,8 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 		return matches.reduce(Set(), { $0.union($1.referencedRules) })
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
-		DFA.union(matches.map{ $0.toFSM(rules: rules) })
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
+		PatternType.union(matches.map({ $0.toPattern(patternType, rules: rules) }))
 	}
 
 	public static func union(_ elements: [Self]) -> Self {
@@ -658,8 +660,8 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 		return repetitions.reduce(Set(), { $0.union($1.referencedRules) })
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
-		DFA.concatenate(repetitions.map { $0.toFSM(rules: rules) })
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
+		PatternType.union(repetitions.map({ $0.toPattern(patternType, rules: rules) }))
 	}
 
 	public func concatenate(_ other: ABNFConcatenation) -> ABNFConcatenation {
@@ -806,20 +808,11 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 		return repeating.referencedRules
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
-		let fsm = repeating.toFSM(rules: rules);
-		if(min == 0 && max == 1){
-			return fsm.optional();
-		}else if(min == 0 && max == nil){
-			return fsm.star();
-		}else if(min == 1 && max == nil){
-			return fsm.plus();
-		}else{
-			if let max {
-				return fsm.repeating(Int(min)...Int(max));
-			}else{
-				return fsm.repeating(Int(min)...);
-			}
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
+		if let max = self.max {
+			repeating.toPattern(patternType, rules: rules).repeating(Int(min)...Int(max))
+		} else {
+			repeating.toPattern(patternType, rules: rules).repeating(Int(min)...)
 		}
 	}
 
@@ -921,14 +914,14 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		}
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
-			case .rulename(let r): return r.toFSM(rules: rules)
-			case .group(let g): return g.toFSM(rules: rules)
-			case .option(let o): return o.toFSM(rules: rules)
-			case .charVal(let c): return c.toFSM(rules: rules)
-			case .numVal(let n): return n.toFSM(rules: rules)
-			case .proseVal(let p): return p.toFSM(rules: rules)
+			case .rulename(let s): return s.toPattern(patternType, rules: rules)
+			case .group(let s): return s.toPattern(patternType, rules: rules)
+			case .option(let s): return s.toPattern(patternType, rules: rules)
+			case .charVal(let s): return s.toPattern(patternType, rules: rules)
+			case .numVal(let s): return s.toPattern(patternType, rules: rules)
+			case .proseVal(let s): return s.toPattern(patternType, rules: rules)
 		}
 	}
 
@@ -1012,8 +1005,8 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		return alternation.referencedRules
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
-		alternation.toFSM(rules: rules)
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
+		alternation.toPattern(patternType, rules: rules)
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1085,8 +1078,8 @@ public struct ABNFOption<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		return optionalAlternation.referencedRules
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
-		optionalAlternation.toFSM(rules: rules).optional()
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
+		optionalAlternation.toPattern(patternType, rules: rules).optional()
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1149,8 +1142,8 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 		return []
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
-		return DFA(verbatim: sequence.map { Symbol($0) })
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
+		return PatternType.concatenate(sequence.map { PatternType.symbol($0) })
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1269,10 +1262,10 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		return []
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
 		switch self.value {
-			case .sequence(let seq): return DFA(verbatim: seq)
-			case .range(let low, let high): return DFA(range: low...high)
+			case .sequence(let seq): return PatternType.concatenate(seq.map { PatternType.symbol($0) })
+			case .range(let low, let high): return PatternType.concatenate((low...high).map { PatternType.symbol($0) })
 		}
 	}
 
@@ -1414,7 +1407,7 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 		return []
 	}
 
-	public func toFSM(rules: Dictionary<String, DFA<Element>>) -> DFA<Element> {
+	public func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol {
 		fatalError("Cannot convert prose to FSM")
 	}
 
