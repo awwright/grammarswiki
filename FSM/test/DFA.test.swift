@@ -434,4 +434,46 @@ import Testing
 		#expect(dfa.nextStates(initial: 6, input: pattern) == [10]);
 		#expect(dfa.nextStates(initial: 7, input: pattern) == [10]);
 	}
+
+	@Suite("toPattern") struct DFATests_toPattern {
+		@Test("empty")
+		func test_DFA_toPattern_0() {
+			let dfa: DFA<Array<UInt8>> = DFA([]);
+			#expect(Array(dfa).count == 0)
+			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
+			#expect(pattern.description == "∅")
+		}
+
+		@Test("epsilon")
+		func test_DFA_toPattern_1() {
+			let dfa: DFA<Array<UInt8>> = DFA([ [] ]);
+			#expect(Array(dfa).count == 1)
+			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
+			#expect(pattern.description == "ε")
+		}
+
+		@Test("character")
+		func test_DFA_toPattern_2() {
+			let dfa: DFA<Array<UInt8>> = DFA([ [0x30] ]);
+			#expect(Array(dfa).count == 1)
+			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
+			#expect(pattern.description == "30")
+		}
+
+		@Test("character?")
+		func test_DFA_toPattern_3() {
+			let dfa: DFA<Array<UInt8>> = DFA([ [], [0x30] ]);
+			#expect(Array(dfa).count == 2)
+			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
+			#expect(pattern.description == "ε|30")
+		}
+
+		@Test("character*")
+		func test_DFA_toPattern_4() {
+			let dfa: DFA<Array<UInt8>> = DFA([ [], [0x30] ]).star();
+			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
+			// FIXME: this currently resolves to ε|30.30* better known as 30*
+//			#expect(pattern.description == "30*")
+		}
+	}
 }

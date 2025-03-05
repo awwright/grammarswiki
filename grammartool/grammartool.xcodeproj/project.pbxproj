@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		28587D362D78222E00F226C0 /* FSM in Frameworks */ = {isa = PBXBuildFile; productRef = 28587D352D78222E00F226C0 /* FSM */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		28587D282D78219900F226C0 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -35,6 +39,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				28587D362D78222E00F226C0 /* FSM in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -45,6 +50,7 @@
 			isa = PBXGroup;
 			children = (
 				28587D2C2D78219900F226C0 /* grammartool */,
+				28587D342D78222E00F226C0 /* Frameworks */,
 				28587D2B2D78219900F226C0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -55,6 +61,13 @@
 				28587D2A2D78219900F226C0 /* grammartool */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		28587D342D78222E00F226C0 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -77,6 +90,7 @@
 			);
 			name = grammartool;
 			packageProductDependencies = (
+				28587D352D78222E00F226C0 /* FSM */,
 			);
 			productName = grammartool;
 			productReference = 28587D2A2D78219900F226C0 /* grammartool */;
@@ -289,6 +303,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		28587D352D78222E00F226C0 /* FSM */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FSM;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 28587D222D78219900F226C0 /* Project object */;
 }

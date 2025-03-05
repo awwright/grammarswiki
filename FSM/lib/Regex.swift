@@ -144,46 +144,68 @@ public indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteg
 	public typealias Element = Array<S>
 	public typealias Symbol = S
 
-	public static var empty: Self { Self.union([]) }
-	public static var epsilon: Self { Self.concatenate([]) }
+	public static var empty: Self { Self.alternation([]) }
+	public static var epsilon: Self { Self.concatenation([]) }
 
-	case union([Self])
-	case concatenate([Self])
+	case alternation([Self])
+	case concatenation([Self])
 	case star(Self)
 	case symbol(Symbol)
 
 	public init (_ sequence: any Sequence<Symbol>) {
-		self = .concatenate(sequence.map{ Self.symbol($0) })
+		self = .concatenation(sequence.map{ Self.symbol($0) })
 	}
 
 	var precedence: Int {
 		switch self {
-			case .union: return 4
-			case .concatenate: return 3
+			case .alternation: return 4
+			case .concatenation: return 3
 			case .star: return 2
 			case .symbol: return 1
 		}
 	}
 
-	public func concatenate(_ other: Self) -> Self {
-		if case .concatenate(let array) = self {
-			return .concatenate(array + [other])
-		}else{
-			return .concatenate([self, other])
-		}
+	static public func union(_ elements: [Self]) -> Self {
+		let array = elements.flatMap({ if case .alternation(let v) = $0 { v } else { [$0] } })
+		if array.count == 1 { return array[0] }
+		var contains: Set<Self> = Set()
+		return .alternation(array.filter { $0 != .empty && contains.insert($0).inserted })
+	}
 
+	static public func concatenate(_ elements: [Self]) -> Self {
+		let array = elements.flatMap({ if case .concatenation(let v) = $0 { v } else { [$0] } })
+		// Concatenation with empty is empty
+		if (array.contains { $0 == .empty }) { return .empty }
+		if array.count == 1 { return array[0] }
+		return .concatenation(array)
 	}
 
 	public func union(_ other: Self) -> Self {
-		if case .union(let array) = self {
-			return .union(array + [other])
-		}else{
-			return .union([self, other])
-		}
+		let lhs = if case .alternation(let array) = self { array } else { [self] }
+		let rhs = if case .alternation(let array) = other { array } else { [other] }
+		let array = lhs + rhs
+		if array.count == 1 { return array[0] }
+		var contains: Set<Self> = Set()
+		return .alternation(array.filter { contains.insert($0).inserted })
+	}
+
+	public func concatenate(_ other: Self) -> Self {
+		let lhs = if case .concatenation(let array) = self { array } else { [self] }
+		let rhs = if case .concatenation(let array) = other { array } else { [other] }
+		let array = lhs + rhs
+		// Concatenation with empty is empty
+		if (array.contains { $0 == .empty }) { return .empty }
+		if array.count == 1 { return array[0] }
+		return .concatenation(array)
 	}
 
 	public func star() -> Self {
-		return .star(self)
+		switch self {
+			case .alternation(let array): return array.isEmpty ? .concatenation([]) : .star(self)
+			case .concatenation(let array): return array.isEmpty ? self : .star(self)
+			case .star: return self
+			case .symbol: return .star(self)
+		}
 	}
 
 	public var description: String {
@@ -194,8 +216,8 @@ public indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteg
 			return other.description
 		}
 		switch self {
-			case .union(let array): return array.isEmpty ? "∅" : array.map(toString).joined(separator: "|")
-			case .concatenate(let array): return array.isEmpty ? "ε" : array.map(toString).joined(separator: ".")
+			case .alternation(let array): return array.isEmpty ? "∅" : array.map(toString).joined(separator: "|")
+			case .concatenation(let array): return array.isEmpty ? "ε" : array.map(toString).joined(separator: ".")
 			case .star(let regex): return toString(regex) + "*"
 			case .symbol(let c): return String(c, radix: 0x10)
 		}
@@ -203,8 +225,8 @@ public indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteg
 
 	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternProtocol, PatternType.Symbol == Symbol {
 		switch self {
-			case .union(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
-			case .concatenate(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))
+			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
+			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .star(let regex): return regex.toPattern(as: PatternType.self).star()
 			case .symbol(let c): return PatternType.symbol(c)
 		}

@@ -39,7 +39,8 @@ typealias Char = UInt32;
 
 //print(getInput()/*!*/);
 let rulelist = ABNFRulelist<Char>.parse(getInput()!)!;
-let parsedRules = rulelist.toPattern(DFA<Array<Char>>.self, rules: [:])
+
+let parsedRules: Dictionary<String, DFA<Array<Char>>> = rulelist.toPattern(as: DFA<Array<Char>>.self)
 print(parsedRules.keys);
 //print(rulelist.description);
 

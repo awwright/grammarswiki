@@ -447,11 +447,17 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
-		self
+		if matches.count == 1 && matches[0].repetitions.count == 1 && matches[0].repetitions[0].min == 1 && matches[0].repetitions[0].max == 1, case ABNFElement.group(let group) = matches[0].repetitions[0].repeating {
+			return group.alternation
+		}
+		return self
 	}
 	public var concatenation: ABNFConcatenation<Symbol> {
+		if matches.count == 1 && matches[0].repetitions.count == 1 && matches[0].repetitions[0].min == 1 && matches[0].repetitions[0].max == 1, case ABNFElement.group(let group) = matches[0].repetitions[0].repeating, group.alternation.matches.count==1 {
+			return group.alternation.matches[0]
+		}
 		// If there's only a single match in the concatenation, unwrap it
-		(matches.count == 1) ? matches[0] : ABNFConcatenation<Symbol>(repetitions: [self.repetition])
+		return (matches.count == 1) ? matches[0] : ABNFConcatenation<Symbol>(repetitions: [self.repetition])
 	}
 	public var repetition: ABNFRepetition<Symbol> {
 		return ABNFRepetition<Symbol>(min: 1, max: 1, element: self.element)
@@ -521,22 +527,24 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 
 	public func union(_ other: Self) -> Self {
 		// Iterate over other and try to merge it with an existing element if possible, otherwise append to the end.
-		var newMatches = self.matches;
+		var newMatches = self.alternation.matches;
 		// For every element in `other`, append it to the end.
 		// Then see if the last element can be merged in with an existing element before it.
 		// If so, check that element and so on.
 		// Try to preserve the order as much as possible because sometimes that is significant.
-		other: for otherConcat in other.matches {
+		other: for otherConcat in other.alternation.matches {
 			var i = newMatches.count;
 			newMatches.append(otherConcat);
 			var search = newMatches.last!;
+			var searchIndex = newMatches.count - 1;
 			while i > 0 {
 				i -= 1;
 				if let replacementConcat = newMatches[i].hasUnion(search) {
 					newMatches[i] = replacementConcat;
 					// remove elements matching `search`
-					newMatches.removeAll(where: {$0 == search});
+					newMatches.remove(at: searchIndex)
 					search = replacementConcat;
+					searchIndex = i;
 				}
 			}
 		}
@@ -634,10 +642,16 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
-		ABNFAlternation(matches: [self])
+		if repetitions.count == 1 && repetitions[0].min == 1 && repetitions[0].max == 1, case ABNFElement.group(let group) = repetitions[0].repeating {
+			return group.alternation
+		}
+		return ABNFAlternation(matches: [self])
 	}
 	public var concatenation: ABNFConcatenation<Symbol> {
-		self
+		if repetitions.count==1 && repetitions[0].min == 1 && repetitions[0].max == 1, case ABNFElement.group(let group) = repetitions[0].repeating, group.alternation.matches.count == 1, group.alternation.matches[0].repetitions.count==1 {
+			return group.alternation.matches[0]
+		}
+		return self
 	}
 	public var repetition: ABNFRepetition<Symbol> {
 		// If there's only a single repetition in the string, unwrap it
@@ -668,13 +682,28 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
-		PatternType.union(repetitions.map({ $0.toPattern(as: PatternType.self, rules: rules) }))
+		PatternType.concatenate(repetitions.map({ $0.toPattern(as: PatternType.self, rules: rules) }))
+	}
+
+	public static func concatenate(_ concatenations: [ABNFConcatenation<Symbol>]) -> ABNFConcatenation<Symbol> {
+		var newRepetitions: Array<ABNFRepetition<Symbol>> = [];
+		for repetition in concatenations.flatMap(\.repetitions) {
+			if repetition.isEmpty { continue }
+			if let last = newRepetitions.last, let merged = last.hasConcatenation(repetition) {
+				newRepetitions[newRepetitions.count - 1] = merged
+			} else {
+				newRepetitions.append(repetition)
+			}
+		}
+		return ABNFConcatenation(repetitions: newRepetitions)
 	}
 
 	public func concatenate(_ other: ABNFConcatenation) -> ABNFConcatenation {
-		let allRepetitions = (repetitions + other.repetitions)
-		let newRepetitions = allRepetitions.filter { !$0.isEmpty };
-		return ABNFConcatenation(repetitions: newRepetitions.isEmpty ? [allRepetitions[0]] : newRepetitions)
+		// See if self last element and other first element have a natural concatenation, and use that if so
+		if self.repetitions.isEmpty == false && other.repetitions.isEmpty == false, let merged = self.repetitions.last!.hasConcatenation(other.repetitions.first!) {
+			return ABNFConcatenation(repetitions: Array(self.repetitions[0..<self.repetitions.count-1]) + [merged] + other.repetitions[1...])
+		}
+		return ABNFConcatenation(repetitions: Array(self.repetitions + other.repetitions))
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -760,7 +789,10 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 		ABNFConcatenation(repetitions: [self])
 	}
 	public var repetition: ABNFRepetition<Symbol> {
-		self
+		if min == 1 && max == 1, case ABNFElement.group(let group) = repeating, group.alternation.matches.count == 1, group.alternation.matches[0].repetitions.count==1 {
+			return group.alternation.matches[0].repetitions[0]
+		}
+		return self
 	}
 	public var element: ABNFElement<Symbol> {
 		(min == 1 && max == 1) ? repeating : ABNFElement.group(self.group)
@@ -790,6 +822,9 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 	}
 
 	public func hasConcatenation(_ other: Self) -> Self? {
+		if self.min == 1 && self.max == 1, let merged = self.repeating.hasConcatenation(other.repeating) {
+			return merged.repetition
+		}
 		if self.repeating == other.repeating {
 			let newMin = self.min + other.min;
 			let newMax = self.max==nil || other.max==nil ? nil : (self.max! + other.max!);
@@ -864,16 +899,29 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 	case proseVal(ABNFProseVal<Symbol>)
 
 	public var alternation: ABNFAlternation<Symbol> {
-		ABNFAlternation(matches: [self.concatenation])
+		// If we're getting a group, unwrap the group
+		if case .group(let group) = self {
+			return group.alternation
+		}
+		return ABNFAlternation(matches: [self.concatenation])
 	}
 	public var concatenation: ABNFConcatenation<Symbol> {
-		ABNFConcatenation(repetitions: [self.repetition])
+		if case .group(let group) = self, group.alternation.matches.count == 1 {
+			return group.alternation.matches[0]
+		}
+		return ABNFConcatenation(repetitions: [self.repetition])
 	}
 	public var repetition: ABNFRepetition<Symbol> {
-		ABNFRepetition<Symbol>(min: 1, max: 1, element: self)
+		if case .group(let group) = self, group.alternation.matches.count == 1 && group.alternation.matches[0].repetitions.count == 1 {
+			return group.alternation.matches[0].repetitions[0]
+		}
+		return ABNFRepetition<Symbol>(min: 1, max: 1, element: self)
 	}
 	public var element: ABNFElement<Symbol> {
-		self
+		if case .group(let group) = self {
+			return group.element
+		}
+		return self
 	}
 	public var group: ABNFGroup<Symbol> {
 		return ABNFGroup<Symbol>(alternation: self.alternation)
@@ -1272,7 +1320,7 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
 		switch self.value {
 			case .sequence(let seq): return PatternType.concatenate(seq.map { PatternType.symbol($0) })
-			case .range(let low, let high): return PatternType.concatenate((low...high).map { PatternType.symbol($0) })
+			case .range(let low, let high): return PatternType.union((low...high).map { PatternType.symbol($0) })
 		}
 	}
 

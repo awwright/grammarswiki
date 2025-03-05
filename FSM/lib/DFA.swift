@@ -733,6 +733,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		// Make a new initial state at 0, epsilon transition to old initial state
 		// Create an empty new-final state at 1
 		// And add epsilon transitions for all old-final states to new-final state at 1
+		let empty = PatternType.empty;
 		let epsilon = PatternType.epsilon;
 		let newInitial: Dictionary<Int, PatternType> = [self.initial + 2: epsilon];
 		let newFinal: Dictionary<Int, PatternType> = [:];
@@ -802,13 +803,13 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 
 		// According to _Introduction to Automata Theory_...
 		// Given an initial state ⓪, a final state ①, and paths ⓪-R→⓪, ⓪-S→①, ①-T→⓪, and ①-U→①,
-		// the resulting regular expression will be (R | SU*T)*SU*
+		// the resulting regular expression will be (R | S U* T)* S U*
 		assert(states.count == 2)
-		let R = states[0][0] ?? epsilon;
-		let S = states[0][1] ?? epsilon;
-		let T = states[1][0] ?? epsilon;
-		let U = states[1][1] ?? epsilon;
-		return PatternType.concatenate([PatternType.union([R, PatternType.concatenate([S, U.star(), T])]), S, U.star()]);
+		let R = states[0][0] ?? empty;
+		let S = states[0][1] ?? empty;
+		let T = states[1][0] ?? empty;
+		let U = states[1][1] ?? empty;
+		return ( (R).union( (S).concatenate(U.star()).concatenate(T) ) ).star().concatenate(S).concatenate(U.star())
 	}
 
 	public mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
