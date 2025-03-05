@@ -729,6 +729,88 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		return DFA<Target>(nfa: nfa)
 	}
 
+	public func toPattern<PatternType: RegularPatternProtocol>(_: PatternType.Type) -> PatternType where PatternType.Symbol == Symbol {
+		// Make a new initial state at 0, epsilon transition to old initial state
+		// Create an empty new-final state at 1
+		// And add epsilon transitions for all old-final states to new-final state at 1
+		let epsilon = PatternType.epsilon;
+		let newInitial: Dictionary<Int, PatternType> = [self.initial + 2: epsilon];
+		let newFinal: Dictionary<Int, PatternType> = [:];
+
+		// Convert the FSM to a FSM with regular expressions as the transitions
+		var states: Array<Dictionary<Int, PatternType>> = [newInitial, newFinal] + self.states.enumerated().map {
+			(oldNo, oldTable) in
+			var newTable: Dictionary<Int, PatternType> = [:]
+
+			// Merge transitions with the same source and target together
+			// Renumber the states accordingly
+			oldTable.forEach {
+				(symbol, target) in
+				newTable[target + 2] = newTable[target + 2, default: PatternType.empty].union(PatternType.symbol(symbol))
+			}
+
+			// If the state was a final state, add an epsilon transition to state 1
+			if(self.finals.contains(oldNo)){
+				newTable[1] = epsilon
+			}
+			return newTable;
+		}
+
+		// Begin state elimination
+		// Iterate through non-final abnfFSM.states backwards
+		var eliminating = states.count;
+		while eliminating > 2 {
+			eliminating -= 1;
+			// Rewrite all two-segment paths def (d->e->f) to the form:
+			// df' = df | de *ee ef
+			// Precompute (*ee ef)
+			var fe: Dictionary<Int, PatternType> = [:]
+			for (f, segment) in states[eliminating] {
+				fe[f] = segment
+			}
+			let ee = fe.removeValue(forKey: eliminating);
+			var ee_ef_i: Dictionary<Int, PatternType> = [:]
+			for (f, segment) in fe {
+				ee_ef_i[f] = if let ee { ee.star().concatenate(segment) } else { segment }
+			}
+			states = (0..<eliminating).map {
+				d in
+				// Take the table of transitions for state d
+				// If there are any transitions d->e
+				var table = states[d];
+				let de = table.removeValue(forKey: eliminating)
+				if let de {
+					// For each f from e, redraw transition e->f as d->f (add alternate to (union with) existing d->f as necessary)
+					for (f, ee_ef) in ee_ef_i {
+						if let existing_f = table[f] {
+							// These first two options produce optimized versions
+							if(existing_f == de){
+								table[f] = de.concatenate(ee_ef.optional());
+							}else if(existing_f == ee_ef){
+								table[f] = de.optional().concatenate(ee_ef)
+							}else{
+								table[f] = existing_f.union(de.concatenate(ee_ef));
+							}
+						}else{
+							table[f] = de.concatenate(ee_ef);
+						}
+					}
+				}
+				return table;
+			};
+		}
+
+		// According to _Introduction to Automata Theory_...
+		// Given an initial state ⓪, a final state ①, and paths ⓪-R→⓪, ⓪-S→①, ①-T→⓪, and ①-U→①,
+		// the resulting regular expression will be (R | SU*T)*SU*
+		assert(states.count == 2)
+		let R = states[0][0] ?? epsilon;
+		let S = states[0][1] ?? epsilon;
+		let T = states[1][0] ?? epsilon;
+		let U = states[1][1] ?? epsilon;
+		return PatternType.concatenate([PatternType.union([R, PatternType.concatenate([S, U.star(), T])]), S, U.star()]);
+	}
+
 	public mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
 		if(contains(newMember)) {
 			return (false, newMember)

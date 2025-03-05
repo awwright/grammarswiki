@@ -24,7 +24,7 @@ public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 /// - static func concatenate
 /// - func optional
 /// - func toPattern
-public protocol RegularPatternProtocol {
+public protocol RegularPatternProtocol: Equatable {
 	/// The type of sequence this pattern operates over, such as an array of symbols.
 	associatedtype Element: SymbolSequenceProtocol;
 
@@ -139,12 +139,12 @@ extension RegularPatternProtocol {
 /// A very simple implementation of RegularPatternProtocol. Likely the simplest possible implementation.
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.
-indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteger {
-	typealias Element = Array<S>
-	typealias Symbol = S
+public indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteger {
+	public typealias Element = Array<S>
+	public typealias Symbol = S
 
-	static var empty: Self { Self.union([]) }
-	static var epsilon: Self { Self.concatenate([]) }
+	public static var empty: Self { Self.union([]) }
+	public static var epsilon: Self { Self.concatenate([]) }
 
 	case union([Self])
 	case concatenate([Self])
@@ -164,7 +164,7 @@ indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteger {
 		}
 	}
 
-	func concatenate(_ other: Self) -> Self {
+	public func concatenate(_ other: Self) -> Self {
 		if case .concatenate(let array) = self {
 			return .concatenate(array + [other])
 		}else{
@@ -173,7 +173,7 @@ indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteger {
 
 	}
 
-	func union(_ other: Self) -> Self {
+	public func union(_ other: Self) -> Self {
 		if case .union(let array) = self {
 			return .union(array + [other])
 		}else{
@@ -181,11 +181,11 @@ indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteger {
 		}
 	}
 
-	func star() -> Self {
+	public func star() -> Self {
 		return .star(self)
 	}
 
-	var description: String {
+	public var description: String {
 		func toString(_ other: Self) -> String {
 			if(other.precedence >= self.precedence) {
 				return "(\(other.description))"
@@ -200,8 +200,13 @@ indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteger {
 		}
 	}
 
-	func toPattern<PatternType>(_ patternType: PatternType.Type) -> PatternType where PatternType : RegularPatternProtocol {
-		PatternType.empty
+	public func toPattern<PatternType>(_ patternType: PatternType.Type) -> PatternType where PatternType: RegularPatternProtocol, PatternType.Symbol == Symbol {
+		switch self {
+			case .union(let array): return PatternType.union(array.map({ $0.toPattern(patternType) }))
+			case .concatenate(let array): return PatternType.concatenate(array.map({ $0.toPattern(patternType) }))
+			case .star(let regex): return regex.toPattern(patternType).star()
+			case .symbol(let c): return PatternType.symbol(c)
+		}
 	}
 }
 
