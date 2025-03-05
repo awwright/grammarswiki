@@ -87,7 +87,8 @@ public protocol RegularPatternProtocol: Equatable {
 	/// Converts this pattern to an equivalent pattern of the specified type.
 	/// - Parameter patternType: The target pattern type to convert to.
 	/// - Returns: An equivalent pattern constructed using the target type's interface.
-//	func toPattern<PatternType: RegularPatternProtocol>(_ patternType: PatternType.Type) -> PatternType where PatternType.Symbol == Symbol
+	// TODO: There should probably be different protocols for things that can be cast from vs. to a regular pattern
+	func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol
 }
 
 extension RegularPatternProtocol {
@@ -200,11 +201,11 @@ public indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteg
 		}
 	}
 
-	public func toPattern<PatternType>(_ patternType: PatternType.Type) -> PatternType where PatternType: RegularPatternProtocol, PatternType.Symbol == Symbol {
+	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternProtocol, PatternType.Symbol == Symbol {
 		switch self {
-			case .union(let array): return PatternType.union(array.map({ $0.toPattern(patternType) }))
-			case .concatenate(let array): return PatternType.concatenate(array.map({ $0.toPattern(patternType) }))
-			case .star(let regex): return regex.toPattern(patternType).star()
+			case .union(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
+			case .concatenate(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))
+			case .star(let regex): return regex.toPattern(as: PatternType.self).star()
 			case .symbol(let c): return PatternType.symbol(c)
 		}
 	}

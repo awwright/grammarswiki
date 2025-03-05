@@ -53,6 +53,6 @@ guard let fsm = parsedRules[rulename] else {
 	exit(1);
 }
 print(fsm.toViz());
-var pattern = fsm.toPattern(SimpleRegex<Char>.self)
+var pattern: SimpleRegex<Char> = fsm.toPattern()
 print(pattern.description)
-print(pattern.toPattern(ABNFAlternation<Char>.self).description)
+print(pattern.toPattern(as: ABNFAlternation<Char>.self).description)

@@ -729,7 +729,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		return DFA<Target>(nfa: nfa)
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(_: PatternType.Type) -> PatternType where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
 		// Make a new initial state at 0, epsilon transition to old initial state
 		// Create an empty new-final state at 1
 		// And add epsilon transitions for all old-final states to new-final state at 1

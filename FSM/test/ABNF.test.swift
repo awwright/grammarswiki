@@ -441,7 +441,7 @@ import Testing;
 		"A" / "B" / 3"C"
 		""";
 		let (expression, _) = ABNFAlternation<UInt8>.match(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm = expression.toPattern(as: DFA<Array<UInt8>>.self);
 		#expect(fsm.contains("A".utf8));
 	}
 
@@ -451,7 +451,7 @@ import Testing;
 		0*1"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
 		#expect(fsm.contains("".utf8));
 		#expect(fsm.contains("C".utf8));
 		#expect(!fsm.contains("CC".utf8));
@@ -463,7 +463,7 @@ import Testing;
 		1*"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
 		#expect(!fsm.contains("".utf8));
 		#expect(fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
@@ -475,7 +475,7 @@ import Testing;
 		*"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
 		#expect(fsm.contains("".utf8));
 		#expect(fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
@@ -487,7 +487,7 @@ import Testing;
 		2*"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
 		#expect(!fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
 		#expect(fsm.contains("CCC".utf8));
@@ -499,7 +499,7 @@ import Testing;
 		*2"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
 		#expect(fsm.contains("".utf8));
 		#expect(fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
@@ -512,7 +512,7 @@ import Testing;
 		2*3"C"
 		""";
 		let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
 		#expect(!fsm.contains("C".utf8));
 		#expect(fsm.contains("CC".utf8));
 		#expect(fsm.contains("CCC".utf8));
@@ -525,7 +525,7 @@ import Testing;
 		"C"
 		""";
 		let (expression, _) = ABNFElement<UInt8>.match(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
 		#expect(fsm.contains("C".utf8));
 	}
 
@@ -535,7 +535,7 @@ import Testing;
 		"C"
 		""";
 		let (expression, _) = ABNFCharVal<UInt8>.match(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
 		#expect(fsm.contains("C".utf8));
 	}
 
@@ -543,7 +543,7 @@ import Testing;
 	func test_rulelist_toPattern_2() async throws {
 		let input = "Top = 3Rule\r\nRule = \"C\"\r\n";
 		let expression = ABNFRulelist<UInt8>.parse(input.utf8)!
-		let fsm = expression.toPattern(DFA<Array<UInt8>>.self, rules: [:]);
+		let fsm: Dictionary<String, DFA<Array<UInt8>>> = expression.toPattern(rules: [:]);
 		#expect(fsm["Top"]!.contains("CCC".utf8));
 	}
 

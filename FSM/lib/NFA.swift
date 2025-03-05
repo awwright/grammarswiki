@@ -487,6 +487,11 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 		return NFA<Target>();
 	}
 
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
+		// Can this be optimized?
+		DFA<Element>(nfa: self).toPattern(as: PatternType.self)
+	}
+
 	public mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
 		if(contains(newMember)) {
 			return (false, newMember)
