@@ -122,12 +122,12 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 	public typealias Element = Array<S>;
 
 	/// The array of rules comprising this rulelist.
-	let rules: [ABNFRule<Symbol>]
+	public let rules: [ABNFRule<Symbol>]
 
 	/// Initializes a rulelist with an array of rules.
 	///
 	/// - Parameter rules: The rules to include in the rulelist.
-	init(rules: [ABNFRule<Symbol>] = []) {
+	public init(rules: [ABNFRule<Symbol>] = []) {
 		self.rules = rules
 	}
 
@@ -256,6 +256,13 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 	public enum DefinedAs: String {
 		case equal = "="
 		case incremental = "/="
+
+		var description: String {
+			switch self {
+				case .equal: return "="
+				case .incremental: return "/="
+			}
+		}
 	}
 
 	public let rulename: ABNFRulename<Symbol>;
@@ -281,7 +288,7 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 	}
 
 	public var description: String {
-		return "\(rulename.description) \(definedAs) \(alternation.description)\r\n"
+		return "\(rulename.description) \(definedAs.description) \(alternation.description)\r\n"
 	}
 
 	var referencedRules: Set<String> {
@@ -345,7 +352,7 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
 	public typealias Element = Array<S>;
 
-	let label: String;
+	public let label: String;
 
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.label < rhs.label;

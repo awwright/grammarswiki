@@ -585,6 +585,16 @@ import Testing;
 			let fsm: Dictionary<String, DFA<Array<UInt8>>> = expression.toPattern(rules: [:]);
 			#expect(fsm["Top"]!.contains("CCC".utf8));
 		}
+
+		@Test("num-val")
+		func test_toPattern_numVal_range() async throws {
+			let input = "%x30-39";
+			let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
+			print("computing");
+			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			print(fsm.toViz());
+			#expect(fsm.contains([0x30]))
+		}
 	}
 	@Suite("union") struct ABNFTest_union {
 		@Test("rulename / rulename")

@@ -345,9 +345,87 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	}
 
 	/// Minimizes this DFA by merging equivalent states.
+	/// A minimized DFA has the fewest number of states possible of any equivalent DFA.
+	/// It does this by merging states with the "same" behavior into the same state.
+	/// Implemented by Hopcroft's Algorithm.
+	/// - Returns: The minimized DFA
 	public func minimized() -> DFA<Element> {
-		// Take a look at Hopcroft’s algorithm
-		return self
+		// Step 1: Remove unreachable states
+		var reachable = Set<Int>([initial])
+		var reachableStates = [initial]
+		var index = 0
+		while index < reachableStates.count {
+			let current = reachableStates[index]
+			index += 1
+			for nextState in states[current].values {
+				if reachable.insert(nextState).inserted {
+					reachableStates.append(nextState)
+				}
+			}
+		}
+		let stateMap = Dictionary(uniqueKeysWithValues: reachableStates.enumerated().map { ($1, $0) })
+		let trimmedStates = reachableStates.map { state in
+			Dictionary(uniqueKeysWithValues: states[state].map { ($0.key, stateMap[$0.value]!) })
+		}
+		let trimmedFinals = Set(finals.intersection(reachableStates).map { stateMap[$0]! })
+		let trimmedInitial = stateMap[initial]!
+
+		// Initialize partition with accepting and non-accepting states
+		var partition = [Set<Int>]()
+		let accepting = Set(0..<trimmedStates.count).intersection(trimmedFinals)
+		let nonAccepting = Set(0..<trimmedStates.count).subtracting(trimmedFinals)
+
+		if !accepting.isEmpty {
+			partition.append(accepting)
+		}
+		if !nonAccepting.isEmpty {
+			partition.append(nonAccepting)
+		}
+
+		// Initialize worklist with symbols from alphabet
+		let alphabet = Set(trimmedStates.flatMap { $0.keys })
+		var worklist = alphabet.map { ($0, partition) }
+
+		// Refine partitions
+		while !worklist.isEmpty {
+			let (symbol, currentPartition) = worklist.removeFirst()
+
+			// For each partition, split based on transitions for this symbol
+			var newPartition = [Set<Int>]()
+			var changed = false
+
+			for block in currentPartition {
+				// Group states by their transition target for this symbol
+				let transitions = Dictionary(grouping: block) { state -> Int? in
+					trimmedStates[state][symbol]
+				}
+
+				if transitions.count > 1 {
+					changed = true
+					newPartition.append(contentsOf: transitions.values.map { Set($0) })
+				} else {
+					newPartition.append(block)
+				}
+			}
+
+			if changed {
+				// Remove old partition and add new ones
+				worklist = worklist.filter { $1 != currentPartition }
+				worklist.append(contentsOf: alphabet.map { ($0, newPartition) })
+				partition = newPartition
+			}
+		}
+
+		let stateToPartition = Dictionary(uniqueKeysWithValues: partition.enumerated().flatMap { (index, set) in set.map { ($0, index) } })
+		let newStates = partition.map {
+			block in
+			let representative = block.first!
+			return Dictionary(uniqueKeysWithValues: trimmedStates[representative].map { ($0.key, stateToPartition[$0.value]!) })
+		}
+		let newInitial = stateToPartition[trimmedInitial]!
+		let newFinals = Set(partition.enumerated().filter { trimmedFinals.contains($1.first!) }.map { $0.offset })
+
+		return DFA(states: newStates, initial: newInitial, finals: newFinals)
 	}
 
 	/// Maps the DFA’s symbols to a new type.
@@ -361,6 +439,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 				(transform(key), value)
 			})
 		}
+		assert(newStates.count == states.count)
 		return DFA<Target>(
 			states: newStates,
 			initial: self.initial,

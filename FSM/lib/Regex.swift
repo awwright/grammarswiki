@@ -140,7 +140,7 @@ extension RegularPatternProtocol {
 /// A very simple implementation of RegularPatternProtocol. Likely the simplest possible implementation.
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.
-public indirect enum SimpleRegex<S>: RegularPatternProtocol where S: BinaryInteger {
+public indirect enum SimpleRegex<S>: RegularPatternProtocol, Hashable where S: BinaryInteger {
 	public typealias Element = Array<S>
 	public typealias Symbol = S
 

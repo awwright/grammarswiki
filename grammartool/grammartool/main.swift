@@ -35,24 +35,28 @@ func getInput() -> Data? {
 	}
 }
 
-typealias Char = UInt32;
+typealias Char = UInt8;
 
 //print(getInput()/*!*/);
 let rulelist = ABNFRulelist<Char>.parse(getInput()!)!;
+let defaultRuleName = rulelist.rules.first?.rulename.label
+print(defaultRuleName)
+print(rulelist.description)
 
 let parsedRules: Dictionary<String, DFA<Array<Char>>> = rulelist.toPattern(as: DFA<Array<Char>>.self)
 print(parsedRules.keys);
-//print(rulelist.description);
 
 guard arguments.count >= 3 else {
 	exit(0);
 }
 
-let rulename = arguments[2]
-guard let fsm = parsedRules[rulename] else {
-	print("Could not compile \(rulename)");
+let expression = arguments[2]
+guard let alternation = ABNFAlternation<Char>.parse(expression.utf8) else {
+	print("Could not compile \(expression)");
 	exit(1);
 }
+
+let fsm = alternation.toPattern(as: DFA<Array<Char>>.self, rules: parsedRules).minimized()
 print(fsm.toViz());
 var pattern: SimpleRegex<Char> = fsm.toPattern()
 print(pattern.description)
