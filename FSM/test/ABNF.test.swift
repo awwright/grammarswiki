@@ -473,6 +473,100 @@ import Testing;
 			#expect(prose.isOptional == false)
 		}
 	}
+	@Suite("mapSymbols") struct ABNFTest_mapSymbols {
+		@Test("UInt8->UInt16")
+		func test_rulelist() async throws {
+			let input = """
+			"A" / "B" / 3"C"
+			""";
+			let (expression, _) = ABNFAlternation<UInt8>.match(input.utf8)!
+			let mapped = expression.mapSymbols({ UInt16($0) });
+			#expect(mapped.toPattern(as: DFA<Array<UInt16>>.self).contains("A".utf16));
+		}
+
+		@Test("To lowercase")
+		func test_repetition_optional() async throws {
+			let input = "[%x43]";
+			let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
+			// Make it lowercase
+			let mapped = expression.mapSymbols { (0x41...0x5A).contains($0) ? ($0 + 0x20) : $0 }
+			let fsm: DFA<Array<UInt8>> = mapped.toPattern();
+			#expect(fsm.contains("".utf8));
+			#expect(fsm.contains("c".utf8));
+			#expect(!fsm.contains("C".utf8));
+		}
+
+		@Test("char-val")
+		func test_char_val() async throws {
+			// FIXME: a char-val is case insensitive, how do you handle this?
+		}
+
+		@Test("num-val range")
+		func test_numVal_range() async throws {
+			let input = "%x30-39";
+			let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
+			print("computing");
+			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			print(fsm.toViz());
+			#expect(fsm.contains([0x30]))
+		}
+
+		@Test("num-val sequence")
+		func test_numVal_sequence() async throws {
+			let input = "%x30-39";
+			let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
+			print("computing");
+			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			print(fsm.toViz());
+			#expect(fsm.contains([0x30]))
+		}
+	}
+	@Suite("mapElements") struct ABNFTest_mapElements {
+		@Test("rulename")
+		func test_rulename() async throws {
+			// Substitute a certain rulename for its definition
+		}
+
+		@Test("group")
+		func test_group() async throws {
+			// FIXME: a char-val is case insensitive, how do you handle this?
+		}
+
+		@Test("option")
+		func test_option() async throws {
+			// FIXME: a char-val is case insensitive, how do you handle this?
+		}
+
+		@Test("char-val")
+		func test_char_val() async throws {
+			// FIXME: a char-val is case insensitive, how do you handle this?
+		}
+
+		@Test("num-val range")
+		func test_numVal_range() async throws {
+			let input = "%x30-39";
+			let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
+			print("computing");
+			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			print(fsm.toViz());
+			#expect(fsm.contains([0x30]))
+		}
+
+		@Test("num-val sequence")
+		func test_numVal_sequence() async throws {
+			let input = "%x30-39";
+			let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
+			print("computing");
+			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			print(fsm.toViz());
+			#expect(fsm.contains([0x30]))
+		}
+
+		@Test("prose-val sequence")
+		func test_proseVal() async throws {
+			// TODO: Substitute a prose-val for a special symbol
+		}
+	}
 	@Suite("toPattern") struct ABNFTest_toPattern {
 		@Test("expression.toPattern")
 		func test_rulelist_toPattern() async throws {

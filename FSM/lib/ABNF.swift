@@ -173,6 +173,21 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 		return Set(rules.flatMap(\.referencedRules))
 	}
 
+	public func mapElements<Target>(_ transform: (ABNFElement<Symbol>) -> ABNFElement<Target>) -> ABNFRulelist<Target> {
+		let newRules = rules.map { $0.mapElements(transform) };
+		return ABNFRulelist<Target>(rules: newRules)
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFRulelist<Target> {
+		let newRules = rules.map { $0.mapSymbols(transform) };
+		assert(newRules.count == rules.count)
+		return ABNFRulelist<Target>(rules: newRules)
+	}
+
+	public func mapRulenames(_ transform: (ABNFRulename<Symbol>) -> ABNFRulename<Symbol>) -> ABNFRulelist<Symbol> {
+		return ABNFRulelist<Symbol>(rules: rules.map{ $0.mapRulenames(transform) })
+	}
+
 	/// Generates a dictionary of deterministic finite automata (DFAs) for each rule in the list.
 	///
 	/// - Parameter ruleMap: An optional map of pre-resolved rules to their DFAs, used for external references.
@@ -231,6 +246,19 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 	}
 }
 
+/// Specifies if the rule was defined using `=` or as an additional alternation `=/`
+public enum ABNFDefinedAs: String {
+	case equal = "="
+	case incremental = "/="
+
+	var description: String {
+		switch self {
+			case .equal: return "="
+			case .incremental: return "/="
+		}
+	}
+}
+
 /// Represents a single rule in an ABNF grammar, as defined in RFC 5234 with Errata 2968.
 ///
 /// A rule consists of a rulename, a definition operator (`=` or `=/`), and an alternation defining
@@ -252,30 +280,17 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
 	public typealias Element = Array<S>;
 
-	/// Specifies if the rule was defined using `=` or as an additional alternation `=/`
-	public enum DefinedAs: String {
-		case equal = "="
-		case incremental = "/="
-
-		var description: String {
-			switch self {
-				case .equal: return "="
-				case .incremental: return "/="
-			}
-		}
-	}
-
 	public let rulename: ABNFRulename<Symbol>;
-	public let definedAs: DefinedAs;
+	public let definedAs: ABNFDefinedAs;
 	public let alternation: ABNFAlternation<Symbol>;
 
-	public init(rulename: ABNFRulename<Symbol>, definedAs: DefinedAs, alternation: ABNFAlternation<Symbol>) {
+	public init(rulename: ABNFRulename<Symbol>, definedAs: ABNFDefinedAs, alternation: ABNFAlternation<Symbol>) {
 		self.rulename = rulename
 		self.definedAs = definedAs
 		self.alternation = alternation
 	}
 
-	public init<T>(rulename: ABNFRulename<Symbol>, definedAs: DefinedAs, expression: T) where T: ABNFExpression, T.Symbol == Symbol {
+	public init<T>(rulename: ABNFRulename<Symbol>, definedAs: ABNFDefinedAs, expression: T) where T: ABNFExpression, T.Symbol == Symbol {
 		self.rulename = rulename
 		self.definedAs = definedAs
 		self.alternation = expression.alternation
@@ -291,11 +306,29 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 		return "\(rulename.description) \(definedAs.description) \(alternation.description)\r\n"
 	}
 
-	var referencedRules: Set<String> {
+	public var referencedRules: Set<String> {
 		return alternation.referencedRules;
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
+	public func mapRulenames(_ transform: (ABNFRulename<Symbol>) -> ABNFRulename<Symbol>) -> ABNFRule<Symbol> {
+		func transformElement(_ element: ABNFElement<Symbol>) -> ABNFElement<Symbol> {
+			switch element {
+				case .rulename(let rulename): ABNFElement.rulename(transform(rulename))
+				default: element
+			}
+		}
+		return ABNFRule<Symbol>(rulename: transform(rulename), definedAs: definedAs, alternation: alternation.mapElements(transformElement))
+	}
+
+	public func mapElements<Target>(_ transform: (ABNFElement<Symbol>) -> ABNFElement<Target>) -> ABNFRule<Target> {
+		ABNFRule<Target>(rulename: ABNFRulename(label: rulename.label), definedAs: definedAs, alternation: alternation.mapElements(transform))
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFRule<Target> {
+		ABNFRule<Target>(rulename: ABNFRulename(label: rulename.label), definedAs: definedAs, alternation: alternation.mapSymbols(transform))
+	}
+
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
 		alternation.toPattern(as: PatternType.self, rules: rules)
 	}
 
@@ -316,7 +349,7 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 		guard let (definedAs, remainder3) = Terminals.defined_as_inner.match(remainder2) else { return nil }
 		guard let (_, remainder4) = Terminals.c_wsp_star.match(remainder3) else { return nil }
 
-		var op: DefinedAs;
+		var op: ABNFDefinedAs;
 		switch(definedAs.count){
 			case 1: op = .equal;
 			case 2: op = .incremental;
@@ -354,6 +387,10 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 
 	public let label: String;
 
+	public init(label: String) {
+		self.label = label;
+	}
+
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.label < rhs.label;
 	}
@@ -388,6 +425,14 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 
 	public var referencedRules: Set<String> {
 		return Set([label])
+	}
+
+	public func mapElements<Target>(_ transform: (ABNFElement<Symbol>) -> ABNFElement<Target>) -> ABNFRulename<Target> {
+		ABNFRulename<Target>(label: label)
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFRulename<Target> {
+		ABNFRulename<Target>(label: label)
 	}
 
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
@@ -500,6 +545,14 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 
 	public var referencedRules: Set<String> {
 		return matches.reduce(Set(), { $0.union($1.referencedRules) })
+	}
+
+	public func mapElements<Target>(_ transform: (ABNFElement<Symbol>) -> ABNFElement<Target>) -> ABNFAlternation<Target> {
+		ABNFAlternation<Target>(matches: matches.map{ $0.mapElements(transform) })
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFAlternation<Target> {
+		self.mapElements({ $0.mapSymbols(transform) })
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
@@ -638,7 +691,7 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
 	public typealias Element = Array<S>;
 
-	let repetitions: [ABNFRepetition<Symbol>]
+	public let repetitions: [ABNFRepetition<Symbol>]
 
 	public init(repetitions: [ABNFRepetition<Symbol>]) {
 		self.repetitions = repetitions
@@ -686,6 +739,14 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 
 	public var referencedRules: Set<String> {
 		return repetitions.reduce(Set(), { $0.union($1.referencedRules) })
+	}
+
+	public func mapElements<Target>(_ transform: (ABNFElement<Symbol>) -> ABNFElement<Target>) -> ABNFConcatenation<Target> {
+		ABNFConcatenation<Target>(repetitions: repetitions.map{ $0.mapElements(transform) })
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFConcatenation<Target> {
+		self.mapElements({ $0.mapSymbols(transform) })
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
@@ -857,6 +918,14 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 		return repeating.referencedRules
 	}
 
+	public func mapElements<Target>(_ transform: (ABNFElement<Symbol>) -> ABNFElement<Target>) -> ABNFRepetition<Target> {
+		return ABNFRepetition<Target>(min: min, max: max, element: transform(repeating))
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFRepetition<Target> {
+		self.mapElements({ $0.mapSymbols(transform) })
+	}
+
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
 		if let max = self.max {
 			repeating.toPattern(as: PatternType.self, rules: rules).repeating(Int(min)...Int(max))
@@ -976,6 +1045,17 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		}
 	}
 
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFElement<Target> {
+		switch self {
+			case .rulename(let s): return ABNFElement<Target>.rulename(s.mapSymbols(transform))
+			case .group(let s): return ABNFElement<Target>.group(s.mapSymbols(transform))
+			case .option(let s): return ABNFElement<Target>.option(s.mapSymbols(transform))
+			case .charVal(let s): return ABNFElement<Target>.charVal(s.mapSymbols(transform))
+			case .numVal(let s): return ABNFElement<Target>.numVal(s.mapSymbols(transform))
+			case .proseVal(let s): return ABNFElement<Target>.proseVal(s.mapSymbols(transform))
+		}
+	}
+
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
 			case .rulename(let s): return s.toPattern(as: PatternType.self, rules: rules)
@@ -1032,6 +1112,10 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 	// A group always unwraps to an alternation
 	public let alternation: ABNFAlternation<Symbol>
 
+	public init(alternation: ABNFAlternation<Symbol>) {
+		self.alternation = alternation;
+	}
+
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		return lhs.alternation < rhs.alternation;
 	}
@@ -1065,6 +1149,10 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 
 	public var referencedRules: Set<String> {
 		return alternation.referencedRules
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFGroup<Target> {
+		ABNFGroup<Target>(alternation: alternation.mapSymbols(transform))
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
@@ -1140,6 +1228,10 @@ public struct ABNFOption<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		return optionalAlternation.referencedRules
 	}
 
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFOption<Target> {
+		ABNFOption<Target>(optionalAlternation: optionalAlternation.mapSymbols(transform))
+	}
+
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
 		optionalAlternation.toPattern(as: PatternType.self, rules: rules).optional()
 	}
@@ -1162,7 +1254,7 @@ public struct ABNFOption<S>: ABNFExpression where S: Comparable & BinaryInteger 
 public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
 	public typealias Element = Array<S>;
 
-	let sequence: Array<S>
+	public let sequence: Array<S>
 
 	public init<T>(sequence: T) where T: Sequence, T.Element == Symbol {
 		self.sequence = Array(sequence)
@@ -1202,6 +1294,10 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 
 	public var referencedRules: Set<String> {
 		return []
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFCharVal<Target> {
+		ABNFCharVal<Target>(sequence: sequence.map(transform))
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
@@ -1322,6 +1418,18 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 
 	public var referencedRules: Set<String> {
 		return []
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFNumVal<Target> {
+		let base: ABNFNumVal<Target>.Base = switch self.base {
+			case .bin: .bin;
+			case .dec: .dec;
+			case .hex: .hex
+		}
+		return switch self.value {
+			case .sequence(let seq): ABNFNumVal<Target>(base: base, value: ABNFNumVal<Target>.Value.sequence(seq.map(transform)))
+			case .range(let low, let high): ABNFNumVal<Target>(base: base, value: ABNFNumVal<Target>.Value.range(transform(low), transform(high)))
+		}
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
@@ -1467,6 +1575,10 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 
 	public var referencedRules: Set<String> {
 		return []
+	}
+
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFProseVal<Target> {
+		return ABNFProseVal<Target>(remark: self.remark)
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {

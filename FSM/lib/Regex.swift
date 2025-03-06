@@ -84,6 +84,8 @@ public protocol RegularPatternProtocol: Equatable {
 	//func subtracting(_ other: Self) -> Self
 	//func symmetricDifference(_ other: Self) -> Self
 
+	//func mapSymbol<Target>(_: (Symbol) throws -> Target) rethrows -> Target;
+
 	/// Converts this pattern to an equivalent pattern of the specified type.
 	/// - Parameter patternType: The target pattern type to convert to.
 	/// - Returns: An equivalent pattern constructed using the target type's interface.
