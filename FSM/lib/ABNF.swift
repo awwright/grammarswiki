@@ -438,6 +438,7 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
 	// This is also a clever way of preventing recursive loops
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
+		assert(rules[label] != nil, "Expect rule \(label) to be in rules dictionary, only have \(rules.keys)");
 		return rules[label]!
 	}
 
@@ -615,6 +616,7 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 		self.concatenation.concatenate(other.concatenation).alternation
 	}
 
+	// These map to ABNFElement
 	public func optional() -> Self {
 		self.repeating(0...1)
 	}
@@ -623,15 +625,18 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 		self.repeating(1...)
 	}
 
+	// An adaptation of ABNFElement#star
 	public func star() -> Self {
 		ABNFRepetition(min: 0, max: nil, element: self.element).alternation
 	}
 
+	// An adaptation of ABNFElement#repeating
 	public func repeating(_ count: Int) -> Self {
 		precondition(count >= 0)
 		return ABNFRepetition<Symbol>(min: UInt(count), max: UInt(count), element: self.element).alternation
 	}
 
+	// An adaptation of ABNFElement#repeating
 	public func repeating(_ range: ClosedRange<Int>) -> Self {
 		precondition(range.lowerBound >= 0)
 		// A simple optimization, in most cases
@@ -641,6 +646,7 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 		return ABNFRepetition<Symbol>(min: UInt(range.lowerBound), max: UInt(range.upperBound), element: self.element).alternation;
 	}
 
+	// An adaptation of ABNFElement#repeating
 	public func repeating(_ range: PartialRangeFrom<Int>) -> Self {
 		precondition(range.lowerBound >= 0)
 		return ABNFRepetition<Symbol>(min: UInt(range.lowerBound), max: nil, element: self.element).alternation
@@ -1091,6 +1097,39 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		return nil;
 	}
 
+	// These functions can go here because they tend to up-cast an ABNFElement to an ABNFRepetition
+	// These are also wrapped in ABNFAlteration because that implements everything for RegularPatternProtocol conformance
+	public func optional() -> ABNFRepetition<Symbol> {
+		self.repeating(0...1)
+	}
+
+	public func plus() -> ABNFRepetition<Symbol> {
+		self.repeating(1...)
+	}
+
+	public func star() -> ABNFRepetition<Symbol> {
+		ABNFRepetition(min: 0, max: nil, element: self)
+	}
+
+	public func repeating(_ count: Int) -> ABNFRepetition<Symbol> {
+		precondition(count >= 0)
+		return ABNFRepetition<Symbol>(min: UInt(count), max: UInt(count), element: self)
+	}
+
+	public func repeating(_ range: ClosedRange<Int>) -> ABNFRepetition<Symbol> {
+		precondition(range.lowerBound >= 0)
+		// A simple optimization, in most cases
+		if case .group(let group) = self, range.lowerBound == 0 && range.upperBound == 1 {
+			return ABNFElement<Symbol>.option(ABNFOption<Symbol>(optionalAlternation: group.alternation)).repetition
+		}
+		return ABNFRepetition<Symbol>(min: UInt(range.lowerBound), max: UInt(range.upperBound), element: self.element);
+	}
+
+	public func repeating(_ range: PartialRangeFrom<Int>) -> ABNFRepetition<Symbol> {
+		precondition(range.lowerBound >= 0)
+		return ABNFRepetition<Symbol>(min: UInt(range.lowerBound), max: nil, element: self)
+	}
+
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		if let (r, remainder) = ABNFRulename<Symbol>.match(input) { return (.rulename(r), remainder) }
 		if let (g, remainder) = ABNFGroup<Symbol>.match(input) { return (.group(g), remainder) }
@@ -1316,8 +1355,8 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 		guard let (_, remainder1) = Terminals.DQUOTE.match(input) else { return nil }
 		let charPattern = DFA<Array<UInt8>>(range: 0x20...0x21) | DFA<Array<UInt8>>(range: 0x23...0x7E)
 		guard let (chars, remainder2) = charPattern.star().match(remainder1) else { return nil }
-		guard let (_, remainder3) = Terminals.DQUOTE.match(remainder2) else { return nil }
-		return (ABNFCharVal<Symbol>(sequence: chars.map { Symbol($0) }), remainder3)
+		guard let (_, remainder) = Terminals.DQUOTE.match(remainder2) else { return nil }
+		return (ABNFCharVal<Symbol>(sequence: chars.map { Symbol($0) }), remainder)
 	}
 }
 
@@ -1432,7 +1471,7 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		}
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
 		switch self.value {
 			case .sequence(let seq): return PatternType.concatenate(seq.map { PatternType.symbol($0) })
 			case .range(let low, let high): return PatternType.union((low...high).map { PatternType.symbol($0) })

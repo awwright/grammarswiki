@@ -85,12 +85,6 @@ public protocol RegularPatternProtocol: Equatable {
 	//func symmetricDifference(_ other: Self) -> Self
 
 	//func mapSymbol<Target>(_: (Symbol) throws -> Target) rethrows -> Target;
-
-	/// Converts this pattern to an equivalent pattern of the specified type.
-	/// - Parameter patternType: The target pattern type to convert to.
-	/// - Returns: An equivalent pattern constructed using the target type's interface.
-	// TODO: There should probably be different protocols for things that can be cast from vs. to a regular pattern
-	func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol
 }
 
 extension RegularPatternProtocol {
