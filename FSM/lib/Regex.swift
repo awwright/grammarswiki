@@ -87,6 +87,8 @@ public protocol RegularPatternProtocol: Equatable {
 	//func mapSymbol<Target>(_: (Symbol) throws -> Target) rethrows -> Target;
 }
 
+infix operator ++: AdditionPrecedence;
+
 extension RegularPatternProtocol {
 	/// Convenience method to union this pattern with another.
 	/// - Parameter other: The pattern to union with.
@@ -131,8 +133,32 @@ extension RegularPatternProtocol {
 		precondition(range.lowerBound >= 0)
 		return Self.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
+
+	// Operator shortcuts
+
+	/// Concatenation operator
+	// The selection of symbol for operator is fraught because most of these symbols have been used for most different things
+	// String concatenation is slightly different than language concatenation,
+	// I want to suggest the string concatenation of the cross product of any string from ordered pair languages
+	public static func ++ (lhs: Self, rhs: Self) -> Self {
+		return Self.concatenate([lhs, rhs]);
+	}
+	/// Union/alternation
+	// This is another case where the operator is confusing.
+	// SQL uses || for string concatenation, but in C it would suggest union.
+	// You could also use + to suggest union, but many languages including Swift use it for string concatenation.
+	public static func | (lhs: Self, rhs: Self) -> Self {
+		return Self.union([lhs, rhs])
+	}
 }
 
+// For symbol types that support it, allow generating a range of symbols
+extension RegularPatternProtocol where Symbol: Comparable & Strideable, Symbol.Stride: SignedInteger {
+	public static func range(_ symbols: ClosedRange<Symbol>) -> Self {
+		let chars = symbols.lowerBound...symbols.upperBound;
+		return Self.union(chars.map{ Self.symbol($0) });
+	}
+}
 /// A very simple implementation of RegularPatternProtocol. Likely the simplest possible implementation.
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.

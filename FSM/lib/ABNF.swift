@@ -1340,7 +1340,13 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
-		return PatternType.concatenate(sequence.map { PatternType.symbol($0) })
+		return PatternType.concatenate(sequence.map {
+			codepoint in
+			// Check for uppercase letters, also accept lowercase versions
+			if(codepoint >= 0x41 && codepoint <= 0x5A) { return PatternType.union([ PatternType.symbol(codepoint), PatternType.symbol(codepoint+0x20) ]) }
+			else if(codepoint >= 0x61 && codepoint <= 0x7A) { return PatternType.union([ PatternType.symbol(codepoint-0x20), PatternType.symbol(codepoint) ]) }
+			else { return PatternType.symbol(codepoint) }
+		})
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1642,26 +1648,70 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 	}
 }
 
+// A dictionary of all of the rules that ABNF provides by default
+public struct ABNFBuiltins<Dfn: RegularPatternProtocol> where Dfn.Symbol: BinaryInteger, Dfn.Symbol.Stride: SignedInteger {
+	typealias Symbol = Dfn.Symbol
+
+	static var ALPHA : Dfn { Dfn.range(0x41...0x5A) | Dfn.range(0x61...0x7A) }; // %x41-5A / %x61-7A   ; A-Z / a-z
+	static var BIT   : Dfn { Dfn.symbol(0x30) |  Dfn.symbol(0x31) }; // "0" / "1"
+	static var CHAR  : Dfn { Dfn.range(0x1...0x7F) }; // %x01-7F
+	static var CR    : Dfn { Dfn.symbol(0xD) }; // %x0D
+	static var CRLF  : Dfn { Dfn.symbol(0xD) ++ Dfn.symbol(0xA) }; // CR LF
+	static var CTL   : Dfn { Dfn.range(0...0x1F) | Dfn.symbol(0x7F) }; // %x00-1F / %x7F
+	static var DIGIT : Dfn { Dfn.range(0x30...0x39) }; // %x30-39
+	static var DQUOTE: Dfn { Dfn.symbol(0x22) }; // %x22
+	static var HEXDIG: Dfn { DIGIT | Dfn.range(0x41...0x46) | Dfn.range(0x61...0x66) }; // DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+	static var HTAB  : Dfn { Dfn.symbol(0x9) }; // %x09
+	static var LF    : Dfn { Dfn.symbol(0xA) }; // %x0A
+	static var LWSP  : Dfn { (WSP | (CRLF ++ WSP)).star() }; // *(WSP / CRLF WSP)
+	static var OCTET : Dfn { Dfn.range(0...0xFF) }; // %x00-FF
+	static var SP    : Dfn { Dfn.symbol(0x20) }; // %x20
+	static var VCHAR : Dfn { Dfn.range(0x21...0x7E) }; // %x21-7E
+	static var WSP   : Dfn { SP | HTAB }; // SP / HTAB
+
+	static var dictionary: Dictionary<String, Dfn> {
+		[
+			"ALPHA" : ABNFBuiltins.ALPHA,
+			"BIT"   : ABNFBuiltins.BIT,
+			"CHAR"  : ABNFBuiltins.CHAR,
+			"CR"    : ABNFBuiltins.CR,
+			"CRLF"  : ABNFBuiltins.CRLF,
+			"CTL"   : ABNFBuiltins.CTL,
+			"DIGIT" : ABNFBuiltins.DIGIT,
+			"DQUOTE": ABNFBuiltins.DQUOTE,
+			"HEXDIG": ABNFBuiltins.HEXDIG,
+			"HTAB"  : ABNFBuiltins.HTAB,
+			"LF"    : ABNFBuiltins.LF,
+			"LWSP"  : ABNFBuiltins.LWSP,
+			"OCTET" : ABNFBuiltins.OCTET,
+			"SP"    : ABNFBuiltins.SP,
+			"VCHAR" : ABNFBuiltins.VCHAR,
+			"WSP"   : ABNFBuiltins.WSP,
+		]
+	}
+}
+
 /// A set of values for parsing ABNF
 /// Instances of ABNF documents themselves can't refer to these
 struct Terminals {
 	typealias Rule = DFA<Array<UInt8>>;
-	static let ALPHA : Rule = Terminals["A"..."Z"] | Terminals["a"..."z"]; // %x41-5A / %x61-7A   ; A-Z / a-z
-	static let BIT   : Rule = Terminals["0"] | Terminals["1"]; // "0" / "1"
-	static let CHAR  : Rule = Rule(range: 0x1...0x7F); // %x01-7F
-	static let CR    : Rule = [[0xD]]; // %x0D
-	static let CRLF  : Rule = [[0xD, 0xA]]; // CR LF
-	static let CTL   : Rule = Rule(range: 0...0x1F) | Rule([[0x7F]]); // %x00-1F / %x7F
-	static let DIGIT : Rule = Rule(range: 0x30...0x39); // %x30-39
-	static let DQUOTE: Rule = [[0x22]]; // %x22
-	static let HEXDIG: Rule = DIGIT | Terminals["A"..."F"] | Terminals["a"..."f"]
-	static let HTAB  : Rule = [[0x9]]; // %x09
-	static let LF    : Rule = [[0xA]]; // %x0A
-	static let LWSP  : Rule = (WSP | (CRLF ++ WSP)).star(); // *(WSP / CRLF WSP)
-	static let OCTET : Rule = Rule(range: 0...0xFF); // %x00-FF
-	static let SP    : Rule = [[0x20]]; // %x20
-	static let VCHAR : Rule = Rule(range: 0x21...0x7E); // %x21-7E
-	static let WSP   : Rule = SP | HTAB; // SP / HTAB
+
+	static let ALPHA  = ABNFBuiltins<Rule>.ALPHA;
+	static let BIT    = ABNFBuiltins<Rule>.BIT;
+	static let CHAR   = ABNFBuiltins<Rule>.CHAR;
+	static let CR     = ABNFBuiltins<Rule>.CR;
+	static let CRLF   = ABNFBuiltins<Rule>.CRLF;
+	static let CTL    = ABNFBuiltins<Rule>.CTL;
+	static let DIGIT  = ABNFBuiltins<Rule>.DIGIT;
+	static let DQUOTE = ABNFBuiltins<Rule>.DQUOTE;
+	static let HEXDIG = ABNFBuiltins<Rule>.HEXDIG;
+	static let HTAB   = ABNFBuiltins<Rule>.HTAB;
+	static let LF     = ABNFBuiltins<Rule>.LF;
+	static let LWSP   = ABNFBuiltins<Rule>.LWSP;
+	static let OCTET  = ABNFBuiltins<Rule>.OCTET;
+	static let SP     = ABNFBuiltins<Rule>.SP;
+	static let VCHAR  = ABNFBuiltins<Rule>.VCHAR;
+	static let WSP    = ABNFBuiltins<Rule>.WSP;
 
 	// And now various other expressions used within the rules...
 	// c-wsp          =  WSP / (c-nl WSP)

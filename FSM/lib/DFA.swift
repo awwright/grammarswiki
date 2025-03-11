@@ -922,20 +922,6 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 
 	// Operator shortcuts
 
-	/// Concatenation operator
-	// The selection of symbol for operator is fraught because most of these symbols have been used for most different things
-	// String concatenation is slightly different than language concatenation,
-	// I want to suggest the string concatenation of the cross product of any string from ordered pair languages
-	public static func ++ (lhs: Self, rhs: Self) -> Self {
-		return DFA<Element>.concatenate([lhs, rhs]);
-	}
-	/// Union/alternation
-	// This is another case where the operator is confusing.
-	// SQL uses || for string concatenation, but in C it would suggest union.
-	// You could also use + to suggest union, but many languages including Swift use it for string concatenation.
-	public static func | (lhs: Self, rhs: Self) -> Self {
-		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] || $0[1] });
-	}
 	/// Subtract/difference
 	/// Returns a version of `lhs` but removing any elements in `rhs`
 	///

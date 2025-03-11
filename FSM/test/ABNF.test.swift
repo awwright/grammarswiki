@@ -920,16 +920,92 @@ import Testing;
 			#expect(expression.description == "<foo> <bar>");
 		}
 	}
+	@Suite("ABNFBuiltins") struct ABNFTest_ABNFBuiltins {
+		@Test("Compare source to builtin")
+		func test_builtin_source() async throws {
+			// From <https://www.rfc-editor.org/rfc/rfc5234.txt> pages 12-13
+			let builtin_source = """
+			ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
 
-	@Test("ABNFRepetition<UInt8>.element")
-	func test_expression_element() async throws {
-		let input = "foo";
-		let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
-		#expect(expression.description == "foo");
-		#expect(expression.repeating(2).description == "2foo");
-		#expect(expression.repeating(2...).description == "2*foo");
-		// TODO: Handle as a special case
-		//#expect(expression.repeating(0...1).description == "[foo]");
+			BIT            =  "0" / "1"
+
+			CHAR           =  %x01-7F
+										  ; any 7-bit US-ASCII character,
+										  ;  excluding NUL
+			CR             =  %x0D
+										  ; carriage return
+
+			CRLF           =  CR LF
+										  ; Internet standard newline
+
+			CTL            =  %x00-1F / %x7F
+										  ; controls
+
+			DIGIT          =  %x30-39
+										  ; 0-9
+
+			DQUOTE         =  %x22
+										  ; " (Double Quote)
+
+			HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+
+			HTAB           =  %x09
+										  ; horizontal tab
+
+			LF             =  %x0A
+										  ; linefeed
+
+			LWSP           =  *(WSP / CRLF WSP)
+										  ; Use of this linear-white-space rule
+										  ;  permits lines containing only white
+										  ;  space that are no longer legal in
+										  ;  mail headers and have caused
+										  ;  interoperability problems in other
+										  ;  contexts.
+										  ; Do not use when defining mail
+										  ;  headers and use with caution in
+										  ;  other contexts.
+
+			OCTET          =  %x00-FF
+										  ; 8 bits of data
+
+			SP             =  %x20
+
+			VCHAR          =  %x21-7E
+										  ; visible (printing) characters
+
+			WSP            =  SP / HTAB
+										  ; white space
+
+			""";
+
+			let referenceRulelist: ABNFRulelist<UInt8> = ABNFRulelist<UInt8>.parse(builtin_source.replacing("\n", with: "\r\n").utf8)!;
+			let referenceDictionary = referenceRulelist.toPattern(as: DFA<Array<UInt8>>.self);
+			assert(referenceDictionary.keys.count == 16);
+
+			let providedDictionary = ABNFBuiltins<DFA<Array<UInt8>>>.dictionary;
+			#expect(providedDictionary.keys.count == 16);
+
+			providedDictionary.forEach { key, value in
+				let difference = value.symmetricDifference(referenceDictionary[key]!)
+				#expect(difference.finals.isEmpty, "Builtin rule \(key) mismatches reference, have values \(difference.toViz())")
+			}
+		}
+
+		@Test("HEXDIG")
+		func test_HEXDIG() async throws {
+			// Test across types
+			#expect(ABNFBuiltins<DFA<Array<UInt>>>.HEXDIG.contains([0x30]))
+			#expect(ABNFBuiltins<DFA<Array<UInt8>>>.HEXDIG.contains([0x30]))
+			#expect(ABNFBuiltins<DFA<Array<UInt16>>>.HEXDIG.contains([0x30]))
+			#expect(ABNFBuiltins<DFA<Array<UInt32>>>.HEXDIG.contains([0x30]))
+			// FIXME: this should support Character...
+			//#expect(ABNFBuiltins<Character>.HEXDIG.contains("0"))
+
+			// Test case-insensitive
+			#expect(ABNFBuiltins<DFA<Array<UInt>>>.HEXDIG.contains([0x41]))
+			#expect(ABNFBuiltins<DFA<Array<UInt8>>>.HEXDIG.contains([0x61]))
+		}
 	}
 
 	@Test("group.repeating(0...1) is an option")

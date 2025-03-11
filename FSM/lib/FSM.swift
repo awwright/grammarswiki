@@ -1,6 +1,3 @@
-
-infix operator ++: AdditionPrecedence;
-
 /// A protocol that allows more more sophisticated set operations than a normal Regular Expression language
 public protocol FSMProtocol: SetAlgebra, RegularPatternProtocol where Element: SymbolSequenceProtocol {
 	associatedtype StateNo: Hashable;
