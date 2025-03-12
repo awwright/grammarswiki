@@ -1652,24 +1652,24 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 public struct ABNFBuiltins<Dfn: RegularPatternProtocol> where Dfn.Symbol: BinaryInteger, Dfn.Symbol.Stride: SignedInteger {
 	typealias Symbol = Dfn.Symbol
 
-	static var ALPHA : Dfn { Dfn.range(0x41...0x5A) | Dfn.range(0x61...0x7A) }; // %x41-5A / %x61-7A   ; A-Z / a-z
-	static var BIT   : Dfn { Dfn.symbol(0x30) |  Dfn.symbol(0x31) }; // "0" / "1"
-	static var CHAR  : Dfn { Dfn.range(0x1...0x7F) }; // %x01-7F
-	static var CR    : Dfn { Dfn.symbol(0xD) }; // %x0D
-	static var CRLF  : Dfn { Dfn.symbol(0xD) ++ Dfn.symbol(0xA) }; // CR LF
-	static var CTL   : Dfn { Dfn.range(0...0x1F) | Dfn.symbol(0x7F) }; // %x00-1F / %x7F
-	static var DIGIT : Dfn { Dfn.range(0x30...0x39) }; // %x30-39
-	static var DQUOTE: Dfn { Dfn.symbol(0x22) }; // %x22
-	static var HEXDIG: Dfn { DIGIT | Dfn.range(0x41...0x46) | Dfn.range(0x61...0x66) }; // DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
-	static var HTAB  : Dfn { Dfn.symbol(0x9) }; // %x09
-	static var LF    : Dfn { Dfn.symbol(0xA) }; // %x0A
-	static var LWSP  : Dfn { (WSP | (CRLF ++ WSP)).star() }; // *(WSP / CRLF WSP)
-	static var OCTET : Dfn { Dfn.range(0...0xFF) }; // %x00-FF
-	static var SP    : Dfn { Dfn.symbol(0x20) }; // %x20
-	static var VCHAR : Dfn { Dfn.range(0x21...0x7E) }; // %x21-7E
-	static var WSP   : Dfn { SP | HTAB }; // SP / HTAB
+	public static var ALPHA : Dfn { Dfn.range(0x41...0x5A) | Dfn.range(0x61...0x7A) }; // %x41-5A / %x61-7A   ; A-Z / a-z
+	public static var BIT   : Dfn { Dfn.symbol(0x30) |  Dfn.symbol(0x31) }; // "0" / "1"
+	public static var CHAR  : Dfn { Dfn.range(0x1...0x7F) }; // %x01-7F
+	public static var CR    : Dfn { Dfn.symbol(0xD) }; // %x0D
+	public static var CRLF  : Dfn { Dfn.symbol(0xD) ++ Dfn.symbol(0xA) }; // CR LF
+	public static var CTL   : Dfn { Dfn.range(0...0x1F) | Dfn.symbol(0x7F) }; // %x00-1F / %x7F
+	public static var DIGIT : Dfn { Dfn.range(0x30...0x39) }; // %x30-39
+	public static var DQUOTE: Dfn { Dfn.symbol(0x22) }; // %x22
+	public static var HEXDIG: Dfn { DIGIT | Dfn.range(0x41...0x46) | Dfn.range(0x61...0x66) }; // DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+	public static var HTAB  : Dfn { Dfn.symbol(0x9) }; // %x09
+	public static var LF    : Dfn { Dfn.symbol(0xA) }; // %x0A
+	public static var LWSP  : Dfn { (WSP | (CRLF ++ WSP)).star() }; // *(WSP / CRLF WSP)
+	public static var OCTET : Dfn { Dfn.range(0...0xFF) }; // %x00-FF
+	public static var SP    : Dfn { Dfn.symbol(0x20) }; // %x20
+	public static var VCHAR : Dfn { Dfn.range(0x21...0x7E) }; // %x21-7E
+	public static var WSP   : Dfn { SP | HTAB }; // SP / HTAB
 
-	static var dictionary: Dictionary<String, Dfn> {
+	public static var dictionary: Dictionary<String, Dfn> {
 		[
 			"ALPHA" : ABNFBuiltins.ALPHA,
 			"BIT"   : ABNFBuiltins.BIT,

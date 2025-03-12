@@ -2,23 +2,8 @@ import Foundation;
 import FSM;
 
 let arguments = CommandLine.arguments
-//guard arguments.count > 1 else {
-//	print("Usage: \(arguments[0]) <filename>")
-//	print("Also accepts stdin input after file processing (Ctrl+D or Ctrl+Z to end)")
-//	exit(1)
-//}
-print(arguments);
 
-func getInput() -> Data? {
-	// Check command-line arguments
-	let filename: String?
-
-	if arguments.count > 1 {
-		filename = arguments[1]
-	} else {
-		filename = nil
-	}
-
+func getInput(filename: String?) -> Data? {
 	if let filename {
 		// Read raw bytes from file
 		do {
@@ -35,29 +20,20 @@ func getInput() -> Data? {
 	}
 }
 
-typealias Char = UInt8;
-
-//print(getInput()/*!*/);
-let rulelist = ABNFRulelist<Char>.parse(getInput()!)!;
-let defaultRuleName = rulelist.rules.first?.rulename.label
-print(defaultRuleName)
-print(rulelist.description)
-
-let parsedRules: Dictionary<String, DFA<Array<Char>>> = rulelist.toPattern(as: DFA<Array<Char>>.self)
-print(parsedRules.keys);
-
-guard arguments.count >= 3 else {
-	exit(0);
+func bold(_ text: String) -> String {
+	return "\u{1B}[1m\(text)\u{1B}[0m"
 }
 
-let expression = arguments[2]
-guard let alternation = ABNFAlternation<Char>.parse(expression.utf8) else {
-	print("Could not compile \(expression)");
-	exit(1);
-}
+let programName = arguments.count >= 2 ? arguments[1] : nil;
 
-let fsm = alternation.toPattern(as: DFA<Array<Char>>.self, rules: parsedRules).minimized()
-print(fsm.toViz());
-var pattern: SimpleRegex<Char> = fsm.toPattern()
-print(pattern.description)
-print(pattern.toPattern(as: ABNFAlternation<Char>.self).description)
+switch programName {
+	case "abnf-expression-test-input": abnf_expression_test_input(arguments: arguments);
+	case "abnf-to-regex": abnf_to_regex(arguments: arguments);
+
+	default:
+	print("Usage: \(arguments[0]) <commands> [commands options...]");
+	print("Tests an input against a grammar description");
+	print("");
+	abnf_expression_test_input_help(arguments: arguments);
+	abnf_to_regex_help(arguments: arguments);
+}
