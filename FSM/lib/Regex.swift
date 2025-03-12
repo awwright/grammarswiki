@@ -41,11 +41,13 @@ public protocol RegularPatternProtocol: Equatable {
 	/// - Parameter elements: An array of patterns to union with this one.
 	/// - Returns: A pattern accepting any sequence accepted by at least one of the input patterns.
 	static func union(_ elements: [Self]) -> Self
+	//static func union<T>(_ elements: T) -> Self where T: Sequence, T.Element==Symbol
 
 	/// Creates a pattern accepting the concatenation of the languages defined by the given patterns.
 	/// - Parameter elements: An array of patterns to concatenate with this one.
 	/// - Returns: A pattern accepting sequences formed by appending sequences from each pattern in order.
 	static func concatenate(_ elements: [Self]) -> Self
+	//static func concatenate<T>(_ elements: T) -> Self where T: Sequence, T.Element==Symbol
 
 	/// Creates a pattern that accepts only a single input with one element of the given symbol
 	/// - Parameter element: The symbol to turn into a regular expression
@@ -154,9 +156,28 @@ extension RegularPatternProtocol {
 
 // For symbol types that support it, allow generating a range of symbols
 extension RegularPatternProtocol where Symbol: Comparable & Strideable, Symbol.Stride: SignedInteger {
-	public static func range(_ symbols: ClosedRange<Symbol>) -> Self {
-		let chars = symbols.lowerBound...symbols.upperBound;
-		return Self.union(chars.map{ Self.symbol($0) });
+	/// Creates a pattern that accepts any single symbol within the given range (exclusive upper bound).
+	/// - Parameter range: The range of symbols (e.g., `0...10`). 
+	public static func range(_ range: ClosedRange<Symbol>) -> Self {
+		return Self.union(range.map{ Self.symbol($0) });
+	}
+
+	/// Creates a pattern that accepts any single symbol within the given range (exclusive upper bound).
+	/// - Parameter range: The range of symbols (e.g., `0..<10`).
+	public static func range(_ range: Range<Symbol>) -> Self {
+		return Self.union(range.map{ Self.symbol($0) });
+	}
+
+	/// Creates an alternation between all of the symbols in the given sequence
+	/// - Parameter range: The range of symbols (e.g., `0..<10`).
+	public static func range<T: Sequence>(_ range: T) -> Self where T.Element == Symbol {
+		return Self.union(range.map{ Self.symbol($0) });
+	}
+
+	/// Creates a concatenation from the symbols in the given sequence
+	/// - Parameter range: The range of symbols (e.g., `0..<10`).
+	public static func sequence<T: Sequence>(_ sequence: T) -> Self where T.Element == Symbol {
+		return Self.concatenate(sequence.map{ Self.symbol($0) });
 	}
 }
 /// A very simple implementation of RegularPatternProtocol. Likely the simplest possible implementation.

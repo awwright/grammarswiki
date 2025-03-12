@@ -89,37 +89,6 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		)
 	}
 
-	/// Creates a DFA that accepts any single symbol within the given range (exclusive upper bound).
-	///
-	/// - Parameter range: The range of symbols (e.g., `0..<10`).
-	public init(range: Range<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
-		// Map each element in verbatim to a key in a new dictionary with value 1
-		let table: Dictionary<Symbol, StateNo> = range.reduce(into: [:]) { result, key in
-			result[key] = 1
-		}
-		self.init(
-			states: [ table, [:] ],
-			initial: 0,
-			finals: [ 1 ]
-		)
-	}
-
-	/// Creates a DFA that accepts any single symbol within the given closed range.
-	///
-	/// - Parameter range: The closed range of symbols (e.g., `0...9`).
-	public init(range: ClosedRange<Symbol>) where Symbol: Strideable, Symbol.Stride: SignedInteger {
-		// Map each element in verbatim to a key in a new dictionary with value 1
-		var table: Dictionary<Symbol, StateNo> = [:];
-		for char in range {
-			table[char] = 1;
-		}
-		self.init(
-			states: [ table, [:] ],
-			initial: 0,
-			finals: [ 1 ]
-		)
-	}
-
 	/// Creates a DFA out of an NFA.
 	///
 	/// - Parameter nfa: The NFA to convert.

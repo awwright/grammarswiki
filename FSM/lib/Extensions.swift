@@ -18,7 +18,7 @@ extension String: SymbolSequenceProtocol {
 
 // For some reason an Array isn't comparable when its elements are
 // Add suitable lexiocographic sorting support so that we can use Arrays of symbols as input e.g. Array<UInt32>
-extension Array: Comparable where Element: Comparable {
+extension Array: @retroactive Comparable where Element: Comparable {
 	public static func < (lhs: Array<Element>, rhs: Array<Element>) -> Bool {
 		for (l, r) in zip(lhs, rhs) {
 			if l != r {
@@ -29,13 +29,13 @@ extension Array: Comparable where Element: Comparable {
 	}
 }
 
-extension Bool: Comparable {
+extension Bool: @retroactive Comparable {
 	public static func < (lhs: Bool, rhs: Bool) -> Bool {
 		return lhs && !rhs;
 	}
 }
 
-extension Character: Strideable {
+extension Character: @retroactive Strideable {
 	public func distance(to: Character) -> Int {
 		return Int(to.unicodeScalars.first!.value - self.unicodeScalars.first!.value);
 	}

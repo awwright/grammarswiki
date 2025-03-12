@@ -27,7 +27,7 @@ import Testing
 
 	@Test("Character range")
 	func test_from_ClosedRange() {
-		let dfa = DFA<String>(range: "a"..."f")
+		let dfa = DFA<String>.range("a"..."f")
 		#expect(!dfa.contains(""))
 		#expect(dfa.contains("a"))
 		#expect(dfa.contains("f"))
@@ -437,7 +437,7 @@ import Testing
 
 	@Suite("toPattern") struct DFATests_toPattern {
 		@Test("empty")
-		func test_DFA_toPattern_0() {
+		func test_empty() {
 			let dfa: DFA<Array<UInt8>> = DFA([]);
 			#expect(Array(dfa).count == 0)
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
@@ -445,7 +445,7 @@ import Testing
 		}
 
 		@Test("epsilon")
-		func test_DFA_toPattern_1() {
+		func test_epsilon() {
 			let dfa: DFA<Array<UInt8>> = DFA([ [] ]);
 			#expect(Array(dfa).count == 1)
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
@@ -453,7 +453,7 @@ import Testing
 		}
 
 		@Test("character")
-		func test_DFA_toPattern_2() {
+		func test_char() {
 			let dfa: DFA<Array<UInt8>> = DFA([ [0x30] ]);
 			#expect(Array(dfa).count == 1)
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
@@ -461,19 +461,29 @@ import Testing
 		}
 
 		@Test("character?")
-		func test_DFA_toPattern_3() {
+		func test_optional() {
 			let dfa: DFA<Array<UInt8>> = DFA([ [], [0x30] ]);
 			#expect(Array(dfa).count == 2)
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
 			#expect(pattern.description == "ε|30")
 		}
 
-		@Test("character*")
-		func test_DFA_toPattern_4() {
-			let dfa: DFA<Array<UInt8>> = DFA([ [], [0x30] ]).star();
+		@Test("character+")
+		func test_plus() {
+			// FIXME: .minimized() is required otherwise this produces 30.30*
+			// Is this something that can be fixed in .star()?
+			let dfa: DFA<Array<UInt8>> = DFA([ [0x30] ]).plus().minimized();
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
-			// FIXME: this currently resolves to ε|30.30* better known as 30*
-//			#expect(pattern.description == "30*")
+			#expect(pattern.description == "30.30*")
+		}
+
+		@Test("character*")
+		func test_star() {
+			// FIXME: .minimized() is required otherwise this produces ε|30.30*
+			// Is this something that can be fixed in .star()?
+			let dfa: DFA<Array<UInt8>> = DFA([ [0x30] ]).star().minimized();
+			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
+			#expect(pattern.description == "30*")
 		}
 	}
 }

@@ -970,6 +970,7 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 /// ```
 ///
 /// - Note: The order of cases in `match` reflects ABNF parsing precedence.
+/// - Note: An `ABNFElement` is distinct from `Element` in Sequence and RegularPatternProtocol, which is just the type of items in the set.
 public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
 	public typealias Element = Array<S>;
 
@@ -1359,7 +1360,7 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		guard let (_, remainder1) = Terminals.DQUOTE.match(input) else { return nil }
-		let charPattern = DFA<Array<UInt8>>(range: 0x20...0x21) | DFA<Array<UInt8>>(range: 0x23...0x7E)
+		let charPattern: DFA<Array<UInt8>> = DFA.range(0x20...0x21) | DFA.range(0x23...0x7E)
 		guard let (chars, remainder2) = charPattern.star().match(remainder1) else { return nil }
 		guard let (_, remainder) = Terminals.DQUOTE.match(remainder2) else { return nil }
 		return (ABNFCharVal<Symbol>(sequence: chars.map { Symbol($0) }), remainder)
@@ -1643,7 +1644,7 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		// 0x20...0x7E - 0x3E
-		let pattern: DFA<Array<UInt8>> = (DFA(range: 0x20...0x3D) | DFA(range: 0x3F...0x7E)).star();
+		let pattern: DFA<Array<UInt8>> = (DFA.range(0x20...0x3D) | DFA.range(0x3F...0x7E)).star();
 
 		guard let (_, input_) = Terminals["<"].match(input) else { return nil; }
 		guard let (match, input__) = pattern.match(input_) else { return nil }
