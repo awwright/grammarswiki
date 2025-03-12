@@ -13,17 +13,17 @@ func abnf_expression_test_input(arguments: Array<String>){
 	}
 	let abnfExpression = arguments[2];
 	let input = arguments[3];
-	let abnfTree = ABNFAlternation<UInt8>.parse(abnfExpression.utf8);
+	let abnfTree = ABNFAlternation<UInt32>.parse(abnfExpression.utf8);
 	guard let abnfTree else {
 		print("Could not parse ABNF");
 		return;
 	}
-	let fsm = try? abnfTree.toPattern(as: DFA<Array<UInt8>>.self, rules: ABNFBuiltins<DFA<Array<UInt8>>>.dictionary);
+	let fsm = try? abnfTree.toPattern(as: DFA<Array<UInt32>>.self, rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary);
 	guard let fsm else {
 		print("Internal error (could not convert ABNF to DFA)");
 		return;
 	}
-	if(fsm.contains(input.utf8)){
+	if(fsm.contains(input.unicodeScalars.map{ $0.value })){
 		print("Accepted")
 	}else{
 		print("Rejected")

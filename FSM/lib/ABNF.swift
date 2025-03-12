@@ -947,10 +947,10 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 			let (minStr, _) = Terminals.DIGIT_star.match(match)!
 			let (maxStr, remainder2) = Terminals.DIGIT_star.match(remainder1)!
 			guard let (element, remainder) = ABNFElement<Symbol>.match(remainder2) else { return nil }
-			return (ABNFRepetition(min: DIGIT_value(minStr), max: maxStr.isEmpty ? nil : DIGIT_value(maxStr), element: element), remainder)
+			return (ABNFRepetition(min: repeat_value(minStr), max: maxStr.isEmpty ? nil : repeat_value(maxStr), element: element), remainder)
 		} else if let (exactStr, remainder1) = Terminals.repeat_min.match(input) {
 			// 1*DIGIT element
-			let count = DIGIT_value(exactStr);
+			let count = repeat_value(exactStr);
 			guard let (element, remainder) = ABNFElement<Symbol>.match(remainder1) else { return nil }
 			return (ABNFRepetition(min: count, max: count, element: element), remainder)
 		} else {
@@ -1412,12 +1412,18 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		case dec = 10;
 		case hex = 16;
 
-		func parseNum<T> (_ input: T) -> Symbol? where T: Collection, T.Element == UInt8 {
-			return switch self {
-				case Base.bin: Symbol(BIT_value(input));
-				case Base.dec: Symbol(DIGIT_value(input));
-				case Base.hex: Symbol(HEXDIG_value(input));
+		func parseNum(_ input: any Sequence<UInt8>) -> Symbol? {
+			var currentValue: Symbol = 0;
+			for c in input {
+				currentValue *= Symbol(self.rawValue);
+				switch(c){
+					case 0x30...0x39: currentValue += Symbol(c-0x30) // 0-9
+					case 0x41...0x46: currentValue += Symbol(c-0x41+10) // A-F
+					case 0x61...0x66: currentValue += Symbol(c-0x61+10) // a-f
+					default: fatalError("Invalid input")
+				}
 			}
+			return currentValue;
 		}
 		var numPattern: DFA<Array<UInt8>> {
 			return switch self {
@@ -1746,38 +1752,12 @@ struct Terminals {
 	}
 }
 
-func BIT_value(_ input: any Sequence<UInt8>) -> UInt {
-	var currentValue: UInt = 0;
-	for c in input {
-		currentValue *= 2;
-		switch(c){
-			case 0x30...0x31: currentValue += UInt(c-0x30) // 0-1
-			default: fatalError("Invalid input")
-		}
-	}
-	return currentValue;
-}
-
-func DIGIT_value(_ input: any Sequence<UInt8>) -> UInt {
+func repeat_value(_ input: any Sequence<UInt8>) -> UInt {
 	var currentValue: UInt = 0;
 	for c in input {
 		currentValue *= 10;
 		switch(c){
 			case 0x30...0x39: currentValue += UInt(c-0x30) // 0-9
-			default: fatalError("Invalid input")
-		}
-	}
-	return currentValue;
-}
-
-func HEXDIG_value(_ input: any Sequence<UInt8>) -> UInt {
-	var currentValue: UInt = 0;
-	for c in input {
-		currentValue *= 16;
-		switch(c){
-			case 0x30...0x39: currentValue += UInt(c-0x30) // 0-9
-			case 0x41...0x46: currentValue += UInt(c-0x41+10) // A-F
-			case 0x61...0x66: currentValue += UInt(c-0x61+10) // a-f
 			default: fatalError("Invalid input")
 		}
 	}
