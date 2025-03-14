@@ -15,6 +15,23 @@ import Testing;
 			#expect(CHAR_string(remainder) == "another");
 		}
 
+		@Test("rulelist incremental")
+		func test_rulelist_incremental() async throws {
+			let abnf = "rule = %x20\r\nrule =/ %x30\r\n..."
+			let (rulelist, remainder) = ABNFRulelist<UInt8>.match(abnf.utf8)!
+			#expect(rulelist == ABNFRulelist<UInt8>(rules: [
+				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).alternation),
+				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .incremental, alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30])).alternation),
+			]));
+			let dict = rulelist.dictionary;
+			let expectedRule = ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFAlternation(matches: [
+				ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).concatenation,
+				ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30])).concatenation,
+			]));
+			#expect(dict == ["rule": expectedRule]);
+			#expect(CHAR_string(remainder) == "...");
+		}
+
 		@Test("rule")
 		func test_rule() async throws {
 			let abnf = "foo = bar\r\nanother"; // Must contain trailing \r\n, escape this for cross-platform reasons
@@ -657,6 +674,16 @@ import Testing;
 			let expression = ABNFRulelist<UInt8>.parse(input.utf8)!
 			let fsm: Dictionary<String, DFA<Array<UInt8>>> = expression.toPattern(rules: [:]);
 			#expect(fsm["Top"]!.contains("CCC".utf8));
+		}
+
+		@Test("rulelist.toPattern with incremental rules")
+		func test_rulelist_toPattern_incremental() async throws {
+			let abnf = "rule = %x20\r\nrule =/ %x30\r\n"
+			let expression = ABNFRulelist<UInt16>.parse(abnf.utf8)!
+			let fsm: Dictionary<String, DFA<Array<UInt16>>> = expression.toPattern(rules: [:]);
+			#expect(fsm["rule"]!.contains(" ".utf16));
+			#expect(fsm["rule"]!.contains("0".utf16));
+			#expect(fsm["rule"]!.contains("1".utf16) == false);
 		}
 
 		@Test("num-val")

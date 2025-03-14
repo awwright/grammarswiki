@@ -198,11 +198,8 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 	/// - Note: This is a variation of `toPattern` that returns a dictionary, cooresponding with how a rulelist encodes multiple rules.
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules ruleMap: Dictionary<String, PatternType> = [:]) -> Dictionary<String, PatternType> where PatternType.Symbol == Symbol {
 		// Get a Dictionary of each rule by its name to its referencedRules
-		let requiredRules = Dictionary<String, Set<String>>(uniqueKeysWithValues: rules.map {
-			($0.rulename.label, $0.referencedRules)
-		}).filter { $0.1.contains($0.0) == false }
-
 		let rulesByName = self.dictionary;
+		let requiredRules = rulesByName.mapValues { $0.referencedRules }.filter { $0.1.contains($0.0) == false }
 
 		var resolvedRules = ruleMap;
 		// TODO: Detect head/tail recursion, that can be converted
