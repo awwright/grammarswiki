@@ -29,6 +29,7 @@ let programName = arguments.count >= 2 ? arguments[1] : nil;
 switch programName {
 	case "abnf-expression-test-input": abnf_expression_test_input(arguments: arguments);
 	case "abnf-to-regex": abnf_to_regex(arguments: arguments);
+	case "abnf-equivalent-inputs": abnf_equivalent_inputs(arguments: arguments);
 
 	default:
 	print("Usage: \(arguments[0]) <commands> [commands options...]");
@@ -36,4 +37,5 @@ switch programName {
 	print("");
 	abnf_expression_test_input_help(arguments: arguments);
 	abnf_to_regex_help(arguments: arguments);
+	abnf_equivalent_inputs_help(arguments: arguments);
 }

@@ -252,6 +252,29 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		return Self.ID(fsm: self, state: state)
 	}
 
+	/// Get a FSM representing all the inputs that get you to an equivalent state
+	/// I.e. all of the other inputs that will produce the same results with any additional input
+	/// I.e. all the values of `other` where `other + extra == input + extra` for all `extra`
+	/// Combine this with tags on states to distinguish different end states that have different semantics
+	/// However, this will return `nil` if input lands on a non-live state.
+	/// In this case, it is equivalent to all inputs that land on a non-live state, which canot be enumerated without an alphabet. So don't do that.
+	public func equivalentInputs(input: any Sequence<Symbol>) -> Self? {
+		// Minimizing the FSM ensures that there's no equivalent final states
+		// If the FSM is already minimized this should be a somewhat speedy operation
+		let minimized = self.minimized()
+		var currentState = minimized.initial;
+		for char in input {
+			guard currentState < minimized.states.count, let nextState = minimized.states[currentState][char]
+			else { return nil } //uh-oh, now we have to find all of the oblivion states
+			currentState = nextState
+		}
+		return DFA<Element>(
+			states: minimized.states,
+			initial: minimized.initial,
+			finals: [currentState]
+		).minimized()
+	}
+
 	/// Derive a new FSM using a parallel construction
 	///
 	/// This crawls all the different possible combinations of states that can be reached from every possible input.

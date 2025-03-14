@@ -143,7 +143,6 @@ import Testing;
 		func test_UInt8_plus() async throws {
 			let a = SimpleRegex.symbol(1);
 			let plus = a.plus()
-			print(plus.description)
 			#expect(plus.description == "1.1*", "Plus should be concatenation with star")
 			if case .concatenation(let array) = plus {
 				#expect(array.count == 2)

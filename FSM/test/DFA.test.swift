@@ -141,6 +141,14 @@ import Testing
 		#expect(dfa2.match("abcd")! == ("abc", "d"))
 	}
 
+	@Test("equivalent")
+	func test_equivalent() {
+		let dfa = DFA<String>(["a", "aa", "aaa", "aaaa"]).concatenate(DFA<String>(["b", "bb", "bbb", "bbbb"])).concatenate(DFA<String>(["a"]).star()).minimized()
+		let equivalent = dfa.equivalentInputs(input: "ab")!
+		#expect(Set(equivalent) == Set(["ab", "aab", "aaab", "aaaab"]))
+	}
+
+
 	@Test("parallel")
 	func test_parallel() {
 		// See union, intersection, and symmetricDifference below

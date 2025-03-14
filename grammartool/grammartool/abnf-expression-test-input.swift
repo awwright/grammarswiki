@@ -7,7 +7,7 @@ func abnf_expression_test_input_help(arguments: Array<String>) {
 }
 
 func abnf_expression_test_input(arguments: Array<String>){
-	guard arguments.count != 4  else {
+	guard arguments.count == 4  else {
 		abnf_expression_test_input_help(arguments: arguments);
 		return;
 	}
@@ -18,11 +18,7 @@ func abnf_expression_test_input(arguments: Array<String>){
 		print("Could not parse ABNF");
 		return;
 	}
-	let fsm = try? abnfTree.toPattern(as: DFA<Array<UInt32>>.self, rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary);
-	guard let fsm else {
-		print("Internal error (could not convert ABNF to DFA)");
-		return;
-	}
+	let fsm = abnfTree.toPattern(as: DFA<Array<UInt32>>.self, rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary);
 	if(fsm.contains(input.unicodeScalars.map{ $0.value })){
 		print("Accepted")
 	}else{
