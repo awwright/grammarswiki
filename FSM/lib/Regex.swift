@@ -54,6 +54,13 @@ public protocol RegularPatternProtocol: Equatable {
 	/// - Returns: A pattern accepting the given symbol
 	static func symbol(_ element: Symbol) -> Self
 
+	// TODO: It may be very difficult to add this to ABNF, even though ABNF does have a concept of an alphabet
+	/// Get exactly symbols used in the pattern
+	//var alphabet: Set<Symbol> { get }
+
+	/// Partition the alphabet by equivalent symbols
+	//var alphabetPartitions: Set<Set<Symbol>> { get }
+
 	/// Returns a pattern to also accept the empty sequence, making it optional.
 	/// - Returns: A pattern that accepts either the empty sequence or any sequence this pattern accepts.
 	func optional() -> Self
@@ -197,6 +204,36 @@ public indirect enum SimpleRegex<S>: RegularPatternProtocol, Hashable where S: B
 
 	public init (_ sequence: any Sequence<Symbol>) {
 		self = .concatenation(sequence.map{ Self.symbol($0) })
+	}
+
+	/// A set of all the symbols in use in this regex.
+	/// Using any symbols outside this set guarantees a transition to the oblivion state (rejection).
+	public var alphabet: Set<Symbol> {
+		switch self {
+			case .alternation(let array): return Set(array.flatMap(\.alphabet))
+			case .concatenation(let array): return Set(array.flatMap(\.alphabet))
+			case .star(let regex): return regex.alphabet
+			case .symbol(let c): return [c]
+		}
+	}
+
+	/// The alphabet, partitioned into sets whose behaviors are equivalent
+	/// (i.e. changing the symbol with an equivalent symbol won't change validation)
+	public var alphabetPartitions: Set<Set<Symbol>> {
+		switch self {
+			case .alternation(let array):
+				// A union of symbols will always result in an equivalent result, so group symbols in the alternation together
+				let symbols: Set<Symbol> = Set(array.compactMap { if case .symbol(let s) = $0 { s } else { nil } })
+				let nonsymbols: Array<Set<Set<Symbol>>> = array.compactMap { if case .symbol = $0 { return nil } else { return $0.alphabetPartitions } }
+				return alphabetCombine([symbols] + nonsymbols.flatMap { $0 })
+			case .concatenation(let array):
+				return alphabetCombine(array.flatMap { $0.alphabetPartitions })
+			case .star(let regex):
+				return regex.alphabetPartitions
+			case .symbol(let c):
+				// This won't usually be called, unless the regex is literally a single symbol
+				return Set([Set([c])])
+		}
 	}
 
 	var precedence: Int {
