@@ -11,6 +11,9 @@
       location = "group:grammartool/grammartool.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:grammars/grammars.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:README.md">
    </FileRef>
 </Workspace>
