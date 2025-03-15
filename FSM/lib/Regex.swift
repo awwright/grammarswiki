@@ -54,13 +54,6 @@ public protocol RegularPatternProtocol: Equatable {
 	/// - Returns: A pattern accepting the given symbol
 	static func symbol(_ element: Symbol) -> Self
 
-	// TODO: It may be very difficult to add this to ABNF, even though ABNF does have a concept of an alphabet
-	/// Get exactly symbols used in the pattern
-	//var alphabet: Set<Symbol> { get }
-
-	/// Partition the alphabet by equivalent symbols
-	//var alphabetPartitions: Set<Set<Symbol>> { get }
-
 	/// Returns a pattern to also accept the empty sequence, making it optional.
 	/// - Returns: A pattern that accepts either the empty sequence or any sequence this pattern accepts.
 	func optional() -> Self
@@ -187,10 +180,29 @@ extension RegularPatternProtocol where Symbol: Comparable & Strideable, Symbol.S
 		return Self.concatenate(sequence.map{ Self.symbol($0) });
 	}
 }
+
+/// This protocol indicates that the conforming structure has all the components necessary to build a pattern from another RegularPatternProtocol
+public protocol RegularPattern {
+	/// The type of sequence this pattern operates over, such as an array of symbols.
+	associatedtype Element: SymbolSequenceProtocol;
+
+	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
+	typealias Symbol = Element.Symbol;
+
+	func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol;
+
+	/// Get exactly symbols used in the pattern
+	var alphabet: Set<Symbol> { get }
+
+	// TODO: It may be very difficult to add this to ABNF, even though ABNF does have a concept of an alphabet
+	/// Partition the alphabet by equivalent symbols
+	var alphabetPartitions: Set<Set<Symbol>> { get }
+}
+
 /// A very simple implementation of RegularPatternProtocol. Likely the simplest possible implementation.
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.
-public indirect enum SimpleRegex<S>: RegularPatternProtocol, Hashable where S: BinaryInteger {
+public indirect enum SimpleRegex<S>: RegularPattern, RegularPatternProtocol, Hashable where S: BinaryInteger {
 	public typealias Element = Array<S>
 	public typealias Symbol = S
 
