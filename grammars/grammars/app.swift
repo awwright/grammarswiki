@@ -4,7 +4,6 @@ import SwiftUI
 struct ABNFEditorApp: App {
 	static var catalog: Array<DocumentItem> = {
 		guard let bundlePath = Bundle.main.resourcePath else { return [] }
-		print(bundlePath)
 		let fileExtension = ".abnf"
 
 		do {

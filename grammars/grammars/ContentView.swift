@@ -1,5 +1,4 @@
 // TODO:
-// - Show files from builtin catalog in a NavigationSplitView
 // - Show files from custom home directory, allow creating and renaming custom files
 // - Open files from any path, as a document view
 // - Accordion/disclosure group for different views on the file
@@ -82,10 +81,29 @@ struct DocumentDetail: View {
 					}
 					.pickerStyle(MenuPickerStyle())
 
+					if let selectedRule {
+						DisclosureGroup("Partitions", content: {
+							let partitions = rulelist.dictionary[selectedRule]!.alphabetPartitions(rulelist: rulelist);
+							ForEach(Array(partitions), id: \.self) {
+								part in
+								let sorted = Array(part).sorted(by: { $0 < $1 })
+								Text(String(describing: sorted)).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
+							}
+						})
+					}
+
 					if let rulelist_fsm, let selectedRule, let selected_fsm = rulelist_fsm[selectedRule] {
 						DisclosureGroup("FSM Info", content: {
-							Text("States: \(selected_fsm.states.count)")
-							Text("Alphabet: \(selected_fsm.alphabet)")
+							Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
+								GridRow {
+									Text("States").font(.headline).gridColumnAlignment(.trailing)
+									Text(String(selected_fsm.states.count))
+								}
+								GridRow {
+									Text("Alphabet").font(.headline).gridColumnAlignment(.trailing)
+									Text(String(describing: selected_fsm.alphabet))
+								}
+							}
 						})
 						DisclosureGroup("Graphviz", content: {
 							Text(selected_fsm.toViz())
@@ -93,6 +111,8 @@ struct DocumentDetail: View {
 								.border(Color.gray, width: 1)
 						})
 					}
+
+					Divider()
 
 					TextField("Enter test input", text: $testInput)
 						.textFieldStyle(RoundedBorderTextFieldStyle())

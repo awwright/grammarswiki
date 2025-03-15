@@ -547,7 +547,8 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 									nonsymbols += [Set(seq)]
 								}
 						}
-					default: nonsymbols += Array(element.alphabetPartitions(rulelist: rulelist))
+					default:
+						nonsymbols += Array(innerElement.alphabetPartitions(rulelist: rulelist))
 				}
 			}else{
 				nonsymbols += matches.flatMap { $0.alphabetPartitions(rulelist: rulelist) }
