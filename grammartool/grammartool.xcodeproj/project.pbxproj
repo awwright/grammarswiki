@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		28587D362D78222E00F226C0 /* FSM in Frameworks */ = {isa = PBXBuildFile; productRef = 28587D352D78222E00F226C0 /* FSM */; };
+		2868844D2D852C9600310408 /* FSM in Frameworks */ = {isa = PBXBuildFile; productRef = 2868844C2D852C9600310408 /* FSM */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -39,7 +39,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				28587D362D78222E00F226C0 /* FSM in Frameworks */,
+				2868844D2D852C9600310408 /* FSM in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,7 +90,7 @@
 			);
 			name = grammartool;
 			packageProductDependencies = (
-				28587D352D78222E00F226C0 /* FSM */,
+				2868844C2D852C9600310408 /* FSM */,
 			);
 			productName = grammartool;
 			productReference = 28587D2A2D78219900F226C0 /* grammartool */;
@@ -120,6 +120,9 @@
 			);
 			mainGroup = 28587D212D78219900F226C0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				286884302D852BEB00310408 /* XCLocalSwiftPackageReference "../FSM" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 28587D2B2D78219900F226C0 /* Products */;
 			projectDirPath = "";
@@ -304,8 +307,15 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		286884302D852BEB00310408 /* XCLocalSwiftPackageReference "../FSM" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../FSM;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
-		28587D352D78222E00F226C0 /* FSM */ = {
+		2868844C2D852C9600310408 /* FSM */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FSM;
 		};

@@ -1,9 +1,47 @@
+// TODO:
+// - Show files from builtin catalog in a NavigationSplitView
+// - Show files from custom home directory, allow creating and renaming custom files
+// - Open files from any path, as a document view
+// - Accordion/disclosure group for different views on the file
+// - Replace text editor with a real code editor
+// - Parsing errors, show the unexpected character and the permitted characters for that position
+// - Auto-completion of rule names
+// - Import rules from other documents
+// - Limit text field to accepted characters, use a multi-line field if \n is permitted; use \r\n for newlines when \r is permitted
+
 import SwiftUI
 import FSM
 
 struct ContentView: View {
+	@State var catalog: [DocumentItem]
+	// Document selection
+	@State private var selection: DocumentItem? = nil
+
+	var body: some View {
+		NavigationSplitView {
+			List(selection: $selection) {
+				Section("Catalog") {
+					ForEach(catalog, id: \.self) {
+						document in
+						NavigationLink(document.name, value: document)
+					}
+				}
+			}
+			.navigationTitle("Catalog")
+		} detail: {
+			if let selection, let index = catalog.firstIndex(where: { $0.id == selection.id }) {
+				DocumentDetail(document: $catalog[index])
+			} else {
+				Text("Select a document")
+			}
+		}
+	}
+}
+
+struct DocumentDetail: View {
+	@Binding var document: DocumentItem // Binding to the specific document
+
 	// User input
-	@State private var text: String = ""
 	@State private var selectedRule: String? = nil
 	@State private var testInput: String = ""
 
@@ -13,14 +51,13 @@ struct ContentView: View {
 	@State private var rulelist_fsm: Dictionary<String, DFA<Array<UInt32>>>? = nil
 	@State private var parseError: String? = nil
 	@State private var testResult: String? = nil
-	@State private var graphviz = ""
 
 	var body: some View {
 		HStack(spacing: 20) {
 			VStack(alignment: .leading) {
 				Text("ABNF Grammar")
 					.font(.headline)
-				TextEditor(text: $text)
+				TextEditor(text: $document.content)
 					.border(Color.gray, width: 1)
 					.font(Font.system(.body, design: .monospaced))
 					.autocorrectionDisabled(true)
@@ -33,7 +70,7 @@ struct ContentView: View {
 				}
 			}
 
-			VStack(alignment: .leading) {
+			VStack(alignment: .leading) { ScrollView {
 				Text("Test Input")
 					.font(.headline)
 				if let rulelist = rulelist {
@@ -44,15 +81,24 @@ struct ContentView: View {
 						}
 					}
 					.pickerStyle(MenuPickerStyle())
+
+					if let rulelist_fsm, let selectedRule, let selected_fsm = rulelist_fsm[selectedRule] {
+						DisclosureGroup("FSM Info", content: {
+							Text("States: \(selected_fsm.states.count)")
+							Text("Alphabet: \(selected_fsm.alphabet)")
+						})
+						DisclosureGroup("Graphviz", content: {
+							Text(selected_fsm.toViz())
+								.textSelection(.enabled)
+								.border(Color.gray, width: 1)
+						})
+					}
+
 					TextField("Enter test input", text: $testInput)
 						.textFieldStyle(RoundedBorderTextFieldStyle())
 						.onChange(of: testInput) {
 							testInputAgainstRule()
 						}
-
-					if graphviz.isEmpty == false {
-						Text(graphviz)
-					}
 
 					if let testResult {
 						Text("Result: \(testResult)")
@@ -63,17 +109,17 @@ struct ContentView: View {
 						.foregroundColor(.gray)
 				}
 				Spacer()
-			}
+			} }
 			.frame(minWidth: 200)
 		}
 		.padding()
-		.onChange(of: self.text) {
+		.onChange(of: document.content) {
 			// Update rulelist when document text changes
-			updateRulelist(self.text)
+			updateRulelist(document.content)
 		}
 		.onAppear {
 			// Initial parse when view appears
-			updateRulelist(self.text)
+			updateRulelist(document.content)
 		}
 	}
 
@@ -82,7 +128,7 @@ struct ContentView: View {
 		let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 		if let (parsed, _) = ABNFRulelist<UInt32>.match(input) {
 			rulelist = parsed
-			rulelist_fsm = parsed.toPattern()
+			rulelist_fsm = parsed.toPattern(rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary)
 			parseError = nil
 			if let currentSelection = selectedRule, !parsed.dictionary.keys.contains(currentSelection) {
 				if let firstRule = parsed.rules.first {
@@ -112,12 +158,10 @@ struct ContentView: View {
 			return
 		}
 		let input = Array(testInput.unicodeScalars.map(\.value))
-		let compiledRulelist: Dictionary<String, DFA<Array<UInt32>>> = rulelist.toPattern(as: DFA<Array<UInt32>>.self);
-		guard let selected_fsm = compiledRulelist[selectedRule] else {
-			testResult = "Rule `\(selectedRule)` is recursive"
+		guard let rulelist_fsm, let selected_fsm = rulelist_fsm[selectedRule] else {
+			testResult = "Rule `\(selectedRule)` is recursive or missing rules"
 			return
 		}
-		graphviz = selected_fsm.toViz()
 
 		if selected_fsm.contains(input) {
 			testResult = "Accepted"

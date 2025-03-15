@@ -1226,12 +1226,15 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+		switch input.first {
+			case 0x28: if let (g, remainder) = ABNFGroup<Symbol>.match(input) { return (.group(g), remainder) }
+			case 0x5B: if let (o, remainder) = ABNFOption<Symbol>.match(input) { return (.option(o), remainder) }
+			case 0x22: if let (c, remainder) = ABNFCharVal<Symbol>.match(input) { return (.charVal(c), remainder) }
+			case 0x25: if let (n, remainder) = ABNFNumVal<Symbol>.match(input) { return (.numVal(n), remainder) }
+			case 0x3C: if let (p, remainder) = ABNFProseVal<Symbol>.match(input) { return (.proseVal(p), remainder) }
+			default: break;
+		}
 		if let (r, remainder) = ABNFRulename<Symbol>.match(input) { return (.rulename(r), remainder) }
-		if let (g, remainder) = ABNFGroup<Symbol>.match(input) { return (.group(g), remainder) }
-		if let (o, remainder) = ABNFOption<Symbol>.match(input) { return (.option(o), remainder) }
-		if let (c, remainder) = ABNFCharVal<Symbol>.match(input) { return (.charVal(c), remainder) }
-		if let (n, remainder) = ABNFNumVal<Symbol>.match(input) { return (.numVal(n), remainder) }
-		if let (p, remainder) = ABNFProseVal<Symbol>.match(input) { return (.proseVal(p), remainder) }
 		return nil
 	}
 }
@@ -1314,11 +1317,9 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		let prefix = Terminals["("] ++ Terminals.c_wsp_star;
-		guard let (_, remainder1) = prefix.match(input) else { return nil }
+		guard let (_, remainder1) = Terminals.group_start.match(input) else { return nil }
 		guard let (alternation, remainder2) = ABNFAlternation<Symbol>.match(remainder1) else { return nil }
-		let suffix = Terminals.c_wsp_star ++ Terminals[")"];
-		guard let (_, remainder) = suffix.match(remainder2) else { return nil }
+		guard let (_, remainder) = Terminals.group_end.match(remainder2) else { return nil }
 		return (ABNFGroup(alternation: alternation), remainder)
 	}
 }
@@ -1391,11 +1392,9 @@ public struct ABNFOption<S>: ABNFExpression where S: Comparable & BinaryInteger 
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		let prefix_pattern = Terminals["["] ++ Terminals.c_wsp_star;
-		guard let (_, remainder1) = prefix_pattern.match(input) else { return nil }
+		guard let (_, remainder1) = Terminals.option_start.match(input) else { return nil }
 		guard let (alternation, remainder2) = ABNFAlternation<Symbol>.match(remainder1) else { return nil }
-		let suffix_pattern = Terminals.c_wsp_star ++ Terminals["]"];
-		guard let (_, remainder) = suffix_pattern.match(remainder2) else { return nil }
+		guard let (_, remainder) = Terminals.option_end.match(remainder2) else { return nil }
 		return (ABNFOption(optionalAlternation: alternation), remainder)
 	}
 }
@@ -1679,7 +1678,7 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 	}
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		guard let (_, remainder0) = Terminals["%"].match(input) else { return nil }
+		guard let (_, remainder0) = Terminals.numVal_start.match(input) else { return nil }
 		guard let (basePrefix, remainder1) = Terminals.CHAR.match(remainder0) else { return nil }
 		let base: Base? = switch(basePrefix[basePrefix.startIndex]){
 			case 0x42, 0x62: Base.bin // Bb
@@ -1694,7 +1693,7 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		var values: [Symbol] = [firstStr]
 		var remainder = remainder2
 		while true {
-			if let (_, remainder3) = Terminals["."].match(remainder) {
+			if let (_, remainder3) = Terminals.numVal_sequence_separator.match(remainder) {
 				guard let (moreDigits, remainder4) = base.numPattern.match(remainder3) else { break }
 				values.append(base.parseNum(moreDigits)!)
 				remainder = remainder4
@@ -1703,10 +1702,11 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 			}
 		}
 
-		if values.count == 1, let (_, remainder5) = Terminals["-"].match(remainder) {
+		if values.count == 1, let (_, remainder5) = Terminals.numVal_range_separator.match(remainder) {
 			guard let (endDigits, remainder6) = base.numPattern.match(remainder5) else { return nil }
 			let endStr = base.parseNum(endDigits)
 			guard let endStr else { return nil }
+			// FIXME: This can throw given a string like %x20-2
 			return (ABNFNumVal<Symbol>(base: base, value: Value.range(Symbol(values.first!)...Symbol(endStr))), remainder6)
 		}
 
@@ -1786,9 +1786,9 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 		// 0x20...0x7E - 0x3E
 		let pattern: DFA<Array<UInt8>> = (DFA.range(0x20...0x3D) | DFA.range(0x3F...0x7E)).star();
 
-		guard let (_, input_) = Terminals["<"].match(input) else { return nil; }
+		guard let (_, input_) = Terminals.proseVal_start.match(input) else { return nil; }
 		guard let (match, input__) = pattern.match(input_) else { return nil }
-		guard let (_, remainder) = Terminals[">"].match(input__) else { return nil; }
+		guard let (_, remainder) = Terminals.proseVal_end.match(input__) else { return nil; }
 
 		let node = ABNFProseVal(remark: CHAR_string(match))
 		return (node, remainder)
@@ -1884,6 +1884,16 @@ struct Terminals {
 	static let repeat_min = DIGIT.plus();
 	static let repeat_range = DIGIT.star() ++ Terminals["*"];
 	static let DIGIT_star = DIGIT.star();
+
+	static let group_start = Terminals["("] ++ c_wsp_star;
+	static let group_end = c_wsp_star ++ Terminals[")"];
+	static let option_start = Terminals["["] ++ c_wsp_star;
+	static let option_end = c_wsp_star ++ Terminals["]"];
+	static let numVal_start = Terminals["%"];
+	static let numVal_sequence_separator = Terminals["."];
+	static let numVal_range_separator = Terminals["-"];
+	static let proseVal_start = Terminals["<"];
+	static let proseVal_end = Terminals[">"];
 
 	// And a generic way to get an arbitrary character sequence as a Rule
 	static subscript (string: String) -> Rule {
