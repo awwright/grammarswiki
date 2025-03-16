@@ -151,15 +151,15 @@ struct DocumentDetail: View {
 								.textSelection(.enabled)
 								.border(Color.gray, width: 1)
 						})
+
+						Divider()
+
+						TextField("Enter test input", text: $testInput)
+							.textFieldStyle(RoundedBorderTextFieldStyle())
+							.onChange(of: testInput) {
+								testInputAgainstRule()
+							}
 					}
-
-					Divider()
-
-					TextField("Enter test input", text: $testInput)
-						.textFieldStyle(RoundedBorderTextFieldStyle())
-						.onChange(of: testInput) {
-							testInputAgainstRule()
-						}
 
 					if let testResult {
 						Text("Result: \(testResult)")
