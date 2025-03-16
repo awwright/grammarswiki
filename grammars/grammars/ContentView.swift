@@ -12,33 +12,74 @@ import SwiftUI
 import FSM
 
 struct ContentView: View {
-	@State var catalog: [DocumentItem]
-	// Document selection
+	@Binding var model: AppModel
 	@State private var selection: DocumentItem? = nil
 
 	var body: some View {
 		NavigationSplitView {
 			List(selection: $selection) {
+				Section("Saved") {
+					ForEach(Array(model.user.values), id: \.self) {
+						document in
+						NavigationLink(document.name, value: document)
+					}
+				}
 				Section("Catalog") {
-					ForEach(catalog, id: \.self) {
+					ForEach(model.catalog, id: \.self) {
 						document in
 						NavigationLink(document.name, value: document)
 					}
 				}
 			}
-			.navigationTitle("Catalog")
+			.navigationSplitViewColumnWidth(min: 150, ideal: 250, max: 600)
+			.toolbar {
+				ToolbarItem {
+					Button(action: addDocument) {
+						Label("Add", systemImage: "plus")
+					}
+				}
+			}
 		} detail: {
-			if let selection, let index = catalog.firstIndex(where: { $0.id == selection.id }) {
-				DocumentDetail(document: $catalog[index])
+			// FIXME: This technique mangles the undo stack when you switch documents. I don't know how to fix this.
+			if let selectedDocument = selection {
+				let binding: Binding<DocumentItem> = model.catalog.contains(selectedDocument) ?
+					Binding(
+						get: { selectedDocument },
+						set: {
+							// Attemting to set on this document makes a copy
+							let newDocument = DocumentItem(
+								name: "\($0.name) copy",
+								content: $0.content
+							)
+							model.addDocument(newDocument)
+							selection = newDocument
+						}
+					) : Binding(
+						get: { model.user[selectedDocument.id]! },
+						set: { model.user[selectedDocument.id] = $0 }
+					);
+				DocumentDetail(document: binding)
+					.navigationTitle(selectedDocument.name)
 			} else {
 				Text("Select a document")
 			}
 		}
 	}
+
+	func addDocument(){
+		withAnimation {
+			let newDocument = DocumentItem(
+				name: "New Document \(model.user.count + 1)",
+				content: ""
+			)
+			model.addDocument(newDocument)
+			selection = newDocument
+		}
+	}
 }
 
 struct DocumentDetail: View {
-	@Binding var document: DocumentItem // Binding to the specific document
+	@Binding var document: DocumentItem
 
 	// User input
 	@State private var selectedRule: String? = nil
