@@ -1,12 +1,13 @@
 // TODO:
-// - Open files from any path, as a document view
-// - Accordion/disclosure group for different views on the file
 // - Replace text editor with a real code editor
 // - Parsing errors, show the unexpected character and the permitted characters for that position
 // - Auto-completion of rule names
 // - Import rules from other documents
 // - Limit text field to accepted characters, use a multi-line field if \n is permitted; use \r\n for newlines when \r is permitted
 // - Search feature for catalog
+// - Rendered graph view
+// - Selection of symbol type/preview (e.g. show decimal, hex, or glyph)
+// - Open files from any path, as a document view
 
 import SwiftUI
 import FSM
@@ -123,6 +124,7 @@ struct DocumentDetail: View {
 					.border(Color.gray, width: 1)
 					.font(Font.system(.body, design: .monospaced))
 					.autocorrectionDisabled(true)
+
 				if let error = parseError {
 					Text("Parse Error: \(error)")
 						.foregroundColor(.red)
@@ -190,6 +192,8 @@ struct DocumentDetail: View {
 				} else {
 					Text("No valid grammar loaded")
 						.foregroundColor(.gray)
+
+					Divider()
 				}
 				Spacer()
 			} }
@@ -208,26 +212,42 @@ struct DocumentDetail: View {
 
 	/// Parses the grammar text into a rulelist
 	private func updateRulelist(_ text: String) {
+		rulelist = nil
+		rulelist_fsm = nil
+		parseError = "Parsing..."
+		selectedRule = nil
+		testResult = nil
 		let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-		if let (parsed, _) = ABNFRulelist<UInt32>.match(input) {
-			rulelist = parsed
-			rulelist_fsm = parsed.toPattern(rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary)
-			parseError = nil
-			if let currentSelection = selectedRule, !parsed.dictionary.keys.contains(currentSelection) {
-				if let firstRule = parsed.rules.first {
-					selectedRule = firstRule.rulename.label
-				}else{
-					selectedRule = nil
+		Task.detached(priority: .background) {
+			if let (parsed, _) = ABNFRulelist<UInt32>.match(input) {
+				await MainActor.run {
+					rulelist = parsed
+					Task.detached(priority: .background) {
+						let parsed_rulelist_fsm = parsed.toPattern(rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary)
+						await MainActor.run {
+							rulelist_fsm = parsed_rulelist_fsm
+							parseError = nil
+							if let currentSelection = selectedRule, !parsed.dictionary.keys.contains(currentSelection) {
+								if let firstRule = parsed.rules.first {
+									selectedRule = firstRule.rulename.label
+								}else{
+									selectedRule = nil
+								}
+							} else if let firstRule = parsed.rules.first {
+								selectedRule = firstRule.rulename.label
+							}
+						}
+					}
 				}
-			} else if let firstRule = parsed.rules.first {
-				selectedRule = firstRule.rulename.label
+			} else {
+				await MainActor.run {
+					rulelist = nil
+					rulelist_fsm = nil
+					parseError = "Failed to parse grammar"
+					selectedRule = nil
+					testResult = nil
+				}
 			}
-		} else {
-			rulelist = nil
-			rulelist_fsm = nil
-			parseError = "Failed to parse grammar"
-			selectedRule = nil
-			testResult = nil
 		}
 	}
 

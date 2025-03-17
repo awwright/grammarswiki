@@ -408,11 +408,17 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 	}
 
 	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
-		rulelist.dictionary[label]!.alphabet(rulelist: rulelist)
+		guard let rule = rulelist.dictionary[label] else { return Set([]) }
+		// Remove this rule from the rulelist to prevent recursion
+		let newRulelist = ABNFRulelist<Symbol>(rules: rulelist.rules.filter({ $0.rulename.label != self.label }))
+		return rule.alphabet(rulelist: newRulelist)
 	}
 
 	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
-		rulelist.dictionary[label]!.alphabetPartitions(rulelist: rulelist)
+		guard let rule = rulelist.dictionary[label] else { return Set([]) }
+		// Remove this rule from the rulelist to prevent recursion
+		let newRulelist = ABNFRulelist<Symbol>(rules: rulelist.rules.filter({ $0.rulename.label != self.label }))
+		return rule.alphabetPartitions(rulelist: newRulelist)
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
@@ -1478,8 +1484,7 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 
 	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		guard let (_, remainder1) = Terminals.DQUOTE.match(input) else { return nil }
-		let charPattern: DFA<Array<UInt8>> = DFA.range(0x20...0x21) | DFA.range(0x23...0x7E)
-		guard let (chars, remainder2) = charPattern.star().match(remainder1) else { return nil }
+		guard let (chars, remainder2) = Terminals.charVal_pattern.match(remainder1) else { return nil }
 		guard let (_, remainder) = Terminals.DQUOTE.match(remainder2) else { return nil }
 		return (ABNFCharVal<Symbol>(sequence: chars.map { Symbol($0) }), remainder)
 	}
@@ -1895,6 +1900,7 @@ struct Terminals {
 	static let numVal_range_separator = Terminals["-"];
 	static let proseVal_start = Terminals["<"];
 	static let proseVal_end = Terminals[">"];
+	static let charVal_pattern = (Rule.range(0x20...0x21) | Rule.range(0x23...0x7E)).star()
 
 	// And a generic way to get an arbitrary character sequence as a Rule
 	static subscript (string: String) -> Rule {

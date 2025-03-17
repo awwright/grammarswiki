@@ -27,7 +27,7 @@ import Testing;
 			// 1*"C"
 			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
 			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ Set([0x43]) ]))
+			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
 		}
 
 		@Test("repetition star")
@@ -35,7 +35,7 @@ import Testing;
 			// *"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
 			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ Set([0x43]) ]))
+			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
 		}
 
 		@Test("repetition min")
@@ -43,7 +43,7 @@ import Testing;
 			// 2*"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
 			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ Set([0x43]) ]))
+			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
 		}
 
 		@Test("repetition max")
@@ -51,7 +51,7 @@ import Testing;
 			// *2"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
 			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ Set([0x43]) ]))
+			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
 		}
 
 		@Test("repetition.toPattern min/max")
@@ -59,7 +59,7 @@ import Testing;
 			// 2*3"ABC"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "ABC".utf8).element)
 			#expect(expression.alphabet() == Set([0x41, 0x42, 0x43]))
-			#expect(expression.alphabetPartitions() == Set([ Set([0x43]), Set([0x43]), Set([0x43]) ]))
+			#expect(expression.alphabetPartitions() == Set([ [0x41], [0x42], [0x43] ]))
 		}
 
 		@Test("element.toPattern")
@@ -67,7 +67,7 @@ import Testing;
 			// "C"
 			let expression = ABNFElement.charVal(ABNFCharVal<UInt8>(sequence: "C".utf8))
 			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ Set([0x43]) ]))
+			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
 		}
 
 		@Test("char_val.toPattern")
@@ -75,7 +75,7 @@ import Testing;
 			// "C"
 			let expression = ABNFCharVal<UInt8>(sequence: "C".utf8)
 			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ Set([0x43]) ]))
+			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
 		}
 
 		@Test("rulelist.toPattern with rule")
@@ -83,7 +83,7 @@ import Testing;
 			let input = "Top = 3Rule\r\nRule = \"C\"\r\n";
 			let expression = ABNFRulelist<UInt8>.parse(input.utf8)!
 			#expect(expression.alphabet == Set([0x43]))
-			#expect(expression.alphabetPartitions == Set([ Set([0x43]) ]))
+			#expect(expression.alphabetPartitions == Set([ [0x43] ]))
 		}
 
 		@Test("rulelist.toPattern with incremental rules")
@@ -92,15 +92,27 @@ import Testing;
 			let expression = ABNFRulelist<UInt16>.parse(abnf.utf8)!
 			#expect(expression.alphabet == Set([0x20, 0x30]))
 			// This is is the most tricky to do correctly
-			#expect(expression.alphabetPartitions == Set([ Set([0x20, 0x30]) ]))
+			#expect(expression.alphabetPartitions == Set([ [0x20, 0x30] ]))
 		}
 
 		@Test("num-val")
 		func test_numVal_range() async throws {
 			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39))
-			print(expression.alphabetPartitions())
 			#expect(expression.alphabet() == Set(0x30...0x39))
 			#expect(expression.alphabetPartitions() == Set([ Set(0x30...0x39) ]))
+		}
+
+		@Test("recursion")
+		func test_rulelist_repetition() async throws {
+			let expression = ABNFRulelist<UInt8>(rules: [
+				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
+					ABNFCharVal(sequence: [0x40, 0x41]).repetition,
+					ABNFRulename(label: "rule").repetition,
+					ABNFNumVal(base: .hex, value: .range(0x41...0x43)).repetition,
+				]).alternation)
+			]);
+			#expect(expression.alphabet == [0x40, 0x41, 0x42, 0x43])
+			#expect(expression.alphabetPartitions == Set([ [0x40], [0x41], [0x42, 0x43] ]))
 		}
 	}
 	@Suite("match") struct ABNFTest_match {
