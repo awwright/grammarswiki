@@ -1,5 +1,4 @@
 // TODO:
-// - Show files from custom home directory, allow creating and renaming custom files
 // - Open files from any path, as a document view
 // - Accordion/disclosure group for different views on the file
 // - Replace text editor with a real code editor
@@ -7,6 +6,7 @@
 // - Auto-completion of rule names
 // - Import rules from other documents
 // - Limit text field to accepted characters, use a multi-line field if \n is permitted; use \r\n for newlines when \r is permitted
+// - Search feature for catalog
 
 import SwiftUI
 import FSM
@@ -21,13 +21,13 @@ struct ContentView: View {
 				Section("Saved") {
 					ForEach(Array(model.user.values), id: \.self) {
 						document in
-						NavigationLink(document.name, value: document)
+						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }))
 					}
 				}
 				Section("Catalog") {
 					ForEach(model.catalog, id: \.self) {
 						document in
-						NavigationLink(document.name, value: document)
+						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }))
 					}
 				}
 			}
@@ -56,7 +56,7 @@ struct ContentView: View {
 						}
 					) : Binding(
 						get: { model.user[selectedDocument.id]! },
-						set: { model.user[selectedDocument.id] = $0 }
+						set: { model.addDocument($0) }
 					);
 				DocumentDetail(document: binding)
 					.navigationTitle(selectedDocument.name)
@@ -75,6 +75,28 @@ struct ContentView: View {
 			model.addDocument(newDocument)
 			selection = newDocument
 		}
+	}
+}
+
+struct DocumentItemView: View {
+	@Binding var document: DocumentItem
+	@State private var isRenaming: Bool = false
+	@State private var draftName: String = ""
+	var body: some View {
+		NavigationLink(value: document, label: {
+			if isRenaming {
+				TextField("Name", text: $draftName, onCommit: {
+					document.name = draftName
+					isRenaming = false
+				})
+			} else {
+				Text(document.name)
+					.onTapGesture {
+						draftName = document.name // Initialize with current name
+						isRenaming = true
+					}
+			}
+		})
 	}
 }
 
