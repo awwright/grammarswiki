@@ -1,7 +1,7 @@
 // TODO:
-// - Replace text editor with a real code editor
 // - Parsing errors, show the unexpected character and the permitted characters for that position
 // - Auto-completion of rule names
+// - Show tab of alternative forms of the document
 // - Import rules from other documents
 // - Limit text field to accepted characters, use a multi-line field if \n is permitted; use \r\n for newlines when \r is permitted
 // - Search feature for catalog
@@ -11,6 +11,8 @@
 
 import SwiftUI
 import FSM
+import CodeEditorView
+import LanguageSupport
 
 struct ContentView: View {
 	@Binding var model: AppModel
@@ -83,6 +85,7 @@ struct DocumentItemView: View {
 	@Binding var document: DocumentItem
 	@State private var isRenaming: Bool = false
 	@State private var draftName: String = ""
+
 	var body: some View {
 		NavigationLink(value: document, label: {
 			if isRenaming {
@@ -92,10 +95,6 @@ struct DocumentItemView: View {
 				})
 			} else {
 				Text(document.name)
-					.onTapGesture {
-						draftName = document.name // Initialize with current name
-						isRenaming = true
-					}
 			}
 		})
 	}
@@ -115,15 +114,32 @@ struct DocumentDetail: View {
 	@State private var parseError: String? = nil
 	@State private var testResult: String? = nil
 
+	// Code editor variables
+	@State private var position: CodeEditor.Position       = CodeEditor.Position()
+	@State private var messages: Set<TextLocated<Message>> = [] // For syntax errors or annotations
+	@State private var selectionLink: NSRange? = nil // For linking rule to definition
+	@Environment(\.colorScheme) private var colorScheme: ColorScheme
+
 	var body: some View {
 		HStack(spacing: 20) {
 			VStack(alignment: .leading) {
+				// Some views that were considered for this:
+				// - Builtin TextEditor - would be sufficient except it automatically curls quotes and there's no way to disable it
+				// - https://github.com/krzyzanowskim/STTextView - more like a text field, lacks code highlighting, instead wants an AttributedString, though maybe that's what I want
+				// - https://github.com/CodeEditApp/CodeEditSourceEditor - This requires ten thousand different properties I don't know how to set
+				// - https://github.com/mchakravarty/CodeEditorView - This one
 				Text("ABNF Grammar")
 					.font(.headline)
-				TextEditor(text: $document.content)
-					.border(Color.gray, width: 1)
-					.font(Font.system(.body, design: .monospaced))
-					.autocorrectionDisabled(true)
+
+				CodeEditor(
+					text: $document.content,
+					position: $position,
+					messages: $messages,
+					language: abnfLanguageConfiguration()
+				)
+				.environment(\.codeEditorTheme, colorScheme == .dark ? Theme.defaultDark : Theme.defaultLight)
+				.frame(minHeight: 300)
+				.font(.system(size: 14, design: .monospaced))
 
 				if let error = parseError {
 					Text("Parse Error: \(error)")
@@ -201,11 +217,9 @@ struct DocumentDetail: View {
 		}
 		.padding()
 		.onChange(of: document.content) {
-			// Update rulelist when document text changes
 			updateRulelist(document.content)
 		}
 		.onAppear {
-			// Initial parse when view appears
 			updateRulelist(document.content)
 		}
 	}
@@ -272,4 +286,22 @@ struct DocumentDetail: View {
 			testResult = "Rejected"
 		}
 	}
+
+    // Simplified ABNF language configuration
+    private func abnfLanguageConfiguration() -> LanguageConfiguration {
+		 LanguageConfiguration(
+			name: "ABNF",
+			supportsSquareBrackets: true,
+			supportsCurlyBrackets: false,
+			stringRegex: try! Regex("\"[^\"]*\""),
+			characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
+			numberRegex: try! Regex("[1-9][0-9]*"),
+			singleLineComment: ";",
+			nestedComment: nil,
+			identifierRegex: try! Regex("[0-9A-Za-z-]+"),
+			operatorRegex: try! Regex("\"[^\"]*\""),
+			reservedIdentifiers: [],
+			reservedOperators: ["/", "*", "=", "=/"]
+		 )
+    }
 }
