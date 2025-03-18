@@ -35,7 +35,7 @@ func abnf_to_regex(arguments: Array<String>){
 	let importedDict = importedRulelist.toPattern(as: DFA<Array<UInt8>>.self, rules: builtins).mapValues { $0.minimized() }
 
 	print("Parse expression...");
-	let expression = ABNFAlternation<Char>.parse(arguments[expressionIndex].utf8);
+	let expression = ABNFAlternation<UInt8>.parse(arguments[expressionIndex].utf8);
 	guard let expression else {
 		print("Could not parse input")
 		return;
