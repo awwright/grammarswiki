@@ -80,19 +80,31 @@ import Testing;
 
 		@Test("rulelist.toPattern with rule")
 		func test_rulelist_2() async throws {
-			let input = "Top = 3Rule\r\nRule = \"C\"\r\n";
-			let expression = ABNFRulelist<UInt8>.parse(input.utf8)!
+			let expression = ABNFRulelist<UInt8>(rules: [
+				ABNFRule(rulename: ABNFRulename<UInt8>(label: "Top"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
+					ABNFRepetition(min: 3, max: 3, element: ABNFRulename(label: "Rule").element)
+				]).alternation),
+				ABNFRule(rulename: ABNFRulename<UInt8>(label: "Rule"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
+					ABNFCharVal(sequence: [0x43]).repetition
+				]).alternation),
+			]);
 			#expect(expression.alphabet == Set([0x43]))
 			#expect(expression.alphabetPartitions == Set([ [0x43] ]))
 		}
 
 		@Test("rulelist.toPattern with incremental rules")
 		func test_rulelist_incremental() async throws {
-			let abnf = "rule = %x20\r\nrule =/ %x30\r\n"
-			let expression = ABNFRulelist<UInt16>.parse(abnf.utf8)!
-			#expect(expression.alphabet == Set([0x20, 0x30]))
+			let expression = ABNFRulelist<UInt32>(rules: [
+				ABNFRule(rulename: ABNFRulename<UInt32>(label: "Top"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
+					ABNFNumVal<UInt32>(base: .hex, value: .sequence([0x12345678])).repetition
+				]).alternation),
+				ABNFRule(rulename: ABNFRulename<UInt32>(label: "Top"), definedAs: .incremental, alternation: ABNFConcatenation(repetitions: [
+					ABNFCharVal(sequence: [0x63]).repetition
+				]).alternation),
+			]);
+			#expect(expression.alphabet == Set([0x63, 0x12345678]))
 			// This is is the most tricky to do correctly
-			#expect(expression.alphabetPartitions == Set([ [0x20, 0x30] ]))
+			#expect(expression.alphabetPartitions == Set([ [0x63, 0x12345678] ]))
 		}
 
 		@Test("num-val")
@@ -115,12 +127,12 @@ import Testing;
 			#expect(expression.alphabetPartitions == Set([ [0x40], [0x41], [0x42, 0x43] ]))
 		}
 	}
-	@Suite("match") struct ABNFTest_match {
+	@Suite("match/parse") struct ABNFTest_match {
 		@Test("rulelist")
 		func test_rulelist() async throws {
 			let abnf = "rule1 = foo\r\nrule2 = \r\n\tfoo\r\nanother"
-			let (rule, remainder) = ABNFRulelist<UInt8>.match(abnf.utf8)!
-			let (inner, _) = ABNFAlternation<UInt8>.match("foo".utf8)!
+			let (rule, remainder) = try ABNFRulelist<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFAlternation<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFRulelist<UInt8>(rules: [
 				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule1"), definedAs: .equal, alternation: inner),
 				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule2"), definedAs: .equal, alternation: inner),
@@ -131,7 +143,7 @@ import Testing;
 		@Test("rulelist incremental")
 		func test_rulelist_incremental() async throws {
 			let abnf = "rule = %x20\r\nrule =/ %x30\r\n..."
-			let (rulelist, remainder) = ABNFRulelist<UInt8>.match(abnf.utf8)!
+			let (rulelist, remainder) = try ABNFRulelist<UInt8>.match(abnf.utf8)!
 			#expect(rulelist == ABNFRulelist<UInt8>(rules: [
 				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).alternation),
 				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .incremental, alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30])).alternation),
@@ -148,8 +160,8 @@ import Testing;
 		@Test("rule")
 		func test_rule() async throws {
 			let abnf = "foo = bar\r\nanother"; // Must contain trailing \r\n, escape this for cross-platform reasons
-			let (rule, remainder) = ABNFRule<UInt8>.match(abnf.utf8)!
-			let (inner, _) = ABNFAlternation<UInt8>.match("bar".utf8)!
+			let (rule, remainder) = try ABNFRule<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFAlternation<UInt8>.parse("bar".utf8)
 			#expect(rule == ABNFRule(rulename: ABNFRulename<UInt8>(label: "foo"), definedAs: .equal, alternation: inner));
 			#expect(CHAR_string(remainder) == "another");
 		}
@@ -172,8 +184,8 @@ import Testing;
 		@Test("alternation of single rulename")
 		func test_alternation_rulename() async throws {
 			let abnf = "foo )";
-			let (rule, remainder) = ABNFAlternation<UInt8>.match(abnf.utf8)!
-			let (inner, _) = ABNFConcatenation<UInt8>.match("foo".utf8)!
+			let (rule, remainder) = try! ABNFAlternation<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFConcatenation<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFAlternation<UInt8>(matches: [inner]));
 			#expect(CHAR_string(remainder) == " )");
 			#expect(rule.alternation == rule)
@@ -188,8 +200,8 @@ import Testing;
 		@Test("alternation of two rulenames")
 		func test_alternation_rulename2() async throws {
 			let abnf = "foo / foo )";
-			let (rule, remainder) = ABNFAlternation<UInt8>.match(abnf.utf8)!
-			let (inner, _) = ABNFConcatenation<UInt8>.match("foo".utf8)!
+			let (rule, remainder) = try! ABNFAlternation<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFConcatenation<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFAlternation<UInt8>(matches: [inner, inner]));
 			#expect(CHAR_string(remainder) == " )");
 			#expect(rule.alternation == rule)
@@ -204,8 +216,8 @@ import Testing;
 		@Test("concatenation of single rulename")
 		func test_concatenation() async throws {
 			let abnf = "foo ";
-			let (rule, remainder) = ABNFConcatenation<UInt8>.match(abnf.utf8)!
-			let (inner, _) = ABNFRepetition<UInt8>.match("foo".utf8)!
+			let (rule, remainder) = try! ABNFConcatenation<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFRepetition<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFConcatenation<UInt8>(repetitions: [inner]));
 			#expect(CHAR_string(remainder) == " ");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -220,9 +232,9 @@ import Testing;
 		@Test("concatenation of two rulenames")
 		func test_concatenation_rulename2() async throws {
 			let abnf = "foo bar ";
-			let (rule, remainder) = ABNFConcatenation<UInt8>.match(abnf.utf8)!
-			let inner1 = ABNFRepetition<UInt8>.parse("foo".utf8)!
-			let inner2 = ABNFRepetition<UInt8>.parse("bar".utf8)!
+			let (rule, remainder) = try! ABNFConcatenation<UInt8>.match(abnf.utf8)!
+			let inner1 = try! ABNFRepetition<UInt8>.parse("foo".utf8)
+			let inner2 = try! ABNFRepetition<UInt8>.parse("bar".utf8)
 			#expect(rule == ABNFConcatenation<UInt8>(repetitions: [inner1, inner2]));
 			#expect(CHAR_string(remainder) == " ");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -237,7 +249,7 @@ import Testing;
 		@Test("repetition 0")
 		func test_repetition_0() async throws {
 			let abnf = "0foo ...";
-			let (rule, remainder) = ABNFRepetition<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: 0, element: ABNFRulename<UInt8>(label: "foo").element));
 			#expect(CHAR_string(remainder) == " ...");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -251,9 +263,9 @@ import Testing;
 
 		@Test("repetition 1")
 		func test_repetition_1() async throws {
-			let (foo, _) = ABNFElement<UInt8>.match("foo".utf8)!;
+			let foo = try! ABNFElement<UInt8>.parse("foo".utf8);
 			let abnf = "foo ";
-			let (rule, remainder) = ABNFRepetition<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 1, max: 1, element: foo));
 			#expect(CHAR_string(remainder) == " ");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -267,14 +279,14 @@ import Testing;
 
 		@Test("repetition min")
 		func test_repetition_2() async throws {
-			let (foo, _) = ABNFElement<UInt8>.match("foo".utf8)!;
+			let foo = try! ABNFElement<UInt8>.parse("foo".utf8);
 			let abnf = "1*foo ";
-			let (rule, remainder) = ABNFRepetition<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 1, max: nil, element: foo));
 			#expect(CHAR_string(remainder) == " ");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
 			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFRulename<UInt8>.parse("foo".utf8)!.element))
+			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFRulename<UInt8>(label: "foo").element))
 			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == false)
@@ -283,14 +295,14 @@ import Testing;
 
 		@Test("repetition max")
 		func test_repetition_3() async throws {
-			let (foo, _) = ABNFElement<UInt8>.match("foo".utf8)!;
+			let foo = try! ABNFElement<UInt8>.parse("foo".utf8);
 			let abnf = "*4foo ";
-			let (rule, remainder) = ABNFRepetition<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: 4, element: foo));
 			#expect(CHAR_string(remainder) == " ");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
 			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 0, max: 4, element: ABNFRulename<UInt8>.parse("foo".utf8)!.element))
+			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 0, max: 4, element: ABNFRulename<UInt8>(label: "foo").element))
 			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == false)
@@ -299,14 +311,14 @@ import Testing;
 
 		@Test("repetition min/max")
 		func test_repetition_4() async throws {
-			let (foo, _) = ABNFElement<UInt8>.match("foo".utf8)!;
+			let foo = try! ABNFElement<UInt8>.parse("foo".utf8);
 			let abnf = "2*4foo ";
-			let (rule, remainder) = ABNFRepetition<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 2, max: 4, element: foo));
 			#expect(CHAR_string(remainder) == " ");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
 			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 2, max: 4, element: ABNFRulename<UInt8>.parse("foo".utf8)!.element))
+			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 2, max: 4, element: ABNFRulename<UInt8>(label: "foo").element))
 			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == false)
@@ -317,7 +329,7 @@ import Testing;
 		@Test("element of rulename")
 		func test_element_rulename() async throws {
 			let abnf = "foo";
-			let (rule, remainder) = ABNFElement<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -332,7 +344,7 @@ import Testing;
 		@Test("element of group of alternation")
 		func test_element_group_alternation() async throws {
 			let abnf = "(foo / bar) ...";
-			let (rule, remainder) = ABNFElement<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			let concatenation1 = ABNFConcatenation<UInt8>(repetitions: [ABNFRepetition<UInt8>(min: 1, max: 1, element: ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")))]);
 			let concatenation2 = ABNFConcatenation<UInt8>(repetitions: [ABNFRepetition<UInt8>(min: 1, max: 1, element: ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "bar")))]);
 			#expect(rule == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: ABNFAlternation<UInt8>(matches: [
@@ -352,7 +364,7 @@ import Testing;
 		@Test("element of group of concatenation")
 		func test_element_group_concatenation() async throws {
 			let abnf = "(foo bar) ...";
-			let (rule, remainder) = ABNFElement<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			let repetition1 = ABNFRepetition<UInt8>(min: 1, max: 1, element: ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")));
 			let repetition2 = ABNFRepetition<UInt8>(min: 1, max: 1, element: ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "bar")));
 			#expect(rule == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: ABNFAlternation<UInt8>(matches: [ABNFConcatenation<UInt8>(repetitions: [repetition1, repetition2])]))));
@@ -369,7 +381,7 @@ import Testing;
 		@Test("element of group of rulename")
 		func test_element_group_rulename() async throws {
 			let abnf = "(foo) ...";
-			let (rule, remainder) = ABNFElement<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: ABNFAlternation<UInt8>(matches: [ABNFConcatenation<UInt8>(repetitions: [ABNFRepetition<UInt8>(min: 1, max: 1, element: ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")))])]))));
 			#expect(CHAR_string(remainder) == " ...");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -384,7 +396,7 @@ import Testing;
 		@Test("element of option")
 		func test_element_option() async throws {
 			let abnf = "[foo]";
-			let (rule, remainder) = ABNFElement<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.option(ABNFOption<UInt8>(optionalAlternation: ABNFAlternation<UInt8>(matches: [ABNFConcatenation<UInt8>(repetitions: [ABNFRepetition<UInt8>(min: 1, max: 1, element: ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")))])]))));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -399,7 +411,7 @@ import Testing;
 		@Test("element of charVal")
 		func test_element_charVal() async throws {
 			let abnf = "\" \"-";
-			let (rule, remainder) = ABNFElement<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.charVal(ABNFCharVal<UInt8>(sequence: [0x20])));
 			#expect(CHAR_string(remainder) == "-");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -414,7 +426,7 @@ import Testing;
 		@Test("element of numval")
 		func test_element_numVal() async throws {
 			let abnf = "%x31";
-			let (rule, remainder) = ABNFElement<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.numVal(ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x31]))));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -429,7 +441,7 @@ import Testing;
 		@Test("element of proseVal")
 		func test_element_proseVal() async throws {
 			let abnf = "<Plain text description>";
-			let (rule, remainder) = ABNFElement<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.proseVal(ABNFProseVal<UInt8>(remark: "Plain text description")));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -445,8 +457,8 @@ import Testing;
 		func test_group_empty() async throws {
 			// An expression that can be reduced by eliminating the group
 			let abnf = "( 0<> )";
-			let (rule, remainder) = ABNFGroup<UInt8>.match(abnf.utf8)!
-			let inner = ABNFAlternation<UInt8>.parse("0<>".utf8)!
+			let (rule, remainder) = try! ABNFGroup<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFAlternation<UInt8>.parse("0<>".utf8)
 			#expect(rule == ABNFGroup<UInt8>(alternation: inner));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == inner)
@@ -462,8 +474,8 @@ import Testing;
 		func test_group_rulename() async throws {
 			// An expression that can be reduced by eliminating the group
 			let abnf = "( foo )";
-			let (rule, remainder) = ABNFGroup<UInt8>.match(abnf.utf8)!
-			let (inner, _) = ABNFAlternation<UInt8>.match("foo".utf8)!
+			let (rule, remainder) = try! ABNFGroup<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFAlternation<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFGroup<UInt8>(alternation: inner));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == inner)
@@ -479,8 +491,8 @@ import Testing;
 		func test_group_alternation() async throws {
 			// And an expression that cannot be reduced by eliminating the group
 			let abnf = "( foo / bar ) ...";
-			let (rule, remainder) = ABNFGroup<UInt8>.match(abnf.utf8)!
-			let inner = ABNFAlternation<UInt8>.parse("foo / bar".utf8)!
+			let (rule, remainder) = try! ABNFGroup<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFAlternation<UInt8>.parse("foo / bar".utf8)
 			#expect(rule == ABNFGroup<UInt8>(alternation: inner));
 			#expect(CHAR_string(remainder) == " ...");
 			#expect(rule.alternation == inner)
@@ -496,8 +508,8 @@ import Testing;
 		func test_group_concatenation() async throws {
 			// And an expression that cannot be reduced by eliminating the group
 			let abnf = "( foo bar ) ...";
-			let (rule, remainder) = ABNFGroup<UInt8>.match(abnf.utf8)!
-			let inner = ABNFConcatenation<UInt8>.parse("foo bar".utf8)!
+			let (rule, remainder) = try! ABNFGroup<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFConcatenation<UInt8>.parse("foo bar".utf8)
 			#expect(rule == ABNFGroup<UInt8>(alternation: ABNFAlternation<UInt8>(matches: [inner])));
 			#expect(CHAR_string(remainder) == " ...");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [inner]))
@@ -512,8 +524,8 @@ import Testing;
 		@Test("option")
 		func test_option() async throws {
 			let abnf = "[ foo ] ...";
-			let (rule, remainder) = ABNFOption<UInt8>.match(abnf.utf8)!
-			let (inner, _) = ABNFAlternation<UInt8>.match("foo".utf8)!
+			let (rule, remainder) = try! ABNFOption<UInt8>.match(abnf.utf8)!
+			let inner = try! ABNFAlternation<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFOption<UInt8>(optionalAlternation: inner));
 			#expect(CHAR_string(remainder) == " ...");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -531,7 +543,7 @@ import Testing;
 			let abnf = """
 			"foo"
 			""";
-			let (rule, remainder) = ABNFCharVal<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFCharVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFCharVal<UInt8>(sequence: "foo".utf8));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -546,7 +558,7 @@ import Testing;
 		@Test("num-val w/ bin-val")
 		func test_bin_val() async throws {
 			let abnf = "%b100000.100000";
-			let (rule, remainder) = ABNFNumVal<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFNumVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFNumVal<UInt8>(base: .bin, value: .sequence([0x20, 0x20])));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -561,7 +573,7 @@ import Testing;
 		@Test("num-val w/ dec-val")
 		func test_dec_val() async throws {
 			let abnf = "%d32.32";
-			let (rule, remainder) = ABNFNumVal<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFNumVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFNumVal<UInt8>(base: .dec, value: .sequence([0x20, 0x20])));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -576,7 +588,7 @@ import Testing;
 		@Test("num-val w/ hex-val")
 		func test_hex_val() async throws {
 			let abnf = "%x20.20";
-			let (rule, remainder) = ABNFNumVal<UInt8>.match(abnf.utf8)!
+			let (rule, remainder) = try! ABNFNumVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20, 0x20])));
 			#expect(CHAR_string(remainder) == "");
 			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
@@ -591,7 +603,7 @@ import Testing;
 		@Test("prose_val")
 		func test_prose_val() async throws {
 			let input = "<Some message> 123".utf8;
-			let (prose, remainder) = ABNFProseVal<UInt8>.match(input)!
+			let (prose, remainder) = try! ABNFProseVal<UInt8>.match(input)!
 			#expect(prose == ABNFProseVal<UInt8>(remark: "Some message"));
 			#expect(CHAR_string(remainder) == " 123");
 			#expect(prose.alternation == ABNFAlternation<UInt8>(matches: [prose.concatenation]))
@@ -612,16 +624,17 @@ import Testing;
 				ABNFCharVal(sequence: "C".utf8).element.repeating(3).concatenation,
 			])
 			let mapped = expression.mapSymbols({ UInt16($0) });
-			#expect(mapped.toPattern(as: DFA<Array<UInt16>>.self).contains("A".utf16));
+			#expect(try mapped.toPattern(as: DFA<Array<UInt16>>.self).contains("A".utf16));
 		}
 
 		@Test("To lowercase")
 		func test_repetition_optional() async throws {
-			let input = "[%x43]";
-			let (expression, _) = ABNFRepetition<UInt8>.match(input.utf8)!
+			let input = "[%x43] ...";
+			let (expression, remainder) = try! ABNFRepetition<UInt8>.match(input.utf8)!
+			#expect(CHAR_string(remainder) == " ...")
 			// Make it lowercase
 			let mapped = expression.mapSymbols { (0x41...0x5A).contains($0) ? ($0 + 0x20) : $0 }
-			let fsm: DFA<Array<UInt8>> = mapped.toPattern();
+			let fsm: DFA<Array<UInt8>> = try mapped.toPattern();
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("c".utf8));
 			#expect(!fsm.contains("C".utf8));
@@ -635,16 +648,16 @@ import Testing;
 		@Test("num-val range")
 		func test_numVal_range() async throws {
 			let input = "%x30-39";
-			let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
-			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			let expression = try! ABNFAlternation<UInt8>.parse(input.utf8)
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
 
 		@Test("num-val sequence")
 		func test_numVal_sequence() async throws {
 			let input = "%x30-39";
-			let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
-			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			let expression = try! ABNFAlternation<UInt8>.parse(input.utf8)
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
 	}
@@ -671,17 +684,15 @@ import Testing;
 
 		@Test("num-val range")
 		func test_numVal_range() async throws {
-			let input = "%x30-39";
-			let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
-			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).alternation
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
 
 		@Test("num-val sequence")
 		func test_numVal_sequence() async throws {
-			let input = "%x30-39";
-			let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
-			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).alternation
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
 
@@ -699,7 +710,7 @@ import Testing;
 				ABNFCharVal(sequence: "B".utf8).concatenation,
 				ABNFCharVal(sequence: "C".utf8).element.repeating(3).concatenation,
 			])
-			let fsm = expression.toPattern(as: DFA<Array<UInt8>>.self);
+			let fsm = try expression.toPattern(as: DFA<Array<UInt8>>.self);
 			#expect(fsm.contains("A".utf8));
 		}
 
@@ -707,7 +718,7 @@ import Testing;
 		func test_repetition_optional_toPattern() async throws {
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(!fsm.contains("CC".utf8));
@@ -717,7 +728,7 @@ import Testing;
 		func test_repetition_plus_toPattern() async throws {
 			// 1*"C"
 			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
@@ -727,7 +738,7 @@ import Testing;
 		func test_repetition_star_toPattern() async throws {
 			// *"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
@@ -737,7 +748,7 @@ import Testing;
 		func test_repetition_min_toPattern() async throws {
 			// 2*"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
 			#expect(fsm.contains("CCC".utf8));
@@ -747,7 +758,7 @@ import Testing;
 		func test_repetition_max_toPattern() async throws {
 			// *2"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
@@ -758,7 +769,7 @@ import Testing;
 		func test_repetition_minmax_toPattern() async throws {
 			// 2*3"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
 			#expect(fsm.contains("CCC".utf8));
@@ -769,7 +780,7 @@ import Testing;
 		func test_element_toPattern() async throws {
 			// "C"
 			let expression = ABNFElement.charVal(ABNFCharVal<UInt8>(sequence: "C".utf8))
-			let fsm: DFA<Array<UInt8>> = expression.toPattern(rules: [:]);
+			let fsm: DFA<Array<UInt8>> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("C".utf8));
 		}
 
@@ -783,20 +794,33 @@ import Testing;
 
 		@Test("rulelist.toPattern with rule")
 		func test_rulelist_toPattern_2() async throws {
-			let input = "Top = 3Rule\r\nRule = \"C\"\r\n";
-			let expression = ABNFRulelist<UInt8>.parse(input.utf8)!
-			let fsm: Dictionary<String, DFA<Array<UInt8>>> = expression.toPattern(rules: [:]);
+			let expression = ABNFRulelist<UInt8>(rules: [
+				ABNFRule(rulename: ABNFRulename<UInt8>(label: "Top"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
+					ABNFRepetition(min: 3, max: 3, element: ABNFRulename(label: "Rule").element)
+				]).alternation),
+				ABNFRule(rulename: ABNFRulename<UInt8>(label: "Rule"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
+					ABNFCharVal(sequence: [0x63]).repetition
+				]).alternation),
+			]);
+			let fsm: Dictionary<String, DFA<Array<UInt8>>> = try expression.toPattern(rules: [:]);
 			#expect(fsm["Top"]!.contains("CCC".utf8));
 		}
 
 		@Test("rulelist.toPattern with incremental rules")
 		func test_rulelist_toPattern_incremental() async throws {
-			let abnf = "rule = %x20\r\nrule =/ %x30\r\n"
-			let expression = ABNFRulelist<UInt16>.parse(abnf.utf8)!
-			let fsm: Dictionary<String, DFA<Array<UInt16>>> = expression.toPattern(rules: [:]);
-			#expect(fsm["rule"]!.contains(" ".utf16));
-			#expect(fsm["rule"]!.contains("0".utf16));
-			#expect(fsm["rule"]!.contains("1".utf16) == false);
+			let expression = ABNFRulelist<UInt16>(rules: [
+				ABNFRule(rulename: ABNFRulename<UInt16>(label: "Top"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
+					ABNFNumVal<UInt16>(base: .hex, value: .sequence([0x20])).repetition
+				]).alternation),
+				ABNFRule(rulename: ABNFRulename<UInt16>(label: "Top"), definedAs: .incremental, alternation: ABNFConcatenation(repetitions: [
+					ABNFCharVal(sequence: [0x30]).repetition
+				]).alternation),
+			]);
+			let fsm: Dictionary<String, DFA<Array<UInt16>>> = try expression.toPattern(rules: [:]);
+			let rule = try #require(fsm["Top"]);
+			#expect(rule.contains(" ".utf16));
+			#expect(rule.contains("0".utf16));
+			#expect(rule.contains("1".utf16) == false);
 		}
 
 		@Test("num-val")
@@ -809,78 +833,76 @@ import Testing;
 	@Suite("union") struct ABNFTest_union {
 		@Test("rulename / rulename")
 		func test_union_rulename() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("bar".utf8)!;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").alternation;
+			let expr2 = ABNFRulename<UInt8>(label: "bar").alternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "foo bar");
 		}
 		@Test("rulename / rulename")
 		func test_union_rulename_homogeneous() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("foo".utf8)!;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").alternation;
+			let expr2 = ABNFRulename<UInt8>(label: "foo").alternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "foo");
 		}
 		@Test("alternation / alternation")
 		func test_union_alternation() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("foo/bar".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("alice/bob".utf8)!;
+			let expr1 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "foo").concatenation, ABNFRulename(label: "bar").concatenation]); // foo/bar
+			let expr2 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "alice").concatenation, ABNFRulename(label: "bob").concatenation]); // alice/bob
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "foo / bar / alice / bob");
 		}
 
 		@Test("concatenation / concatenation")
 		func test_union_concatenation() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("a b".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("c d".utf8)!;
+			let expr1 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "a").repetition, ABNFRulename(label: "b").repetition]).alternation; // a b
+			let expr2 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "c").repetition, ABNFRulename(label: "d").repetition]).alternation; // c d
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "a b / c d");
 		}
 
 		@Test("repetition / repetition (heterogeneous)")
 		func test_union_repetition_0() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("2foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("2bar".utf8)!;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
+			let expr2 = ABNFRulename<UInt8>(label: "bar").element.repeating(2).alternation
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "2foo / 2bar");
 		}
 
 		@Test("repetition / repetition (homogeneous)")
 		func test_union_repetition_1() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("foo".utf8)!;
-			let expression = expr1.union(expr2);
+			let expr = ABNFRulename<UInt8>(label: "foo").alternation
+			let expression = expr.union(expr);
 			#expect(expression.description == "foo");
 		}
 
 		@Test("repetition / repetition (homogeneous)")
 		func test_union_repetition_2() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("2foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("2foo".utf8)!;
-			let expression = expr1.union(expr2);
+			let expr = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
+			let expression = expr.union(expr);
 			#expect(expression.description == "2foo");
 		}
 
 		@Test("repetition / repetition (homogeneous 2)")
 		func test_union_repetition_3() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("2*foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("2foo".utf8)!;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").element.repeating(2...).alternation
+			let expr2 = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "2*foo");
 		}
 
 		@Test("group / group (rulename)")
 		func test_union_group() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("(foo)".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("(bar)".utf8)!;
+			let expr1 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "foo").alternation).alternation;
+			let expr2 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "bar").alternation).alternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "foo / bar");
 		}
 
 		@Test("option / option (rulename)")
 		func test_union_option() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("[foo]".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("[bar]".utf8)!;
+			let expr1 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "foo").alternation).alternation;
+			let expr2 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "bar").alternation).alternation;
 			let expression = expr1.union(expr2);
 			 #expect(expression.description == "[foo] / [bar]");
 			// TODO: Should look like this:
@@ -889,32 +911,32 @@ import Testing;
 
 		@Test("charVal / charVal")
 		func test_union_charVal() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("\"foo\"".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("\"bar\"".utf8)!;
+			let expr1 = ABNFCharVal(sequence: "foo".utf8).alternation;
+			let expr2 = ABNFCharVal(sequence: "bar".utf8).alternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "\"foo\" / \"bar\"");
 		}
 
 		@Test("numVal / numVal (sequence 1)")
 		func test_union_numVal_sequence() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("%x20".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("%x21".utf8)!;
+			let expr1 = ABNFNumVal(base: .hex, value: .sequence([0x20])).alternation;
+			let expr2 = ABNFNumVal(base: .hex, value: .sequence([0x21])).alternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "%x20-21");
 		}
 
 		@Test("numVal / numVal (sequence 2)")
 		func test_union_numVal_sequence_2() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("%x20".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("%x22".utf8)!;
+			let expr1 = ABNFNumVal(base: .hex, value: .sequence([0x20])).alternation;
+			let expr2 = ABNFNumVal(base: .hex, value: .sequence([0x22])).alternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "%x20 / %x22");
 		}
 
 		@Test("numVal / numVal (range)")
 		func test_union_numVal_range() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("%x20-21".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("%x30-39".utf8)!;
+			let expr1 = ABNFNumVal(base: .hex, value: .range(0x20...0x21)).alternation;
+			let expr2 = ABNFNumVal(base: .hex, value: .range(0x30...0x39)).alternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "%x20-21 / %x30-39");
 		}
@@ -922,8 +944,8 @@ import Testing;
 		@Test("numVal range 2")
 		func test_union_numVal_2() async throws {
 			// Put it out of order just to see if it matches them
-			let matches = ["%x20", "%x29", "%x22", "%x27", "%x24", "%x25", "%x26", "%x23", "%x28", "%x21"].map {
-				ABNFAlternation<UInt8>.parse($0.utf8)!
+			let matches = Array<UInt8>([0x20, 0x29, 0x22, 0x27, 0x24, 0x25, 0x26, 0x23, 0x28, 0x21]).map {
+				ABNFNumVal<UInt8>(base: .hex, value: .sequence([$0])).alternation
 			}
 			let expression = ABNFAlternation<UInt8>.union(matches)
 			#expect(expression.description == "%x20-29");
@@ -931,17 +953,17 @@ import Testing;
 
 		@Test("numVal range 3")
 		func test_union_union_2() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("%x30-32".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("%x37-39".utf8)!;
-			let expr3 = ABNFAlternation<UInt8>.parse("%x33-35".utf8)!;
+			let expr1 = try! ABNFAlternation<UInt8>.parse("%x30-32".utf8);
+			let expr2 = try! ABNFAlternation<UInt8>.parse("%x37-39".utf8);
+			let expr3 = try! ABNFAlternation<UInt8>.parse("%x33-35".utf8);
 			let expression = ABNFAlternation<UInt8>.union([expr1, expr2, expr3])
 			#expect(expression.description == "%x30-35 / %x37-39");
 		}
 
 		@Test("proseVal / proseVal")
 		func test_union_proseVal() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("<foo>".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("<bar>".utf8)!;
+			let expr1 = ABNFProseVal<UInt8>(remark: "foo").alternation;
+			let expr2 = ABNFProseVal<UInt8>(remark: "bar").alternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "<foo> / <bar>");
 		}
@@ -949,115 +971,122 @@ import Testing;
 	@Suite("concatenate") struct ABNFTest_concatenate {
 		@Test("rulename ++ rulename")
 		func test_concatenate_rulename() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("bar".utf8)!;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").alternation;
+			let expr2 = ABNFRulename<UInt8>(label: "bar").alternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "foo bar");
 		}
 		@Test("alternation ++ alternation")
 		func test_concatenate_alternation() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("foo/bar".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("alice/bob".utf8)!;
+			let expr1 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "foo").concatenation, ABNFRulename(label: "bar").concatenation]); // foo/bar
+			let expr2 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "alice").concatenation, ABNFRulename(label: "bob").concatenation]); // alice/bob
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "(foo / bar) (alice / bob)");
 		}
 
 		@Test("concatenation ++ concatenation")
 		func test_concatenate_concatenation() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("a b".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("c d".utf8)!;
+			let expr1 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "a").repetition, ABNFRulename(label: "b").repetition]).alternation; // a b
+			let expr2 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "c").repetition, ABNFRulename(label: "d").repetition]).alternation; // c d
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "a b c d");
 		}
 
 		@Test("repetition ++ repetition (heterogeneous)")
 		func test_concatenate_repetition_0() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("2foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("2bar".utf8)!;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
+			let expr2 = ABNFRulename<UInt8>(label: "bar").element.repeating(2).alternation
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "2foo 2bar");
 		}
 
 		@Test("repetition ++ repetition (homogeneous)")
 		func test_concatenate_repetition_1() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("foo".utf8)!;
-			let expression = expr1.concatenate(expr2);
+			let expr = ABNFRulename<UInt8>(label: "foo").alternation
+			let expression = expr.concatenate(expr);
 			#expect(expression.description == "2foo");
 		}
 
 		@Test("repetition ++ repetition (homogeneous)")
 		func test_concatenate_repetition_2() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("2foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("2foo".utf8)!;
-			let expression = expr1.concatenate(expr2);
+			let expr = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
+			let expression = expr.concatenate(expr);
 			#expect(expression.description == "4foo");
 		}
 
 		@Test("repetition ++ repetition (homogeneous 2)")
 		func test_concatenate_repetition_3() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("2*foo".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("2foo".utf8)!;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").element.repeating(2...).alternation
+			let expr2 = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "4*foo");
 		}
 
 		@Test("group ++ group (rulename)")
 		func test_concatenate_group() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("(foo)".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("(bar)".utf8)!;
+			let expr1 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "foo").alternation).alternation;
+			let expr2 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "bar").alternation).alternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "foo bar");
 		}
 
 		@Test("option ++ option (rulename)")
 		func test_concatenate_option() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("[foo]".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("[bar]".utf8)!;
+			let expr1 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "foo").alternation).alternation;
+			let expr2 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "bar").alternation).alternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "[foo] [bar]");
 		}
 
 		@Test("charVal ++ charVal")
 		func test_concatenate_charVal() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("\"foo\"".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("\"bar\"".utf8)!;
+			let expr1 = ABNFCharVal(sequence: "foo".utf8).alternation;
+			let expr2 = ABNFCharVal(sequence: "bar".utf8).alternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "\"foobar\"");
 		}
 
 		@Test("numVal ++ numVal (sequence)")
 		func test_concatenate_numVal_sequence() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("%x20".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("%x21".utf8)!;
+			let expr1 = ABNFNumVal(base: .hex, value: .sequence([0x20])).alternation;
+			let expr2 = ABNFNumVal(base: .hex, value: .sequence([0x22])).alternation;
 			let expression = expr1.concatenate(expr2);
-			#expect(expression.description == "%x20.21");
+			#expect(expression.description == "%x20.22");
 		}
 
 		@Test("numVal ++ numVal ++ group ++ group (sequence)")
 		func test_concatenate_numVal_group() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("%x20".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("%x21".utf8)!;
-			let expr3 = ABNFAlternation<UInt8>.parse("(%x30.32.34)".utf8)!;
-			let expr4 = ABNFAlternation<UInt8>.parse("(%x36.38)".utf8)!;
+			let expr1 = ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).alternation; // %x20
+			let expr2 = ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x21])).alternation; // %x21
+			let expr3 = ABNFGroup<UInt8>(alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30, 0x32, 0x34])).alternation).alternation; // (%x30.32.34)
+			let expr4 = ABNFGroup<UInt8>(alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x36, 0x38])).alternation).alternation; // (%x36.38)
 			let expression = ABNFAlternation<UInt8>.concatenate([expr1, expr2, expr3, expr4])
 			#expect(expression.description == "%x20.21.30.32.34.36.38");
 		}
 
 		@Test("numVal ++ numVal (range)")
 		func test_concatenate_numVal_range() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("%x20-21".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("%x30-39".utf8)!;
+			let expr1 = ABNFNumVal<UInt8>(base: .hex, value: .range(0x20...0x21)).alternation;
+			let expr2 = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).alternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "%x20-21 %x30-39");
 		}
 
 		@Test("proseVal ++ proseVal")
 		func test_concatenate_proseVal() async throws {
-			let expr1 = ABNFAlternation<UInt8>.parse("<foo>".utf8)!;
-			let expr2 = ABNFAlternation<UInt8>.parse("<bar>".utf8)!;
+			let expr1 = ABNFProseVal<UInt8>(remark: "foo").alternation
+			let expr2 = ABNFProseVal<UInt8>(remark: "bar").alternation
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "<foo> <bar>");
+		}
+
+		@Test("num-val hasUnion")
+		func test_numVal_hasUnion() async throws {
+			let rule1 = ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20]))
+			let rule2 = ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x21]))
+			let union = ABNFNumVal<UInt8>(base: .hex, value: .range(0x20...0x21))
+			#expect(rule1.hasUnion(rule2) == union);
+			#expect(rule1.hasUnion(rule2)!.description == "%x20-21");
 		}
 	}
 	@Suite("ABNFBuiltins") struct ABNFTest_ABNFBuiltins {
@@ -1119,8 +1148,8 @@ import Testing;
 
 			""";
 
-			let referenceRulelist: ABNFRulelist<UInt8> = ABNFRulelist<UInt8>.parse(builtin_source.replacing("\n", with: "\r\n").utf8)!;
-			let referenceDictionary = referenceRulelist.toPattern(as: DFA<Array<UInt8>>.self);
+			let referenceRulelist: ABNFRulelist<UInt8> = try ABNFRulelist<UInt8>.parse(builtin_source.replacing("\n", with: "\r\n").utf8);
+			let referenceDictionary = try referenceRulelist.toPattern(as: DFA<Array<UInt8>>.self);
 			assert(referenceDictionary.keys.count == 16);
 
 			let providedDictionary = ABNFBuiltins<DFA<Array<UInt8>>>.dictionary;
@@ -1148,31 +1177,25 @@ import Testing;
 		}
 	}
 
-	@Test("group.repeating(0...1) is an option")
-	func test_group_optional() async throws {
-		let input = "(foo)";
-		let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
-		#expect(expression.description == "(foo)");
-		// Since the goal is to shrink the expression to an equivlanent form,
-		// an ABNFOption<UInt8> is smaller than an ABNFRepetition<UInt8>
-		#expect(expression.repeating(0...1).description == "[foo]");
-	}
+	@Suite("conversions")
+	struct ABNFTest_conversions {
+		@Test("group.repeating(0...1) is an option")
+		func test_group_optional() async throws {
+			let input = "(foo)";
+			let expression = try ABNFAlternation<UInt8>.parse(input.utf8)
+			#expect(expression.description == "(foo)");
+			// Since the goal is to shrink the expression to an equivlanent form,
+			// an ABNFOption<UInt8> is smaller than an ABNFRepetition<UInt8>
+			#expect(expression.repeating(0...1).description == "[foo]");
+		}
 
-	@Test("expression.element")
-	func test_expression_element_2() async throws {
-		let input = "foo [bar]";
-		let expression = ABNFAlternation<UInt8>.parse(input.utf8)!
-		#expect(expression.description == "foo [bar]");
-		#expect(expression.repeating(2).description == "2(foo [bar])");
-		#expect(expression.repeating(2...).description == "2*(foo [bar])");
-	}
-
-	@Test("num-val hasUnion")
-	func test_numVal_hasUnion() async throws {
-		let (rule1, _) = ABNFNumVal<UInt8>.match("%x20".utf8)!
-		let (rule2, _) = ABNFNumVal<UInt8>.match("%x21".utf8)!
-		let (union, _) = ABNFNumVal<UInt8>.match("%x20-21".utf8)!
-		#expect(rule1.hasUnion(rule2) == union);
-		#expect(rule1.hasUnion(rule2)!.description == "%x20-21");
+		@Test("expression.element")
+		func test_expression_element_2() async throws {
+			let input = "foo [bar]";
+			let expression = try ABNFAlternation<UInt8>.parse(input.utf8)
+			#expect(expression.description == "foo [bar]");
+			#expect(expression.repeating(2).description == "2(foo [bar])");
+			#expect(expression.repeating(2...).description == "2*(foo [bar])");
+		}
 	}
 }

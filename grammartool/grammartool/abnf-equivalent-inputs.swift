@@ -13,9 +13,11 @@ func abnf_equivalent_inputs(arguments: Array<String>){
 	}
 	let abnfExpression = arguments[2];
 	let input = arguments[3];
-	let abnfTree = ABNFAlternation<UInt32>.parse(abnfExpression.utf8);
-	guard let abnfTree else {
+	let abnfTree: ABNFAlternation<UInt32>;
+	do { abnfTree = try ABNFAlternation<UInt32>.parse(abnfExpression.utf8); }
+	catch {
 		print("Could not parse ABNF");
+		print(error.localizedDescription);
 		return;
 	}
 	let fsm = abnfTree.toPattern(as: DFA<Array<UInt32>>.self, rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary);

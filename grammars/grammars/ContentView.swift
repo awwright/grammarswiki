@@ -110,8 +110,9 @@ struct DocumentDetail: View {
 	// Computed variables
 	// TODO: There's probably a way to actually compute these reactive to the user input
 	@State private var rulelist: ABNFRulelist<UInt32>? = nil
+	@State private var rulelist_error: String? = nil
 	@State private var rulelist_fsm: Dictionary<String, DFA<Array<UInt32>>>? = nil
-	@State private var parseError: String? = nil
+	@State private var rulelist_fsm_error: String? = nil
 	@State private var testResult: String? = nil
 
 	// Code editor variables
@@ -141,12 +142,15 @@ struct DocumentDetail: View {
 				.frame(minHeight: 300)
 				.font(.system(size: 14, design: .monospaced))
 
-				if let error = parseError {
+				if let error = rulelist_error {
 					Text("Parse Error: \(error)")
 						.foregroundColor(.red)
+				} else if rulelist == nil {
+					Text("Parsing...")
+						.foregroundColor(.gray)
 				} else {
 					Text("Grammar parsed successfully")
-						.foregroundColor(.green)
+						.foregroundColor(.gray)
 				}
 			}
 
@@ -199,11 +203,19 @@ struct DocumentDetail: View {
 							.onChange(of: testInput) {
 								testInputAgainstRule()
 							}
-					}
 
-					if let testResult {
-						Text("Result: \(testResult)")
-							.foregroundColor(testResult == "Accepted" ? .green : .red)
+						if let testResult {
+							Text("Result: \(testResult)")
+								.foregroundColor(testResult == "Accepted" ? .green : .red)
+						}
+					} else if let rulelist_fsm_error {
+						Text(rulelist_fsm_error)
+							.foregroundColor(.red)
+						Divider()
+					} else {
+						Text("Building FSM...")
+							.foregroundColor(.gray)
+						Divider()
 					}
 				} else {
 					Text("No valid grammar loaded")
@@ -227,39 +239,52 @@ struct DocumentDetail: View {
 	/// Parses the grammar text into a rulelist
 	private func updateRulelist(_ text: String) {
 		rulelist = nil
+		rulelist_error = nil
 		rulelist_fsm = nil
-		parseError = "Parsing..."
-		selectedRule = nil
+		rulelist_fsm_error = nil
 		testResult = nil
 		let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-		Task.detached(priority: .background) {
-			if let (parsed, _) = ABNFRulelist<UInt32>.match(input) {
-				await MainActor.run {
-					rulelist = parsed
-					Task.detached(priority: .background) {
-						let parsed_rulelist_fsm = parsed.toPattern(rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary)
-						await MainActor.run {
-							rulelist_fsm = parsed_rulelist_fsm
-							parseError = nil
-							if let currentSelection = selectedRule, !parsed.dictionary.keys.contains(currentSelection) {
-								if let firstRule = parsed.rules.first {
-									selectedRule = firstRule.rulename.label
-								}else{
-									selectedRule = nil
-								}
-							} else if let firstRule = parsed.rules.first {
-								selectedRule = firstRule.rulename.label
-							}
-						}
-					}
-				}
-			} else {
+		Task.detached(priority: .utility) {
+			let parsed: ABNFRulelist<UInt32>;
+			do {
+				parsed = try ABNFRulelist<UInt32>.parse(input)
+			} catch {
 				await MainActor.run {
 					rulelist = nil
+					rulelist_error = error.localizedDescription
 					rulelist_fsm = nil
-					parseError = "Failed to parse grammar"
-					selectedRule = nil
+					rulelist_fsm_error = nil
 					testResult = nil
+				}
+				return
+			}
+			await MainActor.run {
+				rulelist = parsed
+				rulelist_error = nil
+				rulelist_fsm = nil
+				rulelist_fsm_error = nil
+				if let currentSelection = selectedRule, !parsed.dictionary.keys.contains(currentSelection) {
+					if let firstRule = parsed.rules.first {
+						selectedRule = firstRule.rulename.label
+					}else{
+						selectedRule = nil
+					}
+				}else if let firstRule = parsed.rules.first {
+					selectedRule = firstRule.rulename.label
+				}
+				Task.detached(priority: .utility) {
+					do {
+						let parsed_rulelist_fsm = try parsed.toPattern(rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary)
+						await MainActor.run {
+							rulelist_fsm = parsed_rulelist_fsm
+							rulelist_fsm_error = nil
+						}
+					} catch {
+						await MainActor.run {
+							rulelist_fsm = nil
+							rulelist_fsm_error = error.localizedDescription
+						}
+					}
 				}
 			}
 		}
@@ -299,9 +324,9 @@ struct DocumentDetail: View {
 			singleLineComment: ";",
 			nestedComment: nil,
 			identifierRegex: try! Regex("[0-9A-Za-z-]+"),
-			operatorRegex: try! Regex("\"[^\"]*\""),
+			operatorRegex: try! Regex("/|\\*|=|=/"),
 			reservedIdentifiers: [],
-			reservedOperators: ["/", "*", "=", "=/"]
+			reservedOperators: []
 		 )
     }
 }

@@ -22,12 +22,13 @@ public protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringCon
 	typealias Symbol = Element.Element;
 
 	/// Attempts to parse the given input to produce an instance of this production.
+	/// This should throw if there is no way for the input to be valid, even as an empty string.
 	///
 	/// - Parameter input: A collection of `UInt8` values representing the input to parse,
 	///   typically an ASCII-encoded string.
 	/// - Returns: A tuple containing the parsed production and the remaining unparsed input,
 	///   or `nil` if parsing fails.
-	static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8>
+	static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection<UInt8>
 
 	/// The `description` property required by `CustomStringConvertible` is expected to produce valid ABNF.
 	var description: String {get}
@@ -37,22 +38,36 @@ public protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringCon
 /// Extension providing a convenience methods for ABNFProduction
 extension ABNFProduction {
 	/// Parses the entire input into an instance of this production, ensuring no input remains.
+	/// Use parse instead of match when you relly need the whole input to be exactly right.
 	///
 	/// - Parameter input: A collection of `UInt8` values representing the full input to parse.
 	/// - Returns: The parsed production if successful and the entire input is consumed.
 	/// - Throws: `ABNFError.parseFailure` if parsing fails or unparsed input remains.
 	/// - Note: This method is stricter than `match`, requiring complete consumption of the input.
-	public static func parse<T>(_ input: T) -> Self? where T: Collection<UInt8> {
-		let match = Self.match(input)
+	public static func parse<T>(_ input: T) throws -> Self where T: Collection<UInt8> {
+		let match = try Self.match(input)
 		guard let (rulelist, remainder) = match else {
-			assertionFailure("Could not parse input")
-			return nil;
+			throw ABNFParseError(message: "Could not parse input", index: input.startIndex..<input.endIndex)
 		}
 		guard remainder.isEmpty else {
-			assertionFailure("Could not parse input past \(remainder.count)")
-			return nil;
+			throw ABNFParseError(message: "Could not parse input past \(remainder.count)", index: remainder.startIndex..<input.endIndex)
 		}
 		return rulelist;
+	}
+}
+
+struct ABNFParseError<T>: Error where T: Comparable {
+	let message: String;
+	let index: Range<T>
+	var localizedDescription: String {
+		message
+	}
+}
+
+struct ABNFExportError: Error {
+	let message: String;
+	var localizedDescription: String {
+		message
 	}
 }
 
@@ -100,7 +115,7 @@ public protocol ABNFExpression: ABNFProduction {
 	///
 	/// - Parameter rules: A dictionary of resolved rulenames to their DFAs.
 	/// - Returns: The DFA equivalent to the definition of this rule.
-	func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType>) -> PatternType where PatternType.Symbol == Symbol
+	func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType>) throws -> PatternType where PatternType.Symbol == Symbol
 }
 
 /// Represents a list of rules in an ABNF grammar, as defined in RFC 5234 with Errata 3076.
@@ -204,7 +219,7 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 	/// - Note: Rules with circular dependencies that cannot be converted to a DFA will be excluded from the return value without any other warning.
 	///
 	/// - Note: This is a variation of `toPattern` that returns a dictionary, cooresponding with how a rulelist encodes multiple rules.
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules ruleMap: Dictionary<String, PatternType> = [:]) -> Dictionary<String, PatternType> where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules ruleMap: Dictionary<String, PatternType> = [:]) throws -> Dictionary<String, PatternType> where PatternType.Symbol == Symbol {
 		// Get a Dictionary of each rule by its name to its referencedRules
 		let rulesByName = self.dictionary;
 		let requiredRules = rulesByName.mapValues { $0.referencedRules }.filter { $0.1.contains($0.0) == false }
@@ -217,7 +232,7 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 					guard let rule = rulesByName[rulename] else {
 						fatalError("Could not resolve \(rulename)")
 					}
-					resolvedRules[rulename] = rule.toPattern(as: PatternType.self, rules: resolvedRules);
+					resolvedRules[rulename] = try rule.toPattern(as: PatternType.self, rules: resolvedRules);
 					continue main;
 				}
 			}
@@ -230,12 +245,12 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 	///
 	/// - Parameter input: A collection of `UInt8` values representing the ABNF grammar text.
 	/// - Returns: A tuple containing the parsed rulelist and remaining input, or `nil` if parsing fails.
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Initialize a SubSequence starting at the beginning of input
 		var remainder = input[...]
 		var rules: [ABNFRule<Symbol>] = []
 		while !remainder.isEmpty {
-			if let (rule, remainder1) = ABNFRule<Symbol>.match(remainder) {
+			if let (rule, remainder1) = try ABNFRule<Symbol>.match(remainder) {
 				// First try to parse as a rule
 				rules.append(rule)
 				remainder = remainder1
@@ -340,8 +355,8 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 		ABNFRule<Target>(rulename: ABNFRulename(label: rulename.label), definedAs: definedAs, alternation: alternation.mapSymbols(transform))
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
-		alternation.toPattern(as: PatternType.self, rules: rules)
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
+		try alternation.toPattern(as: PatternType.self, rules: rules)
 	}
 
 	public func union(_ other: ABNFRule<Symbol>) -> ABNFRule<Symbol> {
@@ -369,7 +384,7 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 		}
 
 		// Parse alternation
-		guard let (alternation, remainder5) = ABNFAlternation<Symbol>.match(remainder4) else { return nil }
+		guard let (alternation, remainder5) = try ABNFAlternation<Symbol>.match(remainder4) else { return nil }
 
 		// Parse *WSP c-nl
 		guard let (_, remainder) = Terminals.c_wsp_star_c_nl.match(remainder5) else { return nil }
@@ -463,9 +478,11 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
 	// This is also a clever way of preventing recursive loops
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
-		assert(rules[label] != nil, "Expect rule \(label) to be in rules dictionary, only have \(rules.keys)");
-		return rules[label]!
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
+		guard let pattern = rules[label] else{
+			throw ABNFExportError(message: "Expect rule \(label) to be in rules dictionary, only have \(rules.keys)");
+		}
+		return pattern
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -620,12 +637,8 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 		self.mapElements({ $0.mapSymbols(transform) })
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
-		PatternType.union(matches.map({ $0.toPattern(as: PatternType.self, rules: [:]) }))
-	}
-
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
-		PatternType.union(matches.map({ $0.toPattern(as: PatternType.self, rules: rules) }))
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
+		PatternType.union(try matches.map({ try $0.toPattern(as: PatternType.self, rules: rules) }))
 	}
 
 	public static func union(_ elements: [Self]) -> Self {
@@ -720,12 +733,13 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 		return ABNFAlternation(matches: matches.sorted())
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		var remainder = input[input.startIndex...]
 		var concatenations: [ABNFConcatenation<Symbol>] = []
 
 		// Match first concatenation
-		guard let (firstConcat, remainder1) = ABNFConcatenation<Symbol>.match(remainder) else { return nil }
+		guard let (firstConcat, remainder1) = try ABNFConcatenation<Symbol>.match(remainder) else { return nil }
 		concatenations.append(firstConcat)
 		remainder = remainder1
 
@@ -736,7 +750,7 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 			remainder = remainder2
 
 			// Parse concatenation
-			guard let (concat, remainder3) = ABNFConcatenation<Symbol>.match(remainder) else { break }
+			guard let (concat, remainder3) = try ABNFConcatenation<Symbol>.match(remainder) else { break }
 			remainder = remainder3
 			concatenations.append(concat)
 		}
@@ -826,8 +840,8 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 		self.mapElements({ $0.mapSymbols(transform) })
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
-		PatternType.concatenate(repetitions.map({ $0.toPattern(as: PatternType.self, rules: rules) }))
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
+		PatternType.concatenate(try repetitions.map({ try $0.toPattern(as: PatternType.self, rules: rules) }))
 	}
 
 	public static func concatenate(_ concatenations: [ABNFConcatenation<Symbol>]) -> ABNFConcatenation<Symbol> {
@@ -872,11 +886,11 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 		return nil;
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		var reps: [ABNFRepetition<Symbol>] = []
 
 		// Match first repetition
-		guard let (firstRep, remainder1) = ABNFRepetition<Symbol>.match(input) else { return nil }
+		guard let (firstRep, remainder1) = try ABNFRepetition<Symbol>.match(input) else { return nil }
 		reps.append(firstRep)
 
 		// Match zero or more (1*c-wsp repetition)
@@ -884,7 +898,7 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 		while true {
 			// Consume whitespace
 			guard let (_, remainder2) = Terminals.c_wsp_plus.match(remainder) else { break }
-			guard let (rep, remainder3) = ABNFRepetition<Symbol>.match(remainder2) else { break }
+			guard let (rep, remainder3) = try ABNFRepetition<Symbol>.match(remainder2) else { break }
 			remainder = remainder3
 			reps.append(rep)
 		}
@@ -1011,30 +1025,30 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 		self.mapElements({ $0.mapSymbols(transform) })
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		if let max = self.max {
-			repeating.toPattern(as: PatternType.self, rules: rules).repeating(Int(min)...Int(max))
+			try repeating.toPattern(as: PatternType.self, rules: rules).repeating(Int(min)...Int(max))
 		} else {
-			repeating.toPattern(as: PatternType.self, rules: rules).repeating(Int(min)...)
+			try repeating.toPattern(as: PatternType.self, rules: rules).repeating(Int(min)...)
 		}
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		if let (match, remainder1) = Terminals.repeat_range.match(input) {
 			// (*DIGIT "*" *DIGIT) element
 			// match = *DIGIT "*"
 			let (minStr, _) = Terminals.DIGIT_star.match(match)!
 			let (maxStr, remainder2) = Terminals.DIGIT_star.match(remainder1)!
-			guard let (element, remainder) = ABNFElement<Symbol>.match(remainder2) else { return nil }
+			guard let (element, remainder) = try ABNFElement<Symbol>.match(remainder2) else { return nil }
 			return (ABNFRepetition(min: repeat_value(minStr), max: maxStr.isEmpty ? nil : repeat_value(maxStr), element: element), remainder)
 		} else if let (exactStr, remainder1) = Terminals.repeat_min.match(input) {
 			// 1*DIGIT element
 			let count = repeat_value(exactStr);
-			guard let (element, remainder) = ABNFElement<Symbol>.match(remainder1) else { return nil }
+			guard let (element, remainder) = try ABNFElement<Symbol>.match(remainder1) else { return nil }
 			return (ABNFRepetition(min: count, max: count, element: element), remainder)
 		} else {
 			// element
-			guard let (element, remainder) = ABNFElement<Symbol>.match(input) else { return nil }
+			guard let (element, remainder) = try ABNFElement<Symbol>.match(input) else { return nil }
 			return (ABNFRepetition(min: 1, max: 1, element: element), remainder)
 		}
 	}
@@ -1164,14 +1178,14 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		}
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
-			case .rulename(let s): return s.toPattern(as: PatternType.self, rules: rules)
-			case .group(let s): return s.toPattern(as: PatternType.self, rules: rules)
-			case .option(let s): return s.toPattern(as: PatternType.self, rules: rules)
+			case .rulename(let s): return try s.toPattern(as: PatternType.self, rules: rules)
+			case .group(let s): return try s.toPattern(as: PatternType.self, rules: rules)
+			case .option(let s): return try s.toPattern(as: PatternType.self, rules: rules)
 			case .charVal(let s): return s.toPattern(as: PatternType.self, rules: rules)
 			case .numVal(let s): return s.toPattern(as: PatternType.self, rules: rules)
-			case .proseVal(let s): return s.toPattern(as: PatternType.self, rules: rules)
+			case .proseVal(let s): return try s.toPattern(as: PatternType.self, rules: rules)
 		}
 	}
 
@@ -1232,13 +1246,13 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		return ABNFRepetition<Symbol>(min: UInt(range.lowerBound), max: nil, element: self)
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		switch input.first {
-			case 0x28: if let (g, remainder) = ABNFGroup<Symbol>.match(input) { return (.group(g), remainder) }
-			case 0x5B: if let (o, remainder) = ABNFOption<Symbol>.match(input) { return (.option(o), remainder) }
-			case 0x22: if let (c, remainder) = ABNFCharVal<Symbol>.match(input) { return (.charVal(c), remainder) }
-			case 0x25: if let (n, remainder) = ABNFNumVal<Symbol>.match(input) { return (.numVal(n), remainder) }
-			case 0x3C: if let (p, remainder) = ABNFProseVal<Symbol>.match(input) { return (.proseVal(p), remainder) }
+			case 0x28: if let (g, remainder) = try ABNFGroup<Symbol>.match(input) { return (.group(g), remainder) }
+			case 0x5B: if let (o, remainder) = try ABNFOption<Symbol>.match(input) { return (.option(o), remainder) }
+			case 0x22: if let (c, remainder) = try ABNFCharVal<Symbol>.match(input) { return (.charVal(c), remainder) }
+			case 0x25: if let (n, remainder) = try ABNFNumVal<Symbol>.match(input) { return (.numVal(n), remainder) }
+			case 0x3C: if let (p, remainder) = try ABNFProseVal<Symbol>.match(input) { return (.proseVal(p), remainder) }
 			default: break;
 		}
 		if let (r, remainder) = ABNFRulename<Symbol>.match(input) { return (.rulename(r), remainder) }
@@ -1307,8 +1321,8 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		ABNFGroup<Target>(alternation: alternation.mapSymbols(transform))
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
-		alternation.toPattern(as: PatternType.self, rules: rules)
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
+		try alternation.toPattern(as: PatternType.self, rules: rules)
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1323,9 +1337,9 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		return nil
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		guard let (_, remainder1) = Terminals.group_start.match(input) else { return nil }
-		guard let (alternation, remainder2) = ABNFAlternation<Symbol>.match(remainder1) else { return nil }
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+		guard let (_, remainder1) = try Terminals.group_start.match(input) else { return nil }
+		guard let (alternation, remainder2) = try ABNFAlternation<Symbol>.match(remainder1) else { return nil }
 		guard let (_, remainder) = Terminals.group_end.match(remainder2) else { return nil }
 		return (ABNFGroup(alternation: alternation), remainder)
 	}
@@ -1390,17 +1404,17 @@ public struct ABNFOption<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		ABNFOption<Target>(optionalAlternation: optionalAlternation.mapSymbols(transform))
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
-		optionalAlternation.toPattern(as: PatternType.self, rules: rules).optional()
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
+		try optionalAlternation.toPattern(as: PatternType.self, rules: rules).optional()
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
 		return nil
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		guard let (_, remainder1) = Terminals.option_start.match(input) else { return nil }
-		guard let (alternation, remainder2) = ABNFAlternation<Symbol>.match(remainder1) else { return nil }
+		guard let (alternation, remainder2) = try ABNFAlternation<Symbol>.match(remainder1) else { return nil }
 		guard let (_, remainder) = Terminals.option_end.match(remainder2) else { return nil }
 		return (ABNFOption(optionalAlternation: alternation), remainder)
 	}
@@ -1482,7 +1496,7 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 		return ABNFCharVal(sequence: self.sequence + other.sequence)
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		guard let (_, remainder1) = Terminals.DQUOTE.match(input) else { return nil }
 		guard let (chars, remainder2) = Terminals.charVal_pattern.match(remainder1) else { return nil }
 		guard let (_, remainder) = Terminals.DQUOTE.match(remainder2) else { return nil }
@@ -1683,7 +1697,7 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		return nil;
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		guard let (_, remainder0) = Terminals.numVal_start.match(input) else { return nil }
 		guard let (basePrefix, remainder1) = Terminals.CHAR.match(remainder0) else { return nil }
 		let base: Base? = switch(basePrefix[basePrefix.startIndex]){
@@ -1713,7 +1727,11 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 			let endStr = base.parseNum(endDigits)
 			guard let endStr else { return nil }
 			// FIXME: This can throw given a string like %x20-2
-			return (ABNFNumVal<Symbol>(base: base, value: Value.range(Symbol(values.first!)...Symbol(endStr))), remainder6)
+			guard Symbol(values.first!) <= Symbol(endStr) else {
+				throw ABNFParseError(message: "Invalid range", index: remainder1.startIndex..<remainder5.startIndex)
+			}
+			let range = Value.range(Symbol(values.first!)...Symbol(endStr))
+			return (ABNFNumVal<Symbol>(base: base, value: range), remainder6)
 		}
 
 		return (ABNFNumVal<Symbol>(base: base, value: Value.sequence(values)), remainder)
@@ -1779,8 +1797,8 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 		return ABNFProseVal<Target>(remark: self.remark)
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
-		fatalError("Cannot convert prose to FSM")
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
+		throw ABNFExportError(message: "Cannot convert prose to FSM")
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1788,7 +1806,7 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 		return nil
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		// 0x20...0x7E - 0x3E
 		let pattern: DFA<Array<UInt8>> = (DFA.range(0x20...0x3D) | DFA.range(0x3F...0x7E)).star();
 

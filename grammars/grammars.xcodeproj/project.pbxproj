@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		281270C12D8615790095D0E1 /* catalog in Resources */ = {isa = PBXBuildFile; fileRef = 281270C02D8615790095D0E1 /* catalog */; };
+		286752AE2D891A3A00AB3FEF /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 286752AD2D891A3A00AB3FEF /* CodeEditorView */; };
+		286752B02D891A3A00AB3FEF /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 286752AF2D891A3A00AB3FEF /* LanguageSupport */; };
 		28A063122D7A3F3900E9F382 /* FSM in Frameworks */ = {isa = PBXBuildFile; productRef = 28A063112D7A3F3900E9F382 /* FSM */; };
 /* End PBXBuildFile section */
 
@@ -67,6 +69,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				28A063122D7A3F3900E9F382 /* FSM in Frameworks */,
+				286752B02D891A3A00AB3FEF /* LanguageSupport in Frameworks */,
+				286752AE2D891A3A00AB3FEF /* CodeEditorView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -128,6 +132,8 @@
 			name = grammars;
 			packageProductDependencies = (
 				28A063112D7A3F3900E9F382 /* FSM */,
+				286752AD2D891A3A00AB3FEF /* CodeEditorView */,
+				286752AF2D891A3A00AB3FEF /* LanguageSupport */,
 			);
 			productName = grammars;
 			productReference = 28A062DE2D7A3DCE00E9F382 /* grammars.app */;
@@ -210,6 +216,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				286884232D852AFC00310408 /* XCLocalSwiftPackageReference "../FSM" */,
+				286752AC2D8919D900AB3FEF /* XCRemoteSwiftPackageReference "CodeEditorView" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 28A062DF2D7A3DCE00E9F382 /* Products */;
@@ -578,7 +585,28 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		286752AC2D8919D900AB3FEF /* XCRemoteSwiftPackageReference "CodeEditorView" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mchakravarty/CodeEditorView";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.15.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		286752AD2D891A3A00AB3FEF /* CodeEditorView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 286752AC2D8919D900AB3FEF /* XCRemoteSwiftPackageReference "CodeEditorView" */;
+			productName = CodeEditorView;
+		};
+		286752AF2D891A3A00AB3FEF /* LanguageSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 286752AC2D8919D900AB3FEF /* XCRemoteSwiftPackageReference "CodeEditorView" */;
+			productName = LanguageSupport;
+		};
 		28A063112D7A3F3900E9F382 /* FSM */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FSM;
