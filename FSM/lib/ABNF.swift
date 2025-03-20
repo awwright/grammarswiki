@@ -56,15 +56,15 @@ extension ABNFProduction {
 	}
 }
 
-struct ABNFParseError<T>: Error where T: Comparable {
+public struct ABNFParseError<T>: Error where T: Comparable {
 	let message: String;
-	let index: Range<T>
+	public let index: Range<T>
 	var localizedDescription: String {
 		message
 	}
 }
 
-struct ABNFExportError: Error {
+public struct ABNFExportError: Error {
 	let message: String;
 	var localizedDescription: String {
 		message
@@ -1338,7 +1338,7 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 	}
 
 	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		guard let (_, remainder1) = try Terminals.group_start.match(input) else { return nil }
+		guard let (_, remainder1) = Terminals.group_start.match(input) else { return nil }
 		guard let (alternation, remainder2) = try ABNFAlternation<Symbol>.match(remainder1) else { return nil }
 		guard let (_, remainder) = Terminals.group_end.match(remainder2) else { return nil }
 		return (ABNFGroup(alternation: alternation), remainder)

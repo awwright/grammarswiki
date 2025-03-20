@@ -28,11 +28,11 @@ func abnf_to_regex(arguments: Array<String>){
 	let builtins = ABNFBuiltins<DFA<Array<UInt8>>>.dictionary;
 
 	print("Parse imports...");
-	let (importedRulelist, _) = ABNFRulelist<UInt8>.match(imported!)!;
+	let importedRulelist = try! ABNFRulelist<UInt8>.parse(imported!);
 
 	// builtins will be copied to the output
 	print("Compile imports...");
-	let importedDict = importedRulelist.toPattern(as: DFA<Array<UInt8>>.self, rules: builtins).mapValues { $0.minimized() }
+	let importedDict = try! importedRulelist.toPattern(as: DFA<Array<UInt8>>.self, rules: builtins).mapValues { $0.minimized() }
 
 	print("Parse expression...");
 	let expression: ABNFAlternation<UInt8>;
@@ -43,7 +43,7 @@ func abnf_to_regex(arguments: Array<String>){
 	}
 
 	print("Compile expression...");
-	let fsm = expression.toPattern(as: DFA<Array<UInt8>>.self, rules: importedDict)
+	let fsm: DFA<Array<UInt8>> = try! expression.toPattern(rules: importedDict)
 
 	print("Build regex...");
 	let regex = fsm.toPattern(as: SimpleRegex<UInt8>.self)

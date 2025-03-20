@@ -212,6 +212,10 @@ struct DocumentDetail: View {
 						Text(rulelist_fsm_error)
 							.foregroundColor(.red)
 						Divider()
+					} else if rulelist_fsm != nil {
+						Text("Selected rule is recursive")
+							.foregroundColor(.gray)
+						Divider()
 					} else {
 						Text("Building FSM...")
 							.foregroundColor(.gray)
@@ -248,15 +252,27 @@ struct DocumentDetail: View {
 			let parsed: ABNFRulelist<UInt32>;
 			do {
 				parsed = try ABNFRulelist<UInt32>.parse(input)
-			} catch {
+			} catch let error as ABNFParseError<Array<UInt32>.Index> {
 				await MainActor.run {
 					rulelist = nil
 					rulelist_error = error.localizedDescription
 					rulelist_fsm = nil
 					rulelist_fsm_error = nil
 					testResult = nil
+					messages = Set([
+						TextLocated(location: TextLocation(zeroBasedLine: input.count(where: {$0 == 0xA}), column: 0), entity: Message(category: .error, length: error.index.startIndex, summary: "Syntax Error", description: nil))
+					])
 				}
-				return
+				return;
+			} catch {
+				await MainActor.run {
+					rulelist = nil
+					rulelist_error = "Unknown error: " + error.localizedDescription
+					rulelist_fsm = nil
+					rulelist_fsm_error = nil
+					testResult = nil
+				}
+				return;
 			}
 			await MainActor.run {
 				rulelist = parsed
@@ -318,7 +334,7 @@ struct DocumentDetail: View {
 			name: "ABNF",
 			supportsSquareBrackets: true,
 			supportsCurlyBrackets: false,
-			stringRegex: try! Regex("\"[^\"]*\""),
+			stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
 			characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
 			numberRegex: try! Regex("[1-9][0-9]*"),
 			singleLineComment: ";",
