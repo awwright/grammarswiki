@@ -1,9 +1,18 @@
 ; @source: RFC 5322
 ; @charset=UTF-32
+; <https://www.rfc-editor.org/rfc/rfc5322.html>
+
+addr-spec       =   local-part "@" domain
 
 local-part      =   dot-atom / quoted-string
 
 domain          =   dot-atom / domain-literal
+
+domain-literal  =   "[" *(dtext) "]"
+
+dtext           =   %d33-90 /          ; Printable US-ASCII
+                    %d94-126 ;/         ;  characters not including
+                    ;obs-dtext          ;  "[", "]", or "\"
 
 quoted-string   =   DQUOTE *qcontent DQUOTE
 qcontent        =   qtext / quoted-pair
