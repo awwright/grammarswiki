@@ -494,4 +494,43 @@ import Testing
 			#expect(pattern.description == "30*")
 		}
 	}
+
+	@Suite("alphabet/alphabetPattern") struct DFATests_alphabet {
+		@Test("empty") func empty() async throws {
+			let dfa: DFA<Array<UInt8>> = DFA([])
+			#expect(dfa.alphabet == [])
+			#expect(dfa.alphabetPartitions == [])
+		}
+		@Test("epsilon") func epsilon() async throws {
+			let dfa: DFA<Array<UInt8>> = DFA([ [] ]).minimized();
+			#expect(dfa.alphabet == [])
+			#expect(dfa.alphabetPartitions == [])
+		}
+		@Test("single") func single() async throws {
+			let dfa: DFA<Array<UInt8>> = DFA([ [0x30] ]).minimized();
+			#expect(dfa.alphabet == [0x30])
+			#expect(dfa.alphabetPartitions == [ [0x30] ])
+		}
+		@Test("union") func union() async throws {
+			let dfa: DFA<Array<UInt8>> = DFA([ [0x30], [0x31], [0x32] ]).minimized();
+			print(dfa.toViz())
+			print(dfa.alphabetPartitions)
+			#expect(dfa.alphabet == [0x30, 0x31, 0x32])
+			#expect(dfa.alphabetPartitions == [ [0x30, 0x31, 0x32] ])
+		}
+		@Test("sequence") func sequence() async throws {
+			let dfa: DFA<Array<UInt8>> = DFA([ [0x30, 0x31, 0x32] ]).minimized();
+			print(dfa.toViz())
+			print(dfa.alphabetPartitions)
+			#expect(dfa.alphabet == [0x30, 0x31, 0x32])
+			#expect(dfa.alphabetPartitions == [ [0x30], [0x31], [0x32] ])
+		}
+		@Test("intersection") func intersection() async throws {
+			let dfa: DFA<Array<UInt8>> = DFA([ [0x30],  [0x31],  [0x32],  [0x33], [0x30, 0x33] ]).minimized();
+			print(dfa.toViz())
+			print(dfa.alphabetPartitions)
+			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])
+			#expect(dfa.alphabetPartitions == [ [0x30], [0x31, 0x32], [0x33] ])
+		}
+	}
 }

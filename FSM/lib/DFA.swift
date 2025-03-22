@@ -117,6 +117,18 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		Set(self.states.flatMap(\.keys))
 	}
 
+	public var alphabetPartitions: Set<Set<Symbol>> {
+		var fragments: Array<Set<Symbol>> = [];
+		for transitions in self.states {
+			var partitions: Dictionary<StateNo, Set<Symbol>> = [:];
+			for (target, s) in transitions {
+				partitions[s, default: []].insert(target);
+			}
+			fragments += partitions.map { $0.1 }
+		}
+		return alphabetCombine(fragments)
+	}
+
 	/// Generates a Graphviz DOT representation of the DFA for visualization.
 	///
 	/// - Returns: A string in DOT format, viewable with tools like Graphviz.
