@@ -33,5 +33,15 @@ import Testing;
 			let partitions = alphabetCombine(alphabets);
 			#expect(partitions == Set([ Set("0"..."9"), Set("a"..."f"), Set("g"..."z") ]))
 		}
+		@Test("alphabet ^ hexdig") func test_partitionReduce_char2() async throws {
+			let alphabets: Array<Set<Character>> = [
+				Set(Array("0"..."1")),
+				Set(Array("a"..."z")),
+				Set(Array("0"..."9") + Array("a"..."f")),
+				Set(Array("0"..."9") + Array("a"..."z")),
+			];
+			let partitions = alphabetCombine(alphabets);
+			#expect(partitions == Set([ Set("0"..."1"), Set("2"..."9"), Set("a"..."f"), Set("g"..."z") ]))
+		}
 	}
 }
