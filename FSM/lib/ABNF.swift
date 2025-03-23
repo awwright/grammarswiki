@@ -139,11 +139,20 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 	/// The array of rules comprising this rulelist.
 	public let rules: [ABNFRule<Symbol>]
 
+	public let ruleNames: Array<String>
+
 	/// Initializes a rulelist with an array of rules.
 	///
 	/// - Parameter rules: The rules to include in the rulelist.
 	public init(rules: [ABNFRule<Symbol>] = []) {
 		self.rules = rules
+		var ruleNames: Array<String> = [];
+		for rule in rules {
+			if(!ruleNames.contains(rule.rulename.label)){
+				ruleNames.append(rule.rulename.label);
+			}
+		}
+		self.ruleNames = ruleNames
 	}
 
 	public static func < (lhs: Self, rhs: Self) -> Bool {
