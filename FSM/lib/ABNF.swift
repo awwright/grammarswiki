@@ -159,13 +159,57 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 		return lhs.rules < rhs.rules;
 	}
 
-	public var alphabet: Set<Symbol> {
-		rules.reduce(Set<Symbol>([]), { $0.union($1.alphabet(rulelist: self)) })
-	}
-
-	public var alphabetPartitions: Set<Set<Symbol>> {
-		alphabetCombine(dictionary.flatMap { $1.alphabetPartitions(rulelist: self) })
-	}
+//	public var alphabet: Set<Symbol> {
+//		Set(alphabetDict().flatMap { $1 })
+//	}
+//
+//	public func alphabetDict(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Dictionary<String, Set<Symbol>> {
+//		// Get a Dictionary of each rule by its name to its referencedRules
+//		let rulesByName = self.dictionary;
+//		let requiredRules = rulesByName.mapValues { $0.referencedRules }.filter { $0.1.contains($0.0) == false }
+//
+//		var resolvedRules = rulelist;
+//		// TODO: Detect head/tail recursion, that can be converted
+//		main: repeat {
+//			for (rulename, referenced) in requiredRules {
+//				if resolvedRules[rulename] == nil && referenced.isSubset(of: resolvedRules.keys) {
+//					guard let rule = rulesByName[rulename] else {
+//						fatalError("Could not resolve \(rulename)")
+//					}
+//					resolvedRules[rulename] = rule.alphabet(rulelist: resolvedRules);
+//					continue main;
+//				}
+//			}
+//			break main;
+//		} while true;
+//		return resolvedRules;
+//	}
+//
+//	public var alphabetPartitions: Set<Set<Symbol>> {
+//		alphabetCombine(alphabetPartitionsDict().flatMap { $1 })
+//	}
+//
+//	public func alphabetPartitionsDict(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Dictionary<String, Set<Set<Symbol>>> {
+//		// Get a Dictionary of each rule by its name to its referencedRules
+//		let rulesByName = self.dictionary;
+//		let requiredRules = rulesByName.mapValues { $0.referencedRules }.filter { $0.1.contains($0.0) == false }
+//
+//		var resolvedRules = rulelist;
+//		// TODO: Detect head/tail recursion, that can be converted
+//		main: repeat {
+//			for (rulename, referenced) in requiredRules {
+//				if resolvedRules[rulename] == nil && referenced.isSubset(of: resolvedRules.keys) {
+//					guard let rule = rulesByName[rulename] else {
+//						fatalError("Could not resolve \(rulename)")
+//					}
+//					resolvedRules[rulename] = rule.alphabetPartitions(rulelist: resolvedRules);
+//					continue main;
+//				}
+//			}
+//			break main;
+//		} while true;
+//		return resolvedRules;
+//	}
 
 	/// Converts the rulelist into a dictionary mapping rulenames to their corresponding rules.
 	///
@@ -384,10 +428,10 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 		return "\(rulename.description) \(definedAs.description) \(alternation.description)\r\n"
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		alternation.alphabet(rulelist: rulelist)
 	}
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		alternation.alphabetPartitions(rulelist: rulelist)
 	}
 
@@ -425,7 +469,7 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 		return ABNFRule<Symbol>(rulename: rulename, definedAs: definedAs, alternation: self.alternation.union(other))
 	}
 
-	public static func match<T>(_ input: T) -> (Self, T.SubSequence)? where T: Collection<UInt8> {
+	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection<UInt8> {
 		// Parse rulename
 		guard let (rulename, remainder1) = ABNFRulename<Symbol>.match(input) else { return nil }
 
@@ -480,18 +524,16 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 		return lhs.label < rhs.label;
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
-		guard let rule = rulelist.dictionary[label] else { return Set([]) }
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
+		guard let rule = rulelist[label] else { print("No alphabet provided for \(label)"); return [] }
 		// Remove this rule from the rulelist to prevent recursion
-		let newRulelist = ABNFRulelist<Symbol>(rules: rulelist.rules.filter({ $0.rulename.label != self.label }))
-		return rule.alphabet(rulelist: newRulelist)
+		return rule
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
-		guard let rule = rulelist.dictionary[label] else { return Set([]) }
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
+		guard let rule = rulelist[label] else { print("No alphabet provided for \(label)"); return [] }
 		// Remove this rule from the rulelist to prevent recursion
-		let newRulelist = ABNFRulelist<Symbol>(rules: rulelist.rules.filter({ $0.rulename.label != self.label }))
-		return rule.alphabetPartitions(rulelist: newRulelist)
+		return rule
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
@@ -538,7 +580,7 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 	// This is also a clever way of preventing recursive loops
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		guard let pattern = rules[label] else{
-			throw ABNFExportError(message: "Expect rule \(label) to be in rules dictionary, only have \(rules.keys)");
+			throw ABNFExportError(message: "Expect rule `\(label)` to be in rules dictionary, only have: \(rules.keys.joined(separator: ", "))");
 		}
 		return pattern
 	}
@@ -600,39 +642,20 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 		return lhs.matches < rhs.matches;
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		matches.reduce(Set<Symbol>([]), { $0.union($1.alphabet(rulelist: rulelist)) })
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		var symbols: Set<Symbol> = Set()
 		var nonsymbols: Array<Set<Symbol>> = []
 
 		for match in matches {
-			if match.repetitions.count==1 && match.repetitions[0].min==1 && match.repetitions[0].max==1 {
-				let innerElement = match.repetitions[0].repeating
-				switch innerElement {
-					case .charVal(let charVal):
-						if charVal.sequence.count==1 {
-							symbols.insert(charVal.sequence[0])
-						}else{
-							nonsymbols += [Set(charVal.sequence)]
-						}
-					case .numVal(let numVal):
-						switch numVal.value {
-							case .range(let range): symbols.formUnion(range)
-							case .sequence(let seq):
-								if seq.count==1 {
-									symbols.insert(seq[0])
-								}else{
-									nonsymbols += [Set(seq)]
-								}
-						}
-					default:
-						nonsymbols += Array(innerElement.alphabetPartitions(rulelist: rulelist))
-				}
-			}else{
-				nonsymbols += matches.flatMap { $0.alphabetPartitions(rulelist: rulelist) }
+			let matchPartitions = match.alphabetPartitions(rulelist: rulelist)
+			if(matchPartitions.count == 1){
+				symbols.formUnion(matchPartitions.first!)
+			}else if(matchPartitions.count > 1){
+				nonsymbols += matchPartitions
 			}
 		}
 		return alphabetCombine([symbols] + nonsymbols)
@@ -842,11 +865,11 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 		return lhs.repetitions < rhs.repetitions;
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		repetitions.reduce(Set<Symbol>([]), { $0.union($1.alphabet(rulelist: rulelist)) })
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		alphabetCombine(repetitions.flatMap { $0.alphabetPartitions(rulelist: rulelist) })
 	}
 
@@ -999,11 +1022,11 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 //		return lhs.hashValue < rhs.hashValue;
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		repeating.alphabet(rulelist: rulelist)
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		isEmpty ? Set([Set([])]) : repeating.alphabetPartitions(rulelist: rulelist)
 	}
 
@@ -1132,7 +1155,7 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 	case numVal(ABNFNumVal<Symbol>)
 	case proseVal(ABNFProseVal<Symbol>)
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		switch self {
 			case .rulename(let r): return r.alphabet(rulelist: rulelist)
 			case .group(let g): return g.alphabet(rulelist: rulelist)
@@ -1143,7 +1166,7 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		}
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		switch self {
 			case .rulename(let r): return r.alphabetPartitions(rulelist: rulelist)
 			case .group(let g): return g.alphabetPartitions(rulelist: rulelist)
@@ -1336,11 +1359,11 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 		return lhs.alternation < rhs.alternation;
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		alternation.alphabet(rulelist: rulelist)
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		alternation.alphabetPartitions(rulelist: rulelist)
 	}
 
@@ -1419,11 +1442,11 @@ public struct ABNFOption<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		return lhs.optionalAlternation < rhs.optionalAlternation;
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		optionalAlternation.alphabet(rulelist: rulelist)
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		optionalAlternation.alphabetPartitions(rulelist: rulelist)
 	}
 
@@ -1492,11 +1515,11 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 		return lhs.sequence < rhs.sequence;
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		Set(sequence)
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		Set(sequence.map{ Set([$0]) })
 	}
 
@@ -1574,14 +1597,14 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 		return lhs.value < rhs.value;
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		switch self.value {
 			case .sequence(let seq): return Set(seq.map { $0 })
 			case .range(let seq): return Set(seq.map { $0 })
 		}
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		switch self.value {
 			case .sequence(let seq): return Set(seq.map { Set([$0]) })
 			case .range(let range): return Set([Set(range)])
@@ -1811,11 +1834,11 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 		return lhs.remark < rhs.remark;
 	}
 
-	public func alphabet(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Symbol> {
+	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		fatalError("Cannot produce alphabet from prose")
 	}
 
-	public func alphabetPartitions(rulelist: ABNFRulelist<Symbol> = ABNFRulelist(rules: [])) -> Set<Set<Symbol>> {
+	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
 		fatalError("Cannot produce alphabetPartitions from prose")
 	}
 
@@ -1897,6 +1920,10 @@ public struct ABNFBuiltins<Dfn: RegularPatternProtocol> where Dfn.Symbol: Binary
 	public static var SP    : Dfn { Dfn.symbol(0x20) }; // %x20
 	public static var VCHAR : Dfn { Dfn.range(0x21...0x7E) }; // %x21-7E
 	public static var WSP   : Dfn { SP | HTAB }; // SP / HTAB
+
+	public static var keys: Array<String> {
+		["ALPHA", "BIT", "CHAR", "CR", "CRLF", "CTL", "DIGIT", "DQUOTE", "HEXDIG", "HTAB", "LF", "LWSP", "OCTET", "SP", "VCHAR", "WSP"]
+	};
 
 	public static var dictionary: Dictionary<String, Dfn> {
 		[

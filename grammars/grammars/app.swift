@@ -7,6 +7,9 @@ struct ABNFEditorApp: App {
 		WindowGroup {
 			ContentView(model: $model)
 		}
+		Settings {
+			SettingsView()
+		}
 	}
 }
 

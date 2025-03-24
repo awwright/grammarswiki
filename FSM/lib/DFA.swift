@@ -24,7 +24,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	public typealias States = StateNo?;
 
 	public static var empty: Self {
-		Self(states: [], initial: 0, finals: [])
+		Self(states: [[:]], initial: 0, finals: [])
 	}
 	public static var epsilon: Self {
 		Self(states: [], initial: 0, finals: [0])

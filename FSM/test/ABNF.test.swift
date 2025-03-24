@@ -78,35 +78,6 @@ import Testing;
 			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
 		}
 
-		@Test("rulelist.toPattern with rule")
-		func test_rulelist_2() async throws {
-			let expression = ABNFRulelist<UInt8>(rules: [
-				ABNFRule(rulename: ABNFRulename<UInt8>(label: "Top"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
-					ABNFRepetition(min: 3, max: 3, element: ABNFRulename(label: "Rule").element)
-				]).alternation),
-				ABNFRule(rulename: ABNFRulename<UInt8>(label: "Rule"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
-					ABNFCharVal(sequence: [0x43]).repetition
-				]).alternation),
-			]);
-			#expect(expression.alphabet == Set([0x43]))
-			#expect(expression.alphabetPartitions == Set([ [0x43] ]))
-		}
-
-		@Test("rulelist.toPattern with incremental rules")
-		func test_rulelist_incremental() async throws {
-			let expression = ABNFRulelist<UInt32>(rules: [
-				ABNFRule(rulename: ABNFRulename<UInt32>(label: "Top"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
-					ABNFNumVal<UInt32>(base: .hex, value: .sequence([0x12345678])).repetition
-				]).alternation),
-				ABNFRule(rulename: ABNFRulename<UInt32>(label: "Top"), definedAs: .incremental, alternation: ABNFConcatenation(repetitions: [
-					ABNFCharVal(sequence: [0x63]).repetition
-				]).alternation),
-			]);
-			#expect(expression.alphabet == Set([0x63, 0x12345678]))
-			// This is is the most tricky to do correctly
-			#expect(expression.alphabetPartitions == Set([ [0x63, 0x12345678] ]))
-		}
-
 		@Test("num-val")
 		func test_numVal_range() async throws {
 			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39))
@@ -114,17 +85,23 @@ import Testing;
 			#expect(expression.alphabetPartitions() == Set([ Set(0x30...0x39) ]))
 		}
 
-		@Test("recursion")
-		func test_rulelist_repetition() async throws {
-			let expression = ABNFRulelist<UInt8>(rules: [
-				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
-					ABNFCharVal(sequence: [0x40, 0x41]).repetition,
-					ABNFRulename(label: "rule").repetition,
-					ABNFNumVal(base: .hex, value: .range(0x41...0x43)).repetition,
-				]).alternation)
-			]);
-			#expect(expression.alphabet == [0x40, 0x41, 0x42, 0x43])
-			#expect(expression.alphabetPartitions == Set([ [0x40], [0x41], [0x42, 0x43] ]))
+		@Test("builtins")
+		func test_rulelist_builtins() async throws {
+			let builtins = ABNFBuiltins<DFA<Array<UInt8>>>.dictionary.mapValues { $0.minimized() };
+			let expression = ABNFRulename<UInt8>(label: "DIGIT").alternation;
+			#expect(expression.alphabet(rulelist: builtins.mapValues(\.alphabet)) == Set(0x30...0x39))
+			#expect(expression.alphabetPartitions(rulelist: builtins.mapValues(\.alphabetPartitions)) == Set([ Set(0x30...0x39) ]))
+		}
+
+		@Test("builtins 2")
+		func test_rulelist_builtins2() async throws {
+			let builtins = ABNFBuiltins<DFA<Array<UInt8>>>.dictionary.mapValues { $0.minimized() };
+			let expression = ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFAlternation(matches: [
+				ABNFRulename(label: "DIGIT").concatenation,
+				ABNFNumVal(base: .hex, value: .range(0x41...0x43)).concatenation,
+			]));
+			#expect(expression.alphabet(rulelist: builtins.mapValues(\.alphabet)) == Set(Array(0x30...0x39) + [0x41, 0x42, 0x43]))
+			#expect(expression.alphabetPartitions(rulelist: builtins.mapValues(\.alphabetPartitions)) == Set([ Set(Array(0x30...0x39) + [0x41, 0x42, 0x43]) ]))
 		}
 	}
 	@Suite("match/parse") struct ABNFTest_match {
@@ -1159,6 +1136,9 @@ import Testing;
 				let difference = value.symmetricDifference(referenceDictionary[key]!)
 				#expect(difference.finals.isEmpty, "Builtin rule \(key) mismatches reference, have values \(difference.toViz())")
 			}
+
+			#expect(providedDictionary["DIGIT"]!.alphabet == Set(0x30...0x39));
+			#expect(providedDictionary["DIGIT"]!.alphabetPartitions == Set([ Set(0x30...0x39) ]));
 		}
 
 		@Test("HEXDIG")
