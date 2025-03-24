@@ -192,6 +192,55 @@ public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryIntege
 		return dict;
 	}
 
+	/// Tells you which other rules the named rule depends on. Also tells you if operations won't be able to complete because some rules are undefined or recursive.
+	public func dependencies(rulename: String) -> (dependencies: Array<String>, builtins: Array<String>, undefined: Array<String>, recursive: Array<String>) {
+		let rules = self.dictionary.mapValues { $0.referencedRules.sorted() }
+		let builtinNames = ["ALPHA", "BIT", "CHAR", "CR", "CRLF", "CTL", "DIGIT", "DQUOTE", "HEXDIG", "HTAB", "LF", "LWSP", "OCTET", "SP", "VCHAR", "WSP"];
+		// Set of rules fully explored to avoid reprocessing
+		var visited = Set<String>()
+		var path = Array<String>()
+		var ordered = Array<String>()
+		var builtins = Set<String>() // Names of rules that are being implicitly imported from the builtins
+		var undefined = Set<String>() // Names of rules that have no definition
+		var recursive = Set<String>() // Names of rules that depend on themselves
+		func dfs(rule: String) {
+			// Skip if already fully processed
+			if visited.contains(rule) {
+				return
+			}
+
+			// Add rule to current path
+			path.append(rule)
+
+			// Get dependencies; if rule isn't in 'rules' or 'builtins', it's undefined
+			if let dependencies = rules[rule] {
+				for dep in dependencies {
+					// Check for cycle
+					if let index = path.firstIndex(of: dep) {
+						// Cycle detected; add all rules in cycle to recursive
+						for r in path[index...] {
+							recursive.insert(r)
+						}
+					} else {
+						// Recurse into dependency
+						dfs(rule: dep)
+					}
+				}
+			} else if builtinNames.contains(rule) {
+				builtins.insert(rule)
+			} else {
+				undefined.insert(rule)
+			}
+
+			// Remove rule from path, mark as visited, and add to ordered list
+			path.removeLast()
+			visited.insert(rule)
+			ordered.append(rule)
+		}
+		dfs(rule: rulename)
+		return (ordered, builtins.sorted(), undefined.sorted(), recursive.sorted())
+	}
+
 	public var description: String {
 		return rules.map { $0.description }.joined()
 	}
