@@ -1,5 +1,4 @@
 // TODO:
-// - Parsing errors, show the unexpected character and the permitted characters for that position
 // - Auto-completion of rule names
 // - Show tab of alternative forms of the document
 // - Import rules from other documents
