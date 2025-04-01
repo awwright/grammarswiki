@@ -148,6 +148,24 @@ import Testing
 		#expect(Set(equivalent) == Set(["ab", "aab", "aaab", "aaaab"]))
 	}
 
+	@Test("minimized")
+	func test_minimized() {
+		// A DFA with some live states and some dead states
+		let dfa = DFA<Array<UInt8>>(
+			states: [[0:2], [0:2], [1:3], [0:4], [:]],
+			initial: 0,
+			finals: [2]
+		)
+		#expect(dfa.minimized().states.count == 2)
+		#expect(dfa.finals.count == 1)
+
+		let providedDictionary = ABNFBuiltins<DFA<Array<UInt8>>>.dictionary
+		providedDictionary.forEach { key, value in
+			#expect(value.finals.isEmpty == false)
+			let difference = value.symmetricDifference(value.minimized())
+			#expect(difference.finals.isEmpty)
+		}
+	}
 
 	@Test("parallel")
 	func test_parallel() {
