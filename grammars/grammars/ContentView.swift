@@ -124,6 +124,9 @@ struct DocumentDetail: View {
 	@State private var rule_partitions: Array<Array<UInt32>>? = nil
 	@State private var rule_fsm: DFA<Array<UInt32>>? = nil
 	@State private var rule_fsm_error: String? = nil
+	@State private var rule_fsm_proxy: SymbolClassDFA<Array<UInt32>>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
+	@State private var rule_partshrink: Dictionary<UInt32, UInt32>? = nil
+	@State private var rule_partexpand: Dictionary<UInt32, Array<UInt32>>? = nil
 
 	@State private var fsm_test_result: Bool? = nil
 	@State private var fsm_test_next: Array<UInt32>? = nil
@@ -252,7 +255,7 @@ struct DocumentDetail: View {
 						if showAlphabet {
 							DisclosureGroup("Alphabet", isExpanded: $alphabet_expanded, content: {
 								if let rule_alphabet {
-//										Text(String(describing: rule_alphabet)).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
+									// Text(String(describing: rule_alphabet)).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
 									Text(describeCharacterSet(rule_alphabet)).frame(maxWidth: .infinity, alignment: .leading)//.padding(1).border(Color.gray, width: 0.5)
 								}else{
 									Text("Computing alphabet...")
@@ -266,7 +269,7 @@ struct DocumentDetail: View {
 								if let rule_partitions {
 									ForEach(Array(rule_partitions), id: \.self) {
 										part in
-//											Text(String(describing: part)).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
+										// Text(String(describing: part)).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
 										Text(describeCharacterSet(Array(part))).frame(maxWidth: .infinity, alignment: .leading) //.padding(1).border(Color.gray, width: 0.5)
 									}
 								}else{
@@ -306,10 +309,12 @@ struct DocumentDetail: View {
 								.onAppear { updatedFSM() }
 							}
 
-							if showGraphViz {
+							if showGraphViz, let rule_partexpand {
 								// TODO: "Copy to clipboard" button
 								DisclosureGroup("Graphviz", content: {
-									Text(rule_fsm.toViz())
+									let reducedAlphabetLanguage = DFA<Array<UInt32>>.union( rule_partexpand.keys.map { DFA<Array<UInt32>>.symbol($0) } ).star();
+									let expanded: DFA<Array<String>> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { if let cset = rule_partexpand[$0] { describeCharacterSet(cset) } else { "Unknown symbol \($0)" } }
+									Text(expanded.minimized().toViz())
 										.textSelection(.enabled)
 										.border(Color.gray, width: 1)
 								})
@@ -386,6 +391,8 @@ struct DocumentDetail: View {
 		// invalidate updatedRule
 		rule_alphabet = nil
 		rule_partitions = nil
+		rule_partshrink = nil
+		rule_partexpand = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
 		// invalidate updatedFSM
@@ -416,6 +423,8 @@ struct DocumentDetail: View {
 					content_rulelist_error = "Error at index: " + String(describing: error.index)
 					rule_alphabet = nil
 					rule_partitions = nil
+					rule_partshrink = nil
+			rule_partexpand = nil
 					fsm_test_result = nil
 					let line = input[0...error.index.startIndex].count(where: { $0 == 0xA })
 					messages = Set([
@@ -438,6 +447,8 @@ struct DocumentDetail: View {
 	private func updatedRule() {
 		rule_alphabet = nil
 		rule_partitions = nil
+		rule_partshrink = nil
+		rule_partexpand = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
 		// invalidate updatedFSM
@@ -466,36 +477,46 @@ struct DocumentDetail: View {
 			await MainActor.run {
 				rule_alphabet = Array(result_alphabet).sorted { $0 < $1 }
 				rule_partitions = Array(result_partitions).map { $0.sorted { $0 < $1 } }.sorted { $0[0] < $1[0] }
-			}
-		}
 
-		// Compute DFA
-		Task.detached(priority: .utility) {
-			func reduce<S, T>(definitions: Array<(String, S)>, initial: Dictionary<String, T>, combine: (S, Dictionary<String, T>) throws -> T) rethrows -> T {
-				var current = initial;
-				var last: T?
-				for (rulename, definition) in definitions {
-					last = try combine(definition, current)
-					current[rulename] = last
-				}
-				return last!
-			}
-			do {
-				let result = try reduce(definitions: dependencies, initial: builtins, combine: { try $0.toPattern(rules: $1) })
-				await MainActor.run {
-					rule_fsm = result
-					rule_fsm_error = nil
-				}
-			} catch let error as ABNFExportError {
-				print(error)
-				await MainActor.run {
-					rule_fsm = nil
-					rule_fsm_error = "ABNFExportError: " + String(describing: error)
-				}
-			} catch {
-				await MainActor.run {
-					rule_fsm = nil
-					rule_fsm_error = error.localizedDescription
+				let ( reducedMapping, expandMapping, reducedAlphabet ) = compressPartitions(result_partitions)
+				rule_partshrink = reducedMapping
+				rule_partexpand = expandMapping
+
+				// Compute DFA
+				Task.detached(priority: .utility) {
+					func reduce<S, T>(definitions: Array<(String, S)>, initial: Dictionary<String, T>, combine: (S, Dictionary<String, T>) throws -> T) rethrows -> T {
+						var current = initial;
+						var last: T?
+						for (rulename, definition) in definitions {
+							last = try combine(definition, current)
+							current[rulename] = last
+						}
+						return last!
+					}
+					do {
+						// Cut the builtins down to match the reducedAlphabet... let's see if this works
+						print(reducedAlphabet)
+						let reducedAlphabetLanguage = DFA<Array<UInt32>>.union( reducedAlphabet.map { DFA<Array<UInt32>>.symbol($0) } ).star().minimized();
+						print(reducedAlphabetLanguage.toViz())
+						let reducedBuiltins = builtins.mapValues { $0.intersection(reducedAlphabetLanguage).minimized() }
+						let result = try reduce(definitions: dependencies, initial: reducedBuiltins, combine: { try $0.toPattern(rules: $1, alphabet: reducedAlphabet) })
+						await MainActor.run {
+							rule_fsm = result
+							rule_fsm_proxy = SymbolClassDFA(inner: result, mapping: reducedMapping)
+							rule_fsm_error = nil
+						}
+					} catch let error as ABNFExportError {
+						print(error)
+						await MainActor.run {
+							rule_fsm = nil
+							rule_fsm_error = "ABNFExportError: " + String(describing: error)
+						}
+					} catch {
+						await MainActor.run {
+							rule_fsm = nil
+							rule_fsm_error = error.localizedDescription
+						}
+					}
 				}
 			}
 		}
@@ -539,15 +560,15 @@ struct DocumentDetail: View {
 			return
 		}
 		let input = Array(testInput.unicodeScalars.map(\.value))
-		guard let selected_fsm = rule_fsm else {
+		guard let selected_fsm = rule_fsm_proxy else {
 			fsm_test_error = "Rule `\(selectedRule)` is recursive or missing rules"
 			return
 		}
 
 		let fsm_test_state = selected_fsm.nextState(state: selected_fsm.initial, input: input)
 		fsm_test_result = selected_fsm.isFinal(fsm_test_state);
-		if let fsm_test_state {
-			fsm_test_next = selected_fsm.states[fsm_test_state].keys.sorted()
+		if let fsm_test_state, let rule_partexpand, let rule_partshrink = rule_fsm_proxy?.mapping {
+			fsm_test_next = selected_fsm.states[fsm_test_state].keys.flatMap { rule_partexpand[rule_partshrink[$0]!]! }.sorted()
 		}
 		if fsm_test_result == false {
 			if fsm_test_state != nil {

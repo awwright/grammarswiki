@@ -612,11 +612,11 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
 
-//	func derive(_ input: Element) -> Self
-//	{
-////		let nextStates = self.next(initial: self.initial, )
-////		return Self.init(states: self.states, initial: currentState, finals: self.finals);
-//	}
+	//func derive(_ input: Element) -> Self
+	//{
+	//	let nextStates = self.next(initial: self.initial, )
+	//	return Self.init(states: self.states, initial: currentState, finals: self.finals);
+	//}
 
 	/// An iterator over all accepted sequences. Implements ``Sequence``.
 	///
