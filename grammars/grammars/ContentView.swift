@@ -133,7 +133,7 @@ struct DocumentDetail: View {
 	@State private var fsm_test_error: String? = nil
 
 	@State private var fsm_iterator: DFA<Array<UInt32>>.Iterator? = nil
-	@State private var fsm_iterator_result: Array<UInt32>? = nil
+	@State private var fsm_iterator_result: [String] = []
 
 	@State private var fsm_regex: SimpleRegex<UInt32>? = nil
 	@State private var fsm_regex_description: String? = nil
@@ -322,16 +322,20 @@ struct DocumentDetail: View {
 
 							if showInstances {
 								DisclosureGroup("Instances", isExpanded: $instances_expanded, content: {
+									ForEach(fsm_iterator_result, id: \.self) { instance in
+										Text(instance).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
+									}
+
 									HStack {
 										Button {
+											fsm_iterator_result = []
 											fsm_iterator = rule_fsm.makeIterator()
-											fsm_iterator_result = fsm_iterator?.next()
+											generateInstances()
 										} label: { Label("Reset", systemImage: "restart") }
 										Button {
-											fsm_iterator_result = fsm_iterator?.next()
-										} label: { Label("Next", systemImage: "arrowshape.forward") }
+											generateInstances()
+										} label: { Label("More", systemImage: "arrowshape.forward") }
 									}
-									Text(String(describing: fsm_iterator_result ?? [])).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
 								})
 							}
 
@@ -402,6 +406,8 @@ struct DocumentDetail: View {
 		fsm_test_result = nil
 		fsm_test_error = nil
 		fsm_test_next = nil
+		fsm_iterator = nil
+		fsm_iterator_result = []
 
 		let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 		Task.detached(priority: .utility) {
@@ -458,6 +464,8 @@ struct DocumentDetail: View {
 		fsm_test_result = nil
 		fsm_test_error = nil
 		fsm_test_next = nil
+		fsm_iterator = nil
+		fsm_iterator_result = []
 
 		guard let content_rulelist, let selectedRule else {
 			rule_fsm_error = "No rule selected"
@@ -529,6 +537,8 @@ struct DocumentDetail: View {
 		fsm_test_result = nil
 		fsm_test_error = nil
 		fsm_test_next = nil
+		fsm_iterator = nil
+		fsm_iterator_result = []
 
 		guard let rule_fsm else {
 			return
@@ -542,6 +552,19 @@ struct DocumentDetail: View {
 				fsm_regex = result
 				fsm_regex_description = description
 				fsm_regex_error = nil
+			}
+		}
+	}
+
+	private func generateInstances() {
+		if fsm_iterator != nil {
+			for _ in 0..<1000 {
+				let value = fsm_iterator!.next()
+				if let value {
+					fsm_iterator_result.append(String(decoding: value, as: Unicode.UTF32.self))
+				} else {
+					break
+				}
 			}
 		}
 	}

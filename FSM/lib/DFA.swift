@@ -662,10 +662,10 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	/// Indefinitely, if need be.
 	public struct PathIterator: IteratorProtocol {
 		public struct Segment: Equatable {
-			var source: StateNo
-			var index: Int
-			var symbol: Element.Element
-			var target: StateNo
+			public var source: StateNo
+			public var index: Int
+			public var symbol: Element.Element
+			public var target: StateNo
 		};
 		public typealias Path = Array<Segment>;
 		let fsm: DFA<Element>;
@@ -770,20 +770,28 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	public struct Iterator: IteratorProtocol {
 		let fsm: DFA<Element>;
 		var iterator: PathIterator;
+		var currentDepth: Int;
 
 		init(_ fsm: DFA<Element>) {
 			// let fsm = options.fsm;
 			self.fsm = fsm;
-			self.iterator = PathIterator(fsm);
+			self.iterator = PathIterator(fsm, filter: { _, path in path.count <= 0 });
+			self.currentDepth = 0;
 		}
 
 		public mutating func next() -> Element? {
-			while let stack = iterator.next() {
-				// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
-				let state = stack.isEmpty ? fsm.initial : stack.last!.target;
-				if fsm.finals.contains(state) {
-					return stack.reduce(Element.empty, { $0.appending(iterator.states[$1.source][$1.index].symbol) });
+			while currentDepth <= fsm.states.count {
+				while let stack = iterator.next() {
+					if stack.count < currentDepth { continue }
+					// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
+					let state = stack.isEmpty ? fsm.initial : stack.last!.target;
+					if fsm.finals.contains(state) {
+						return stack.reduce(Element.empty, { $0.appending(iterator.states[$1.source][$1.index].symbol) });
+					}
 				}
+				self.currentDepth += 1
+				let maxDepth = currentDepth;
+				self.iterator = PathIterator(fsm, filter: { _, path in path.count <= maxDepth });
 			}
 			return nil;
 		}
