@@ -367,9 +367,27 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 				}
 			}
 		}
+
+		// Step 2. Remove dead states
+		var coReachable = Set<Int>(finals).intersection(reachable)
+		var coReachableList = Array(coReachable)
+		index = 0
+		while index < coReachableList.count {
+			let current = coReachableList[index]
+			index += 1
+			for (state, transitions) in states.enumerated() {
+				for nextState in transitions.values {
+					if nextState == current && coReachable.insert(state).inserted {
+						coReachableList.append(state)
+					}
+				}
+			}
+		}
+		reachableStates = reachableStates.filter { coReachable.contains($0) }
 		let stateMap = Dictionary(uniqueKeysWithValues: reachableStates.enumerated().map { ($1, $0) })
 		let trimmedStates = reachableStates.map { state in
-			Dictionary(uniqueKeysWithValues: states[state].map { ($0.key, stateMap[$0.value]!) })
+			// Remove transitions to dead states, remap remaining transitions
+			Dictionary(uniqueKeysWithValues: states[state].compactMap { if let target = stateMap[$0.value] { ($0.key, target) } else { nil } })
 		}
 		let trimmedFinals = Set(finals.intersection(reachableStates).map { stateMap[$0]! })
 		let trimmedInitial = stateMap[initial]!
