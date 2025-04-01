@@ -385,6 +385,9 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		}
 		reachableStates = reachableStates.filter { coReachable.contains($0) }
 		let stateMap = Dictionary(uniqueKeysWithValues: reachableStates.enumerated().map { ($1, $0) })
+		if(stateMap.isEmpty) {
+			return DFA<Element>.empty
+		}
 		let trimmedStates = reachableStates.map { state in
 			// Remove transitions to dead states, remap remaining transitions
 			Dictionary(uniqueKeysWithValues: states[state].compactMap { if let target = stateMap[$0.value] { ($0.key, target) } else { nil } })

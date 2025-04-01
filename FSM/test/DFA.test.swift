@@ -150,6 +150,14 @@ import Testing
 
 	@Test("minimized")
 	func test_minimized() {
+		// A DFA with only dead states
+		let dfa0 = DFA<Array<UInt8>>(
+			states: [[0:2], [0:2], [1:3], [0:4], [:]],
+			initial: 0,
+			finals: []
+		)
+		#expect(dfa0.finals.isEmpty)
+
 		// A DFA with some live states and some dead states
 		let dfa = DFA<Array<UInt8>>(
 			states: [[0:2], [0:2], [1:3], [0:4], [:]],
