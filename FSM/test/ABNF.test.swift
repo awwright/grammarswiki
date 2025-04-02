@@ -11,7 +11,8 @@ import Testing;
 				ABNFCharVal(sequence: "B".utf8).concatenation,
 				ABNFCharVal(sequence: "C".utf8).element.repeating(3).concatenation,
 			])
-			#expect(expression.alphabet() == Set([0x41, 0x42, 0x43]))
+			#expect(expression.alphabet() == Set([0x41, 0x42, 0x43, 0x61, 0x62, 0x63]))
+			#expect(expression.alphabetPartitions() == Set([ [0x41, 0x42, 0x43, 0x61, 0x62, 0x63] ]))
 		}
 
 		@Test("repetition optional")
@@ -24,58 +25,62 @@ import Testing;
 
 		@Test("repetition plus")
 		func test_repetition_plus() async throws {
-			// 1*"C"
-			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
+			// 1*"Ab"
+			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
+			#expect(expression.alphabet() == Set([0x41, 0x61, 0x42, 0x62]))
+			#expect(expression.alphabetPartitions() == Set([ [0x41, 0x61], [0x42, 0x62] ]))
 		}
 
 		@Test("repetition star")
 		func test_repetition_star() async throws {
-			// *"C"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
+			// *"AB"
+			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
+			#expect(expression.alphabet() == Set([0x41, 0x61, 0x42, 0x62]))
+			#expect(expression.alphabetPartitions() == Set([ [0x41, 0x61], [0x42, 0x62] ]))
 		}
 
 		@Test("repetition min")
 		func test_repetition_min() async throws {
-			// 2*"C"
-			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
+			// 2*"AB"
+			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
+			#expect(expression.alphabet() == Set([0x41, 0x61, 0x42, 0x62]))
+			#expect(expression.alphabetPartitions() == Set([ [0x41, 0x61], [0x42, 0x62] ]))
 		}
 
 		@Test("repetition max")
 		func test_repetition_max() async throws {
-			// *2"C"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
+			// *2"AB"
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
+			#expect(expression.alphabet() == Set([0x41, 0x61, 0x42, 0x62]))
+			#expect(expression.alphabetPartitions() == Set([ [0x41, 0x61], [0x42, 0x62 ] ]))
 		}
 
-		@Test("repetition.toPattern min/max")
+		@Test("repetition min/max")
 		func test_repetition_minmax() async throws {
 			// 2*3"ABC"
-			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "ABC".utf8).element)
-			#expect(expression.alphabet() == Set([0x41, 0x42, 0x43]))
-			#expect(expression.alphabetPartitions() == Set([ [0x41], [0x42], [0x43] ]))
+			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "Abc".utf8).element)
+			#expect(expression.alphabet() == Set([0x41, 0x61, 0x42, 0x62, 0x43, 0x63]))
+			#expect(expression.alphabetPartitions() == Set([ [0x41, 0x61], [0x42, 0x62], [0x43, 0x63] ]))
 		}
 
-		@Test("element.toPattern")
+		@Test("element")
 		func test_element() async throws {
-			// "C"
-			let expression = ABNFElement.charVal(ABNFCharVal<UInt8>(sequence: "C".utf8))
-			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
+			// "Ab"
+			let expression = ABNFElement.charVal(ABNFCharVal<UInt8>(sequence: "Ab".utf8))
+			#expect(expression.alphabet() == Set([0x41, 0x61, 0x42, 0x62]))
+			#expect(expression.alphabetPartitions() == Set([ [0x41, 0x61], [0x42, 0x62] ]))
 		}
 
-		@Test("char_val.toPattern")
+		@Test("char_val %s/%i")
 		func test_char_val() async throws {
 			// "C"
-			let expression = ABNFCharVal<UInt8>(sequence: "C".utf8)
-			#expect(expression.alphabet() == Set([0x43]))
-			#expect(expression.alphabetPartitions() == Set([ [0x43] ]))
+			let expressioni = ABNFCharVal<UInt8>(sequence: "Abc".utf8, caseSensitive: true)
+			#expect(expressioni.alphabet() == Set([0x41, 0x62, 0x63]))
+			#expect(expressioni.alphabetPartitions() == Set([ [0x41], [0x62], [0x63] ]))
+
+			let expression = ABNFCharVal<UInt8>(sequence: "Abc".utf8, caseSensitive: false)
+			#expect(expression.alphabet() == Set([0x41, 0x61, 0x42, 0x62, 0x43, 0x63]))
+			#expect(expression.alphabetPartitions() == Set([ [0x41, 0x61], [0x42, 0x62], [0x43, 0x63] ]))
 		}
 
 		@Test("num-val")
@@ -532,6 +537,40 @@ import Testing;
 			#expect(rule.isOptional == false)
 		}
 
+		@Test("char-val w/ %i")
+		func test_char_val_i() async throws {
+			let abnf = """
+			%i"foo"
+			""";
+			let (rule, remainder) = try! ABNFCharVal<UInt8>.match(abnf.utf8)!
+			#expect(rule == ABNFCharVal<UInt8>(sequence: "foo".utf8, caseSensitive: false));
+			#expect(CHAR_string(remainder) == "");
+			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
+			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
+			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
+			#expect(rule.element == ABNFElement<UInt8>.charVal(rule))
+			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.isEmpty == false)
+			#expect(rule.isOptional == false)
+		}
+
+		@Test("char-val w/ %s")
+		func test_char_val_s() async throws {
+			let abnf = """
+			%s"foo"
+			""";
+			let (rule, remainder) = try! ABNFCharVal<UInt8>.match(abnf.utf8)!
+			#expect(rule == ABNFCharVal<UInt8>(sequence: "foo".utf8, caseSensitive: true));
+			#expect(CHAR_string(remainder) == "");
+			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
+			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
+			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
+			#expect(rule.element == ABNFElement<UInt8>.charVal(rule))
+			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.isEmpty == false)
+			#expect(rule.isOptional == false)
+		}
+
 		@Test("num-val w/ bin-val")
 		func test_bin_val() async throws {
 			let abnf = "%b100000.100000";
@@ -619,7 +658,14 @@ import Testing;
 
 		@Test("char-val")
 		func test_char_val() async throws {
-			// FIXME: a char-val is case insensitive, how do you handle this?
+			let abnf = """
+			"Foo"
+			""";
+			let expression = try! ABNFCharVal<UInt8>.parse(abnf.utf8)
+			let fsm: DFA<Array<UInt8>> = expression.toPattern();
+			#expect(fsm.contains("Foo".utf8))
+			#expect(fsm.contains("foo".utf8))
+			#expect(fsm.contains("FOO".utf8))
 		}
 
 		@Test("num-val range")

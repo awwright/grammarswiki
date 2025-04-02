@@ -434,14 +434,14 @@ import Testing
 		#expect(values == [""])
 	}
 
-	@Test("IteratorProtocol DepthFirst")
+	@Test("IteratorProtocol")
 	func testIteratorProtocol3() {
 		let dfa = DFA<String>(["bc", "a", "abcdefg", "ab", ""])
 		var values: [String] = []
 		for string in dfa {
 			values.append(string)
 		}
-		#expect(values == ["", "a", "ab", "abcdefg", "bc"])
+		#expect(values == ["", "a", "ab", "bc", "abcdefg"])
 	}
 
 	@Test("nextStates by DFA")

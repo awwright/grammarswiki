@@ -1332,7 +1332,9 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 			case 0x28: if let (g, remainder) = try ABNFGroup<Symbol>.match(input) { return (.group(g), remainder) }
 			case 0x5B: if let (o, remainder) = try ABNFOption<Symbol>.match(input) { return (.option(o), remainder) }
 			case 0x22: if let (c, remainder) = try ABNFCharVal<Symbol>.match(input) { return (.charVal(c), remainder) }
-			case 0x25: if let (n, remainder) = try ABNFNumVal<Symbol>.match(input) { return (.numVal(n), remainder) }
+			case 0x25:
+				if let (c, remainder) = try ABNFCharVal<Symbol>.match(input) { return (.charVal(c), remainder) }
+				else if let (n, remainder) = try ABNFNumVal<Symbol>.match(input) { return (.numVal(n), remainder) }
 			case 0x3C: if let (p, remainder) = try ABNFProseVal<Symbol>.match(input) { return (.proseVal(p), remainder) }
 			default: break;
 		}
@@ -1506,9 +1508,11 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 	public typealias Element = Array<S>;
 
 	public let sequence: Array<S>
+	public let caseSensitive: Bool
 
-	public init<T>(sequence: T) where T: Sequence, T.Element == Symbol {
+	public init<T>(sequence: T, caseSensitive: Bool = false) where T: Sequence, T.Element == Symbol {
 		self.sequence = Array(sequence)
+		self.caseSensitive = caseSensitive
 	}
 
 	public static func < (lhs: Self, rhs: Self) -> Bool {
@@ -1516,11 +1520,30 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 	}
 
 	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
-		Set(sequence)
+		let arr = if caseSensitive {
+			sequence
+		} else {
+			sequence.flatMap{ codepoint in
+				if(codepoint >= 0x41 && codepoint <= 0x5A) { return [ codepoint, codepoint+0x20 ] }
+				else if(codepoint >= 0x61 && codepoint <= 0x7A) { return [ codepoint-0x20, codepoint ] }
+				else { return [codepoint] }
+			}
+		}
+		return Set(arr)
 	}
 
 	public func alphabetPartitions(rulelist: Dictionary<String, Set<Set<Symbol>>> = [:]) -> Set<Set<Symbol>> {
-		Set(sequence.map{ Set([$0]) })
+		let arr: Array<Set<Symbol>>;
+		if caseSensitive {
+			arr = sequence.map { Set([$0]) }
+		} else {
+			arr = sequence.map { codepoint in
+				if(codepoint >= 0x41 && codepoint <= 0x5A) { return Set([codepoint, codepoint+0x20]) }
+				else if(codepoint >= 0x61 && codepoint <= 0x7A) { return Set([codepoint-0x20, codepoint]) }
+				else { return Set([codepoint]) }
+			}
+		}
+		return Set(arr)
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
@@ -1548,7 +1571,7 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 	public var description: String {
 		sequence.forEach { assert($0 < 128); }
 		let seq = sequence.map{ UInt8($0) }
-		return "\"\(CHAR_string(seq))\""
+		return (caseSensitive ? "%s" : "") + "\"" + CHAR_string(seq) + "\""
 	}
 
 	public var referencedRules: Set<String> {
@@ -1564,7 +1587,8 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 		return PatternType.concatenate(sequence.map {
 			codepoint in
 			// Check for uppercase letters, also accept lowercase versions
-			if(codepoint >= 0x41 && codepoint <= 0x5A) { return PatternType.union([ sym(codepoint), sym(codepoint+0x20) ]) }
+			if (caseSensitive) { return sym(codepoint) }
+			else if(codepoint >= 0x41 && codepoint <= 0x5A) { return PatternType.union([ sym(codepoint), sym(codepoint+0x20) ]) }
 			else if(codepoint >= 0x61 && codepoint <= 0x7A) { return PatternType.union([ sym(codepoint-0x20), sym(codepoint) ]) }
 			else { return sym(codepoint) }
 		})
@@ -1579,10 +1603,23 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 	}
 
 	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
-		guard let (_, remainder1) = Terminals.DQUOTE.match(input) else { return nil }
+		let remainder1: T.SubSequence
+		let caseSensitive: Bool
+		if let (_, remainder0) = Terminals.charVal_start_s.match(input) {
+			remainder1 = remainder0
+			caseSensitive = true
+		} else if let (_, remainder0) = Terminals.charVal_start_i.match(input) {
+			remainder1 = remainder0
+			caseSensitive = false
+		} else if let (_, remainder0) = Terminals.DQUOTE.match(input) {
+			remainder1 = remainder0
+			caseSensitive = false
+		} else {
+			return nil
+		}
 		guard let (chars, remainder2) = Terminals.charVal_pattern.match(remainder1) else { return nil }
 		guard let (_, remainder) = Terminals.DQUOTE.match(remainder2) else { return nil }
-		return (ABNFCharVal<Symbol>(sequence: chars.map { Symbol($0) }), remainder)
+		return (ABNFCharVal<Symbol>(sequence: chars.map { Symbol($0) }, caseSensitive: caseSensitive), remainder)
 	}
 }
 
@@ -2008,6 +2045,8 @@ struct Terminals {
 	static let numVal_range_separator = Terminals["-"];
 	static let proseVal_start = Terminals["<"];
 	static let proseVal_end = Terminals[">"];
+	static let charVal_start_s = Terminals["%s"] ++ DQUOTE;
+	static let charVal_start_i = Terminals["%i"] ++ DQUOTE;
 	static let charVal_pattern = (Rule.range(0x20...0x21) | Rule.range(0x23...0x7E)).star()
 
 	// And a generic way to get an arbitrary character sequence as a Rule
