@@ -2,7 +2,8 @@
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.Element: Comparable {
+public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
+	public typealias Element = Array<Symbol>
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
 
@@ -75,7 +76,7 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 		self.init(states: states, epsilon: epsilon, initials: [initial], finals: finals)
 	}
 
-	public init(verbatim: Element){
+	public init(verbatim: some Sequence<Symbol>){
 		// Generate one state per symbol in Element, plus a final state
 		let states = verbatim.enumerated().map { [ $1: Set([$0 + 1]) ] } + [[:]]
 		self.init(
@@ -86,7 +87,7 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 		);
 	}
 
-	public init(dfa: DFA<Element>) {
+	public init(dfa: DFA<Symbol>) {
 		self.init(
 			states: dfa.states.map { $0.mapValues { [$0] } },
 			epsilon: Array(repeating: [], count: dfa.states.count),
@@ -139,7 +140,7 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 		return self.nextStates(states: [state], symbol: symbol);
 	}
 
-	public func nextStates(state: StateNo, string: Element) -> States {
+	public func nextStates(state: StateNo, string: any Sequence<Symbol>) -> States {
 		return self.nextStates(states: [state], string: string);
 	}
 
@@ -148,7 +149,7 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 		return self.followε(states: Set(self.followε(states: states).flatMap { self.states[$0][symbol] ?? [] }))
 	}
 
-	public func nextStates(states: States, string: Element) -> States {
+	public func nextStates(states: States, string: any Sequence<Symbol>) -> States {
 		var currentState = states;
 		for symbol in string {
 			currentState = self.nextStates(states: currentState, symbol: symbol)
@@ -161,7 +162,7 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 	}
 
 	/// Tries to match as many characters from input as possible, returning the last final state
-	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Element.Element> {
+	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Symbol> {
 		var currentState = self.initials;
 		var finalIndex: T.Index? = nil;
 
@@ -194,7 +195,7 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 
 	/// Get the ID of the state machine without any input
 	public struct ID {
-		public let fsm: NFA<Element>
+		public let fsm: NFA<Symbol>
 		public let states: States
 
 		public var isFinal: Bool {
@@ -289,12 +290,17 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 		return Self.init(states: newStates, epsilon: Array(repeating: [], count: newStates.count), initial: newInitialState, finals: newFinals);
 	}
 
-	public func contains(_ input: Element) -> Bool {
+	public func contains(_ input: some Sequence<Symbol>) -> Bool {
 		let final = self.nextStates(states: self.initials, string: input)
 		return self.isFinal(final)
 	}
 
-	public func derive(_ input: Element) -> Self
+	public func contains(_ input: Array<Symbol>) -> Bool {
+		let final = self.nextStates(states: self.initials, string: input)
+		return self.isFinal(final)
+	}
+
+	public func derive(_ input: any Sequence<Symbol>) -> Self
 	{
 		var currentState = self.initials;
 
@@ -430,12 +436,11 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 		return Self.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
 
-	public func homomorphism<Target>(mapping: [(Element, Target)]) -> NFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
-		typealias TargetSymbol = Target.Element;
-		var newStates: [[TargetSymbol: Set<Int>]] = self.states.map { _ in [:] }
+	public func homomorphism<Target>(mapping: [(some Collection<Symbol>, some Collection<Target>)]) -> NFA<Target> where Target: Hashable {
+		var newStates: [[Target: Set<Int>]] = self.states.map { _ in [:] }
 		var newEpsilon: [States] = self.states.map { _ in [] }
 
-		func addTransition( _ states: inout [[TargetSymbol: Set<Int>]], _ from: Int, _ element: TargetSymbol, _ to: Int) {
+		func addTransition( _ states: inout [[Target: Set<Int>]], _ from: Int, _ element: Target, _ to: Int) {
 			if from >= states.count {
 				states.insert([:], at: from);
 			}
@@ -483,13 +488,13 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 	}
 
 	/// Convert one NFA to another by translating a FSM to an FSM
-	public func homomorphism<Target>(mapping: [(DFA<Element>, DFA<Target>)]) -> NFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
+	public func homomorphism<Target>(mapping: [(DFA<Symbol>, DFA<Target>)]) -> NFA<Target> {
 		return NFA<Target>();
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
 		// Can this be optimized?
-		DFA<Element>(nfa: self).toPattern(as: PatternType.self)
+		DFA<Symbol>(nfa: self).toPattern(as: PatternType.self)
 	}
 
 	public mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
@@ -531,5 +536,15 @@ public struct NFA<Element: SymbolSequenceProtocol>: FSMProtocol where Element.El
 
 	public static func - (lhs: Self, rhs: Self) -> Self {
 		return Self.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
+	}
+}
+
+// Conditional protocol compliance
+extension NFA: Sendable where Symbol: Sendable {}
+
+extension NFA where Symbol == Character {
+//	typealias Element = String
+	init (_ val: Array<String>) {
+		self.init(val.map{ Array($0) })
 	}
 }

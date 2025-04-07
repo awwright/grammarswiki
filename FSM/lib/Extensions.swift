@@ -35,6 +35,7 @@ extension Bool: @retroactive Comparable {
 	}
 }
 
+// This is going to explode one day I just know it
 extension Character: @retroactive Strideable {
 	public func distance(to: Character) -> Int {
 		return Int(to.unicodeScalars.first!.value - self.unicodeScalars.first!.value);

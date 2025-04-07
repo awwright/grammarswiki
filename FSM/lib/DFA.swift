@@ -15,9 +15,8 @@
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where Element.Element: Comparable {
-	/// The type of symbols in the DFA’s alphabet.
-	public typealias Symbol = Element.Element;
+public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashable {
+	public typealias Element = Array<Symbol>
 	/// The type used to index states
 	public typealias StateNo = Int;
 	/// The type of a set of states, which in the case of a DFA is optional to include the oblivion state (`nil`).
@@ -80,7 +79,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	/// - Parameter verbatim: The sequence to recognize (e.g., `[UInt8(97), UInt8(98)]` for "ab").
 	///
 	/// You can also provide an array literal, e.g. `DFA([element])`
-	public init(verbatim: Element){
+	public init(verbatim: some Collection<Symbol>){
 		let states = verbatim.enumerated().map { [ $1: $0 + 1 ] } + [[:]]
 		self.init(
 			states: states,
@@ -93,8 +92,8 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	///
 	/// - Parameter nfa: The NFA to convert.
 	/// - Precondition: The NFA must have at most one transition per symbol per state.
-	public init(nfa: NFA<Element>){
-		let translation = NFA<Element>.parallel(fsms: [nfa], merge: { $0[0] });
+	public init(nfa: NFA<Symbol>){
+		let translation = NFA<Symbol>.parallel(fsms: [nfa], merge: { $0[0] });
 		assert(translation.states.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
 		self.states = translation.states.map { $0.mapValues { $0.first! } }
 		self.initial = translation.initials.first!;
@@ -166,7 +165,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	///   - state: The starting state.
 	///   - input: The sequence to process.
 	/// - Returns: The resulting state, or `nil` if any transition fails.
-	public func nextState(state: StateNo, input: Element) -> States {
+	public func nextState(state: StateNo, input: any Sequence<Symbol>) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
 		var currentState = state;
@@ -198,7 +197,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	///
 	/// - Parameter input: The input collection to match against.
 	/// - Returns: A tuple of the matched prefix and remaining input, or `nil` if no match exists.
-	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Element.Element> {
+	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Symbol> {
 		var currentState = self.initial;
 		// Test the initial condition
 		var finalIndex: T.Index? = self.isFinal(currentState) ? input.startIndex : nil;
@@ -226,7 +225,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 
 	/// Instant Description (ID), describes a FSM and its specific state during execution
 	public struct ID {
-		public let fsm: DFA<Element>
+		public let fsm: DFA<Symbol>
 		public let state: StateNo
 
 		/// Indicates if the current state of the ID is a final state
@@ -245,8 +244,8 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		}
 
 		/// Returns a new DFA whose initial state is the current state
-		public var derived: DFA<Element> {
-			DFA<Element>(
+		public var derived: DFA<Symbol> {
+			DFA<Symbol>(
 				states: self.fsm.states,
 				initial: self.state,
 				finals: self.fsm.finals
@@ -280,7 +279,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 			else { return nil } //uh-oh, now we have to find all of the oblivion states
 			currentState = nextState
 		}
-		return DFA<Element>(
+		return DFA<Symbol>(
 			states: minimized.states,
 			initial: minimized.initial,
 			finals: [currentState]
@@ -353,7 +352,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	/// It does this by merging states with the "same" behavior into the same state.
 	/// Implemented by Hopcroft's Algorithm.
 	/// - Returns: The minimized DFA
-	public func minimized() -> DFA<Element> {
+	public func minimized() -> DFA<Symbol> {
 		// Step 1: Remove unreachable states
 		var reachable = Set<Int>([initial])
 		var reachableStates = [initial]
@@ -386,7 +385,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		reachableStates = reachableStates.filter { coReachable.contains($0) }
 		let stateMap = Dictionary(uniqueKeysWithValues: reachableStates.enumerated().map { ($1, $0) })
 		if(stateMap.isEmpty) {
-			return DFA<Element>.empty
+			return DFA<Symbol>.empty
 		}
 		let trimmedStates = reachableStates.map { state in
 			// Remove transitions to dead states, remap remaining transitions
@@ -457,7 +456,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	///
 	/// - Parameter transform: A function mapping each symbol to a new symbol type.
 	/// - Returns: A new DFA with transformed transitions.
-	public func mapSymbols<Target>(_ transform: (Element.Element) -> Target.Element) -> DFA<Target> {
+	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> DFA<Target> {
 		let newStates = states.map {
 			// Map the key of the dictionary using `transform`
 			Dictionary(uniqueKeysWithValues: $0.map { (key, value) in
@@ -473,25 +472,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	}
 
 	/// Checks if the DFA accepts a given sequence (element of the language)
-	public func contains(_ input: Element) -> Bool {
-		var currentState = self.initial;
-
-		for symbol in input {
-			guard currentState < self.states.count,
-					let nextState = self.states[currentState][symbol]
-			else {
-				return false
-			}
-			currentState = nextState
-		}
-
-		return self.finals.contains(currentState)
-	}
-
-	/// Checks if the DFA accepts a given sequence of symbols (not necessarially Element)
-	// This is exactly the same definition as above, but needs to be defined separately otherwise you get infinite loops for some reason
-	// related to how Swift provides a default `Sequence#contains(Element:)`
-	public func contains<T>(_ input: T) -> Bool where T: Sequence, Element.Element == T.Element {
+	public func contains(_ input: some Sequence<Symbol>) -> Bool {
 		var currentState = self.initial;
 
 		for symbol in input {
@@ -508,27 +489,27 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 
 	/// Returns a DFA accepting the union of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
-	public func union(_ other: __owned DFA<Element>) -> DFA<Element> {
+	public func union(_ other: __owned DFA<Symbol>) -> DFA<Symbol> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] });
 	}
 
 	/// Returns a DFA accepting the intersection of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
-	public func intersection(_ other: DFA<Element>) -> DFA<Element> {
+	public func intersection(_ other: DFA<Symbol>) -> DFA<Symbol> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] });
 	}
 
 	/// Returns a DFA accepting the symmetric difference of this DFA’s language and another’s.
 	/// That is, the set of elements in exactly one set or the other set, and not both.
 	/// To only remove elements, see ``subtracting(_:)`` or the ``-(lhs:rhs:)`` operator
-	public func symmetricDifference(_ other: __owned DFA<Element>) -> DFA<Element> {
+	public func symmetricDifference(_ other: __owned DFA<Symbol>) -> DFA<Symbol> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
 
 	// Also provide a static implementation of union since it applies to any number of inputs
-	public static func union(_ languages: Array<DFA<Element>>) -> DFA<Element> {
+	public static func union(_ languages: Array<DFA<Symbol>>) -> DFA<Symbol> {
 		if(languages.count == 0){
-			return DFA<Element>();
+			return DFA<Symbol>();
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
@@ -536,21 +517,21 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	}
 
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
-	public static func concatenate(_ languages: Array<DFA<Element>>) -> DFA<Element> {
+	public static func concatenate(_ languages: Array<DFA<Symbol>>) -> DFA<Symbol> {
 		if(languages.count == 0){
-			return DFA<Element>();
+			return DFA<Symbol>();
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
-		let nfa = NFA<Element>.concatenate(languages.map { NFA<Element>(dfa: $0) });
-		return DFA(nfa: nfa);
+		let nfa = NFA<Symbol>.concatenate(languages.map { NFA<Symbol>(dfa: $0) });
+		return DFA<Symbol>(nfa: nfa);
 	}
 
-	public func concatenate(_ other: DFA<Element>) -> DFA<Element> {
+	public func concatenate(_ other: DFA<Symbol>) -> DFA<Symbol> {
 		return Self.concatenate([self, other]);
 	}
 
-	public static func symbol(_ element: Symbol) -> DFA<Element> {
+	public static func symbol(_ element: Symbol) -> DFA<Symbol> {
 		return Self(
 			states: [[element: 1], [:]],
 			initial: 0,
@@ -560,7 +541,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 
 	/// Return a DFA that also accepts the empty sequence
 	/// i.e. adds the initial state to the set of final states
-	public func optional() -> DFA<Element> {
+	public func optional() -> DFA<Symbol> {
 		return Self(
 			states: self.states,
 			initial: self.initial,
@@ -569,8 +550,8 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	}
 
 	/// Returns a DFA accepting one or more repetitions of its language.
-	public func plus() -> DFA<Element> {
-		let nfa = NFA<Element>(
+	public func plus() -> DFA<Symbol> {
+		let nfa = NFA<Symbol>(
 			states: self.states.map { $0.mapValues { Set([$0]) } },
 			// Add an epsilon transition from the final states to the initial state
 			epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? [self.initial] : [] },
@@ -581,7 +562,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	}
 
 	/// Returns a DFA accepting zero or more repetitions of its language.
-	public func star() -> DFA<Element> {
+	public func star() -> DFA<Symbol> {
 		return self.plus().optional();
 		// Should be equal to:
 		//let nfa = NFA<Element>(
@@ -595,19 +576,19 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	}
 
 	/// Returns a DFA accepting exactly `count` repetitions of its language.
-	public func repeating(_ count: Int) -> DFA<Element> {
+	public func repeating(_ count: Int) -> DFA<Symbol> {
 		precondition(count >= 0)
 		return DFA.concatenate(Array(repeating: self, count: count))
 	}
 
 	/// Returns a DFA accepting between `range.lowerBound` and `range.upperBound` repetitions.
-	public func repeating(_ range: ClosedRange<Int>) -> DFA<Element> {
+	public func repeating(_ range: ClosedRange<Int>) -> DFA<Symbol> {
 		precondition(range.lowerBound >= 0)
 		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + Array(repeating: self.optional(), count: Int(range.upperBound-range.lowerBound)));
 	}
 
 	/// Returns a DFA accepting `range.lowerBound` or more repetitions.
-	public func repeating(_ range: PartialRangeFrom<Int>) -> DFA<Element> {
+	public func repeating(_ range: PartialRangeFrom<Int>) -> DFA<Symbol> {
 		precondition(range.lowerBound >= 0)
 		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
@@ -629,12 +610,11 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		return Iterator(self);
 	}
 
-	// TODO: Implement sort order
 	/// A simple way to create a view on a struct to change how it is iterated or enumerated
 	public struct IteratorFactory<T>: Sequence where T: IteratorProtocol {
-		let dfa: DFA<Element>;
-		let constructor: (DFA<Element>) -> T;
-		init(_ dfa: DFA<Element>, constructor: @escaping (DFA<Element>) -> T) {
+		let dfa: DFA<Symbol>;
+		let constructor: (DFA<Symbol>) -> T;
+		init(_ dfa: DFA<Symbol>, constructor: @escaping (DFA<Symbol>) -> T) {
 			self.dfa = dfa;
 			self.constructor = constructor;
 		}
@@ -664,19 +644,19 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		public struct Segment: Equatable {
 			public var source: StateNo
 			public var index: Int
-			public var symbol: Element.Element
+			public var symbol: Symbol
 			public var target: StateNo
 		};
 		public typealias Path = Array<Segment>;
-		let fsm: DFA<Element>;
-		let states: Array<Array<(symbol: Element.Element, toState: StateNo)>>
+		let fsm: DFA<Symbol>;
+		let states: Array<Array<(symbol: Symbol, toState: StateNo)>>
 		let filter: (Self, Path) -> Bool;
 
 		var stack: Path;
 		var visited: Set<StateNo>?;
 		var started = false;
 
-		init(_ fsm: DFA<Element>, filter: @escaping (Self, Path) -> Bool) {
+		init(_ fsm: DFA<Symbol>, filter: @escaping (Self, Path) -> Bool) {
 			// let fsm = options.fsm;
 			self.fsm = fsm;
 			self.filter = filter;
@@ -709,7 +689,7 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 			self.stack = [];
 		}
 
-		init(_ fsm: DFA<Element>) {
+		init(_ fsm: DFA<Symbol>) {
 			self.init(fsm, filter: { _, _ in true });
 		}
 
@@ -768,25 +748,27 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	}
 
 	public struct Iterator: IteratorProtocol {
-		let fsm: DFA<Element>;
+		public typealias Element = Array<Symbol>
+
+		let fsm: DFA<Symbol>;
 		var iterator: PathIterator;
 		var currentDepth: Int;
 
-		init(_ fsm: DFA<Element>) {
+		init(_ fsm: DFA<Symbol>) {
 			// let fsm = options.fsm;
 			self.fsm = fsm;
 			self.iterator = PathIterator(fsm, filter: { _, path in path.count <= 0 });
 			self.currentDepth = 0;
 		}
 
-		public mutating func next() -> Element? {
+		public mutating func next<T>() -> T? where T: SymbolSequenceProtocol, T.Element == Symbol {
 			while currentDepth <= fsm.states.count {
 				while let stack = iterator.next() {
 					if stack.count < currentDepth { continue }
 					// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
 					let state = stack.isEmpty ? fsm.initial : stack.last!.target;
 					if fsm.finals.contains(state) {
-						return stack.reduce(Element.empty, { $0.appending(iterator.states[$1.source][$1.index].symbol) });
+						return stack.reduce(T.empty, { $0.appending(iterator.states[$1.source][$1.index].symbol) });
 					}
 				}
 				self.currentDepth += 1
@@ -800,9 +782,9 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	// Now we're really getting into alchemy land
 	/// This follows all the paths walked by a set of strings provided as another DFA
 	/// It takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
-	public func nextStates(initial: StateNo, input: DFA<Element>) -> Set<StateNo> {
+	public func nextStates(initial: StateNo, input: DFA<Symbol>) -> Set<StateNo> {
 		var finalStates: Set<StateNo> = [];
-		//var derivative = DFA<Element>(
+		//var derivative = DFA<Symbol>(
 		//	states: self.states,
 		//	initial: state,
 		//	finals: self.finals
@@ -831,13 +813,13 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		return finalStates;
 	}
 
-	public func homomorphism<Target>(mapping: [(Element, Target)]) -> DFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
-		let nfa: NFA<Target> = NFA<Element>(dfa: self).homomorphism(mapping: mapping);
+	public func homomorphism<Target>(mapping: [(some Collection<Symbol>, some Collection<Target>)]) -> DFA<Target> {
+		let nfa: NFA<Target> = NFA<Symbol>(dfa: self).homomorphism(mapping: mapping);
 		return DFA<Target>(nfa: nfa)
 	}
 
-	public func homomorphism<Target>(mapping: [(DFA<Element>, DFA<Target>)]) -> DFA<Target> where Target: Hashable & Sequence, Target.Element: Hashable {
-		let nfa: NFA<Target> = NFA<Element>(dfa: self).homomorphism(mapping: mapping);
+	public func homomorphism<Target>(mapping: [(DFA<Symbol>, DFA<Target>)]) -> DFA<Target> {
+		let nfa: NFA<Target> = NFA<Symbol>(dfa: self).homomorphism(mapping: mapping);
 		return DFA<Target>(nfa: nfa)
 	}
 
@@ -941,15 +923,15 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 		return insert(newMember).1
 	}
 
-	public mutating func formUnion(_ other: __owned DFA<Element>) {
+	public mutating func formUnion(_ other: __owned DFA<Symbol>) {
 		self = self.union(other);
 	}
 
-	public mutating func formIntersection(_ other: DFA<Element>) {
+	public mutating func formIntersection(_ other: DFA<Symbol>) {
 		self = self.intersection(other);
 	}
 
-	public mutating func formSymmetricDifference(_ other: __owned DFA<Element>) {
+	public mutating func formSymmetricDifference(_ other: __owned DFA<Symbol>) {
 		self = self.symmetricDifference(other);
 	}
 
@@ -960,10 +942,29 @@ public struct DFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where 
 	///
 	/// Note: I think (-) is pretty unambiguous here, but some math notation uses \ for this operation.
 	public static func - (lhs: Self, rhs: Self) -> Self {
-		return DFA<Element>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
+		return DFA<Symbol>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
 	}
 }
 
 // Conditional protocol compliance
 extension DFA: Sendable where Symbol: Sendable {}
-extension DFA: Hashable where Element: Hashable {}
+
+extension DFA where Symbol == Character {
+//	typealias Element = String
+	init (_ val: Array<String>) {
+		self.init(val.map{ Array($0) })
+	}
+
+	public mutating func insert(_ newMember: __owned String) -> (inserted: Bool, memberAfterInsert: String) {
+		if(contains(newMember)) {
+			return (false, newMember)
+		}
+		self = self.union(DFA(verbatim: newMember));
+		return (true, newMember)
+	}
+
+	public mutating func remove(_ member: String) -> (String)? {
+		self.formSymmetricDifference(DFA(verbatim: member));
+		return member;
+	}
+}

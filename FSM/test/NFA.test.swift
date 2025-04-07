@@ -3,7 +3,7 @@ import Testing
 
 @Suite("NFA Tests") struct NFATests {
 	@Test("Initialization") func Initialization() {
-		let nfa = NFA<String>()
+		let nfa = NFA<Character>()
 		#expect(nfa.states.count == 1)
 		#expect(nfa.epsilon.count == 1)
 		#expect(nfa.initials == [0])
@@ -15,7 +15,7 @@ import Testing
 		//		["a": Set([1])],
 		//		["b": Set([0])],
 		//	];
-		//	let nfa = NFA<String>(states: transitions, epsilon: [[], []], initials: [0], finals: [1])
+		//	let nfa = NFA<Character>(states: transitions, epsilon: [[], []], initials: [0], finals: [1])
 		//	#expect(nfa.states.count == 2)
 		//	#expect(nfa.epsilon.count == 2)
 		//	#expect(nfa.initials == [0])
@@ -40,7 +40,7 @@ import Testing
 
 	@Test("Follow epsilon function")
 	func test_followε() {
-		let nfa = NFA<String>(
+		let nfa = NFA<Character>(
 			states: [
 				[:],
 				[:],
@@ -73,7 +73,7 @@ import Testing
 	}
 
 	@Test("Next States Calculation") func Initialization5() {
-		let nfa = NFA<String>(states: [["a": [1]], ["b": [0]]], epsilon: [[], []], initial: 0, finals: [1])
+		let nfa = NFA<Character>(states: [["a": [1]], ["b": [0]]], epsilon: [[], []], initial: 0, finals: [1])
 		#expect(nfa.nextStates(states: [0], symbol: "a") == [1])
 		#expect(nfa.nextStates(states: [1], symbol: "b") == [0])
 		#expect(nfa.nextStates(states: [0], string: "ab") == [0])
@@ -116,8 +116,8 @@ import Testing
 
 	@Test("concatenate")
 	func test_concatenate() {
-		let dfa1 = NFA<String>(["a", "b"])
-		let dfa2 = NFA<String>(["x", "y"])
+		let dfa1 = NFA<Character>(["a", "b"])
+		let dfa2 = NFA<Character>(["x", "y"])
 		let concatenation = dfa1.concatenate(dfa2);
 //		let language = Array(concatenation);
 //		#expect(language.count == 4)
@@ -129,7 +129,7 @@ import Testing
 
 	@Test("optional")
 	func test_optional() {
-		let dfa1 = NFA<String>(["a", "b"])
+		let dfa1 = NFA<Character>(["a", "b"])
 		let optional = dfa1.optional();
 		#expect(optional.contains(""))
 		#expect(optional.contains("a"))
@@ -140,7 +140,7 @@ import Testing
 
 	@Test("plus")
 	func test_plus() {
-		let dfa1 = NFA<String>(["a", "b"])
+		let dfa1 = NFA<Character>(["a", "b"])
 		let optional = dfa1.plus();
 		#expect(!optional.contains(""))
 		#expect(optional.contains("a"))
@@ -152,7 +152,7 @@ import Testing
 
 	@Test("star")
 	func test_star() {
-		let dfa1 = NFA<String>(["a", "b"])
+		let dfa1 = NFA<Character>(["a", "b"])
 		let optional = dfa1.star();
 		#expect(optional.contains(""))
 		#expect(optional.contains("a"))
@@ -164,7 +164,7 @@ import Testing
 
 	@Test("repeating(Int)")
 	func test_repeating_int() {
-		let original = NFA<String>(["a", "b"])
+		let original = NFA<Character>(["a", "b"])
 		let repeated = original.repeating(2);
 		#expect(!repeated.contains(""))
 		#expect(!repeated.contains("a"))
@@ -177,7 +177,7 @@ import Testing
 
 	@Test("repeating(ClosedRange)")
 	func test_repeating_closed() {
-		let original = NFA<String>(["a", "b"])
+		let original = NFA<Character>(["a", "b"])
 		let repeated = original.repeating(2...3);
 		#expect(!repeated.contains(""))
 		#expect(!repeated.contains("a"))
@@ -191,7 +191,7 @@ import Testing
 
 	@Test("repeating(PartialRangeFrom)")
 	func test_repeating_lower() {
-		let original = NFA<String>(["a", "b"])
+		let original = NFA<Character>(["a", "b"])
 		let repeated = original.repeating(2...);
 		#expect(!repeated.contains(""))
 		#expect(!repeated.contains("a"))
@@ -205,7 +205,7 @@ import Testing
 
 
 	@Test("Set Operations") func Initialization0() {
-		var nfa = NFA<String>(["abc", "def"])
+		var nfa = NFA<Character>(["abc", "def"])
 		#expect(nfa.contains("abc"))
 		#expect(nfa.contains("def"))
 
@@ -223,7 +223,7 @@ import Testing
 	}
 
 	@Test("Simple Homomorphism - Identity Mapping") func Test01() {
-		let nfa = NFA<String>(verbatim: "abc")
+		let nfa = NFA<Character>(verbatim: "abc")
 		let mapping: [(String, String)] = [("a", "a"), ("b", "b"), ("c", "c")]
 		let newNFA = nfa.homomorphism(mapping: mapping)
 
@@ -232,7 +232,7 @@ import Testing
 	}
 
 	@Test("Homomorphism - Symbol Replacement") func Test02() {
-		let nfa = NFA<String>(verbatim: "abc")
+		let nfa = NFA<Character>(verbatim: "abc")
 		let mapping: [(String, String)] = [("a", "x"), ("b", "y"), ("c", "z")]
 		let newNFA = nfa.homomorphism(mapping: mapping)
 
@@ -242,7 +242,7 @@ import Testing
 	}
 
 	@Test("Homomorphism - Symbol to Multiple Symbols") func Test03() {
-		let nfa = NFA<String>(verbatim: "a")
+		let nfa = NFA<Character>(verbatim: "a")
 		let mapping: [(String, String)] = [("a", "bb")]
 		let newNFA = nfa.homomorphism(mapping: mapping)
 
@@ -252,7 +252,7 @@ import Testing
 	}
 
 	@Test("Homomorphism - Multiple Symbols to One Symbol") func Test04() {
-		let nfa = NFA<String>(verbatim: "ab")
+		let nfa = NFA<Character>(verbatim: "ab")
 		let mapping: [(String, String)] = [("a", "x"), ("b", "x")]
 		let newNFA = nfa.homomorphism(mapping: mapping)
 
@@ -261,7 +261,7 @@ import Testing
 	}
 
 	@Test("Homomorphism - Heterogneous types") func Test05() {
-		let language = NFA<String>(["ab", "ba"]);
+		let language = NFA<Character>(["ab", "ba"]);
 		let mapping: [(String, Array<UInt8>)] = [("a", [1]), ("b", [2])]
 		let translation = language.homomorphism(mapping: mapping)
 
@@ -272,7 +272,7 @@ import Testing
 	}
 
 	@Test("Homomorphism - Complex Mapping") func Test06() {
-		let nfa = NFA<String>(verbatim: "abc")
+		let nfa = NFA<Character>(verbatim: "abc")
 		let mapping: [(String, String)] = [("a", "x"), ("bc", "yz")]
 		let newNFA = nfa.homomorphism(mapping: mapping)
 
@@ -282,7 +282,7 @@ import Testing
 	}
 
 	@Test("Homomorphism - No Mapping for Some Symbols") func Test07() {
-		let language = NFA<String>(verbatim: "abc")
+		let language = NFA<Character>(verbatim: "abc")
 		let mapping: [(String, String)] = [("a", "x"), ("b", "b"), ("c", "c")]
 		let translation = language.homomorphism(mapping: mapping)
 		#expect(translation.contains("xbc"))
@@ -292,7 +292,7 @@ import Testing
 	}
 
 //	@Test("Homomorphism - Plain text to JSON") func Test08() {
-//		let language = NFA<String>(verbatim: "abc")
+//		let language = NFA<Character>(verbatim: "abc")
 //		let mapping: [(DFA<String>, DFA<String>)] = [
 //			(DFA(["a"]), DFA(["a", "\\x61"])),
 //			(DFA(["b"]), DFA(["b", "\\x62"])),

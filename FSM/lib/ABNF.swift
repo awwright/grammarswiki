@@ -1696,7 +1696,7 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 			}
 			return currentValue;
 		}
-		var numPattern: DFA<Array<UInt8>> {
+		var numPattern: DFA<UInt8> {
 			return switch self {
 				case Base.bin: Terminals.BIT.plus()
 				case Base.dec: Terminals.DIGIT.plus()
@@ -1931,7 +1931,7 @@ public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryIntege
 
 	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		// 0x20...0x7E - 0x3E
-		let pattern: DFA<Array<UInt8>> = (DFA.range(0x20...0x3D) | DFA.range(0x3F...0x7E)).star();
+		let pattern: DFA<UInt8> = (DFA.range(0x20...0x3D) | DFA.range(0x3F...0x7E)).star();
 
 		guard let (_, input_) = Terminals.proseVal_start.match(input) else { return nil; }
 		guard let (match, input__) = pattern.match(input_) else { return nil }
@@ -1992,7 +1992,7 @@ public struct ABNFBuiltins<Dfn: RegularPatternProtocol> where Dfn.Symbol: Binary
 /// A set of values for parsing ABNF
 /// Instances of ABNF documents themselves can't refer to these
 struct Terminals {
-	typealias Rule = DFA<Array<UInt8>>;
+	typealias Rule = DFA<UInt8>;
 
 	static let ALPHA  = ABNFBuiltins<Rule>.ALPHA;
 	static let BIT    = ABNFBuiltins<Rule>.BIT;

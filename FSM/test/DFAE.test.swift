@@ -4,8 +4,8 @@ import Testing
 @Suite("DFAE Tests") struct DFAETests {
 	@Test("Empty DFAE")
 	func testEmptyDFAEString() {
-		let map: Dictionary<String, DFA<String>> = [:];
-		let dfa = DFAE<String, String>(partitions: map)
+		let map: Dictionary<String, DFA<Character>> = [:];
+		let dfa = DFAE<Character, String>(partitions: map)
 		#expect(dfa[""] == nil)
 		#expect(dfa["01"] == nil)
 	}
@@ -13,11 +13,11 @@ import Testing
 	@Test("Filled DFAE")
 	func testFilledDFAEString() {
 		let parts = [
-			"binary": DFA<String>(["0", "1"]).star(),
-			"alpha": DFA<String>(["a"]).plus(),
-			"bravo": DFA<String>(["b"]).plus(),
+			"binary": DFA<Character>(["0", "1"]).star(),
+			"alpha": DFA<Character>(["a"]).plus(),
+			"bravo": DFA<Character>(["b"]).plus(),
 		];
-		let dfa = DFAE<String, String>(partitions: parts)
+		let dfa = DFAE<Character, String>(partitions: parts)
 		#expect(dfa[""] == "binary")
 		#expect(dfa["01"] == "binary")
 		#expect(dfa["a"] == "alpha")

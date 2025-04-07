@@ -84,13 +84,13 @@ public struct UnicodeCharsets {
 	})
 
 	/// Returns a DFA matching all the equivalent JSON encodings of the Unicode code point
-	public static let JSONStrings = ComputedCollection<DFA<Array<UInt32>>>(size: 0x10FFFF, computeElement: {
+	public static let JSONStrings = ComputedCollection<DFA<UInt32>>(size: 0x10FFFF, computeElement: {
 		i in
 		let hexMapping: Array<Array<Array<UInt32>>> = [
 			[[0x30]], [[0x31]], [[0x32]], [[0x33]], [[0x34]], [[0x35]], [[0x36]], [[0x37]], [[0x38]], [[0x39]],
 			[[0x41], [0x61]], [[0x42], [0x62]], [[0x43], [0x63]], [[0x44], [0x64]], [[0x45], [0x65]], [[0x46], [0x66]]
 		];
-		var strings = DFA<Array<UInt32>>.concatenate([
+		var strings = DFA<UInt32>.concatenate([
 			DFA([[UInt32(0x5C), UInt32(0x75)]]),
 			DFA(hexMapping[(i >> 12) & 0xf]),
 			DFA(hexMapping[(i >> 8) & 0xf]),

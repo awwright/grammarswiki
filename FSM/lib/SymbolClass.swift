@@ -26,17 +26,16 @@ public func compressPartitions<Symbol>(_ partitions: Set<Set<Symbol>>) -> (reduc
 	return (reduce, expand.mapValues{$0.sorted()}, alphabet)
 }
 
-public struct SymbolClassDFA<Element: SymbolSequenceProtocol>: Sequence, FSMProtocol where Element.Element: Comparable {
-	public typealias Element = DFA<Element>.Element
-	public typealias StateNo = DFA<Element>.StateNo
-	public typealias States = DFA<Element>.States
-	public typealias ArrayLiteralElement = DFA<Element>.ArrayLiteralElement
-	public typealias Iterator = DFA<Element>.Iterator
+public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable, FSMProtocol {
+	public typealias StateNo = DFA<Symbol>.StateNo
+	public typealias States = DFA<Symbol>.States
+	public typealias ArrayLiteralElement = DFA<Symbol>.ArrayLiteralElement
+	public typealias Iterator = DFA<Symbol>.Iterator
 	
 	// TODO: a variation that replaces the symbol with a character class matching the whole character class
 	// Type signature would be DFA<Array<SimplePattern<Symbol>>>
 	
-	public let inner: DFA<Element>;
+	public let inner: DFA<Symbol>;
 	public let mapping: Dictionary<Symbol, Symbol>;
 	public let alphabet: Set<Symbol>;
 
@@ -50,20 +49,20 @@ public struct SymbolClassDFA<Element: SymbolSequenceProtocol>: Sequence, FSMProt
 		alphabet = []
 	}
 	
-	public init(inner: DFA<Element>, mapping: Dictionary<Symbol, Symbol>) {
+	public init(inner: DFA<Symbol>, mapping: Dictionary<Symbol, Symbol>) {
 		self.inner = inner
 		self.mapping = mapping;
 		self.alphabet = Set(mapping.keys);
 	}
 	
-	public init(inner: DFA<Element>) where Element: Comparable & Hashable {
+	public init(inner: DFA<Symbol>) where Element: Comparable & Hashable {
 		let (reduce, _, alphabet) = compressPartitions(inner.alphabetPartitions)
 		self.inner = inner
 		self.mapping = reduce
 		self.alphabet = alphabet
 	}
 	
-	public init(verbatim: DFA<Element>.Element) {
+	public init(verbatim: DFA<Symbol>.Element) {
 		inner = DFA(verbatim: verbatim)
 		mapping = [:]
 		alphabet = []
@@ -86,60 +85,60 @@ public struct SymbolClassDFA<Element: SymbolSequenceProtocol>: Sequence, FSMProt
 		return currentState;
 	}
 	
-	public func intersection(_ other: SymbolClassDFA<Element>) -> SymbolClassDFA<Element> {
+	public func intersection(_ other: SymbolClassDFA<Symbol>) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: inner.intersection(other.inner), mapping: mapping)
 	}
 	
-	public func symmetricDifference(_ other: __owned SymbolClassDFA<Element>) -> SymbolClassDFA<Element> {
+	public func symmetricDifference(_ other: __owned SymbolClassDFA<Symbol>) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: inner.symmetricDifference(other.inner), mapping: mapping)
 	}
 	
-	public static func - (lhs: SymbolClassDFA<Element>, rhs: SymbolClassDFA<Element>) -> SymbolClassDFA<Element> {
+	public static func - (lhs: SymbolClassDFA<Symbol>, rhs: SymbolClassDFA<Symbol>) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: lhs.inner - rhs.inner, mapping: lhs.mapping)
 	}
 	
-	public func star() -> SymbolClassDFA<Element> {
+	public func star() -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: inner.star(), mapping: mapping)
 	}
 	
-	public mutating func formUnion(_ other: __owned SymbolClassDFA<Element>) {
+	public mutating func formUnion(_ other: __owned SymbolClassDFA<Symbol>) {
 		fatalError("Unimplemented")
 		//self = SymbolClassDFA(inner: inner.union(other.inner), mapping: mapping)
 	}
 	
-	public mutating func formIntersection(_ other: SymbolClassDFA<Element>) {
+	public mutating func formIntersection(_ other: SymbolClassDFA<Symbol>) {
 		fatalError("Unimplemented")
 		//self = SymbolClassDFA(inner: inner.intersection(other.inner), mapping: mapping)
 	}
 	
-	public mutating func formSymmetricDifference(_ other: __owned SymbolClassDFA<Element>) {
+	public mutating func formSymmetricDifference(_ other: __owned SymbolClassDFA<Symbol>) {
 		fatalError("Unimplemented")
 		//self = SymbolClassDFA(inner: inner.symmetricDifference(other.inner), mapping: mapping)
 	}
 	
-	public static var empty: SymbolClassDFA<Element> {
-		SymbolClassDFA(inner: DFA<Element>.empty, mapping: [:])
+	public static var empty: SymbolClassDFA<Symbol> {
+		SymbolClassDFA(inner: DFA<Symbol>.empty, mapping: [:])
 	}
 	
-	public static var epsilon: SymbolClassDFA<Element> {
-		SymbolClassDFA(inner: DFA<Element>.epsilon, mapping: [:])
+	public static var epsilon: SymbolClassDFA<Symbol> {
+		SymbolClassDFA(inner: DFA<Symbol>.epsilon, mapping: [:])
 	}
 	
 	
-	public func isFinal(_ state: DFA<Element>.States) -> Bool {
+	public func isFinal(_ state: DFA<Symbol>.States) -> Bool {
 		inner.isFinal(state)
 	}
 	
-	public func makeIterator() -> DFA<Element>.Iterator {
+	public func makeIterator() -> DFA<Symbol>.Iterator {
 		fatalError("Unimplemented")
 		//return inner.makeIterator()
 	}
 	
-	public mutating func insert(_ newMember: __owned DFA<Element>.Element) -> (inserted: Bool, memberAfterInsert: DFA<Element>.Element) {
+	public mutating func insert(_ newMember: __owned DFA<Symbol>.Element) -> (inserted: Bool, memberAfterInsert: DFA<Symbol>.Element) {
 		fatalError("Unimplemented")
 		//var newSet = self.inner;
 		//let value = newSet.insert(newMember);
@@ -147,7 +146,7 @@ public struct SymbolClassDFA<Element: SymbolSequenceProtocol>: Sequence, FSMProt
 		//return value;
 	}
 	
-	public mutating func remove(_ member: DFA<Element>.Element) -> (DFA<Element>.Element)? {
+	public mutating func remove(_ member: DFA<Symbol>.Element) -> (DFA<Symbol>.Element)? {
 		fatalError("Unimplemented")
 		//var newSet = self.inner;
 		//let value = newSet.remove(member);
@@ -155,7 +154,7 @@ public struct SymbolClassDFA<Element: SymbolSequenceProtocol>: Sequence, FSMProt
 		//return value;
 	}
 	
-	public mutating func update(with newMember: __owned DFA<Element>.Element) -> (DFA<Element>.Element)? {
+	public mutating func update(with newMember: __owned DFA<Symbol>.Element) -> (DFA<Symbol>.Element)? {
 		fatalError("Unimplemented")
 		//var newSet = self.inner;
 		//let value = newSet.update(with: newMember);
@@ -163,24 +162,24 @@ public struct SymbolClassDFA<Element: SymbolSequenceProtocol>: Sequence, FSMProt
 		//return value;
 	}
 	
-	public func contains(_ member: DFA<Element>.Element) -> Bool {
+	public func contains(_ member: DFA<Symbol>.Element) -> Bool {
 		inner.contains(member.map { mapping[$0] ?? $0 })
 	}
 	
-	public static func union(_ elements: [SymbolClassDFA<Element>]) -> SymbolClassDFA<Element> {
+	public static func union(_ elements: [SymbolClassDFA<Symbol>]) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: DFA<Element>.union(elements.map(\.inner)), mapping: [:])
+		//SymbolClassDFA(inner: DFA<Symbol>.union(elements.map(\.inner)), mapping: [:])
 	}
 	
 	
-	public static func concatenate(_ elements: [SymbolClassDFA<Element>]) -> SymbolClassDFA<Element> {
+	public static func concatenate(_ elements: [SymbolClassDFA<Symbol>]) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: DFA<Element>.concatenate(elements.map(\.inner)), mapping: [:])
+		//SymbolClassDFA(inner: DFA<Symbol>.concatenate(elements.map(\.inner)), mapping: [:])
 	}
 	
-	public static func symbol(_ element: Symbol) -> SymbolClassDFA<Element> {
+	public static func symbol(_ element: Symbol) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: DFA<Element>.symbol(element), mapping: [:])
+		//SymbolClassDFA(inner: DFA<Symbol>.symbol(element), mapping: [:])
 	}
 	
 }

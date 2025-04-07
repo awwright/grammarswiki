@@ -5,21 +5,21 @@ import Testing
 
 	@Test("Empty DFA of Strings should not contain any input")
 	func testEmptyDFAString() {
-		let dfa = DFA<String>()
+		let dfa = DFA<Character>()
 		#expect(!dfa.contains("a"))
 		#expect(!dfa.contains(""))
 	}
 
 	@Test("Empty DFA of UInt8 Arrays should not contain any input")
 	func testEmptyDFAUInt8() {
-		let dfa = DFA<Array<UInt8>>()
+		let dfa = DFA<UInt8>()
 		#expect(!dfa.contains([0]))
 		#expect(!dfa.contains([]))
 	}
 
 	@Test("DFA from verbatim should recognize the input")
 	func testDFAFromVerbatim() {
-		let dfa = DFA<String>(verbatim: "abc")
+		let dfa = DFA<Character>(verbatim: "abc")
 		#expect(dfa.contains("abc"))
 		#expect(!dfa.contains("ab"))
 		#expect(!dfa.contains("abcd"))
@@ -27,7 +27,7 @@ import Testing
 
 	@Test("Character range")
 	func test_from_ClosedRange() {
-		let dfa = DFA<String>.range("a"..."f")
+		let dfa = DFA<Character>.range("a"..."f")
 		#expect(!dfa.contains(""))
 		#expect(dfa.contains("a"))
 		#expect(dfa.contains("f"))
@@ -37,7 +37,7 @@ import Testing
 
 	@Test("Import from NFA")
 	func testDFAFromNFA() {
-		let nfa = NFA<String>(
+		let nfa = NFA<Character>(
 			states: [
 				[:],
 				[:],
@@ -76,24 +76,24 @@ import Testing
 
 	@Test("Alphabet generation")
 	func testAlphabet() {
-		let dfa = DFA<String>(verbatim: "abc")
+		let dfa = DFA<Character>(verbatim: "abc")
 		let expectedAlphabet: Set<Character> = ["a", "b", "c"]
 		#expect(dfa.alphabet == expectedAlphabet)
 	}
 
 	@Test("nextState for symbol")
 	func test_nextState_symbol() {
-		let dfa_string = DFA<String>(verbatim: "abc")
+		let dfa_string = DFA<Character>(verbatim: "abc")
 		#expect(dfa_string.nextState(state: 0, symbol: "a") == 1)
 		#expect(dfa_string.nextState(state: 1, symbol: "b") == 2)
 
-		let dfa_int = DFA<Array<Int>>(verbatim: [0, 1, 2])
+		let dfa_int = DFA<Int>(verbatim: [0, 1, 2])
 		#expect(dfa_int.nextState(state: 0, symbol: 0) == 1)
 		#expect(dfa_int.nextState(state: 1, symbol: 1) == 2)
 		#expect(dfa_int.nextState(state: 2, symbol: 2) == 3)
 		#expect(dfa_int.nextState(state: 3, symbol: 0) == nil)
 
-		let dfa_bool = DFA<Array<Bool>>(verbatim: [true, false, true])
+		let dfa_bool = DFA<Bool>(verbatim: [true, false, true])
 		#expect(dfa_bool.nextState(state: 0, symbol: true) == 1)
 		#expect(dfa_bool.nextState(state: 1, symbol: false) == 2)
 		#expect(dfa_bool.nextState(state: 2, symbol: true) == 3)
@@ -103,19 +103,19 @@ import Testing
 
 	@Test("nextState for input string")
 	func test_nextState_string() {
-		let dfa_string = DFA<String>(verbatim: "abc")
+		let dfa_string = DFA<Character>(verbatim: "abc")
 		#expect(dfa_string.nextState(state: 0, input: "a") == 1)
 		#expect(dfa_string.nextState(state: 0, input: "ab") == 2)
 		#expect(dfa_string.nextState(state: 1, input: "bc") == 3)
 		#expect(dfa_string.nextState(state: 1, input: "c") == nil)
 
-		let dfa_int = DFA<Array<Int>>(verbatim: [0, 1, 2])
+		let dfa_int = DFA<Int>(verbatim: [0, 1, 2])
 		#expect(dfa_int.nextState(state: 0, input: [0, 1]) == 2)
 		#expect(dfa_int.nextState(state: 1, input: [1, 2]) == 3)
 		#expect(dfa_int.nextState(state: 2, input: [2, 3]) == nil)
 		#expect(dfa_int.nextState(state: 3, input: [0]) == nil)
 
-		let dfa = DFA<Array<Bool>>(verbatim: [true, false, true])
+		let dfa = DFA<Bool>(verbatim: [true, false, true])
 		#expect(dfa.nextState(state: 0, input: [true, false]) == 2)
 		#expect(dfa.nextState(state: 0, input: [true, false, true]) == 3)
 		#expect(dfa.nextState(state: 0, input: [true, false, true, false]) == nil)
@@ -123,7 +123,7 @@ import Testing
 
 	@Test("Greedy match")
 	func test_match() {
-		let dfa = DFA<String>(["a", "ab", "xy"])
+		let dfa = DFA<Character>(["a", "ab", "xy"])
 		#expect(dfa.match("zzz") == nil)
 		#expect(dfa.match("") == nil)
 		#expect(dfa.match("a")! == ("a", ""))
@@ -133,7 +133,7 @@ import Testing
 		#expect(dfa.match("xy")! == ("xy", ""))
 		#expect(dfa.match("xyz")! == ("xy", "z"))
 
-		let dfa2 = DFA<String>(["", "abc"])
+		let dfa2 = DFA<Character>(["", "abc"])
 		#expect(dfa2.match("")! == ("", ""))
 		#expect(dfa2.match("a")! == ("", "a"))
 		#expect(dfa2.match("ab")! == ("", "ab"))
@@ -142,16 +142,16 @@ import Testing
 	}
 
 	@Test("equivalent")
-	func test_equivalent() {
-		let dfa = DFA<String>(["a", "aa", "aaa", "aaaa"]).concatenate(DFA<String>(["b", "bb", "bbb", "bbbb"])).concatenate(DFA<String>(["a"]).star()).minimized()
-		let equivalent = dfa.equivalentInputs(input: "ab")!
-		#expect(Set(equivalent) == Set(["ab", "aab", "aaab", "aaaab"]))
+	func test_equivalent() throws {
+		let dfa = DFA<Character>(["a", "aa", "aaa", "aaaa"]).concatenate(DFA<Character>(["b", "bb", "bbb", "bbbb"])).concatenate(DFA<Character>(["a"]).star()).minimized()
+		let equivalent = try #require(dfa.equivalentInputs(input: "ab"))
+		#expect(Set(equivalent.map { String($0) }) == Set(["ab", "aab", "aaab", "aaaab"]))
 	}
 
 	@Test("minimized")
 	func test_minimized() {
 		// A DFA with only dead states
-		let dfa0 = DFA<Array<UInt8>>(
+		let dfa0 = DFA<UInt8>(
 			states: [[0:2], [0:2], [1:3], [0:4], [:]],
 			initial: 0,
 			finals: []
@@ -159,7 +159,7 @@ import Testing
 		#expect(dfa0.finals.isEmpty)
 
 		// A DFA with some live states and some dead states
-		let dfa = DFA<Array<UInt8>>(
+		let dfa = DFA<UInt8>(
 			states: [[0:2], [0:2], [1:3], [0:4], [:]],
 			initial: 0,
 			finals: [2]
@@ -167,7 +167,7 @@ import Testing
 		#expect(dfa.minimized().states.count == 2)
 		#expect(dfa.finals.count == 1)
 
-		let providedDictionary = ABNFBuiltins<DFA<Array<UInt8>>>.dictionary
+		let providedDictionary = ABNFBuiltins<DFA<UInt8>>.dictionary
 		providedDictionary.forEach { key, value in
 			#expect(value.finals.isEmpty == false)
 			let difference = value.symmetricDifference(value.minimized())
@@ -183,8 +183,8 @@ import Testing
 	@Test("mapTransitions")
 	func test_mapTransitions() {
 		// Map symbols from ASCII UInt8 to Character
-		let dfa1 = DFA<Array<UInt8>>([ [0x61], [0x61, 0x62], [0x63, 0x64] ]);
-		let dfa2: DFA<String> = dfa1.mapSymbols({
+		let dfa1 = DFA<UInt8>([ [0x61], [0x61, 0x62], [0x63, 0x64] ]);
+		let dfa2: DFA<Character> = dfa1.mapSymbols({
 			symbol in
 			// Read `symbol` as an ASCII character and convert it to a Character
 			return Character(UnicodeScalar(Int(symbol))!)
@@ -197,8 +197,8 @@ import Testing
 
 	@Test("Union of DFAs")
 	func testDFAUnion() {
-		let dfa1 = DFA<String>(verbatim: "a")
-		let dfa2 = DFA<String>(verbatim: "b")
+		let dfa1 = DFA<Character>(verbatim: "a")
+		let dfa2 = DFA<Character>(verbatim: "b")
 		let unionDFA = dfa1.union(dfa2)
 		#expect(unionDFA.contains("a"))
 		#expect(unionDFA.contains("b"))
@@ -207,8 +207,8 @@ import Testing
 
 	@Test("Intersection of DFAs")
 	func testDFAIntersection() {
-		let dfa1 = DFA<String>(["a", "b"])
-		let dfa2 = DFA<String>(["b", "c"])
+		let dfa1 = DFA<Character>(["a", "b"])
+		let dfa2 = DFA<Character>(["b", "c"])
 		let intersectionDFA = dfa1.intersection(dfa2)
 
 		#expect(!intersectionDFA.contains("a"))
@@ -219,8 +219,8 @@ import Testing
 
 	@Test("Symmetric Difference of DFAs")
 	func testDFASymmetricDifference() {
-		let dfa1 = DFA<String>(["a", "b", "ab"])
-		let dfa2 = DFA<String>(verbatim: "ab")
+		let dfa1 = DFA<Character>(["a", "b", "ab"])
+		let dfa2 = DFA<Character>(verbatim: "ab")
 		let symDiffDFA = dfa1.symmetricDifference(dfa2)
 
 		#expect(symDiffDFA.contains("a"))
@@ -230,10 +230,10 @@ import Testing
 
 	@Test("concatenate")
 	func test_concatenate() {
-		let dfa1 = DFA<String>(["a", "b"])
-		let dfa2 = DFA<String>(["x", "y"])
+		let dfa1 = DFA<Character>(["a", "b"])
+		let dfa2 = DFA<Character>(["x", "y"])
 		let concatenation = dfa1.concatenate(dfa2);
-		let language = Array(concatenation);
+		let language = Array(concatenation.map { String($0) });
 		#expect(language.count == 4)
 		#expect(language.contains("ax"))
 		#expect(language.contains("ay"))
@@ -243,7 +243,7 @@ import Testing
 
 	@Test("optional")
 	func test_optional() {
-		let dfa1 = DFA<String>(["a", "b"])
+		let dfa1 = DFA<Character>(["a", "b"])
 		let optional = dfa1.optional();
 		#expect(optional.contains(""))
 		#expect(optional.contains("a"))
@@ -254,7 +254,7 @@ import Testing
 
 	@Test("plus")
 	func test_plus() {
-		let dfa1 = DFA<String>(["a", "b"])
+		let dfa1 = DFA<Character>(["a", "b"])
 		let optional = dfa1.plus();
 		#expect(!optional.contains(""))
 		#expect(optional.contains("a"))
@@ -266,7 +266,7 @@ import Testing
 
 	@Test("star")
 	func test_star() {
-		let dfa1 = DFA<String>(["a", "b"])
+		let dfa1 = DFA<Character>(["a", "b"])
 		let optional = dfa1.star();
 		#expect(optional.contains(""))
 		#expect(optional.contains("a"))
@@ -278,7 +278,7 @@ import Testing
 
 	@Test("repeating(Int)")
 	func test_repeating_int() {
-		let original = DFA<String>(["a", "b"])
+		let original = DFA<Character>(["a", "b"])
 		let repeated = original.repeating(2);
 		#expect(!repeated.contains(""))
 		#expect(!repeated.contains("a"))
@@ -291,7 +291,7 @@ import Testing
 
 	@Test("repeating(ClosedRange)")
 	func test_repeating_closed() {
-		let original = DFA<String>(["a", "b"])
+		let original = DFA<Character>(["a", "b"])
 		let repeated = original.repeating(2...3);
 		#expect(!repeated.contains(""))
 		#expect(!repeated.contains("a"))
@@ -305,7 +305,7 @@ import Testing
 
 	@Test("repeating(PartialRangeFrom)")
 	func test_repeating_lower() {
-		let original = DFA<String>(["a", "b"])
+		let original = DFA<Character>(["a", "b"])
 		let repeated = original.repeating(2...);
 		#expect(!repeated.contains(""))
 		#expect(!repeated.contains("a"))
@@ -318,7 +318,7 @@ import Testing
 
 	@Test("Insert and remove operations")
 	func testInsertRemove() {
-		var dfa = DFA<String>()
+		var dfa = DFA<Character>()
 		let (inserted, _) = dfa.insert("test")
 		#expect(inserted)
 		#expect(dfa.contains("test"))
@@ -330,7 +330,7 @@ import Testing
 
 	@Test("DFA#paths Iterator: Single initial state, empty set")
 	func test_paths_0() {
-		let dfa = DFA<String>(
+		let dfa = DFA<Character>(
 			states: [
 				[:],
 			],
@@ -343,7 +343,7 @@ import Testing
 
 	@Test("DFA#paths iterator: Single initial state, empty string final")
 	func test_paths_1() {
-		let dfa = DFA<String>(
+		let dfa = DFA<Character>(
 			states: [
 				[:],
 			],
@@ -356,7 +356,7 @@ import Testing
 
 	@Test("DFA#paths iterator: Single initial state, empty string final")
 	func test_paths_2() {
-		let dfa = DFA<String>(
+		let dfa = DFA<Character>(
 			states: [
 				["x": 1],
 				[:],
@@ -367,36 +367,36 @@ import Testing
 		let paths = Array(dfa.paths);
 		#expect(paths == [
 			[],
-			[DFA<String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 1)],
+			[DFA<Character>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 1)],
 		])
 	}
 
 	@Test("DFA#paths filtered: Single initial state, single character star, path length less than 3")
 	func test_paths_filter_0() {
-		let dfa = DFA<String>(
+		let dfa = DFA<Character>(
 			states: [
 				["x": 0],
 			],
 			initial: 0,
 			finals: [0]
 		)
-		func filter(iterator: DFA<String>.PathIterator, path: DFA<String>.PathIterator.Path) -> Bool {
+		func filter(iterator: DFA<Character>.PathIterator, path: DFA<Character>.PathIterator.Path) -> Bool {
 			return path.count < 3;
 		}
-		var array: Array<DFA<String>.PathIterator.Path> = [];
+		var array: Array<DFA<Character>.PathIterator.Path> = [];
 		for path in dfa.pathIterator(filter: filter) {
 			array.append(path);
 		}
 		#expect(array == [
 			[],
-			[DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 0)],
-			[DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 0), DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 0)]
+			[DFA<Character>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 0)],
+			[DFA<Character>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 0), DFA<Character>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 0)]
 		]);
 	}
 
 	@Test("DFA#paths filtered: No revisiting states (no cycles)")
 	func test_paths_filter_2() {
-		let dfa = DFA<String>(
+		let dfa = DFA<Character>(
 			states: [
 				["x": 1],
 				["y": 2],
@@ -405,7 +405,7 @@ import Testing
 			initial: 0,
 			finals: [0, 1, 2]
 		)
-		func filter(iterator: DFA<String>.PathIterator, path: DFA<String>.PathIterator.Path) -> Bool {
+		func filter(iterator: DFA<Character>.PathIterator, path: DFA<Character>.PathIterator.Path) -> Bool {
 			var seenTargets = Set([0])
 			for segment in path {
 				if seenTargets.insert(segment.target).inserted == false {
@@ -418,28 +418,28 @@ import Testing
 		let paths = Array(dfa.pathIterator(filter: filter));
 		#expect(paths == [
 			[],
-			[DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 1)],
-			[DFA<Swift.String>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 1), DFA<Swift.String>.PathIterator.Segment(source: 1, index: 0, symbol: "y", target: 2)],
+			[DFA<Character>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 1)],
+			[DFA<Character>.PathIterator.Segment(source: 0, index: 0, symbol: "x", target: 1), DFA<Character>.PathIterator.Segment(source: 1, index: 0, symbol: "y", target: 2)],
 			// No transition to "z" because that targets the origin, which we've always previously "visited"
 		]);
 	}
 
 	@Test("IteratorProtocol conformance: Empty string")
 	func testIteratorProtocol1() {
-		let dfa = DFA<String>(verbatim: "")
+		let dfa = DFA<Character>(verbatim: "")
 		var values: [String] = []
-		for string in dfa {
-			values.append(string)
+		for string: String in dfa {
+			values.append(String(string))
 		}
 		#expect(values == [""])
 	}
 
 	@Test("IteratorProtocol")
 	func testIteratorProtocol3() {
-		let dfa = DFA<String>(["bc", "a", "abcdefg", "ab", ""])
+		let dfa = DFA<Character>(["bc", "a", "abcdefg", "ab", ""])
 		var values: [String] = []
-		for string in dfa {
-			values.append(string)
+		for string: String in dfa {
+			values.append(String(string))
 		}
 		#expect(values == ["", "a", "ab", "bc", "abcdefg"])
 	}
@@ -472,7 +472,7 @@ import Testing
 	@Suite("toPattern") struct DFATests_toPattern {
 		@Test("empty")
 		func test_empty() {
-			let dfa: DFA<Array<UInt8>> = DFA([]);
+			let dfa: DFA<UInt8> = DFA([]);
 			#expect(Array(dfa).count == 0)
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
 			#expect(pattern.description == "∅")
@@ -480,7 +480,7 @@ import Testing
 
 		@Test("epsilon")
 		func test_epsilon() {
-			let dfa: DFA<Array<UInt8>> = DFA([ [] ]);
+			let dfa: DFA<UInt8> = DFA([ [] ]);
 			#expect(Array(dfa).count == 1)
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
 			#expect(pattern.description == "ε")
@@ -488,7 +488,7 @@ import Testing
 
 		@Test("character")
 		func test_char() {
-			let dfa: DFA<Array<UInt8>> = DFA([ [0x30] ]);
+			let dfa: DFA<UInt8> = DFA([ [0x30] ]);
 			#expect(Array(dfa).count == 1)
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
 			#expect(pattern.description == "30")
@@ -496,7 +496,7 @@ import Testing
 
 		@Test("character?")
 		func test_optional() {
-			let dfa: DFA<Array<UInt8>> = DFA([ [], [0x30] ]);
+			let dfa: DFA<UInt8> = DFA([ [], [0x30] ]);
 			#expect(Array(dfa).count == 2)
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
 			#expect(pattern.description == "ε|30")
@@ -506,7 +506,7 @@ import Testing
 		func test_plus() {
 			// FIXME: .minimized() is required otherwise this produces 30.30*
 			// Is this something that can be fixed in .star()?
-			let dfa: DFA<Array<UInt8>> = DFA([ [0x30] ]).plus().minimized();
+			let dfa: DFA<UInt8> = DFA([ [0x30] ]).plus().minimized();
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
 			#expect(pattern.description == "30.30*")
 		}
@@ -515,7 +515,7 @@ import Testing
 		func test_star() {
 			// FIXME: .minimized() is required otherwise this produces ε|30.30*
 			// Is this something that can be fixed in .star()?
-			let dfa: DFA<Array<UInt8>> = DFA([ [0x30] ]).star().minimized();
+			let dfa: DFA<UInt8> = DFA([ [0x30] ]).star().minimized();
 			let pattern: SimpleRegex<UInt8> = dfa.toPattern()
 			#expect(pattern.description == "30*")
 		}
@@ -523,36 +523,36 @@ import Testing
 
 	@Suite("alphabet/alphabetPattern") struct DFATests_alphabet {
 		@Test("empty") func empty() async throws {
-			let dfa: DFA<Array<UInt8>> = DFA([])
+			let dfa: DFA<UInt8> = DFA([])
 			#expect(dfa.alphabet == [])
 			#expect(dfa.alphabetPartitions == [])
 		}
 		@Test("epsilon") func epsilon() async throws {
-			let dfa: DFA<Array<UInt8>> = DFA([ [] ]).minimized();
+			let dfa: DFA<UInt8> = DFA([ [] ]).minimized();
 			#expect(dfa.alphabet == [])
 			#expect(dfa.alphabetPartitions == [])
 		}
 		@Test("single") func single() async throws {
-			let dfa: DFA<Array<UInt8>> = DFA([ [0x30] ]).minimized();
+			let dfa: DFA<UInt8> = DFA([ [0x30] ]).minimized();
 			#expect(dfa.alphabet == [0x30])
 			#expect(dfa.alphabetPartitions == [ [0x30] ])
 		}
 		@Test("union") func union() async throws {
-			let dfa: DFA<Array<UInt8>> = DFA([ [0x30], [0x31], [0x32] ]).minimized();
+			let dfa: DFA<UInt8> = DFA([ [0x30], [0x31], [0x32] ]).minimized();
 			print(dfa.toViz())
 			print(dfa.alphabetPartitions)
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32])
 			#expect(dfa.alphabetPartitions == [ [0x30, 0x31, 0x32] ])
 		}
 		@Test("sequence") func sequence() async throws {
-			let dfa: DFA<Array<UInt8>> = DFA([ [0x30, 0x31, 0x32] ]).minimized();
+			let dfa: DFA<UInt8> = DFA([ [0x30, 0x31, 0x32] ]).minimized();
 			print(dfa.toViz())
 			print(dfa.alphabetPartitions)
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32])
 			#expect(dfa.alphabetPartitions == [ [0x30], [0x31], [0x32] ])
 		}
 		@Test("intersection") func intersection() async throws {
-			let dfa: DFA<Array<UInt8>> = DFA([ [0x30],  [0x31],  [0x32],  [0x33], [0x30, 0x33] ]).minimized();
+			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32],  [0x33], [0x30, 0x33] ]).minimized();
 			print(dfa.toViz())
 			print(dfa.alphabetPartitions)
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])

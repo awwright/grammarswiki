@@ -18,24 +18,23 @@ public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashabl
 
 /// DFAE (DFA with Equivalence) is a struct that maps elements in the FSM to some target element.
 /// You can also get a FSM denoting the set of elements in the same partition.
-public struct DFAE<Element: SymbolSequenceProtocol & Hashable, PartNo: Comparable & Hashable> where Element.Element: Comparable & Hashable {
-	typealias Symbol = Element.Element;
+public struct DFAE<Symbol: Comparable & Hashable, PartNo: Comparable & Hashable> {
 	typealias Inner = SymbolOrTag<Symbol, PartNo>;
 	typealias SymTag = SymbolOrTag<Symbol, PartNo>;
 
 	/// Specifies a set of elements and the partition they map to
-	public let partitions: Dictionary<PartNo, DFA<Element>>
+	public let partitions: Dictionary<PartNo, DFA<Symbol>>
 
 	/// The union of all the partitions, tagged with the partition
-	let inner: DFA<Array<SymTag>>
+	let inner: DFA<SymTag>
 
 	/// Final states and the partition they are members of
-	let stateToTarget: Dictionary<DFA<Element>.StateNo, PartNo>
+	let stateToTarget: Dictionary<DFA<Symbol>.StateNo, PartNo>
 
-	init(partitions: Dictionary<PartNo, DFA<Element>>){
-		let innerMap = partitions.map {
+	init(partitions: Dictionary<PartNo, DFA<Symbol>>){
+		let innerMap: Array<DFA<SymTag>> = partitions.map {
 			(partNo, fsm) in
-			DFA<Array<SymTag>>(
+			DFA<SymTag>(
 				// Convert the symbols to SymTag.symbol
 				// If a final state, add a SymTag.tag pointing the state to itself
 				states: fsm.states.enumerated().map {
@@ -49,8 +48,8 @@ public struct DFAE<Element: SymbolSequenceProtocol & Hashable, PartNo: Comparabl
 				finals: fsm.finals
 			)
 		}
-		let inner = DFA.union(innerMap)
-		let stateToTarget = Dictionary(uniqueKeysWithValues: inner.finals.compactMap {
+		let inner = DFA<SymTag>.union(innerMap)
+		let stateToTarget = Dictionary<DFA<Symbol>.StateNo, PartNo>(uniqueKeysWithValues: inner.finals.compactMap {
 			stateNo in
 			let table = inner.states[stateNo]
 			var value: (DFA.StateNo, PartNo)? = nil
@@ -70,8 +69,8 @@ public struct DFAE<Element: SymbolSequenceProtocol & Hashable, PartNo: Comparabl
 		self.stateToTarget = stateToTarget
 	}
 
-	subscript(_ value: Element) -> PartNo? {
-		let resultState = self.inner.nextState(state: self.inner.initial, input: value.map { SymbolOrTag.symbol($0) })
+	subscript(_ value: some Sequence<Symbol>) -> PartNo? {
+		let resultState = self.inner.nextState(state: self.inner.initial, input: value.map { SymbolOrTag<Symbol, PartNo>.symbol($0) })
 		guard self.inner.isFinal(resultState) else { return nil }
 		guard let resultState else { return nil }
 		assert(resultState < self.inner.states.count)
