@@ -1,6 +1,6 @@
 ; <https://www.rfc-editor.org/rfc/rfc8259.html>
 
-JSON-text = ws value ws
+array = begin-array [ value *( value-separator value ) ] end-array
 
 begin-array     = ws %x5B ws  ; [ left square bracket
 
@@ -34,9 +34,6 @@ object = begin-object [ member *( value-separator member ) ]
 member = key name-separator value
 
 key = string
-
-array = begin-array [ value *( value-separator value ) ] end-array
-
 
 number = [ minus ] int [ frac ] [ exp ]
 
@@ -77,5 +74,3 @@ escape = %x5C              ; \
 quotation-mark = %x22      ; "
 
 unescaped = %x20-21 / %x23-5B / %x5D-10FFFF
-
-

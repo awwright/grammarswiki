@@ -149,12 +149,9 @@ DecimalDigit = DIGIT
 DecimalDigits = DecimalDigit 1*(["_"] DecimalDigit)
 DecimalIntegerLiteral = "0" / %x31-39 1*(["_"] DecimalDigit) ; TODO: Also a "NonOctalDecimalIntegerLiteral abomination"
 
-
 ; Definition from 12.9.4 String Literals
 Hex4Digits = 4HEXDIG
 HexEscapeSequence = "x" 2HEXDIG
 
 ; Definition from 12.9.6 Template Literal Lexical Components
 CodePoint = 1*6HEXDIG ; Also, the number described by the resulting string must be <= 0x10FFFF
-
-
