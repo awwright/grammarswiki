@@ -16,6 +16,9 @@
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
 public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashable {
+	// TODO: Implement BidirectionalCollection
+
+	/// Default element type produced reading this as a Sequence
 	public typealias Element = Array<Symbol>
 	/// The type used to index states
 	public typealias StateNo = Int;

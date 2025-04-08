@@ -122,9 +122,9 @@ struct DocumentDetail: View {
 	@State private var rule_error: String? = nil
 	@State private var rule_alphabet: Array<UInt32>? = nil
 	@State private var rule_partitions: Array<Array<UInt32>>? = nil
-	@State private var rule_fsm: DFA<Array<UInt32>>? = nil
+	@State private var rule_fsm: DFA<UInt32>? = nil
 	@State private var rule_fsm_error: String? = nil
-	@State private var rule_fsm_proxy: SymbolClassDFA<Array<UInt32>>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
+	@State private var rule_fsm_proxy: SymbolClassDFA<UInt32>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
 	@State private var rule_partshrink: Dictionary<UInt32, UInt32>? = nil
 	@State private var rule_partexpand: Dictionary<UInt32, Array<UInt32>>? = nil
 
@@ -132,7 +132,7 @@ struct DocumentDetail: View {
 	@State private var fsm_test_next: Array<UInt32>? = nil
 	@State private var fsm_test_error: String? = nil
 
-	@State private var fsm_iterator: DFA<Array<UInt32>>.Iterator? = nil
+	@State private var fsm_iterator: DFA<UInt32>.Iterator? = nil
 	@State private var fsm_iterator_result: [String] = []
 
 	@State private var fsm_regex: SimpleRegex<UInt32>? = nil
@@ -155,7 +155,7 @@ struct DocumentDetail: View {
 	@AppStorage("showTestInput") private var showTestInput: Bool = true
 	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.posix.rawValue
 
-	@State private var rule_expanded = false
+	@AppStorage("expandedRule") private var rule_expanded = false
 	@State private var alphabet_expanded = false
 	@State private var partitions_expanded = false
 	@State private var fsm_expanded = false
@@ -163,7 +163,7 @@ struct DocumentDetail: View {
 	@State private var instances_expanded = false
 
 	// minimized() is necessary here otherwise it won't return a minimized alphabetPartitions
-	let builtins = ABNFBuiltins<DFA<Array<UInt32>>>.dictionary.mapValues { $0.minimized() };
+	let builtins = ABNFBuiltins<DFA<UInt32>>.dictionary.mapValues { $0.minimized() };
 
 	var body: some View {
 		HStack(spacing: 20) {
@@ -312,8 +312,8 @@ struct DocumentDetail: View {
 							if showGraphViz, let rule_partexpand {
 								// TODO: "Copy to clipboard" button
 								DisclosureGroup("Graphviz", content: {
-									let reducedAlphabetLanguage = DFA<Array<UInt32>>.union( rule_partexpand.keys.map { DFA<Array<UInt32>>.symbol($0) } ).star();
-									let expanded: DFA<Array<String>> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { if let cset = rule_partexpand[$0] { describeCharacterSet(cset) } else { "Unknown symbol \($0)" } }
+									let reducedAlphabetLanguage = DFA<UInt32>.union( rule_partexpand.keys.map { DFA<UInt32>.symbol($0) } ).star();
+									let expanded: DFA<String> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { if let cset = rule_partexpand[$0] {  describeCharacterSet(cset) } else { "Unknown symbol \($0)" } }
 									Text(expanded.minimized().toViz())
 										.textSelection(.enabled)
 										.border(Color.gray, width: 1)
@@ -504,7 +504,7 @@ struct DocumentDetail: View {
 					do {
 						// Cut the builtins down to match the reducedAlphabet... let's see if this works
 						print(reducedAlphabet)
-						let reducedAlphabetLanguage = DFA<Array<UInt32>>.union( reducedAlphabet.map { DFA<Array<UInt32>>.symbol($0) } ).star().minimized();
+						let reducedAlphabetLanguage = DFA<UInt32>.union( reducedAlphabet.map { DFA<UInt32>.symbol($0) } ).star().minimized();
 						print(reducedAlphabetLanguage.toViz())
 						let reducedBuiltins = builtins.mapValues { $0.intersection(reducedAlphabetLanguage).minimized() }
 						let result = try reduce(definitions: dependencies, initial: reducedBuiltins, combine: { try $0.toPattern(rules: $1, alphabet: reducedAlphabet) })
@@ -559,7 +559,7 @@ struct DocumentDetail: View {
 	private func generateInstances() {
 		if fsm_iterator != nil {
 			for _ in 0..<1000 {
-				let value = fsm_iterator!.next()
+				let value: Array<UInt32>? = fsm_iterator!.next()
 				if let value {
 					fsm_iterator_result.append(String(decoding: value, as: Unicode.UTF32.self))
 				} else {
@@ -649,7 +649,7 @@ func describeCharacterSet(_ alphabet: Array<UInt32>) -> String {
 		let last = merged.last!
 
 		// Check if current range is adjacent to or overlaps with the last merged range
-		if current.lowerBound <= last.upperBound + 1 {
+		if current.lowerBound <= last.upperBound + 1 && ((0x30...0x39).contains(current.lowerBound) || (0x41...0x5A).contains(current.lowerBound) || (0x61...0x7A).contains(current.lowerBound) || current.lowerBound > 0x7F) && ((0x30...0x39).contains(last.lowerBound) || (0x41...0x5A).contains(last.lowerBound) || (0x61...0x7A).contains(last.lowerBound) || last.lowerBound > 0x7F) {
 			// Merge by creating a new range with the same lower bound and the maximum upper bound
 			let newUpper = max(last.upperBound, current.upperBound)
 			merged[merged.count - 1] = last.lowerBound...newUpper
