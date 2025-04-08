@@ -1,13 +1,10 @@
 ; <https://www.rfc-editor.org/rfc/rfc8259.html>
+; JSON Regular Objects, a subset of objects that only have primitives as values (string, number, boolean, null)
 
 object = begin-object [ member *( value-separator member ) ]
          end-object
 
-begin-array     = ws %x5B ws  ; [ left square bracket
-
 begin-object    = ws %x7B ws  ; { left curly bracket
-
-end-array       = ws %x5D ws  ; ] right square bracket
 
 end-object      = ws %x7D ws  ; } right curly bracket
 
@@ -21,7 +18,7 @@ ws = *(
         %x0A /              ; Line feed or New line
         %x0D )              ; Carriage return
 
-value = false / null / true / object / array / number / string
+value = false / null / true / number / string
 
 false = %x66.61.6c.73.65   ; false
 
@@ -32,8 +29,6 @@ true  = %x74.72.75.65      ; true
 member = key name-separator value
 
 key = string
-
-array = begin-array [ value *( value-separator value ) ] end-array
 
 number = [ minus ] int [ frac ] [ exp ]
 
