@@ -14,6 +14,13 @@ public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashabl
 		}
 		return false;
 	}
+
+	var description: String {
+		switch self {
+			case .symbol(let str): return "\(str)"
+			case .tag(let str): return "<\(str)>"
+		}
+	}
 }
 
 /// DFAE (DFA with Equivalence) is a struct that maps elements in the FSM to some target element.
