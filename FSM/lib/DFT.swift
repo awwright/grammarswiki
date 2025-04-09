@@ -1,6 +1,6 @@
 // Deterministic Finite Transducer
 
-/// A Deterministic Finite State Transducer (DFST) that recognizes a set of input sequences over a given input alphabet
+/// A Deterministic Finite State Transducer (DFT) that recognizes a set of input sequences over a given input alphabet
 /// and produces corresponding output sequences over an output alphabet.
 /// This library mostly uses it to define partitioning schemes, so that inputs which map to the same output are part of the same partition.
 /// Inputs that land on non-final states are not part of the set, and the output is not meaningful.
@@ -13,47 +13,38 @@
 ///   - `InputSymbol`: The type of input symbols (e.g., `Character`), must conform to `Comparable` and `Hashable`.
 ///   - `OutputSymbol`: The type of output symbols (e.g., `String`), must conform to `Comparable` and `Hashable`.
 public struct DFT<I: Comparable & Hashable, O: Comparable & Hashable>: Hashable {
+	/// Default element type produced reading this as a Sequence
 	public typealias Element = Array<I>
+	/// Default type that inputs are mapped to (to label a partition)
 	public typealias Output = Array<O>
-
-	public static var empty: DFT<I, O> {
-		Self(
-			states: [[:]],
-			initial: 0,
-			finals: []
-		)
-	}
-
-	public static var epsilon: DFT<I, O> {
-		Self(
-			states: [[:]],
-			initial: 0,
-			finals: [0]
-		)
-	}
-
-	/// Default element type produced when reading this as a Sequence (input-output pair).
-
 	/// The type used to index states.
 	public typealias StateNo = Int
 	/// The type of a set of states, optional to include the oblivion state (`nil`).
 	public typealias States = StateNo?
 
+	public static var empty: Self {
+		Self(states: [[:]], initial: 0, finals: [])
+	}
+
+	public static var epsilon: Self {
+		Self(states: [[:]], initial: 0, finals: [0])
+	}
+
 	/// The transition table, mapping each state to a dictionary of input symbol to (next state, output sequence) pairs.
 	public let states: Array<Dictionary<I, TO<StateNo, O>>>
-	/// The initial state of the DFST.
+	/// The initial state of the DFT.
 	public let initial: StateNo
 	/// The set of accepting (final) states.
 	public let finals: Set<StateNo>
 
-	/// Creates an empty DFST that accepts no sequences and produces no output.
+	/// Creates an empty DFT that accepts no sequences and produces no output.
 	public init() {
 		self.states = [[:]]
 		self.initial = 0
 		self.finals = []
 	}
 
-	/// Creates a DFST with specified states, initial state, and final states.
+	/// Creates a DFT with specified states, initial state, and final states.
 	///
 	/// - Parameters:
 	///   - states: The transition table; defaults to an empty state if not provided.
@@ -111,7 +102,7 @@ public struct DFT<I: Comparable & Hashable, O: Comparable & Hashable>: Hashable 
 //		)
 //	}
 
-	/// Creates a DFST from a DFA, producing an empty output for each transition.
+	/// Creates a DFT from a DFA, producing an empty output for each transition.
 	public init(dfa: DFA<I>) {
 		self.states = dfa.states.map { $0.mapValues { TO(t: $0, o: nil) } }
 		self.initial = dfa.initial
@@ -190,7 +181,22 @@ public struct DFT<I: Comparable & Hashable, O: Comparable & Hashable>: Hashable 
 		return true
 	}
 
-	/// Checks if the DFST accepts a given input sequence and returns the output if accepted.
+	public func contains(_ input: some Sequence<I>) -> Bool {
+		var currentState = self.initial;
+
+		for symbol in input {
+			guard currentState < self.states.count,
+					let nextState = self.states[currentState][symbol]
+			else {
+				return false
+			}
+			currentState = nextState.t
+		}
+
+		return self.finals.contains(currentState)
+	}
+
+	/// Checks if the DFT accepts a given input sequence and returns the output if accepted.
 	public func map(_ input: some Sequence<I>) -> Output? {
 		var output: Output = []
 		var state = self.initial
@@ -228,9 +234,9 @@ extension DFT where I == O {
 	}
 }
 
-/// Extension to convert a DFA to a DFST with a default output mapping.
+/// Extension to convert a DFA to a DFT with a default output mapping.
 extension DFA {
-	func toDFST() -> DFT<Symbol, Symbol> {
+	func toDFT() -> DFT<Symbol, Symbol> {
 		let newStates = states.map { table in Dictionary(uniqueKeysWithValues: table.map { ($0.key, TO(t: $0.value, o: $0.key)) }) }
 		return DFT(states: newStates, initial: initial, finals: finals)
 	}

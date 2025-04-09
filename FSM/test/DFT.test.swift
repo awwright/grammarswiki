@@ -49,4 +49,12 @@ import Testing
 		#expect(dft.isEquivalent("00", "0123") == false) // outside set
 		#expect(dft.isEquivalent("00", "x") == false) // outside set
 	}
+
+	@Test("contains")
+	func test_contains() async throws {
+		let dft = DFT<Character, Character>(top: DFA<Character>(["", "0", "1", "2"]).star())
+		#expect(dft.contains("") == true)
+		#expect(dft.contains("1") == true)
+		#expect(dft.contains("x") == false)
+	}
 }
