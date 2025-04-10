@@ -12,36 +12,39 @@
 /// - Type Parameters:
 ///   - `InputSymbol`: The type of input symbols (e.g., `Character`), must conform to `Comparable` and `Hashable`.
 ///   - `OutputSymbol`: The type of output symbols (e.g., `String`), must conform to `Comparable` and `Hashable`.
-public struct DFT<I: Comparable & Hashable, O: Comparable & Hashable>: Hashable {
+public struct DFT<Symbol: Comparable & Hashable>: Hashable {
 	/// Default element type produced reading this as a Sequence
-	public typealias Element = Array<I>
+	public typealias Element = Array<Symbol>
 	/// Default type that inputs are mapped to (to label a partition)
-	public typealias Output = Array<O>
+	public typealias Output = Array<Symbol>
 	/// The type used to index states.
 	public typealias StateNo = Int
 	/// The type of a set of states, optional to include the oblivion state (`nil`).
 	public typealias States = StateNo?
 
 	public static var empty: Self {
-		Self(states: [[:]], initial: 0, finals: [])
+		Self(states: [[:]], initial: 0, finals: [:])
 	}
 
 	public static var epsilon: Self {
-		Self(states: [[:]], initial: 0, finals: [0])
+		Self(states: [[:]], initial: 0, finals: [0: []])
 	}
 
 	/// The transition table, mapping each state to a dictionary of input symbol to (next state, output sequence) pairs.
-	public let states: Array<Dictionary<I, TO<StateNo, O>>>
+	public let states: Array<Dictionary<Symbol, StateNo>>
+	/// The output produced at each transition
+	public let output: Array<Dictionary<Symbol, Output>>
 	/// The initial state of the DFT.
 	public let initial: StateNo
-	/// The set of accepting (final) states.
-	public let finals: Set<StateNo>
+	/// The set of accepting (final) states and associated final output
+	public let finals: Dictionary<StateNo, Output>
 
 	/// Creates an empty DFT that accepts no sequences and produces no output.
 	public init() {
 		self.states = [[:]]
+		self.output = [[:]]
 		self.initial = 0
-		self.finals = []
+		self.finals = [:]
 	}
 
 	/// Creates a DFT with specified states, initial state, and final states.
@@ -51,62 +54,45 @@ public struct DFT<I: Comparable & Hashable, O: Comparable & Hashable>: Hashable 
 	///   - initial: The starting state; must be within `states` bounds.
 	///   - finals: The set of accepting states; all must be within `states` bounds.
 	public init(
-		states: Array<Dictionary<I, TO<StateNo, O>>> = [[:]],
+		states: Array<Dictionary<Symbol, StateNo>> = [[:]],
+		output: Array<Dictionary<Symbol, Output>> = [[:]],
 		initial: StateNo = 0,
-		finals: Set<StateNo> = []
+		finals: Dictionary<StateNo, Output> = [:]
 	) {
 		for transitions in states {
 			for (_, next) in transitions {
-				assert(next.t >= 0)
-				assert(next.t < states.count)
+				assert(next >= 0)
+				assert(next < states.count)
 			}
 		}
 		assert(initial >= 0)
 		assert(initial < states.count)
-		for state in finals {
+		for (state, _) in finals {
 			assert(state >= 0)
 			assert(state < states.count)
 		}
 
 		self.states = states
+		self.output = output
 		self.initial = initial
 		self.finals = finals
 	}
 
-//	static top(
-//		states: Array<Dictionary<I, (StateNo, O)>> = [[:]],
-//		initial: StateNo = 0,
-//		finals: Set<StateNo> = []
-//	) {
-//		self.init(states: states.map { $0.mapValues { TO(t: $0.0, o: $0.1) } }, initial: initial, finals: finals)
-//	}
-
 	/// Generate a DFT equivalence with a single partition
 	/// i.e. all values are equivalent
-	init(top: DFA<I>) {
-		self.states = top.states.map { $0.mapValues { TO<StateNo, O>(t: $0, o: nil) } }
+	public init(top: DFA<Symbol>) {
+		self.states = top.states
+		self.output = top.states.map { $0.mapValues { _ in [] } }
 		self.initial = top.initial
-		self.finals = top.finals
+		self.finals = Dictionary(uniqueKeysWithValues: top.finals.map { ($0, []) })
 	}
-
-	/// Creates a DFST that accepts exactly the given input sequence and produces a specified output sequence.
-//	public init(verbatim input: some Collection<I>, output: some Collection<O>) {
-//		let inputArray = Array(input)
-//		let outputArray = Array(output)
-//		assert(inputArray.count == outputArray.count, "Input and output sequences must have the same length")
-//		let states = inputArray.enumerated().map { [inputArray[$0.offset]: (next: $0.offset + 1, output: [outputArray[$0.offset]])] } + [[:]]
-//		self.init(
-//			states: states,
-//			initial: 0,
-//			finals: [states.count - 1]
-//		)
-//	}
-
-	/// Creates a DFT from a DFA, producing an empty output for each transition.
-	public init(dfa: DFA<I>) {
-		self.states = dfa.states.map { $0.mapValues { TO(t: $0, o: nil) } }
-		self.initial = dfa.initial
-		self.finals = dfa.finals
+	/// Generate a DFT equivalence with individual partitions per input
+	/// i.e. all values are different, no values are equivalent
+	public init(bottom: DFA<Symbol>) {
+		self.states = bottom.states
+		self.output = bottom.states.map { Dictionary(uniqueKeysWithValues: $0.map { ($0.key, [$0.key]) }) }
+		self.initial = bottom.initial
+		self.finals = Dictionary(uniqueKeysWithValues: bottom.finals.map { ($0, []) })
 	}
 
 	public static func == (lhs: Self, rhs: Self) -> Bool {
@@ -115,20 +101,20 @@ public struct DFT<I: Comparable & Hashable, O: Comparable & Hashable>: Hashable 
 		lhs.finals == rhs.finals
 	}
 
-	public var alphabet: Set<I> {
+	public var alphabet: Set<Symbol> {
 		Set(states.flatMap(\.keys))
 	}
 
-//	public var outputAlphabet: Set<O> {
-//		Set(states.flatMap { $0.values.flatMap { $0.output } })
-//	}
+	//	public var outputAlphabet: Set<Symbol> {
+	//		Set(output.flatMap { $0.values.flatMap { $0.output } })
+	//	}
 
 	/// Transitions from a state on a given input symbol, returning the next state and output.
-	public func nextState(state: StateNo, symbol: I) -> StateNo? {
+	public func nextState(state: StateNo, symbol: Symbol) -> StateNo? {
 		assert(state >= 0)
 		assert(state < self.states.count)
 		if let transition = self.states[state][symbol] {
-			return transition.t
+			return transition
 		}
 		return nil
 	}
@@ -136,52 +122,17 @@ public struct DFT<I: Comparable & Hashable, O: Comparable & Hashable>: Hashable 
 	/// Checks if a state is accepting.
 	public func isFinal(_ state: States) -> Bool {
 		guard let state else { return false }
-		return self.finals.contains(state)
+		return self.finals[state] != nil
 	}
 
 	/// Determines if two inputs are equivalent according to the DFT (maps to the same output)
 	/// This will decide even on inputs that are not accepting because this will come to a decision
 	/// before it ever reaches the end of the input.
-	public func isEquivalent(_ lhs: some Sequence<I>, _ rhs: some Sequence<I>) -> Bool {
-		var lhsState: States = self.initial
-		var rhsState: States = self.initial
-		var lhsIt = lhs.makeIterator()
-		var rhsIt = rhs.makeIterator()
-
-		func nextSymbol<T: IteratorProtocol>(it: inout T, state: inout States) -> I? where T.Element == I {
-			while true {
-				let input = it.next()
-				guard let input else { return nil }
-				let nextState = states[state!][input]
-				guard let nextState else { state = nil; return nil }
-				state = nextState.t
-				if(nextState.o != nil) {
-					return input
-				}
-			}
-		}
-
-		while true {
-			// Iterate until the next symbol
-			let lhsOutput = nextSymbol(it: &lhsIt, state: &lhsState)
-			let rhsOutput = nextSymbol(it: &rhsIt, state: &rhsState)
-			// If either state reached oblivion, that's bad
-			if lhsState == nil || rhsState == nil {
-				return false
-			}
-			// Both sides reached the end
-			if lhsOutput == nil && rhsOutput == nil {
-				break
-			}
-			// If the outputs are unequal, or one side reached the end
-			if lhsOutput != rhsOutput {
-				return false
-			}
-		}
-		return true
+	public func isEquivalent(_ lhs: some Sequence<Symbol>, _ rhs: some Sequence<Symbol>) -> Bool {
+		return mappedSequence(lhs.makeIterator()).elementsEqual(mappedSequence(rhs.makeIterator()))
 	}
 
-	public func contains(_ input: some Sequence<I>) -> Bool {
+	public func contains(_ input: some Sequence<Symbol>) -> Bool {
 		var currentState = self.initial;
 
 		for symbol in input {
@@ -190,64 +141,87 @@ public struct DFT<I: Comparable & Hashable, O: Comparable & Hashable>: Hashable 
 			else {
 				return false
 			}
-			currentState = nextState.t
+			currentState = nextState
 		}
 
-		return self.finals.contains(currentState)
+		return self.finals[currentState] != nil
 	}
 
 	/// Checks if the DFT accepts a given input sequence and returns the output if accepted.
-	public func map(_ input: some Sequence<I>) -> Output? {
+	public func map(_ input: some Sequence<Symbol>) -> Output? {
 		var output: Output = []
 		var state = self.initial
 		for s in input {
 			let table = self.states[state]
 			guard let transition = table[s] else { return nil }
-			state = transition.t
-			if let o = transition.o {
-				output.append(o)
+			if let o = self.output[state][s] {
+				output += o
 			}
 		}
-		return isFinal(state) ? output : nil
+		if let final = self.finals[state] {
+			return output + final
+		} else {
+			return nil
+		}
 	}
 
 	/// Return a DFA that also accepts the empty sequence
 	/// i.e. adds the initial state to the set of final states
 	public func optional() -> Self {
+		var newFinals = self.finals;
+		if(newFinals[initial] == nil) {
+			newFinals[initial] = []
+		}
 		return Self(
 			states: self.states,
 			initial: self.initial,
-			finals: self.finals.union([self.initial])
+			finals: newFinals
 		);
 	}
-}
 
-/// a transition/output pair
-public struct TO<T: Hashable, O: Hashable>: Hashable {
-	public let t: T
-	public let o: O?
-}
+	/// Maps input symbols to output symbols one at a time
+	public func mappedSequence<It: IteratorProtocol>(_ input: It) -> AnyIterator<Symbol> where It.Element == Symbol {
+		var currentState = initial
+		var inputIterator = input
+		var currentOutput: [Symbol] = []
+		var outputIndex = 0
 
-/// an Input/Output pair
-public struct IO<I: Hashable, O: Hashable>: Hashable {
-	public let i: I
-	public let o: O?
-}
+		return AnyIterator {
+			// Keep going until we have a symbol to return
+			while true {
+				// If we have symbols in currentOutput to yield
+				if outputIndex < currentOutput.count {
+					let symbol = currentOutput[outputIndex]
+					outputIndex += 1
+					return symbol
+				}
 
-extension DFT where I == O {
-	/// Generate a DFT equivalence with individual partitions per input
-	/// i.e. all values are different, no values are equivalent
-	init(bottom: DFA<I>) {
-		self.states = bottom.states.map { Dictionary(uniqueKeysWithValues: $0.map { ($0.key, TO(t: $0.value, o: $0.key)) }) }
-		self.initial = bottom.initial
-		self.finals = bottom.finals
-	}
-}
+				// If we've exhausted current output, check if we're done
+				if let symbol = inputIterator.next() {
+					// Process next input symbol
+					guard currentState < states.count,
+							let nextState = states[currentState][symbol],
+							let transitionOutput = output[currentState][symbol] else {
+						fatalError("Invalid transition for symbol \(symbol) from state \(currentState)")
+					}
 
-/// Extension to convert a DFA to a DFT with a default output mapping.
-extension DFA {
-	func toDFT() -> DFT<Symbol, Symbol> {
-		let newStates = states.map { table in Dictionary(uniqueKeysWithValues: table.map { ($0.key, TO(t: $0.value, o: $0.key)) }) }
-		return DFT(states: newStates, initial: initial, finals: finals)
+					currentOutput = transitionOutput
+					outputIndex = 0
+					currentState = nextState
+				} else {
+					// No more input, check final state and yield final output
+					guard let finalOutput = finals[currentState] else {
+						fatalError("Input sequence ended in non-final state \(currentState)")
+					}
+
+					if finalOutput.isEmpty {
+						return nil // Done
+					}
+
+					currentOutput = finalOutput
+					outputIndex = 0
+				}
+			}
+		}
 	}
 }

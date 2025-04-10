@@ -512,7 +512,7 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 	// Also provide a static implementation of union since it applies to any number of inputs
 	public static func union(_ languages: Array<DFA<Symbol>>) -> DFA<Symbol> {
 		if(languages.count == 0){
-			return DFA<Symbol>();
+			return Self();
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
