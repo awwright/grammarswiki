@@ -210,6 +210,16 @@ public struct DFT<I: Comparable & Hashable, O: Comparable & Hashable>: Hashable 
 		}
 		return isFinal(state) ? output : nil
 	}
+
+	/// Return a DFA that also accepts the empty sequence
+	/// i.e. adds the initial state to the set of final states
+	public func optional() -> Self {
+		return Self(
+			states: self.states,
+			initial: self.initial,
+			finals: self.finals.union([self.initial])
+		);
+	}
 }
 
 /// a transition/output pair

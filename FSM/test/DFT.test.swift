@@ -57,4 +57,17 @@ import Testing
 		#expect(dft.contains("1") == true)
 		#expect(dft.contains("x") == false)
 	}
+
+	@Test("optional")
+	func test_optional() {
+		let dfa1 = DFT<Character, Character>(["a", "b"])
+		#expect(!dfa1.contains(""))
+		let optional = dfa1.optional();
+		#expect(optional.contains(""))
+		#expect(optional.contains("a"))
+		#expect(optional.contains("b"))
+		#expect(!optional.contains("ab"))
+		//let array = Array(optional);
+		//#expect(array.count == 3)
+	}
 }
