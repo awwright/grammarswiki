@@ -7,10 +7,10 @@ public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashabl
 
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		switch (lhs, rhs) {
-		case (.symbol, .tag): return true
-		case (.tag, .tag): if case .tag(let lhstr) = lhs, case .tag(let rhstr) = rhs { return lhstr < rhstr; }
-		case (.symbol, .symbol): if case .symbol(let lhstr) = lhs, case .symbol(let rhstr) = rhs { return lhstr < rhstr; }
-		case (.tag, .symbol): return false
+			case (.symbol, .tag): return true
+			case (.tag, .tag): if case .tag(let lhstr) = lhs, case .tag(let rhstr) = rhs { return lhstr < rhstr; }
+			case (.symbol, .symbol): if case .symbol(let lhstr) = lhs, case .symbol(let rhstr) = rhs { return lhstr < rhstr; }
+			case (.tag, .symbol): return false
 		}
 		return false;
 	}
