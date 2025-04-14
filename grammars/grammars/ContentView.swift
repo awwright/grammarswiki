@@ -120,8 +120,7 @@ struct DocumentDetail: View {
 	@State private var content_rulelist_error: String? = nil
 
 	@State private var rule_error: String? = nil
-	@State private var rule_alphabet: Array<UInt32>? = nil
-	@State private var rule_partitions: Array<Array<UInt32>>? = nil
+	@State private var rule_alphabet: SymbolClass<UInt32>? = nil
 	@State private var rule_fsm: DFA<UInt32>? = nil
 	@State private var rule_fsm_error: String? = nil
 	@State private var rule_fsm_proxy: SymbolClassDFA<UInt32>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
@@ -129,7 +128,7 @@ struct DocumentDetail: View {
 	@State private var rule_partexpand: Dictionary<UInt32, Array<UInt32>>? = nil
 
 	@State private var fsm_test_result: Bool? = nil
-	@State private var fsm_test_next: Array<UInt32>? = nil
+	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
 	@State private var fsm_test_error: String? = nil
 
 	@State private var fsm_iterator: DFA<UInt32>.Iterator? = nil
@@ -146,7 +145,6 @@ struct DocumentDetail: View {
 	@Environment(\.colorScheme) private var colorScheme: ColorScheme
 
 	@AppStorage("showAlphabet") private var showAlphabet: Bool = true
-	@AppStorage("showPartitions") private var showPartitions: Bool = true
 	@AppStorage("showStateCount") private var showStateCount: Bool = true
 	@AppStorage("showFSM") private var showFSM: Bool = true
 	@AppStorage("showRegex") private var showRegex: Bool = true
@@ -156,8 +154,7 @@ struct DocumentDetail: View {
 	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.posix.rawValue
 
 	@AppStorage("expandedRule") private var rule_expanded = false
-	@State private var alphabet_expanded = false
-	@State private var partitions_expanded = false
+	@AppStorage("expandedAlphabet") private var alphabet_expanded = false
 	@State private var fsm_expanded = false
 	@State private var regex_expanded = false
 	@State private var instances_expanded = false
@@ -255,25 +252,13 @@ struct DocumentDetail: View {
 						if showAlphabet {
 							DisclosureGroup("Alphabet", isExpanded: $alphabet_expanded, content: {
 								if let rule_alphabet {
-									// Text(String(describing: rule_alphabet)).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
-									Text(describeCharacterSet(rule_alphabet)).frame(maxWidth: .infinity, alignment: .leading)//.padding(1).border(Color.gray, width: 0.5)
-								}else{
-									Text("Computing alphabet...")
-										.foregroundColor(.gray)
-								}
-							})
-						}
-
-						if showPartitions {
-							DisclosureGroup("Partitions", isExpanded: $partitions_expanded, content: {
-								if let rule_partitions {
-									ForEach(Array(rule_partitions), id: \.self) {
+									ForEach(rule_alphabet.partitions, id: \.self) {
 										part in
 										// Text(String(describing: part)).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
-										Text(describeCharacterSet(Array(part))).frame(maxWidth: .infinity, alignment: .leading) //.padding(1).border(Color.gray, width: 0.5)
+										Text(describeCharacterSet(part)).frame(maxWidth: .infinity, alignment: .leading) //.padding(1).border(Color.gray, width: 0.5)
 									}
 								}else{
-									Text("Computing partitions...")
+									Text("Computing alphabet...")
 										.foregroundColor(.gray)
 								}
 							})
@@ -309,11 +294,11 @@ struct DocumentDetail: View {
 								.onAppear { updatedFSM() }
 							}
 
-							if showGraphViz, let rule_partexpand {
+							if showGraphViz {
 								// TODO: "Copy to clipboard" button
 								DisclosureGroup("Graphviz", content: {
-									let reducedAlphabetLanguage = DFA<UInt32>.union( rule_partexpand.keys.map { DFA<UInt32>.symbol($0) } ).star();
-									let expanded: DFA<String> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { if let cset = rule_partexpand[$0] {  describeCharacterSet(cset) } else { "Unknown symbol \($0)" } }
+									let reducedAlphabetLanguage = DFA<UInt32>.union( rule_alphabet!.partitionLabels.map { DFA<UInt32>.symbol($0) } ).star();
+									let expanded: DFA<String> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { if let cset = rule_alphabet?.siblings($0) {  describeCharacterSet(cset) } else { "Unknown symbol \($0)" } }
 									Text(expanded.minimized().toViz())
 										.textSelection(.enabled)
 										.border(Color.gray, width: 1)
@@ -394,9 +379,7 @@ struct DocumentDetail: View {
 		content_rulelist_error = nil
 		// invalidate updatedRule
 		rule_alphabet = nil
-		rule_partitions = nil
 		rule_partshrink = nil
-		rule_partexpand = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
 		// invalidate updatedFSM
@@ -428,9 +411,7 @@ struct DocumentDetail: View {
 					content_rulelist = nil
 					content_rulelist_error = "Error at index: " + String(describing: error.index)
 					rule_alphabet = nil
-					rule_partitions = nil
 					rule_partshrink = nil
-			rule_partexpand = nil
 					fsm_test_result = nil
 					let line = input[0...error.index.startIndex].count(where: { $0 == 0xA })
 					messages = Set([
@@ -452,9 +433,7 @@ struct DocumentDetail: View {
 	/// Render the FSM
 	private func updatedRule() {
 		rule_alphabet = nil
-		rule_partitions = nil
 		rule_partshrink = nil
-		rule_partexpand = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
 		// invalidate updatedFSM
@@ -480,15 +459,11 @@ struct DocumentDetail: View {
 
 		// Compute alphabets
 		Task.detached(priority: .utility) {
-			let result_alphabet = reduce(definitions: dependencies, initial: builtins.mapValues(\.alphabet), combine: { $0.alphabet(rulelist: $1) })
-			let result_partitions = reduce(definitions: dependencies, initial: builtins.mapValues(\.alphabetPartitions), combine: { $0.alphabetPartitions(rulelist: $1) })
+			let result_alphabet = reduce(definitions: dependencies, initial: builtins.mapValues({ $0.toPattern(as: SymbolClass<UInt32>.self) }), combine: { $0.alphabetPartitions(rulelist: $1) })
 			await MainActor.run {
-				rule_alphabet = Array(result_alphabet).sorted { $0 < $1 }
-				rule_partitions = Array(result_partitions).map { $0.sorted { $0 < $1 } }.sorted { $0[0] < $1[0] }
-
-				let ( reducedMapping, expandMapping, reducedAlphabet ) = compressPartitions(result_partitions)
-				rule_partshrink = reducedMapping
-				rule_partexpand = expandMapping
+				rule_alphabet = result_alphabet
+				rule_partshrink = result_alphabet.alphabetReduce
+				let reducedAlphabet = Set(result_alphabet.partitionLabels)
 
 				// Compute DFA
 				Task.detached(priority: .utility) {
@@ -503,14 +478,13 @@ struct DocumentDetail: View {
 					}
 					do {
 						// Cut the builtins down to match the reducedAlphabet... let's see if this works
-						print(reducedAlphabet)
 						let reducedAlphabetLanguage = DFA<UInt32>.union( reducedAlphabet.map { DFA<UInt32>.symbol($0) } ).star().minimized();
 						print(reducedAlphabetLanguage.toViz())
 						let reducedBuiltins = builtins.mapValues { $0.intersection(reducedAlphabetLanguage).minimized() }
-						let result = try reduce(definitions: dependencies, initial: reducedBuiltins, combine: { try $0.toPattern(rules: $1, alphabet: reducedAlphabet) })
+						let result = try reduce(definitions: dependencies, initial: reducedBuiltins, combine: { try $0.toPattern(rules: $1, alphabet: reducedAlphabet).minimized() })
 						await MainActor.run {
 							rule_fsm = result
-							rule_fsm_proxy = SymbolClassDFA(inner: result, mapping: reducedMapping)
+							rule_fsm_proxy = SymbolClassDFA(inner: result, mapping: rule_partshrink!)
 							rule_fsm_error = nil
 						}
 					} catch let error as ABNFExportError {
@@ -590,8 +564,8 @@ struct DocumentDetail: View {
 
 		let fsm_test_state = selected_fsm.nextState(state: selected_fsm.initial, input: input)
 		fsm_test_result = selected_fsm.isFinal(fsm_test_state);
-		if let fsm_test_state, let rule_partexpand, let rule_partshrink = rule_fsm_proxy?.mapping {
-			fsm_test_next = selected_fsm.states[fsm_test_state].keys.flatMap { rule_partexpand[rule_partshrink[$0]!]! }.sorted()
+		if let fsm_test_state {
+			fsm_test_next = selected_fsm.states[fsm_test_state].keys.flatMap { rule_alphabet!.siblings($0) }
 		}
 		if fsm_test_result == false {
 			if fsm_test_state != nil {
@@ -632,9 +606,7 @@ func reduce<S, T>(definitions: Array<(String, S)>, initial: Dictionary<String, T
 	return last!
 }
 
-func describeCharacterSet(_ alphabet: Array<UInt32>) -> String {
-	let rangeSet = alphabet.map { $0...$0 }
-
+func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>) -> String {
 	// Handle empty set case
 	guard !rangeSet.isEmpty else { return "∅" }
 

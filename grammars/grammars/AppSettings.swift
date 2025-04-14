@@ -3,7 +3,6 @@ import SwiftUI
 // Preferences view
 struct SettingsView: View {
 	@AppStorage("showAlphabet") private var showAlphabet: Bool = true
-	@AppStorage("showPartitions") private var showPartitions: Bool = true
 	@AppStorage("showStateCount") private var showStateCount: Bool = true
 	@AppStorage("showFSM") private var showFSM: Bool = true
 	@AppStorage("showRegex") private var showRegex: Bool = true
@@ -16,7 +15,6 @@ struct SettingsView: View {
 		Form {
 			Section(header: Text("Pattern Display Options").font(.headline)) {
 				Toggle("Show Alphabet", isOn: $showAlphabet)
-				Toggle("Show Partitions", isOn: $showPartitions)
 				Toggle("Show State Count", isOn: $showStateCount)
 				Toggle("Show FSM", isOn: $showFSM)
 				Toggle("Show Regex", isOn: $showRegex)

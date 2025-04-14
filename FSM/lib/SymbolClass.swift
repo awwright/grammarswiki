@@ -1,6 +1,11 @@
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
 /// Optimized for describing ranges of characters.
 /// A replacement for Swift's builtin RangeSet which doesn't support ClosedRange and is overall garbage
+///
+/// In regular languages, an FSM is a machine with states and transitions labeled by symbols.
+/// You can convert an FSM to a regular expression by systematically combining transitions into patterns (a process called state elimination or Arden’s rule).
+/// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
+/// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral, SetAlgebra, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	// MARK: Type definitions
 	public typealias ArrayLiteralElement = Symbol
@@ -163,6 +168,11 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 	}
 
 	/// Maps partition label to set of values in partition
+	public var alphabet: Array<ClosedRange<Symbol>> {
+		symbols
+	}
+
+	/// Maps partition label to set of values in partition
 	public var partitions: Array<Array<ClosedRange<Symbol>>> {
 		let labels = Set(parents).sorted()
 		var dict: Dictionary<Int, Array<ClosedRange<Symbol>>> = Dictionary(uniqueKeysWithValues: labels.map { ($0, []) })
@@ -217,6 +227,14 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 		return self.symbols[self.parents[index]].lowerBound
 	}
 
+	/// Get all the set of symbols in the same partition as the given symbol
+	public func siblings(_ symbol: Symbol) -> Array<ClosedRange<Symbol>> {
+		let index = self.findIndex(symbol)
+		guard let index else { fatalError() }
+		let parent = self.parents[index]
+		return self.symbols.enumerated().compactMap { self.parents[$0]==parent ? $1 : nil }
+	}
+
 	// MARK: SetAlgebra
 	public func contains(_ member: Symbol) -> Bool {
 		// Binary search `symbols` for a matching symbol
@@ -243,6 +261,9 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 		return SymbolClass(partitions: i.flatMap(\.partitions))
 	}
 
+	/// The union of a partitioned set is the meet of the union of each cross products of the two sets of partitions
+	/// So the union of two part-sets with one partition each will have one partition
+	/// But the union of part-sets with more than one partition will be the meet of their partitions.
 	public func union(_ other: __owned SymbolClass<Symbol>) -> SymbolClass<Symbol> {
 		fatalError("Unimplemented")
 	}
@@ -293,6 +314,8 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 	public static func == (lhs: SymbolClass<Symbol>, rhs: SymbolClass<Symbol>) -> Bool {
 		return lhs.symbols == rhs.symbols
 	}
+
+	// TODO: A function that generates a SymbolClassDFA from a DFA and SymbolClass
 
 	// MARK: Helpers
 
@@ -366,10 +389,10 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 	public typealias States = DFA<Symbol>.States
 	public typealias ArrayLiteralElement = DFA<Symbol>.ArrayLiteralElement
 	public typealias Iterator = DFA<Symbol>.Iterator
-	
+
 	// TODO: a variation that replaces the symbol with a character class matching the whole character class
 	// Type signature would be DFA<Array<SimplePattern<Symbol>>>
-	
+
 	public let inner: DFA<Symbol>;
 	public let mapping: Dictionary<Symbol, Symbol>;
 	public let alphabet: Set<Symbol>;
@@ -377,32 +400,32 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 	public var initial: StateNo { inner.initial }
 	public var states: Array<Dictionary<Symbol, StateNo>> { inner.states }
 	public var finals: Set<StateNo> { inner.finals }
-	
+
 	public init() {
 		inner = DFA()
 		mapping = [:]
 		alphabet = []
 	}
-	
+
 	public init(inner: DFA<Symbol>, mapping: Dictionary<Symbol, Symbol>) {
 		self.inner = inner
 		self.mapping = mapping;
 		self.alphabet = Set(mapping.keys);
 	}
-	
+
 	public init(inner: DFA<Symbol>) where Element: Comparable & Hashable {
 		let (reduce, _, alphabet) = compressPartitions(inner.alphabetPartitions)
 		self.inner = inner
 		self.mapping = reduce
 		self.alphabet = alphabet
 	}
-	
+
 	public init(verbatim: DFA<Symbol>.Element) {
 		inner = DFA(verbatim: verbatim)
 		mapping = [:]
 		alphabet = []
 	}
-	
+
 	public func nextState(state: StateNo, input: Element) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
@@ -416,63 +439,62 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 			}
 			currentState = nextState
 		}
-		
+
 		return currentState;
 	}
-	
+
 	public func intersection(_ other: SymbolClassDFA<Symbol>) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: inner.intersection(other.inner), mapping: mapping)
 	}
-	
+
 	public func symmetricDifference(_ other: __owned SymbolClassDFA<Symbol>) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: inner.symmetricDifference(other.inner), mapping: mapping)
 	}
-	
+
 	public static func - (lhs: SymbolClassDFA<Symbol>, rhs: SymbolClassDFA<Symbol>) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: lhs.inner - rhs.inner, mapping: lhs.mapping)
 	}
-	
+
 	public func star() -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: inner.star(), mapping: mapping)
 	}
-	
+
 	public mutating func formUnion(_ other: __owned SymbolClassDFA<Symbol>) {
 		fatalError("Unimplemented")
 		//self = SymbolClassDFA(inner: inner.union(other.inner), mapping: mapping)
 	}
-	
+
 	public mutating func formIntersection(_ other: SymbolClassDFA<Symbol>) {
 		fatalError("Unimplemented")
 		//self = SymbolClassDFA(inner: inner.intersection(other.inner), mapping: mapping)
 	}
-	
+
 	public mutating func formSymmetricDifference(_ other: __owned SymbolClassDFA<Symbol>) {
 		fatalError("Unimplemented")
 		//self = SymbolClassDFA(inner: inner.symmetricDifference(other.inner), mapping: mapping)
 	}
-	
+
 	public static var empty: SymbolClassDFA<Symbol> {
 		SymbolClassDFA(inner: DFA<Symbol>.empty, mapping: [:])
 	}
-	
+
 	public static var epsilon: SymbolClassDFA<Symbol> {
 		SymbolClassDFA(inner: DFA<Symbol>.epsilon, mapping: [:])
 	}
-	
-	
+
 	public func isFinal(_ state: DFA<Symbol>.States) -> Bool {
 		inner.isFinal(state)
 	}
-	
+
 	public func makeIterator() -> DFA<Symbol>.Iterator {
 		fatalError("Unimplemented")
 		//return inner.makeIterator()
 	}
-	
+
 	public mutating func insert(_ newMember: __owned DFA<Symbol>.Element) -> (inserted: Bool, memberAfterInsert: DFA<Symbol>.Element) {
 		fatalError("Unimplemented")
 		//var newSet = self.inner;
@@ -480,7 +502,7 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 		//self = SymbolClassDFA(inner: newSet, mapping: mapping);
 		//return value;
 	}
-	
+
 	public mutating func remove(_ member: DFA<Symbol>.Element) -> (DFA<Symbol>.Element)? {
 		fatalError("Unimplemented")
 		//var newSet = self.inner;
@@ -488,7 +510,7 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 		//self = SymbolClassDFA(inner: newSet, mapping: mapping);
 		//return value;
 	}
-	
+
 	public mutating func update(with newMember: __owned DFA<Symbol>.Element) -> (DFA<Symbol>.Element)? {
 		fatalError("Unimplemented")
 		//var newSet = self.inner;
@@ -496,25 +518,23 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 		//self = SymbolClassDFA(inner: newSet, mapping: mapping);
 		//return value;
 	}
-	
+
 	public func contains(_ member: DFA<Symbol>.Element) -> Bool {
 		inner.contains(member.map { mapping[$0] ?? $0 })
 	}
-	
+
 	public static func union(_ elements: [SymbolClassDFA<Symbol>]) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: DFA<Symbol>.union(elements.map(\.inner)), mapping: [:])
 	}
-	
-	
+
 	public static func concatenate(_ elements: [SymbolClassDFA<Symbol>]) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: DFA<Symbol>.concatenate(elements.map(\.inner)), mapping: [:])
 	}
-	
+
 	public static func symbol(_ element: Symbol) -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: DFA<Symbol>.symbol(element), mapping: [:])
 	}
-	
 }
