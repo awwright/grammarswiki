@@ -133,8 +133,8 @@ public protocol ABNFExpression: ABNFProduction {
 /// ```abnf
 /// rulelist       =  1*( rule / (*WSP c-nl) )
 /// ```
-public struct ABNFRulelist<S>: ABNFProduction where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	/// The array of rules comprising this rulelist.
 	public let rules: [ABNFRule<Symbol>]
@@ -399,8 +399,8 @@ public enum ABNFDefinedAs: String {
 /// alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
 /// c-nl           =  comment / CRLF ; comment or newline
 /// ```
-public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	public let rulename: ABNFRulename<Symbol>;
 	public let definedAs: ABNFDefinedAs;
@@ -511,8 +511,8 @@ public struct ABNFRule<S>: ABNFProduction where S: Comparable & BinaryInteger & 
 /// ```
 ///
 /// - Example: In `digit = "0"`, "digit" is the rulename.
-public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	public let label: String;
 
@@ -614,11 +614,11 @@ public struct ABNFRulename<S>: ABNFExpression where S: Comparable & BinaryIntege
 /// ```
 ///
 /// - Example: `"0" / "1" / "2"` is an alternation of three concatenations.
-public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternProtocol where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
-	public static var empty: Self { ABNFAlternation<S>(matches: []) }
-	public static var epsilon: Self { ABNFAlternation<S>(matches: [ABNFConcatenation(repetitions: [])]) }
+	public static var empty: Self { ABNFAlternation<Symbol>(matches: []) }
+	public static var epsilon: Self { ABNFAlternation<Symbol>(matches: [ABNFConcatenation(repetitions: [])]) }
 
 	public let matches: [ABNFConcatenation<Symbol>]
 
@@ -740,7 +740,7 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 		return elements[1...].reduce(elements[0].concatenation, {$0.concatenate($1.concatenation)}).alternation
 	}
 
-	public static func symbol(_ element: Symbol) -> ABNFAlternation<S> {
+	public static func symbol(_ element: Symbol) -> ABNFAlternation<Symbol> {
 		return ABNFNumVal<Symbol>(base: .hex, value: .sequence([element])).alternation
 	}
 
@@ -852,8 +852,8 @@ public struct ABNFAlternation<S>: ABNFExpression, RegularPatternProtocol where S
 /// ```
 ///
 /// - Example: `"a" "b"` is a concatenation of two repetitions.
-public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	public let repetitions: [ABNFRepetition<Symbol>]
 
@@ -1000,8 +1000,8 @@ public struct ABNFConcatenation<S>: ABNFExpression where S: Comparable & BinaryI
 /// ```
 ///
 /// - Example: `2*3"a"` means "a" must appear between 2 and 3 times.
-public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	public let min: UInt
 	public let max: UInt?
@@ -1145,8 +1145,8 @@ public struct ABNFRepetition<S>: ABNFExpression where S: Comparable & BinaryInte
 ///
 /// - Note: The order of cases in `match` reflects ABNF parsing precedence.
 /// - Note: An `ABNFElement` is distinct from `Element` in Sequence and RegularPatternProtocol, which is just the type of items in the set.
-public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	case rulename(ABNFRulename<Symbol>)
 	case group(ABNFGroup<Symbol>)
@@ -1347,8 +1347,8 @@ public enum ABNFElement<S>: ABNFExpression where S: Comparable & BinaryInteger &
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
 // comment        =  ";" *(WSP / VCHAR) CRLF
-public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	// A group always unwraps to an alternation
 	public let alternation: ABNFAlternation<Symbol>
@@ -1431,8 +1431,8 @@ public struct ABNFGroup<S>: ABNFExpression where S: Comparable & BinaryInteger &
 // option         =  "[" *c-wsp alternation *c-wsp "]"
 // c-wsp          =  WSP / (c-nl WSP)
 // c-nl           =  comment / CRLF ; comment or newline
-public struct ABNFOption<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	public let optionalAlternation: ABNFAlternation<Symbol>
 
@@ -1504,10 +1504,10 @@ public struct ABNFOption<S>: ABNFExpression where S: Comparable & BinaryInteger 
 }
 
 // char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
-public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
-	public let sequence: Array<S>
+	public let sequence: Array<Symbol>
 	public let caseSensitive: Bool
 
 	public init<T>(sequence: T, caseSensitive: Bool = false) where T: Sequence, T.Element == Symbol {
@@ -1624,8 +1624,8 @@ public struct ABNFCharVal<S>: ABNFExpression where S: Comparable & BinaryInteger
 }
 
 // num-val        =  "%" (bin-val / dec-val / hex-val)
-public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	public static func == (lhs: ABNFNumVal, rhs: ABNFNumVal) -> Bool {
 		return lhs.base == rhs.base && lhs.value == rhs.value
@@ -1862,8 +1862,8 @@ public struct ABNFNumVal<S>: ABNFExpression where S: Comparable & BinaryInteger 
 }
 
 // prose-val      =  "<" *(%x20-3D / %x3F-7E) ">"
-public struct ABNFProseVal<S>: ABNFExpression where S: Comparable & BinaryInteger & Hashable, S.Stride: SignedInteger {
-	public typealias Element = Array<S>;
+public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	public typealias Element = Array<Symbol>;
 
 	public let remark: String;
 

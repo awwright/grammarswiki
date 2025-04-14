@@ -25,11 +25,8 @@ public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 /// - func optional
 /// - func toPattern
 public protocol RegularPatternProtocol: Equatable {
-	/// The type of sequence this pattern operates over, such as an array of symbols.
-	associatedtype Element: SymbolSequenceProtocol;
-
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
-	typealias Symbol = Element.Symbol;
+	associatedtype Symbol;
 
 	/// An instance representing the empty language, which accepts no sequences.
 	static var empty: Self { get }
@@ -89,6 +86,7 @@ public protocol RegularPatternProtocol: Equatable {
 	//func mapSymbol<Target>(_: (Symbol) throws -> Target) rethrows -> Target;
 }
 
+/// Language concatenate (string concatenation of cross-product)
 infix operator ++: AdditionPrecedence;
 
 extension RegularPatternProtocol {
@@ -181,13 +179,10 @@ extension RegularPatternProtocol where Symbol: Comparable & Strideable, Symbol.S
 	}
 }
 
-/// This protocol indicates that the conforming structure has all the components necessary to build a pattern from another RegularPatternProtocol
-public protocol RegularPattern {
-	/// The type of sequence this pattern operates over, such as an array of symbols.
-	associatedtype Element: SymbolSequenceProtocol;
-
+/// Indicates that the conforming structure can be exported to a RegularPatternProtocol object
+public protocol RegularPattern where Symbol: Hashable {
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
-	typealias Symbol = Element.Symbol;
+	associatedtype Symbol;
 
 	func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol;
 

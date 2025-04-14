@@ -1,7 +1,7 @@
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
 /// Optimized for describing ranges of characters.
 /// A replacement for Swift's builtin RangeSet which doesn't support ClosedRange and is overall garbage
-public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral, SetAlgebra where Symbol: BinaryInteger {
+public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral, SetAlgebra, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	// MARK: Type definitions
 	public typealias ArrayLiteralElement = Symbol
 	public typealias Element = Symbol
@@ -13,56 +13,111 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 	var parents: Array<Int>
 
 	// MARK: Initializations
+	/// Empty initialization
 	public init() {
 		self.symbols = []
 		self.parents = []
 	}
 
-	public init(symbols: Array<ClosedRange<Symbol>>, parents: Array<Int>) {
+	/// Initialize from pre-sorted data
+	init(symbols: Array<ClosedRange<Symbol>>, parents: Array<Int>) {
 		self.symbols = symbols
 		self.parents = parents
 	}
 
-	public init(partitions: Array<Array<Symbol>>) {
-		self = Self.meet(partitions.compactMap {
-			if($0.isEmpty){ return nil }
-			let sorted = $0.sorted();
-			return SymbolClass(symbols: sorted.map{ $0...$0 }, parents: Array(repeating: 0, count: sorted.count))
-		})
-	}
-
+	/// Convenience function for writing `SymbolClass([a, b, c, ...], [d, e, f, ...], ...)`
 	public init(_ partitions: Array<Symbol>...) {
-		let union = partitions.flatMap { $0 }
-		self.symbols = union.map { $0...$0 }.sorted { $0.lowerBound < $1.lowerBound }
-		self.parents = self.symbols.enumerated().map { i, _ in i }
-		for part in partitions {
-			if part.isEmpty { continue }
-			let partSorted = part.sorted { $0 < $1 }
-			let partLabel = partSorted[0]
-			let partLabelIndex = findIndex(partLabel)!
-			for i in 0..<partSorted.count {
-				self.parents[findIndex(partSorted[i])!] = partLabelIndex
-			}
-		}
+		self.init(partitions: partitions.map { $0.map { $0...$0 } })
 	}
 
-	public init(partitions: Array<Array<ClosedRange<Symbol>>>) {
-		let union = partitions.flatMap { $0 }
-		self.symbols = union.sorted { $0.lowerBound < $1.lowerBound }
-		self.parents = self.symbols.enumerated().map { i, _ in i }
-		for part in partitions {
-			if part.isEmpty { continue }
-			let partSorted = part.sorted { $0.lowerBound < $1.lowerBound }
-			let partLabel = partSorted[0].lowerBound
-			let partLabelIndex = findIndex(partLabel)!
-			for i in 0..<partSorted.count {
-				self.parents[findIndex(partSorted[i].lowerBound)!] = partLabelIndex
-			}
-		}
-	}
-
+	/// Convenience function for writing `SymbolClass([0...5], [10...20], ...)`
 	public init(_ partitions: Array<ClosedRange<Symbol>>...) {
 		self.init(partitions: partitions)
+	}
+
+	/// Create from an array of Symbols
+	public init(partitions: some Collection<some Collection<Symbol>>) {
+		self.init(partitions: partitions.map{ $0.map { $0...$0 } })
+	}
+
+	// If a symbol appears in multiple partitions,
+	public init(partitions: some Collection<some Collection<ClosedRange<Symbol>>>) {
+		// Sort the elements within the partitions and merge adjacent symbols into a ClosedRange
+		let sortedPartitions: Array<Array<ClosedRange<Symbol>>> = partitions.compactMap {
+			ranges in
+			// Return empty array if input is empty
+			guard !ranges.isEmpty else { return nil }
+
+			// Sort ranges by lower bound, then by upper bound for equal lower bounds
+			let sortedRanges = ranges.sorted {
+				$0.lowerBound == $1.lowerBound ? $0.upperBound < $1.upperBound : $0.lowerBound < $1.lowerBound
+			}
+
+			// Initialize result with the first range
+			var merged: [ClosedRange<Symbol>] = [sortedRanges[0]]
+			// Iterate through remaining ranges
+			for current in sortedRanges.dropFirst() {
+				let last = merged.last!
+				// Check if current range is adjacent to or overlaps with the last merged range
+				if current.lowerBound <= last.upperBound + 1 {
+					// Merge by creating a new range with the same lower bound and the maximum upper bound
+					let newUpper = max(last.upperBound, current.upperBound)
+					merged[merged.count - 1] = last.lowerBound...newUpper
+				} else {
+					// If not adjacent or overlapping, add the current range as a new segment
+					merged.append(current)
+				}
+			}
+			return merged
+		}
+
+		// Trivial cases
+		if sortedPartitions.isEmpty {
+			self.symbols = []
+			self.parents = []
+			return
+		} else if sortedPartitions.count == 1 {
+			self.symbols = sortedPartitions[0]
+			self.parents = Array(repeating: 0, count: sortedPartitions[0].count)
+			return
+		}
+
+		// Compute the intersection of all symbols (ranges)
+		let allSymbols = sortedPartitions.flatMap { $0 }.sorted { $0.lowerBound < $1.lowerBound }
+		var lowerBounds: Array<Symbol> = allSymbols.map(\.lowerBound).sorted();
+		var upperBounds: Array<Symbol> = allSymbols.map(\.upperBound).sorted();
+		assert(lowerBounds.count == upperBounds.count)
+
+		// Un-nest ranges by adding lower or upper bounds as necessary
+		// Only add bounds inside one range or another, test this by counting how many bounds are open
+		let nestedUpperBounds: Array<Symbol> = lowerBounds.compactMap {
+			offset in
+			if (lowerBounds.filter { $0 < offset }.count > upperBounds.filter { $0 < offset }.count) { return offset-1 }
+			else { return nil }
+		};
+		let nestedLowerBounds: Array<Symbol> = upperBounds.compactMap {
+			offset in
+			if (lowerBounds.filter { $0 <= offset }.count >= upperBounds.filter { $0 <= offset }.count + 1) { return offset+1 }
+			else { return nil }
+		};
+		lowerBounds = Set(lowerBounds+nestedLowerBounds).sorted()
+		upperBounds = Set(upperBounds+nestedUpperBounds).sorted()
+		assert(lowerBounds.count == upperBounds.count)
+		let symbols: [ClosedRange<Symbol>] = zip(lowerBounds, upperBounds).map { $0...$1 }
+
+		// Determine which input partitions the symbol is a member of
+		let parts: Array<Set<Int>> = symbols.map {
+			let symbol = $0.lowerBound
+			return Set(partitions.enumerated().compactMap { (i, ranges) in
+				ranges.contains(where: { $0.contains(symbol) }) ? i : nil
+			})
+		}
+		// For the new partition index, just point to the first range to exist in the same set of partitions
+		let parents = parts.map {
+			parts.firstIndex(of: $0)!
+		}
+		self.symbols = symbols
+		self.parents = parents
 	}
 
 	// MARK: ExpressibleByArrayLiteral
@@ -71,18 +126,73 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 		self.parents = self.symbols.enumerated().map { i, _ in i }
 	}
 
+	// MARK: RegularPatternProtocol
+	/// A pattern without any elements has an empty alphabet
+	public static var empty: SymbolClass<Symbol> { Self() }
+	/// An element with no symbols also has an empty alphabet
+	public static var epsilon: SymbolClass<Symbol> { Self() }
+	/// An element with a single symbol has one symbol in the alphabet
+	public static func symbol(_ element: Symbol) -> SymbolClass<Symbol> {
+		Self([element])
+	}
+	public static func concatenate(_ elements: [SymbolClass<Symbol>]) -> SymbolClass<Symbol> {
+		SymbolClass<Symbol>(partitions: elements.flatMap(\.partitions))
+	}
+	public static func union(_ elements: [SymbolClass<Symbol>]) -> SymbolClass<Symbol> {
+		// Merge partitions that are the only partition in their alternation
+		// Because they behave the same
+		var symbols: Array<ClosedRange<Symbol>> = []
+		var partitions: Array<Array<ClosedRange<Symbol>>> = []
+		for partition in elements.map(\.partitions) {
+			if(partition.count == 1){
+				symbols += partition[0]
+			}else if(partition.count > 1){
+				partitions += partition
+			}
+		}
+		return SymbolClass<Symbol>(partitions: [symbols] + partitions)
+	}
+	public func star() -> SymbolClass<Symbol> {
+		self
+	}
+
+	// MARK: Various accessors
+
 	public var partitionLabels: Array<Symbol> {
 		self.parents.filter { $0 == parents[$0] }.map{ symbols[$0].lowerBound }
 	}
 
+	/// Maps partition label to set of values in partition
+	public var partitions: Array<Array<ClosedRange<Symbol>>> {
+		let labels = Set(parents).sorted()
+		var dict: Dictionary<Int, Array<ClosedRange<Symbol>>> = Dictionary(uniqueKeysWithValues: labels.map { ($0, []) })
+		for i in 0..<symbols.count {
+			let label = parents[i]
+			dict[label]!.append(symbols[i])
+		}
+		return labels.map { dict[$0]! }
+	}
+
 	/// Computes a mapping of symbol to partition label
 	public var alphabetReduce: Dictionary<Symbol, Symbol> {
-		return [:]
+		var result: Dictionary<Symbol, Symbol> = [:]
+		for (index, parent) in parents.enumerated() {
+			let label = symbols[parent].lowerBound
+			for symbol in symbols[index] {
+				result[symbol] = label
+			}
+		}
+		return result
 	}
 
 	/// Maps partition label to set of values in partition
-	public var alphabetExpand: Dictionary<Symbol, Set<Symbol>> {
-		return [:]
+	public var alphabetExpand: Dictionary<Symbol, Array<Symbol>> {
+		var dict: Dictionary<Symbol, Array<Symbol>> = [:]
+		for i in 0..<symbols.count {
+			let label = symbols[parents[i]].lowerBound
+			dict[label, default: []] += Array(symbols[i])
+		}
+		return dict
 	}
 
 	public var partitionCount: Int {
@@ -126,57 +236,11 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 		return false
 	}
 
-	/// Find the union of the elements with `other`, but divide partitions along their intersections
-	public static func meet(_ other: Array<SymbolClass<Symbol>>) -> SymbolClass<Symbol> {
-		if other.isEmpty {
-			return Self()
-		} else if other.count == 1 {
-			return other[0]
-		}
-
-		// Compute the intersection of all symbols (ranges)
-		let allSymbols = other.flatMap { $0.symbols }.sorted { $0.lowerBound < $1.lowerBound }
-		var lowerBounds: Array<Symbol> = allSymbols.map(\.lowerBound).sorted();
-		var upperBounds: Array<Symbol> = allSymbols.map(\.upperBound).sorted();
-		assert(lowerBounds.count == upperBounds.count)
-
-		// Un-nest ranges by adding lower or upper bounds as necessary
-		// Only add bounds inside one range or another, test this by counting how many bounds are open
-		let nestedUpperBounds: Array<Symbol> = lowerBounds.compactMap {
-			offset in
-			if (lowerBounds.filter { $0 < offset }.count > upperBounds.filter { $0 < offset }.count) { return offset-1 }
-			else { return nil }
-		};
-		let nestedLowerBounds: Array<Symbol> = upperBounds.compactMap {
-			offset in
-			if (lowerBounds.filter { $0 <= offset }.count >= upperBounds.filter { $0 <= offset }.count + 1) { return offset+1 }
-			else { return nil }
-		};
-		lowerBounds = Set(lowerBounds+nestedLowerBounds).sorted()
-		upperBounds = Set(upperBounds+nestedUpperBounds).sorted()
-		assert(lowerBounds.count == upperBounds.count)
-		let symbols: [ClosedRange<Symbol>] = zip(lowerBounds, upperBounds).map { $0...$1 }
-
-		// Assign each range in `symbols` to a new partition
-		let parts: Array<Array<Symbol?>> = symbols.map {
-			subrange in
-			other.map { other in
-				let index = other.symbols.firstIndex(where: { $0.contains(subrange.lowerBound) })
-				guard let index else { return nil }
-				return other.symbols[other.parents[index]].lowerBound
-			}
-		}
-		// For the new partition index, just point to the first range to exist in the same set of partitions
-		let parents = parts.map {
-			parts.firstIndex(of: $0)!
-		}
-		return SymbolClass(
-			symbols: symbols,
-			parents: parents
-		)
-	}
-	public func meet(_ other: __owned SymbolClass<Symbol>) -> SymbolClass<Symbol> {
+	public func meet(_ other: Self) -> Self {
 		return Self.meet([self, other])
+	}
+	public static func meet(_ i: Array<Self>) -> Self {
+		return SymbolClass(partitions: i.flatMap(\.partitions))
 	}
 
 	public func union(_ other: __owned SymbolClass<Symbol>) -> SymbolClass<Symbol> {
