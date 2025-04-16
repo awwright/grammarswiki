@@ -5,3 +5,5 @@ link-value = "<" URI-Reference ">" *( OWS ";" OWS link-param )
 link-param = token BWS [ "=" BWS ( token / quoted-string ) ]
 
 URI-Reference = <import rfc3986-uri.abnf#rule=URI-reference>
+token         = <import rfc9110-http.abnf#rule=token>
+quoted-string = <import rfc9110-http.abnf#rule=quoted-string>

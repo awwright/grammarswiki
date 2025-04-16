@@ -737,6 +737,16 @@ import Testing;
 			#expect(fsm.contains("A".utf8));
 		}
 
+		@Test("repetition none")
+		func test_repetition_none_toPattern() async throws {
+			// 0*1"C"
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 0, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(fsm.contains("".utf8));
+			#expect(!fsm.contains("C".utf8));
+			#expect(!fsm.contains("CC".utf8));
+		}
+
 		@Test("repetition optional")
 		func test_repetition_optional_toPattern() async throws {
 			// 0*1"C"
@@ -788,7 +798,7 @@ import Testing;
 			#expect(!fsm.contains("CCC".utf8));
 		}
 
-		@Test("repetition.toPattern min/max")
+		@Test("repetition min/max")
 		func test_repetition_minmax_toPattern() async throws {
 			// 2*3"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
@@ -798,6 +808,106 @@ import Testing;
 			#expect(fsm.contains("CCC".utf8));
 			#expect(!fsm.contains("CCCC".utf8));
 		}
+
+		@Test("separator 0#0")
+		func test_separator_0_0_toPattern() async throws {
+			// 0*1"C"
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 0, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(fsm.contains("".utf8));
+			#expect(!fsm.contains("C".utf8));
+			#expect(!fsm.contains("C,C".utf8));
+		}
+
+		@Test("separator 0#1")
+		func test_separator_0_1_toPattern() async throws {
+			// 0*1"C"
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(fsm.contains("".utf8));
+			#expect(fsm.contains("C".utf8));
+			#expect(!fsm.contains("C,C".utf8));
+		}
+
+		@Test("separator 0#2")
+		func test_separator_0_2_toPattern() async throws {
+			// 0*1"C"
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(fsm.contains("".utf8));
+			#expect(fsm.contains("C".utf8));
+			#expect(fsm.contains("C,C".utf8));
+			#expect(!fsm.contains("CC".utf8)); // Separator is required
+			#expect(!fsm.contains("C,C,C".utf8));
+		}
+
+		@Test("separator 0#")
+		func test_separator_0_any_toPattern() async throws {
+			// 1*"C"
+			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(!fsm.contains("".utf8));
+			#expect(fsm.contains("C".utf8));
+			#expect(fsm.contains("C,C".utf8));
+		}
+
+		@Test("separator 1#1")
+		func test_separator_1_1_toPattern() async throws {
+			// 0*1"C"
+			let expression = ABNFRepetition<UInt8>(min: 1, max: 1, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(!fsm.contains("".utf8));
+			#expect(fsm.contains("C".utf8));
+			#expect(!fsm.contains("C,C".utf8));
+		}
+
+		@Test("separator 1#2")
+		func test_separator_1_2_toPattern() async throws {
+			// 0*1"C"
+			let expression = ABNFRepetition<UInt8>(min: 1, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(!fsm.contains("".utf8));
+			#expect(fsm.contains("C".utf8));
+			#expect(fsm.contains("C,C".utf8));
+			#expect(!fsm.contains("CC".utf8)); // Separator is required
+			#expect(!fsm.contains("C,C,C".utf8));
+		}
+
+		@Test("separator 1#")
+		func test_separator_1_any_toPattern() async throws {
+			// 1*"C"
+			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(!fsm.contains("".utf8));
+			#expect(fsm.contains("C".utf8));
+			#expect(fsm.contains("C,C".utf8));
+			#expect(!fsm.contains("CC".utf8)); // Separator is required
+		}
+
+		@Test("separator 2#2")
+		func test_separator_2_2_toPattern() async throws {
+			// 0*1"C"
+			let expression = ABNFRepetition<UInt8>(min: 2, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(!fsm.contains("".utf8));
+			#expect(!fsm.contains("C".utf8));
+			#expect(fsm.contains("C,C".utf8));
+			#expect(!fsm.contains("CC".utf8)); // Separator is required
+			#expect(!fsm.contains("C,C,C".utf8));
+		}
+
+		@Test("separator 2#")
+		func test_separator_2_any_toPattern() async throws {
+			// 1*"C"
+			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			#expect(!fsm.contains("".utf8));
+			#expect(!fsm.contains("C".utf8));
+			#expect(fsm.contains("C,C".utf8));
+			#expect(!fsm.contains("CC".utf8)); // Separator is required
+			#expect(fsm.contains("C,C,C".utf8));
+		}
+
 
 		@Test("element.toPattern")
 		func test_element_toPattern() async throws {
@@ -1145,7 +1255,7 @@ import Testing;
 
 			providedDictionary.forEach { key, value in
 				let difference = value.symmetricDifference(referenceDictionary[key]!)
-				#expect(difference.finals.isEmpty, "Builtin rule \(key) mismatches reference, have values \(difference.toViz())")
+				#expect(difference.finals.isEmpty, "Builtin rule \(key) mismatches reference, have values \(difference.minimized().toViz())")
 			}
 		}
 

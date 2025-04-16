@@ -29,7 +29,7 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 		Self(states: [[:]], initial: 0, finals: [])
 	}
 	public static var epsilon: Self {
-		Self(states: [], initial: 0, finals: [0])
+		Self(states: [[:]], initial: 0, finals: [0])
 	}
 
 	/// The transition table, mapping each state to a dictionary of symbol-to-next-state transitions.

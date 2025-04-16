@@ -321,7 +321,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 	/// - Note: Rules with circular dependencies that cannot be converted to a DFA will be excluded from the return value without any other warning.
 	///
 	/// - Note: This is a variation of `toPattern` that returns a dictionary, cooresponding with how a rulelist encodes multiple rules.
-    public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules ruleMap: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> Dictionary<String, PatternType> where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules ruleMap: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> Dictionary<String, PatternType> where PatternType.Symbol == Symbol {
 		// Get a Dictionary of each rule by its name to its referencedRules
 		let rulesByName = self.dictionary;
 		let requiredRules = rulesByName.mapValues { $0.referencedRules }.filter { $0.1.contains($0.0) == false }
@@ -334,7 +334,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 					guard let rule = rulesByName[rulename] else {
 						fatalError("Could not resolve \(rulename)")
 					}
-                    resolvedRules[rulename] = try rule.toPattern(as: PatternType.self, rules: resolvedRules, alphabet: alphabetFilter);
+					resolvedRules[rulename] = try rule.toPattern(as: PatternType.self, rules: resolvedRules, alphabet: alphabetFilter);
 					continue main;
 				}
 			}
@@ -457,8 +457,8 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 		ABNFRule<Target>(rulename: ABNFRulename(label: rulename.label), definedAs: definedAs, alternation: alternation.mapSymbols(transform))
 	}
 
-    public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
-        try alternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
+		try alternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 	}
 
 	public func union(_ other: ABNFRule<Symbol>) -> ABNFRule<Symbol> {
@@ -718,8 +718,8 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternProtocol wh
 		self.mapElements({ $0.mapSymbols(transform) })
 	}
 
-    public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
-        PatternType.union(try matches.map({ try $0.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter) }))
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
+		PatternType.union(try matches.map({ try $0.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter) }))
 	}
 
 	public static func union(_ elements: [Self]) -> Self {
@@ -1005,21 +1005,22 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 
 	public let min: UInt
 	public let max: UInt?
+	public let rangeop: UInt8
 	public let repeating: ABNFElement<Symbol>
 
-	public init(min: UInt, max: UInt?, element: ABNFElement<Symbol>) {
+	public init(min: UInt, max: UInt?, rangeop: UInt8 = 0x2A, element: ABNFElement<Symbol>) {
 		self.min = min
 		self.max = max
 		if let max {
 			precondition(min <= max)
 		}
+		self.rangeop = rangeop
 		self.repeating = element
 	}
 
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		// FIXME: This may not be entirely accurate, may need to loop element and compare that
 		return lhs.repeating < rhs.repeating;
-//		return lhs.hashValue < rhs.hashValue;
 	}
 
 	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
@@ -1082,14 +1083,15 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 	}
 
 	public var description: String {
+		let rangeop = Character(UnicodeScalar(self.rangeop))
 		let repeatStr =
 		if let max {
 			if min == 1 && max == 1 { "" }
 			else if(min == max){ "\(min)" }
-			else{ "\(min)*\(max)" }
+			else{ "\(min)\(rangeop)\(max)" }
 		} else {
-			if min == 0 { "*" }
-			else{ "\(min)*" }
+			if min == 0 { "\(rangeop)" }
+			else{ "\(min)\(rangeop)" }
 		}
 		return repeatStr + repeating.description
 	}
@@ -1107,10 +1109,33 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
-		if let max = self.max {
-			try repeating.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter).repeating(Int(min)...Int(max))
+		let inner = try repeating.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+		let separator: PatternType? = switch(self.rangeop) {
+			case 0x2A: nil; //DFA<Symbol>.epsilon.toPattern();
+			case 0x23: ABNFBuiltins<DFA<Symbol>>.CSEP.toPattern();
+			default: fatalError("Unsupported repetition range operator \(rangeop)")
+		}
+		if let max, max == 0 {
+			return PatternType.epsilon
+		} else if let separator {
+			let min1 = Int(min >= 1 ? min - 1 : 0)
+			let max1 = max == nil ? nil : Int(max! >= 1 ? max! - 1 : 0)
+			if max == nil {
+				let inner1 = separator.concatenate(inner).repeating(min1...)
+				return min == 0 ? inner1.optional() : inner.concatenate(inner1)
+			} else if max == 1 {
+				return min == 0 ? inner.optional() : inner
+			} else {
+				let inner1 = separator.concatenate(inner).repeating(min1...max1!)
+				let basePattern = inner.concatenate(inner1)
+				return min == 0 ? basePattern.optional() : basePattern
+			}
 		} else {
-			try repeating.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter).repeating(Int(min)...)
+			if let max = self.max {
+				return inner.repeating(Int(min)...Int(max))
+			} else {
+				return inner.repeating(Int(min)...)
+			}
 		}
 	}
 
@@ -1118,10 +1143,10 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		if let (match, remainder1) = Terminals.repeat_range.match(input) {
 			// (*DIGIT "*" *DIGIT) element
 			// match = *DIGIT "*"
-			let (minStr, _) = Terminals.DIGIT_star.match(match)!
+			let (minStr, rangeop) = Terminals.DIGIT_star.match(match)!
 			let (maxStr, remainder2) = Terminals.DIGIT_star.match(remainder1)!
 			guard let (element, remainder) = try ABNFElement<Symbol>.match(remainder2) else { return nil }
-			return (ABNFRepetition(min: repeat_value(minStr), max: maxStr.isEmpty ? nil : repeat_value(maxStr), element: element), remainder)
+			return (ABNFRepetition(min: repeat_value(minStr), max: maxStr.isEmpty ? nil : repeat_value(maxStr), rangeop: rangeop.first!, element: element), remainder)
 		} else if let (exactStr, remainder1) = Terminals.repeat_min.match(input) {
 			// 1*DIGIT element
 			let count = repeat_value(exactStr);
@@ -1259,7 +1284,7 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		}
 	}
 
-    public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
             case .rulename(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
             case .group(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
@@ -1405,7 +1430,7 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.Symbol == Symbol {
-        try alternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+		try alternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1488,7 +1513,7 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.Symbol == Symbol {
-        try optionalAlternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter).optional()
+		try optionalAlternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter).optional()
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1583,7 +1608,7 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) -> PatternType where PatternType.Symbol == Symbol {
-        func sym(_ s: Symbol) -> PatternType { if let alphabetFilter, !alphabetFilter.contains(s) { return PatternType.empty } else { return PatternType.symbol(s) } }
+		func sym(_ s: Symbol) -> PatternType { if let alphabetFilter, !alphabetFilter.contains(s) { return PatternType.empty } else { return PatternType.symbol(s) } }
 		return PatternType.concatenate(sequence.map {
 			codepoint in
 			// Check for uppercase letters, also accept lowercase versions
@@ -1755,14 +1780,14 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 	}
 
 	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) -> PatternType where PatternType.Symbol == Symbol {
-        func sym(_ s: Symbol) -> PatternType {
-            if let alphabetFilter, !alphabetFilter.contains(s) { return PatternType.empty } else { return PatternType.symbol(s) }
-        }
-        
-        switch self.value {
-            case .sequence(let seq): return PatternType.concatenate(seq.map { sym($0) })
-        case .range(let range): return PatternType.union(range.map { sym($0) })
-        }
+		func sym(_ s: Symbol) -> PatternType {
+			if let alphabetFilter, !alphabetFilter.contains(s) { return PatternType.empty } else { return PatternType.symbol(s) }
+		}
+
+		switch self.value {
+			case .sequence(let seq): return PatternType.concatenate(seq.map { sym($0) })
+			case .range(let range): return PatternType.union(range.map { sym($0) })
+		}
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1963,6 +1988,8 @@ public struct ABNFBuiltins<Dfn: RegularPatternProtocol> where Dfn.Symbol: Binary
 	public static var VCHAR : Dfn { Dfn.range(0x21...0x7E) }; // %x21-7E
 	public static var WSP   : Dfn { SP | HTAB }; // SP / HTAB
 
+	public static var CSEP : Dfn { WSP.star() ++ Dfn.symbol(0x2C) ++ WSP.star() }; // OWS "," OWS (from RFC 9110)
+
 	public static var keys: Array<String> {
 		["ALPHA", "BIT", "CHAR", "CR", "CRLF", "CTL", "DIGIT", "DQUOTE", "HEXDIG", "HTAB", "LF", "LWSP", "OCTET", "SP", "VCHAR", "WSP"]
 	};
@@ -2033,7 +2060,7 @@ struct Terminals {
 
 	static let rulename = ALPHA ++ (ALPHA | DIGIT | Terminals["-"]).star();
 	static let repeat_min = DIGIT.plus();
-	static let repeat_range = DIGIT.star() ++ Terminals["*"];
+	static let repeat_range = DIGIT.star() ++ (Terminals["*"] | Terminals["#"]);
 	static let DIGIT_star = DIGIT.star();
 
 	static let group_start = Terminals["("] ++ c_wsp_star;
