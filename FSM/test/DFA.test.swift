@@ -522,46 +522,68 @@ import Testing
 	}
 
 	@Suite("alphabet/alphabetPattern") struct DFATests_alphabet {
+		func alphabetPartitionsByContext<T>(_ val: DFA<T>) -> Set<Set<T>> {
+			// An alternate way of calculating partitions that is less magic:
+			var parts: Dictionary<Set<[DFA<T>]>, Set<T>> = [:];
+			for s in val.alphabet {
+				let key = Set(val.symbolContext(input: s).map { [$0.alpha, $0.beta] })
+				parts[key, default: []].insert(s)
+			}
+			return Set(parts.values)
+		}
+
+		func testAlphabetPartitionsEqual<T>(_ val: DFA<T>) -> Bool {
+			return alphabetPartitionsByContext(val) == val.alphabetPartitions
+		}
+
 		@Test("empty") func empty() async throws {
 			let dfa: DFA<UInt8> = DFA([])
 			#expect(dfa.alphabet == [])
 			#expect(dfa.alphabetPartitions == [])
+			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 		@Test("epsilon") func epsilon() async throws {
 			let dfa: DFA<UInt8> = DFA([ [] ]).minimized();
 			#expect(dfa.alphabet == [])
 			#expect(dfa.alphabetPartitions == [])
+			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 		@Test("single") func single() async throws {
 			let dfa: DFA<UInt8> = DFA([ [0x30] ]).minimized();
 			#expect(dfa.alphabet == [0x30])
 			#expect(dfa.alphabetPartitions == [ [0x30] ])
+			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 		@Test("union") func union() async throws {
 			let dfa: DFA<UInt8> = DFA([ [0x30], [0x31], [0x32] ]).minimized();
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32])
 			#expect(dfa.alphabetPartitions == [ [0x30, 0x31, 0x32] ])
+			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 		@Test("sequence") func sequence() async throws {
 			let dfa: DFA<UInt8> = DFA([ [0x30, 0x31, 0x32] ]).minimized();
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32])
 			#expect(dfa.alphabetPartitions == [ [0x30], [0x31], [0x32] ])
+			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 		@Test("intersection") func intersection() async throws {
 			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32],  [0x33], [0x30, 0x33] ]).minimized();
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])
 			#expect(dfa.alphabetPartitions == [ [0x30], [0x31, 0x32], [0x33] ])
+			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 		@Test("concatenation 1") func concatenation() async throws {
 			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32, 0x32],  [0x33, 0x33] ]).minimized().minimized();
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])
 			#expect(dfa.alphabetPartitions == [ [0x30, 0x31], [0x32], [0x33] ])
+			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 		@Test("concatenation 2") func concatenation_2() async throws {
 			// FIXME: Why does this only minimize correctly with two minimized() calls???
 			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32, 0x32],  [0x32, 0x33],  [0x33, 0x32],  [0x33, 0x33] ]).minimized().minimized();
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])
 			#expect(dfa.alphabetPartitions == [ [0x30, 0x31], [0x32, 0x33] ])
+			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 	}
 }
