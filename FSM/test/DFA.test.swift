@@ -539,24 +539,29 @@ import Testing
 		}
 		@Test("union") func union() async throws {
 			let dfa: DFA<UInt8> = DFA([ [0x30], [0x31], [0x32] ]).minimized();
-			print(dfa.toViz())
-			print(dfa.alphabetPartitions)
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32])
 			#expect(dfa.alphabetPartitions == [ [0x30, 0x31, 0x32] ])
 		}
 		@Test("sequence") func sequence() async throws {
 			let dfa: DFA<UInt8> = DFA([ [0x30, 0x31, 0x32] ]).minimized();
-			print(dfa.toViz())
-			print(dfa.alphabetPartitions)
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32])
 			#expect(dfa.alphabetPartitions == [ [0x30], [0x31], [0x32] ])
 		}
 		@Test("intersection") func intersection() async throws {
 			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32],  [0x33], [0x30, 0x33] ]).minimized();
-			print(dfa.toViz())
-			print(dfa.alphabetPartitions)
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])
 			#expect(dfa.alphabetPartitions == [ [0x30], [0x31, 0x32], [0x33] ])
+		}
+		@Test("concatenation 1") func concatenation() async throws {
+			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32, 0x32],  [0x33, 0x33] ]).minimized().minimized();
+			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])
+			#expect(dfa.alphabetPartitions == [ [0x30, 0x31], [0x32], [0x33] ])
+		}
+		@Test("concatenation 2") func concatenation_2() async throws {
+			// FIXME: Why does this only minimize correctly with two minimized() calls???
+			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32, 0x32],  [0x32, 0x33],  [0x33, 0x32],  [0x33, 0x33] ]).minimized().minimized();
+			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])
+			#expect(dfa.alphabetPartitions == [ [0x30, 0x31], [0x32, 0x33] ])
 		}
 	}
 }

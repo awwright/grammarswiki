@@ -128,6 +128,16 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 			}
 			fragments += partitions.map { $0.1 }
 		}
+
+		// An alternate way of calculating partitions that is less magic:
+		//var parts: Dictionary<Set<[Self]>, Set<Symbol>> = [:];
+		//for s in alphabet {
+		//	let key = Set(symbolContext(input: s).map { [$0.alpha, $0.beta] })
+		//	parts[key, default: []].insert(s)
+		//}
+		//assert(alphabetCombine(fragments) == Set(parts.values))
+		//return Set(parts.values)
+
 		return alphabetCombine(fragments)
 	}
 
@@ -287,6 +297,32 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 			initial: minimized.initial,
 			finals: [currentState]
 		).minimized()
+	}
+
+	// TODO: Give these default values (self.initial and self.finals, respectively)
+	/// Return a DFA representing all the paths from `source` to `target`
+	public func subpaths(source: StateNo?, target: some Collection<StateNo>) -> Self {
+		guard let source else {	return Self.empty }
+		return Self(states: states, initial: source, finals: Set(target)).minimized()
+	}
+
+	/// Provides a list of all the tuples (alpha, symbol, beta) where alpha matches strings that can come before the given symbol, and beta matches all the strings that come after.
+	/// Symbol matches the input symbol and any other symbols that can be found in between alpha and beta.
+	/// This function is used to partition
+	// TODO: This could also return a Dict? A beta value is unique per alpha value
+	public func symbolContext(input: Symbol) -> Array<(alpha: Self, symbols: Self, beta: Self)> {
+		self.states.enumerated().compactMap {
+			(source, table) in
+			let target = table[input]
+			guard let target else { return nil }
+			// Get all of the keys that map to the same target
+			let symbols: Array<Symbol> = table.keys.filter { table[$0] == target }
+			return (
+				alpha: self.subpaths(source: self.initial, target: [source]),
+				symbols: DFA<Symbol>(symbols.map { [$0] }),
+				beta: self.subpaths(source: target, target: self.finals)
+			)
+		}
 	}
 
 	/// Derive a new FSM using a parallel construction
