@@ -1,3 +1,23 @@
+/// A protocol that is able to store a set of set of symbols, such that all the sets are disjoint from each other, each element only appearing in one partition
+/// This is a protocol so that various ways of indexing the elements based on tyoe can be used
+protocol PartitionedSetProtocol {
+	/// This type may be any type that can compute intersections, etc.
+	associatedtype Partition: SetAlgebra;
+	typealias Symbol = Partition.Element
+
+	associatedtype Partitions: Collection where Partitions.Element == Partition
+	var partitions: Partitions { get }
+	// Initialization
+	/// Initialize an empty set (no elements, no partitions)
+	init()
+	/// Initialize a PartitionedSet with the given elements, taking the union-meet of the subsets
+	/// If elements appear in multiple partitions, elements found in the same partitions are split out and merged into a new partition
+	/// (so that they never share a partition with elements they didn't share with in all partitions).
+	init(partitions: some Collection<Partition>)
+	/// Get the set of symbols from the partition of the given symbol
+	func siblings(of: Symbol) -> Partition
+}
+
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
 /// Optimized for describing ranges of characters.
 /// A replacement for Swift's builtin RangeSet which doesn't support ClosedRange and is overall garbage
@@ -8,13 +28,17 @@
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral, SetAlgebra, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	// MARK: Type definitions
+	/// Implements PartitionedSetProtocol
+	public typealias Partition = Array<ClosedRange<Symbol>>
+	/// Implements ExpressibleByArrayLiteral
 	public typealias ArrayLiteralElement = Symbol
+	/// Implements SetAlgebra
 	public typealias Element = Symbol
 
 	// MARK: Properties
-	// Ordered list of all symbols (and ranges) in the class
+	/// Ordered list of all symbols (and ranges) in the class
 	var symbols: Array<ClosedRange<Symbol>>
-	// A tree partitioning elements together
+	/// A tree partitioning elements together
 	var parents: Array<Int>
 
 	// MARK: Initializations
@@ -36,7 +60,7 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 	}
 
 	/// Convenience function for writing `SymbolClass([0...5], [10...20], ...)`
-	public init(_ partitions: Array<ClosedRange<Symbol>>...) {
+	public init(_ partitions: Partition...) {
 		self.init(partitions: partitions)
 	}
 
@@ -168,12 +192,12 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 	}
 
 	/// Maps partition label to set of values in partition
-	public var alphabet: Array<ClosedRange<Symbol>> {
+	public var alphabet: Partition {
 		symbols
 	}
 
 	/// Maps partition label to set of values in partition
-	public var partitions: Array<Array<ClosedRange<Symbol>>> {
+	public var partitions: Array<Partition> {
 		let labels = Set(parents).sorted()
 		var dict: Dictionary<Int, Array<ClosedRange<Symbol>>> = Dictionary(uniqueKeysWithValues: labels.map { ($0, []) })
 		for i in 0..<symbols.count {
@@ -228,9 +252,9 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 	}
 
 	/// Get all the set of symbols in the same partition as the given symbol
-	public func siblings(_ symbol: Symbol) -> Array<ClosedRange<Symbol>> {
+	public func siblings(_ symbol: Symbol) -> Partition {
 		let index = self.findIndex(symbol)
-		guard let index else { fatalError() }
+		guard let index else { fatalError("Cannot find \(symbol) in \(symbols)") }
 		let parent = self.parents[index]
 		return self.symbols.enumerated().compactMap { self.parents[$0]==parent ? $1 : nil }
 	}
