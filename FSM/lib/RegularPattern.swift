@@ -1,5 +1,6 @@
-/// Declares a type of sequence that has an empty sequence, and can be built from the empty sequence by appending elements.
-/// The elements of this sequence are called Symbol. They must be usable as keys for a ``Dictionary``, so Symbol depends on ``Hashable``.
+/// Declares a type of sequence that can be consumed or produced by a finite state automata
+/// It defines the empty sequence, and can be built from the empty sequence by appending elements.
+/// An elements of this sequence is a Symbol. They must be usable as keys for a ``Dictionary``, so Symbol depends on ``Hashable``.
 public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 	typealias Symbol = Element;
 

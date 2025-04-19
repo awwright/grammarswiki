@@ -18,6 +18,76 @@ protocol PartitionedSetProtocol {
 	func siblings(of: Symbol) -> Partition
 }
 
+/// Default implementations of functions for PartitionedSetProtocol
+extension PartitionedSetProtocol {
+	/// Create from an array of Symbols
+	init(partitions: some Collection<Partition>) {
+		self.init(partitions: partitions.map{ $0 })
+	}
+}
+
+/// A variation of PartitionedSetProtocol where the elements can be individually iterated
+protocol PartitionedSetElementsProtocol: PartitionedSetProtocol where Partition: Collection, Symbol: Hashable {
+	associatedtype Symbols: Collection where Symbols.Element == Symbol
+	var components: Symbols { get }
+	var alphabetReduce: Dictionary<Symbol, Symbol> { get }
+	var alphabetExpand: Dictionary<Symbol, Array<Symbol>> { get }
+}
+
+/// A variation of PartitionedSetProtocol that can store multiple sets of symbols, associating each set with a label
+protocol PartitionedDictionaryProtocol: PartitionedSetProtocol {
+	associatedtype Label;
+	subscript(labelToPartition: Label) -> Partition { set get }
+	subscript(elementToLabel: Symbol) -> Label { set get }
+}
+
+public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternProtocol {
+	public typealias Partition = Set<Symbol>
+
+	init() {
+		symbols = []
+		parents = []
+	}
+
+	public init(partitions: Array<Partition>) {
+		symbols = Set(partitions.flatMap { $0 }).sorted()
+		let members = symbols.map { s in partitions.enumerated().compactMap { $0.1.contains(s) ? $0.0 : nil } }
+		parents = members.map { members.firstIndex(of: $0)! }
+	}
+
+	var symbols: Array<Symbol>
+	var parents: Array<Int>
+
+	func siblings(of: Symbol) -> Set<Symbol> {
+		let parent = parents[symbols.firstIndex(of: of)!]
+		return Set(symbols.enumerated().compactMap { parents[$0.0] == parent ? $0.1 : nil })
+	}
+
+	public typealias Partitions = Array<Partition>
+	public var partitions: Partitions {
+		let labels = Set(parents).sorted()
+		var dict: Dictionary<Int, Array<Symbol>> = Dictionary(uniqueKeysWithValues: labels.map { ($0, []) })
+		for i in 0..<symbols.count {
+			let label = parents[i]
+			dict[label]!.append(symbols[i])
+		}
+		return labels.map { Set(dict[$0]!) }
+	}
+
+	// MARK: RegularPatternProtocol
+	// For building a partitioned alphabet
+	public static var empty: Self { Self() }
+	public static var epsilon: Self { Self() }
+	public static func symbol(_ element: Symbol) -> Self { .init(partitions: [[element]]) }
+	public func star() -> Self { self }
+	public static func union(_ elements: [Self]) -> Self {
+		Self()
+	}
+	public static func concatenate(_ elements: [Self]) -> Self {
+		Self()
+	}
+}
+
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
 /// Optimized for describing ranges of characters.
 /// A replacement for Swift's builtin RangeSet which doesn't support ClosedRange and is overall garbage
@@ -26,6 +96,7 @@ protocol PartitionedSetProtocol {
 /// You can convert an FSM to a regular expression by systematically combining transitions into patterns (a process called state elimination or Arden’s rule).
 /// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
+// TODO: Rename this to SymbolRangePartitionedSet or something
 public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral, SetAlgebra, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
