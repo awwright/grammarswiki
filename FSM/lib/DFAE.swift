@@ -1,6 +1,7 @@
 // A DFA with Equivalence
 
 /// A wrapper around a symbol of an existing FSM to also support transitions of another type
+// TODO: Conformance with PartitionedSetProtocol
 public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashable>: Comparable, Hashable {
 	case symbol(Symbol)
 	case tag(Tag)

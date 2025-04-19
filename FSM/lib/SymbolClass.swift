@@ -157,17 +157,17 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 
 	// MARK: RegularPatternProtocol
 	/// A pattern without any elements has an empty alphabet
-	public static var empty: SymbolClass<Symbol> { Self() }
+	public static var empty: Self { Self() }
 	/// An element with no symbols also has an empty alphabet
-	public static var epsilon: SymbolClass<Symbol> { Self() }
+	public static var epsilon: Self { Self() }
 	/// An element with a single symbol has one symbol in the alphabet
-	public static func symbol(_ element: Symbol) -> SymbolClass<Symbol> {
+	public static func symbol(_ element: Symbol) -> Self {
 		Self([element])
 	}
-	public static func concatenate(_ elements: [SymbolClass<Symbol>]) -> SymbolClass<Symbol> {
-		SymbolClass<Symbol>(partitions: elements.flatMap(\.partitions))
+	public static func concatenate(_ elements: [Self]) -> Self {
+		Self(partitions: elements.flatMap(\.partitions))
 	}
-	public static func union(_ elements: [SymbolClass<Symbol>]) -> SymbolClass<Symbol> {
+	public static func union(_ elements: [Self]) -> Self {
 		// Merge partitions that are the only partition in their alternation
 		// Because they behave the same
 		var symbols: Array<ClosedRange<Symbol>> = []
@@ -179,9 +179,9 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 				partitions += partition
 			}
 		}
-		return SymbolClass<Symbol>(partitions: [symbols] + partitions)
+		return Self(partitions: [symbols] + partitions)
 	}
-	public func star() -> SymbolClass<Symbol> {
+	public func star() -> Self {
 		self
 	}
 
@@ -288,27 +288,27 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 	/// The union of a partitioned set is the meet of the union of each cross products of the two sets of partitions
 	/// So the union of two part-sets with one partition each will have one partition
 	/// But the union of part-sets with more than one partition will be the meet of their partitions.
-	public func union(_ other: __owned SymbolClass<Symbol>) -> SymbolClass<Symbol> {
+	public func union(_ other: __owned Self) -> Self {
 		fatalError("Unimplemented")
 	}
 
-	public func intersection(_ other: SymbolClass<Symbol>) -> SymbolClass<Symbol> {
+	public func intersection(_ other: Self) -> Self {
 		fatalError("Unimplemented")
 	}
 
-	public func symmetricDifference(_ other: __owned SymbolClass<Symbol>) -> SymbolClass<Symbol> {
+	public func symmetricDifference(_ other: __owned Self) -> Self {
 		fatalError("Unimplemented")
 	}
 
-	public mutating func formUnion(_ other: __owned SymbolClass<Symbol>) {
+	public mutating func formUnion(_ other: __owned Self) {
 		self = self.union(other)
 	}
 
-	public mutating func formIntersection(_ other: SymbolClass<Symbol>) {
+	public mutating func formIntersection(_ other: Self) {
 		self = self.intersection(other)
 	}
 
-	public mutating func formSymmetricDifference(_ other: __owned SymbolClass<Symbol>) {
+	public mutating func formSymmetricDifference(_ other: __owned Self) {
 		self = self.symmetricDifference(other)
 	}
 
@@ -335,7 +335,7 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 		return inserted ? nil : newMember
 	}
 
-	public static func == (lhs: SymbolClass<Symbol>, rhs: SymbolClass<Symbol>) -> Bool {
+	public static func == (lhs: Self, rhs: Self) -> Bool {
 		return lhs.symbols == rhs.symbols
 	}
 
