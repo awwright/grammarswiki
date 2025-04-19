@@ -37,8 +37,8 @@ protocol PartitionedSetElementsProtocol: PartitionedSetProtocol where Partition:
 /// A variation of PartitionedSetProtocol that can store multiple sets of symbols, associating each set with a label
 protocol PartitionedDictionaryProtocol: PartitionedSetProtocol {
 	associatedtype Label;
-	subscript(labelToPartition: Label) -> Partition { set get }
-	subscript(elementToLabel: Component) -> Label { set get }
+	subscript(labelToPartition: Label) -> Partition? { get }
+	subscript(elementToLabel: Component) -> Label? { get }
 }
 
 public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternProtocol {

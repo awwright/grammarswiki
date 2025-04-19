@@ -26,18 +26,29 @@ public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashabl
 
 /// DFAE (DFA with Equivalence) is a struct that maps elements in the FSM to some target element.
 /// You can also get a FSM denoting the set of elements in the same partition.
-public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable> {
+public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>: PartitionedDictionaryProtocol {
+	typealias Partition = DFA<Symbol>
+
+	typealias Partitions = Dictionary<Label, DFA<Symbol>>.Values
+	public var partitions: Dictionary<Label, DFA<Symbol>>.Values { partitionsDict.values }
+
 	typealias Inner = SymbolOrTag<Symbol, Label>;
 	typealias SymTag = SymbolOrTag<Symbol, Label>;
 
 	/// Specifies a set of elements and the partition they map to
-	public let partitions: Dictionary<Label, DFA<Symbol>>
+	public let partitionsDict: Dictionary<Label, DFA<Symbol>>
 
 	/// The union of all the partitions, tagged with the partition
 	let inner: DFA<SymTag>
 
 	/// Final states and the partition they are members of
 	let stateToTarget: Dictionary<DFA<Symbol>.StateNo, Label>
+
+	init() {
+		self.partitionsDict = [:]
+		self.inner = []
+		self.stateToTarget = [:]
+	}
 
 	init(partitions: Dictionary<Label, DFA<Symbol>>){
 		let innerMap: Array<DFA<SymTag>> = partitions.map {
@@ -72,7 +83,7 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable> 
 			return value
 		})
 
-		self.partitions = partitions
+		self.partitionsDict = partitions
 		self.inner = inner
 		self.stateToTarget = stateToTarget
 	}
@@ -86,5 +97,18 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable> 
 		guard let resultTarget else { return nil }
 		assert(self.inner.states[resultState][SymbolOrTag<Symbol, Label>.tag(resultTarget)] != nil)
 		return resultTarget
+	}
+
+
+	subscript(labelToPartition: Label) -> DFA<Symbol>? {
+		fatalError("Unimplemented")
+	}
+
+	subscript(elementToLabel: Component) -> Label? {
+		fatalError("Unimplemented")
+	}
+
+	func siblings(of val: Array<Symbol>) -> DFA<Symbol> {
+		fatalError("Unimplemented")
 	}
 }
