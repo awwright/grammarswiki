@@ -3,7 +3,7 @@
 protocol PartitionedSetProtocol {
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype Partition: SetAlgebra;
-	typealias Symbol = Partition.Element
+	typealias Component = Partition.Element
 
 	associatedtype Partitions: Collection where Partitions.Element == Partition
 	var partitions: Partitions { get }
@@ -15,7 +15,7 @@ protocol PartitionedSetProtocol {
 	/// (so that they never share a partition with elements they didn't share with in all partitions).
 	init(partitions: some Collection<Partition>)
 	/// Get the set of symbols from the partition of the given symbol
-	func siblings(of: Symbol) -> Partition
+	func siblings(of: Component) -> Partition
 }
 
 /// Default implementations of functions for PartitionedSetProtocol
@@ -27,18 +27,18 @@ extension PartitionedSetProtocol {
 }
 
 /// A variation of PartitionedSetProtocol where the elements can be individually iterated
-protocol PartitionedSetElementsProtocol: PartitionedSetProtocol where Partition: Collection, Symbol: Hashable {
-	associatedtype Symbols: Collection where Symbols.Element == Symbol
-	var components: Symbols { get }
-	var alphabetReduce: Dictionary<Symbol, Symbol> { get }
-	var alphabetExpand: Dictionary<Symbol, Array<Symbol>> { get }
+protocol PartitionedSetElementsProtocol: PartitionedSetProtocol where Partition: Collection, Component: Hashable {
+	associatedtype Components: Collection where Components.Element == Component
+	var components: Components { get }
+	var alphabetReduce: Dictionary<Component, Component> { get }
+	var alphabetExpand: Dictionary<Component, Array<Component>> { get }
 }
 
 /// A variation of PartitionedSetProtocol that can store multiple sets of symbols, associating each set with a label
 protocol PartitionedDictionaryProtocol: PartitionedSetProtocol {
 	associatedtype Label;
 	subscript(labelToPartition: Label) -> Partition { set get }
-	subscript(elementToLabel: Symbol) -> Label { set get }
+	subscript(elementToLabel: Component) -> Label { set get }
 }
 
 public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternProtocol {

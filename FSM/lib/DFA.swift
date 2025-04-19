@@ -679,6 +679,7 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 
 	/// An iterator that can iterate over all of the elements of the FSM.
 	/// Indefinitely, if need be.
+	// TODO: Consider using AsyncStream for this
 	public struct PathIterator: IteratorProtocol {
 		public struct Segment: Equatable {
 			public var source: StateNo
