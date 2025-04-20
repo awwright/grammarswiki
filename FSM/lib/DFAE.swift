@@ -100,11 +100,11 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>:
 	}
 
 
-	subscript(labelToPartition: Label) -> DFA<Symbol>? {
+	func siblings(label: Label) -> DFA<Symbol>? {
 		fatalError("Unimplemented")
 	}
 
-	subscript(elementToLabel: Component) -> Label? {
+	func label(component: Component) -> Label? {
 		fatalError("Unimplemented")
 	}
 
