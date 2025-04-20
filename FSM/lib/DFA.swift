@@ -120,25 +120,8 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 	}
 
 	public var alphabetPartitions: Set<Set<Symbol>> {
-		var fragments: Array<Set<Symbol>> = [];
-		for transitions in self.states {
-			var partitions: Dictionary<StateNo, Set<Symbol>> = [:];
-			for (target, s) in transitions {
-				partitions[s, default: []].insert(target);
-			}
-			fragments += partitions.map { $0.1 }
-		}
-
-		// An alternate way of calculating partitions that is less magic:
-		//var parts: Dictionary<Set<[Self]>, Set<Symbol>> = [:];
-		//for s in alphabet {
-		//	let key = Set(symbolContext(input: s).map { [$0.alpha, $0.beta] })
-		//	parts[key, default: []].insert(s)
-		//}
-		//assert(alphabetCombine(fragments) == Set(parts.values))
-		//return Set(parts.values)
-
-		return alphabetCombine(fragments)
+		// If two symbols follow the same path, they might have the same behavior.
+		return alphabetCombine(states.indices.flatMap { v in targets(source: v).values })
 	}
 
 	/// Generates a Graphviz DOT representation of the DFA for visualization.
@@ -149,15 +132,29 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 		viz += "digraph G {\n";
 		viz += "\t_initial [shape=point];\n";
 		viz += "\t_initial -> \(initial);\n";
-		for (i, transitions) in states.enumerated() {
-			let shape = finals.contains(i) ? "doublecircle" : "circle";
-			viz += "\t\(i) [label=\"\(i)\", shape=\"\(shape)\"];\n";
-			for (symbol, target) in transitions {
-				viz += "\t\(i) -> \(target) [label=\(graphvizLabelEscapedString(String(describing: symbol)))];\n";
+		for source in states.indices {
+			let shape = finals.contains(source) ? "doublecircle" : "circle";
+			viz += "\t\(source) [label=\"\(source)\", shape=\"\(shape)\"];\n";
+			for (target, symbols) in targets(source: source) {
+				viz += "\t\(source) -> \(target) [label=\(graphvizLabelEscapedString(symbols.map { String(describing: $0) }.joined(separator: " ")))];\n";
 			}
 		}
 		viz += "}\n";
 		return viz;
+	}
+
+	/// Get a table of all of the symbols that point to each state, from some given state
+	public func targets(source state: StateNo) -> Dictionary<StateNo, Set<Symbol>> {
+		var partitions: Dictionary<StateNo, Set<Symbol>> = [:];
+		for (symbol, target) in states[state] {
+			partitions[target, default: []].insert(symbol);
+		}
+		return partitions
+	}
+
+	/// Get a table of all of the symbols that transition from and to the given states
+	public func targets(source state: StateNo, target: StateNo) -> Set<Symbol> {
+		return targets(source: state)[target] ?? []
 	}
 
 	/// Transitions from a state on a given symbol.
