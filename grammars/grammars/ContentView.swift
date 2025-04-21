@@ -170,37 +170,94 @@ struct DocumentDetail: View {
 				// - https://github.com/krzyzanowskim/STTextView - more like a text field, lacks code highlighting, instead wants an AttributedString, though maybe that's what I want
 				// - https://github.com/CodeEditApp/CodeEditSourceEditor - This requires ten thousand different properties I don't know how to set
 				// - https://github.com/mchakravarty/CodeEditorView - This one
-				Text("ABNF Grammar")
-					.font(.headline)
+				TabView {
+					Tab("Editor", systemImage: "pencil") {
+						CodeEditor(
+							text: $document.content,
+							position: $position,
+							messages: $messages,
+							language: abnfLanguageConfiguration()
+						)
+						.environment(\.codeEditorTheme, colorScheme == .dark ? Theme.defaultDark : Theme.defaultLight)
+						.frame(minHeight: 300)
+						.font(.system(size: 14, design: .monospaced))
+					}
 
-				CodeEditor(
-					text: $document.content,
-					position: $position,
-					messages: $messages,
-					language: abnfLanguageConfiguration()
-				)
-				.environment(\.codeEditorTheme, colorScheme == .dark ? Theme.defaultDark : Theme.defaultLight)
-				.frame(minHeight: 300)
-				.font(.system(size: 14, design: .monospaced))
-				// .onChange(of: position) { _, newPosition in
-				// 	 Handle rule name linking when clicked
-				// 	if let range = selectionLink, newPosition.selectedRange == range {
-				// 		if let definitionRange = findRuleDefinition(ruleNameAt: range) {
-				// 			position.selectedRange = definitionRange
-				// 		}
-				// 	}
-				// }
-				// .contextMenu {
-				// 	Button {} label: { Text("Jump to definition") }
-				// }
-				// .onDoubleTapGesture { tappedPosition in
-				// 	// Detect double-tap on a rule name to link to its definition
-				// 	if let range = findRuleName(at: tappedPosition) {
-				// 		selectionLink = range
-				// 		position.selectedRange = range
-				// 	}
-				// }
-			}
+					if showRegex {
+						Tab("Regex", systemImage: "pencil") {
+							Text("Regular Expression Conversion").font(.headline)
+						}
+					}
+
+					if showGraphViz {
+						// TODO: "Copy to clipboard" button
+						Tab("GraphViz", systemImage: "pencil") {
+							ScrollView {
+								if let rule_fsm {
+									let reducedAlphabetLanguage = DFA<UInt32>.union( rule_alphabet!.partitionLabels.map { DFA<UInt32>.symbol($0) } ).star();
+									let expanded: DFA<String> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { if let cset = rule_alphabet?.siblings($0) {  describeCharacterSet(cset) } else { "Unknown symbol \($0)" } }
+									Text(expanded.minimized().toViz())
+										.textSelection(.enabled)
+										.border(Color.gray, width: 1)
+								}
+							}
+						}
+					}
+
+					Tab("Graph", systemImage: "pencil") {
+						Text("FSM Diagram").font(.headline)
+					}
+
+					Tab("Railroad", systemImage: "pencil") {
+						Text("Railroad Diagram").font(.headline)
+					}
+
+					if showInstances {
+						Tab("Instances", systemImage: "pencil") {
+							if let rule_fsm {
+								HStack {
+									Button {
+										fsm_iterator_result = []
+										fsm_iterator = rule_fsm.makeIterator()
+										generateInstances()
+									} label: { Label("Reset", systemImage: "restart") }
+									Button {
+										generateInstances()
+									} label: { Label("More", systemImage: "arrowshape.forward") }
+								}
+								ScrollView {
+									ForEach(fsm_iterator_result, id: \.self) { instance in
+										Text(instance).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
+									}
+								}
+							}
+						}
+					}
+
+					if showTestInput {
+						Tab("Input Testing", systemImage: "pencil") {
+							TextField("Enter test input", text: $testInput)
+								.textFieldStyle(RoundedBorderTextFieldStyle())
+								.onChange(of: testInput) {
+									updatedInput()
+								}
+
+							if let fsm_test_result {
+								Text("Result: " + (fsm_test_result ? "Accepted" : fsm_test_error ?? "Rejected"))
+									.foregroundColor(fsm_test_result == true ? .green : .red)
+								if let fsm_test_next {
+									Text("Next symbols: " + describeCharacterSet(fsm_test_next))
+								} else {
+									Text("Next symbols: Oblivion")
+								}
+							}else if let fsm_test_error {
+								Text(fsm_test_error).foregroundColor(.red)
+							}
+							Spacer()
+						}
+					}
+				} //TabView
+			} // VStack
 
 			VStack(alignment: .leading) {
 				ScrollView {
@@ -366,7 +423,7 @@ struct DocumentDetail: View {
 				}
 			}
 			.frame(minWidth: 200)
-		}
+		} // HStack
 		.padding()
 		.onChange(of: document.content) { updatedDocument() }
 		.onAppear { updatedDocument() }
