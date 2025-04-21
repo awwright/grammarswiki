@@ -1,7 +1,8 @@
-; <https://www.rfc-editor.org/rfc/rfc5234.txt>
-; This version of the document includes two errata:
+; 0. <https://www.rfc-editor.org/rfc/rfc5234.txt>
 ; 1. <https://www.rfc-editor.org/errata/eid2968>
 ; 2. <https://www.rfc-editor.org/errata/eid3076>
+; 3. <https://www.rfc-editor.org/rfc/rfc7405.html>
+; 4. <https://www.rfc-editor.org/rfc/rfc9110.html>
 rulelist       =  1*( rule / (*WSP c-nl) )
 rule           =  rulename defined-as elements c-nl
 rulename       =  ALPHA *(ALPHA / DIGIT / "-")
@@ -14,10 +15,16 @@ alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
 concatenation  =  repetition *(1*c-wsp repetition)
 repetition     =  [repeat] element
 repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
+; RFC 9110 list form
+repeat         =/ *DIGIT "#" *DIGIT
 element        =  rulename / group / option / char-val / num-val / prose-val
 group          =  "(" *c-wsp alternation *c-wsp ")"
 option         =  "[" *c-wsp alternation *c-wsp "]"
-char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
+; RFC 7405 string forms
+char-val       =  case-insensitive-string / case-sensitive-string
+case-insensitive-string = [ "%i" ] quoted-string
+case-sensitive-string = "%s" quoted-string
+quoted-string  =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
 num-val        =  "%" (bin-val / dec-val / hex-val)
 bin-val        =  "b" 1*BIT [ 1*("." 1*BIT) / ("-" 1*BIT) ]
 dec-val        =  "d" 1*DIGIT [ 1*("." 1*DIGIT) / ("-" 1*DIGIT) ]
