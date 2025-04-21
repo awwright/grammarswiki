@@ -173,6 +173,10 @@ import Testing
 			let difference = value.symmetricDifference(value.minimized())
 			#expect(difference.finals.isEmpty)
 		}
+
+		let dfa2 = DFA<UInt8>([ [0x30],  [0x31],  [0x32, 0x32],  [0x32, 0x33],  [0x33, 0x32],  [0x33, 0x33] ]);
+		#expect(dfa2.states.count == 9)
+		#expect(dfa2.minimized().states.count == 3)
 	}
 
 	@Test("parallel")
@@ -573,14 +577,13 @@ import Testing
 			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 		@Test("concatenation 1") func concatenation() async throws {
-			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32, 0x32],  [0x33, 0x33] ]).minimized().minimized();
+			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32, 0x32],  [0x33, 0x33] ]).minimized();
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])
 			#expect(dfa.alphabetPartitions == [ [0x30, 0x31], [0x32], [0x33] ])
 			#expect(testAlphabetPartitionsEqual(dfa))
 		}
 		@Test("concatenation 2") func concatenation_2() async throws {
-			// FIXME: Why does this only minimize correctly with two minimized() calls???
-			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32, 0x32],  [0x32, 0x33],  [0x33, 0x32],  [0x33, 0x33] ]).minimized().minimized();
+			let dfa: DFA<UInt8> = DFA([ [0x30],  [0x31],  [0x32, 0x32],  [0x32, 0x33],  [0x33, 0x32],  [0x33, 0x33] ]).minimized();
 			#expect(dfa.alphabet == [0x30, 0x31, 0x32, 0x33])
 			#expect(dfa.alphabetPartitions == [ [0x30, 0x31], [0x32, 0x33] ])
 			#expect(testAlphabetPartitionsEqual(dfa))

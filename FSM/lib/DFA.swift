@@ -450,14 +450,19 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 		while !worklist.isEmpty {
 			let (symbol, currentPartition) = worklist.removeFirst()
 
-			// For each partition, split based on transitions for this symbol
+			// Map each state to its block index in the current partition
+			let stateToPartition = Dictionary(uniqueKeysWithValues: currentPartition.enumerated().flatMap { (index, set) in set.map { ($0, index) } })
 			var newPartition = [Set<Int>]()
 			var changed = false
 
 			for block in currentPartition {
-				// Group states by their transition target for this symbol
+				// Group states by the block of their transition target
 				let transitions = Dictionary(grouping: block) { state -> Int? in
-					trimmedStates[state][symbol]
+					if let target = trimmedStates[state][symbol] {
+						return stateToPartition[target]
+					} else {
+						return nil // Handle incomplete DFA if necessary
+					}
 				}
 
 				if transitions.count > 1 {
@@ -478,9 +483,7 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 
 		let stateToPartition = Dictionary(uniqueKeysWithValues: partition.enumerated().flatMap { (index, set) in set.map { ($0, index) } })
 		let newStates = partition.map {
-			block in
-			let representative = block.first!
-			return Dictionary(uniqueKeysWithValues: trimmedStates[representative].map { ($0.key, stateToPartition[$0.value]!) })
+			return Dictionary(uniqueKeysWithValues: trimmedStates[$0.first!].map { ($0.key, stateToPartition[$0.value]!) })
 		}
 		let newInitial = stateToPartition[trimmedInitial]!
 		let newFinals = Set(partition.enumerated().filter { trimmedFinals.contains($1.first!) }.map { $0.offset })
