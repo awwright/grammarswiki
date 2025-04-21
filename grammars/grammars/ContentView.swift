@@ -158,6 +158,7 @@ struct DocumentDetail: View {
 	@State private var fsm_expanded = false
 	@State private var regex_expanded = false
 	@State private var instances_expanded = false
+	@State private var inspector_isPresented = true
 
 	// minimized() is necessary here otherwise it won't return a minimized alphabetPartitions
 	let builtins = ABNFBuiltins<DFA<UInt32>>.dictionary.mapValues { $0.minimized() };
@@ -165,13 +166,13 @@ struct DocumentDetail: View {
 	var body: some View {
 		HStack(spacing: 20) {
 			VStack(alignment: .leading) {
-				// Some views that were considered for this:
-				// - Builtin TextEditor - would be sufficient except it automatically curls quotes and there's no way to disable it
-				// - https://github.com/krzyzanowskim/STTextView - more like a text field, lacks code highlighting, instead wants an AttributedString, though maybe that's what I want
-				// - https://github.com/CodeEditApp/CodeEditSourceEditor - This requires ten thousand different properties I don't know how to set
-				// - https://github.com/mchakravarty/CodeEditorView - This one
 				TabView {
 					Tab("Editor", systemImage: "pencil") {
+						// Some views that were considered for this:
+						// - Builtin TextEditor - would be sufficient except it automatically curls quotes and there's no way to disable it
+						// - https://github.com/krzyzanowskim/STTextView - more like a text field, lacks code highlighting, instead wants an AttributedString, though maybe that's what I want
+						// - https://github.com/CodeEditApp/CodeEditSourceEditor - This requires ten thousand different properties I don't know how to set
+						// - https://github.com/mchakravarty/CodeEditorView - This one
 						CodeEditor(
 							text: $document.content,
 							position: $position,
@@ -258,8 +259,8 @@ struct DocumentDetail: View {
 					}
 				} //TabView
 			} // VStack
-
-			VStack(alignment: .leading) {
+			.padding()
+			.inspector(isPresented: $inspector_isPresented) {
 				ScrollView {
 					// First, show information true about the whole grammar file
 					// If there's no rulelist, then the grammar file isn't parsed at all.
@@ -420,13 +421,20 @@ struct DocumentDetail: View {
 							.foregroundColor(.gray)
 					}
 					Spacer()
-				}
+				} // ScrollView
+				.padding()
+				.inspectorColumnWidth(min: 300, ideal: 500, max: 2000)
 			}
-			.frame(minWidth: 200)
 		} // HStack
-		.padding()
 		.onChange(of: document.content) { updatedDocument() }
 		.onAppear { updatedDocument() }
+		.toolbar {
+			Button {
+				inspector_isPresented.toggle()
+			} label: {
+				Label("Inspector", systemImage: "sidebar.squares.right")
+			}
+		}
 	}
 
 	/// Parses the grammar text into a rulelist
