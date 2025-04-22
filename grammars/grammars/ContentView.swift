@@ -127,18 +127,8 @@ struct DocumentDetail: View {
 	@State private var rule_partshrink: Dictionary<UInt32, UInt32>? = nil
 	@State private var rule_partexpand: Dictionary<UInt32, Array<UInt32>>? = nil
 
-	@State private var fsm_viz_source: String? = nil
-
-	@State private var fsm_test_result: Bool? = nil
-	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
-	@State private var fsm_test_error: String? = nil
-
 	@State private var fsm_iterator: DFA<UInt32>.Iterator? = nil
 	@State private var fsm_iterator_result: [String] = []
-
-	@State private var fsm_regex: SimpleRegex<UInt32>? = nil
-	@State private var fsm_regex_description: String? = nil
-	@State private var fsm_regex_error: String? = nil
 
 	// Code editor variables
 	@State private var position: CodeEditor.Position       = CodeEditor.Position()
@@ -155,11 +145,13 @@ struct DocumentDetail: View {
 	@AppStorage("showTestInput") private var showTestInput: Bool = true
 	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.posix.rawValue
 
-	@AppStorage("expandedRule") private var rule_expanded = false
-	@AppStorage("expandedAlphabet") private var alphabet_expanded = false
+	@AppStorage("expandedRule_deps") private var rule_deps_expanded = true
+	@AppStorage("expandedRule_builtin") private var rule_builtin_expanded = true
+	@AppStorage("expandedRule_undefined") private var rule_undefined_expanded = true
+	@AppStorage("expandedRule_recursive") private var rule_recursive_expanded = true
+	@AppStorage("expandedAlphabet") private var alphabet_expanded = true
 	@State private var fsm_expanded = false
 	@State private var regex_expanded = false
-	@State private var instances_expanded = false
 	@State private var inspector_isPresented = true
 
 	// minimized() is necessary here otherwise it won't return a minimized alphabetPartitions
@@ -188,7 +180,7 @@ struct DocumentDetail: View {
 
 					if showRegex {
 						Tab("Regex", systemImage: "pencil") {
-							Text("Regular Expression Conversion").font(.headline)
+							RegexContentView(rule_fsm: $rule_fsm)
 						}
 					}
 
@@ -196,14 +188,8 @@ struct DocumentDetail: View {
 						// TODO: "Copy to clipboard" button
 						Tab("GraphViz", systemImage: "pencil") {
 							ScrollView {
-								if let fsm_viz_source {
-									Text(fsm_viz_source)
-										.textSelection(.enabled)
-										.border(Color.gray, width: 1)
-								} else {
-									Text("Building...")
-										.foregroundColor(.gray)
-								}
+								GraphVizSourceView(rule_alphabet: $rule_alphabet, rule_fsm: $rule_fsm)
+								Spacer()
 							}
 						}
 					}
@@ -218,43 +204,21 @@ struct DocumentDetail: View {
 
 					if showInstances {
 						Tab("Instances", systemImage: "pencil") {
-							if let rule_fsm {
-								HStack {
-									Button {
-										fsm_iterator_result = []
-										fsm_iterator = rule_fsm.makeIterator()
-										generateInstances()
-									} label: { Label("Reset", systemImage: "restart") }
-									Button {
-										generateInstances()
-									} label: { Label("More", systemImage: "arrowshape.forward") }
-								}
-								ScrollView {
-									ForEach(fsm_iterator_result, id: \.self) { instance in
-										Text(instance).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
-									}
-								}
-							}
+							InstanceGeneratorView(rule_fsm: $rule_fsm)
 						}
 					}
 
 					if showTestInput {
 						Tab("Input Testing", systemImage: "pencil") {
-							TextField("Enter test input", text: $testInput)
-								.textFieldStyle(RoundedBorderTextFieldStyle())
-
-							if let fsm_test_result {
-								Text("Result: " + (fsm_test_result ? "Accepted" : fsm_test_error ?? "Rejected"))
-									.foregroundColor(fsm_test_result == true ? .green : .red)
-								if let fsm_test_next {
-									Text("Next symbols: " + describeCharacterSet(fsm_test_next))
-								} else {
-									Text("Next symbols: Oblivion")
-								}
-							}else if let fsm_test_error {
-								Text(fsm_test_error).foregroundColor(.red)
+							ScrollView {
+								InputTestingView(
+									content_rulelist: $content_rulelist,
+									selectedRule: $selectedRule,
+									rule_alphabet: $rule_alphabet,
+									rule_fsm_proxy: $rule_fsm_proxy
+								)
+								Spacer()
 							}
-							Spacer()
 						}
 					}
 				} //TabView
@@ -278,33 +242,25 @@ struct DocumentDetail: View {
 						.onAppear { updatedRule() }
 
 						if let selectedRule {
-							DisclosureGroup("Rule Information", isExpanded: $rule_expanded, content: {
-								Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
-									let deps = content_rulelist.dependencies(rulename: selectedRule)
-									GridRow {
-										Text("Dependencies").font(.headline).gridColumnAlignment(.trailing)
-										Text(String(deps.dependencies.reversed().joined(separator: ", ")))
-									}
-									if(deps.builtins.isEmpty == false){
-										GridRow {
-											Text("Builtin").font(.headline).gridColumnAlignment(.trailing)
-											Text(String(deps.builtins.joined(separator: ", ")))
-										}
-									}
-									if(deps.undefined.isEmpty == false){
-										GridRow {
-											Text("Undefined").font(.headline).gridColumnAlignment(.trailing)
-											Text(String(deps.undefined.joined(separator: ", ")))
-										}
-									}
-									if(deps.recursive.isEmpty == false){
-										GridRow {
-											Text("Recursive").font(.headline).gridColumnAlignment(.trailing)
-											Text(String(deps.recursive.joined(separator: ", ")))
-										}
-									}
-								}
+							let deps = content_rulelist.dependencies(rulename: selectedRule)
+							DisclosureGroup("Rule Dependencies", isExpanded: $rule_deps_expanded, content: {
+								Text(String(deps.dependencies.reversed().joined(separator: ", ")))
 							})
+							if(deps.builtins.isEmpty == false){
+								DisclosureGroup("Implicit Builtins", isExpanded: $rule_builtin_expanded, content: {
+									Text(String(deps.builtins.joined(separator: ", ")))
+								})
+							}
+							if(deps.undefined.isEmpty == false){
+								DisclosureGroup("Undefined Rules", isExpanded: $rule_undefined_expanded, content: {
+									Text(String(deps.undefined.joined(separator: ", ")))
+								})
+							}
+							if(deps.recursive.isEmpty == false){
+								DisclosureGroup("Recursive Rules", isExpanded: $rule_recursive_expanded, content: {
+									Text(String(deps.recursive.joined(separator: ", ")))
+								})
+							}
 						}
 
 						if showAlphabet {
@@ -336,72 +292,19 @@ struct DocumentDetail: View {
 
 							if showRegex {
 								DisclosureGroup("Regex", isExpanded: $regex_expanded, content: {
-									if let fsm_regex_description {
-										Text(fsm_regex_description)
-											.textSelection(.enabled)
-											.border(Color.gray, width: 1)
-									} else if let fsm_regex_error {
-										Text("Error: \(fsm_regex_error)")
-											.foregroundColor(.red)
-									} else {
-										Text("Building...")
-											.foregroundColor(.gray)
-									}
-								})
-								.onChange(of: rule_fsm) { updatedFSM() }
-								.onAppear { updatedFSM() }
-							}
-
-							if showGraphViz {
-								// TODO: "Copy to clipboard" button
-								DisclosureGroup("Graphviz", content: {
-									if let fsm_viz_source {
-										Text(fsm_viz_source)
-											.textSelection(.enabled)
-											.border(Color.gray, width: 1)
-									} else {
-										Text("Building...")
-											.foregroundColor(.gray)
-									}
-								})
-							}
-
-							if showInstances {
-								DisclosureGroup("Instances", isExpanded: $instances_expanded, content: {
-									ForEach(fsm_iterator_result, id: \.self) { instance in
-										Text(instance).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
-									}
-
-									HStack {
-										Button {
-											fsm_iterator_result = []
-											fsm_iterator = rule_fsm.makeIterator()
-											generateInstances()
-										} label: { Label("Reset", systemImage: "restart") }
-										Button {
-											generateInstances()
-										} label: { Label("More", systemImage: "arrowshape.forward") }
-									}
+									RegexContentView(rule_fsm: $rule_fsm)
 								})
 							}
 
 							Divider()
 
 							if showTestInput {
-								TextField("Enter test input", text: $testInput)
-									.textFieldStyle(RoundedBorderTextFieldStyle())
-
-								if let fsm_test_result {
-									Text("Result: " + (fsm_test_result ? "Accepted" : fsm_test_error ?? "Rejected"))
-										.foregroundColor(fsm_test_result == true ? .green : .red)
-									if let fsm_test_next {
-										Text("Next symbols: " + describeCharacterSet(fsm_test_next))
-									} else {
-										Text("Next symbols: Oblivion")
-									}
-								}else if let fsm_test_error {
-									Text(fsm_test_error).foregroundColor(.red)
-								}
+								InputTestingView(
+									content_rulelist: $content_rulelist,
+									selectedRule: $selectedRule,
+									rule_alphabet: $rule_alphabet,
+									rule_fsm_proxy: $rule_fsm_proxy
+								)
 							}
 						} else if let rule_fsm_error {
 							Text(rule_fsm_error)
@@ -427,7 +330,6 @@ struct DocumentDetail: View {
 			}
 		} // HStack
 		.onChange(of: document.content) { updatedDocument() }
-		.onChange(of: testInput) { updatedInput() }
 		.onAppear { updatedDocument() }
 		.toolbar {
 			Button {
@@ -448,13 +350,7 @@ struct DocumentDetail: View {
 		rule_partshrink = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
-		// invalidate updatedFSM
-		fsm_regex = nil
-		fsm_regex_error = nil
 		// invalidate updatedInput
-		fsm_test_result = nil
-		fsm_test_error = nil
-		fsm_test_next = nil
 		fsm_iterator = nil
 		fsm_iterator_result = []
 
@@ -478,7 +374,6 @@ struct DocumentDetail: View {
 					content_rulelist_error = "Error at index: " + String(describing: error.index)
 					rule_alphabet = nil
 					rule_partshrink = nil
-					fsm_test_result = nil
 					let line = input[0...error.index.startIndex].count(where: { $0 == 0xA })
 					messages = Set([
 						TextLocated(location: TextLocation(zeroBasedLine: line, column: 0), entity: Message(category: .error, length: 2, summary: "Syntax Error", description: nil))
@@ -490,7 +385,6 @@ struct DocumentDetail: View {
 					content_rulelist_error = "Unknown error: " + error.localizedDescription
 					rule_fsm = nil
 					rule_fsm_error = nil
-					fsm_test_result = nil
 				}
 			}
 		}
@@ -502,13 +396,7 @@ struct DocumentDetail: View {
 		rule_partshrink = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
-		// invalidate updatedFSM
-		fsm_regex = nil
-		fsm_regex_error = nil
 		// invalidate updatedInput
-		fsm_test_result = nil
-		fsm_test_error = nil
-		fsm_test_next = nil
 		fsm_iterator = nil
 		fsm_iterator_result = []
 
@@ -566,91 +454,6 @@ struct DocumentDetail: View {
 						}
 					}
 				}
-			}
-		}
-	}
-
-	private func updatedFSM() {
-		fsm_viz_source = nil
-		fsm_regex = nil
-		fsm_regex_error = nil
-		// invalidate updatedInput
-		fsm_test_result = nil
-		fsm_test_error = nil
-		fsm_test_next = nil
-		fsm_iterator = nil
-		fsm_iterator_result = []
-
-		guard let rule_fsm else {
-			return
-		}
-
-		// Compute graphViz
-		if let rule_alphabet {
-			Task.detached(priority: .userInitiated) {
-				let reducedAlphabetLanguage = DFA<UInt32>.union( rule_alphabet.partitionLabels.map { DFA<UInt32>.symbol($0) } ).star();
-				let expanded: DFA<String> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { describeCharacterSet(rule_alphabet.siblings($0)) }
-				let result = expanded.minimized().toViz()
-				await MainActor.run {
-					fsm_viz_source = result
-				}
-			}
-		}
-
-		// Compute regex
-		Task.detached(priority: .utility) {
-			let result: SimpleRegex<UInt32> = rule_fsm.toPattern()
-			let description = result.description
-			await MainActor.run {
-				fsm_regex = result
-				fsm_regex_description = description
-				fsm_regex_error = nil
-			}
-		}
-	}
-
-	private func generateInstances() {
-		if fsm_iterator != nil {
-			for _ in 0..<1000 {
-				let value: Array<UInt32>? = fsm_iterator!.next()
-				if let value {
-					fsm_iterator_result.append(String(decoding: value, as: Unicode.UTF32.self))
-				} else {
-					break
-				}
-			}
-		}
-	}
-
-	/// Tests the input against the selected rule
-	private func updatedInput() {
-		fsm_test_result = nil
-		fsm_test_error = nil
-		fsm_test_next = nil
-
-		guard let content_rulelist,
-				let selectedRule,
-				content_rulelist.dictionary[selectedRule] != nil
-		else {
-			fsm_test_error = "Invalid selection"
-			return
-		}
-		let input = Array(testInput.unicodeScalars.map(\.value))
-		guard let selected_fsm = rule_fsm_proxy else {
-			fsm_test_error = "Rule `\(selectedRule)` is recursive or missing rules"
-			return
-		}
-
-		let fsm_test_state = selected_fsm.nextState(state: selected_fsm.initial, input: input)
-		fsm_test_result = selected_fsm.isFinal(fsm_test_state);
-		if let fsm_test_state {
-			fsm_test_next = selected_fsm.states[fsm_test_state].keys.flatMap { rule_alphabet!.siblings($0) }
-		}
-		if fsm_test_result == false {
-			if fsm_test_state != nil {
-				fsm_test_error = "unexpected EOF"
-			} else {
-				fsm_test_error = "oblivion"
 			}
 		}
 	}
