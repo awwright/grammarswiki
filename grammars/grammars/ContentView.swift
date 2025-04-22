@@ -127,6 +127,8 @@ struct DocumentDetail: View {
 	@State private var rule_partshrink: Dictionary<UInt32, UInt32>? = nil
 	@State private var rule_partexpand: Dictionary<UInt32, Array<UInt32>>? = nil
 
+	@State private var fsm_viz_source: String? = nil
+
 	@State private var fsm_test_result: Bool? = nil
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
 	@State private var fsm_test_error: String? = nil
@@ -194,12 +196,13 @@ struct DocumentDetail: View {
 						// TODO: "Copy to clipboard" button
 						Tab("GraphViz", systemImage: "pencil") {
 							ScrollView {
-								if let rule_fsm {
-									let reducedAlphabetLanguage = DFA<UInt32>.union( rule_alphabet!.partitionLabels.map { DFA<UInt32>.symbol($0) } ).star();
-									let expanded: DFA<String> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { if let cset = rule_alphabet?.siblings($0) {  describeCharacterSet(cset) } else { "Unknown symbol \($0)" } }
-									Text(expanded.minimized().toViz())
+								if let fsm_viz_source {
+									Text(fsm_viz_source)
 										.textSelection(.enabled)
 										.border(Color.gray, width: 1)
+								} else {
+									Text("Building...")
+										.foregroundColor(.gray)
 								}
 							}
 						}
@@ -239,9 +242,6 @@ struct DocumentDetail: View {
 						Tab("Input Testing", systemImage: "pencil") {
 							TextField("Enter test input", text: $testInput)
 								.textFieldStyle(RoundedBorderTextFieldStyle())
-								.onChange(of: testInput) {
-									updatedInput()
-								}
 
 							if let fsm_test_result {
 								Text("Result: " + (fsm_test_result ? "Accepted" : fsm_test_error ?? "Rejected"))
@@ -355,11 +355,14 @@ struct DocumentDetail: View {
 							if showGraphViz {
 								// TODO: "Copy to clipboard" button
 								DisclosureGroup("Graphviz", content: {
-									let reducedAlphabetLanguage = DFA<UInt32>.union( rule_alphabet!.partitionLabels.map { DFA<UInt32>.symbol($0) } ).star();
-									let expanded: DFA<String> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { if let cset = rule_alphabet?.siblings($0) {  describeCharacterSet(cset) } else { "Unknown symbol \($0)" } }
-									Text(expanded.minimized().toViz())
-										.textSelection(.enabled)
-										.border(Color.gray, width: 1)
+									if let fsm_viz_source {
+										Text(fsm_viz_source)
+											.textSelection(.enabled)
+											.border(Color.gray, width: 1)
+									} else {
+										Text("Building...")
+											.foregroundColor(.gray)
+									}
 								})
 							}
 
@@ -387,9 +390,6 @@ struct DocumentDetail: View {
 							if showTestInput {
 								TextField("Enter test input", text: $testInput)
 									.textFieldStyle(RoundedBorderTextFieldStyle())
-									.onChange(of: testInput) {
-										updatedInput()
-									}
 
 								if let fsm_test_result {
 									Text("Result: " + (fsm_test_result ? "Accepted" : fsm_test_error ?? "Rejected"))
@@ -427,6 +427,7 @@ struct DocumentDetail: View {
 			}
 		} // HStack
 		.onChange(of: document.content) { updatedDocument() }
+		.onChange(of: testInput) { updatedInput() }
 		.onAppear { updatedDocument() }
 		.toolbar {
 			Button {
@@ -544,7 +545,7 @@ struct DocumentDetail: View {
 					do {
 						// Cut the builtins down to match the reducedAlphabet... let's see if this works
 						let reducedAlphabetLanguage = DFA<UInt32>.union( reducedAlphabet.map { DFA<UInt32>.symbol($0) } ).star().minimized();
-						print(reducedAlphabetLanguage.toViz())
+						//print(reducedAlphabetLanguage.toViz())
 						let reducedBuiltins = builtins.mapValues { $0.intersection(reducedAlphabetLanguage).minimized() }
 						let result = try reduce(definitions: dependencies, initial: reducedBuiltins, combine: { try $0.toPattern(rules: $1, alphabet: reducedAlphabet).minimized() })
 						await MainActor.run {
@@ -570,6 +571,7 @@ struct DocumentDetail: View {
 	}
 
 	private func updatedFSM() {
+		fsm_viz_source = nil
 		fsm_regex = nil
 		fsm_regex_error = nil
 		// invalidate updatedInput
@@ -581,6 +583,18 @@ struct DocumentDetail: View {
 
 		guard let rule_fsm else {
 			return
+		}
+
+		// Compute graphViz
+		if let rule_alphabet {
+			Task.detached(priority: .userInitiated) {
+				let reducedAlphabetLanguage = DFA<UInt32>.union( rule_alphabet.partitionLabels.map { DFA<UInt32>.symbol($0) } ).star();
+				let expanded: DFA<String> = rule_fsm.intersection(reducedAlphabetLanguage).mapSymbols { describeCharacterSet(rule_alphabet.siblings($0)) }
+				let result = expanded.minimized().toViz()
+				await MainActor.run {
+					fsm_viz_source = result
+				}
+			}
 		}
 
 		// Compute regex
