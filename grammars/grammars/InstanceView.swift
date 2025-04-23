@@ -1,6 +1,11 @@
 import SwiftUI
 import FSM
 
+// TODO: Generate instances starting with a certain prefix, or matching a certain regex
+// TODO: Exclude certain symbols or classes of symbols from generation
+// TODO: Exclude certain rules from generation
+// TODO: Generate negative instances and off-by-one errors
+
 struct InstanceGeneratorView: View {
 	@Binding var rule_fsm: DFA<UInt32>?
 	@State private var iterator: DFA<UInt32>.Iterator?
@@ -9,11 +14,6 @@ struct InstanceGeneratorView: View {
 	var body: some View {
 		VStack(alignment: .leading) {
 			HStack {
-				Button {
-					resetIterator()
-				} label: {
-					Label("Reset", systemImage: "restart")
-				}
 				Button {
 					generateMoreInstances()
 				} label: {
@@ -25,6 +25,13 @@ struct InstanceGeneratorView: View {
 					Text(instance)
 						.border(Color.gray, width: 1)
 						.frame(maxWidth: .infinity, alignment: .leading)
+				}
+			}
+			HStack {
+				Button {
+					generateMoreInstances()
+				} label: {
+					Label("More", systemImage: "arrowshape.forward")
 				}
 			}
 		}

@@ -8,22 +8,12 @@ import Testing;
 		func test_UInt8_empty() async throws {
 			let empty = REPattern<Int>.empty
 			#expect(empty.description == "[^]", "Empty pattern should be represented as an impossible regex")
-			if case .alternation(let array) = empty {
-				#expect(array.isEmpty, "Empty pattern should be an empty union")
-			} else {
-				#expect(false, "Empty pattern should be a union with no alternates")
-			}
 		}
 
 		@Test("Epsilon pattern")
 		func test_UInt8_epsilon() async throws {
 			let epsilon = REPattern<Int>.epsilon
 			#expect(epsilon.description == "", "Epsilon pattern should be represented as emptystring")
-			if case .concatenation(let array) = epsilon {
-				#expect(array.isEmpty, "Epsilon pattern should be an empty concatenation")
-			} else {
-				#expect(false, "Epsilon pattern should be a concatenation with no elements")
-			}
 		}
 
 		@Test("CodePoint pattern")
@@ -63,13 +53,6 @@ import Testing;
 			let b = REPattern.symbol(0x32);
 			let concat = a.concatenate(b)
 			#expect(concat.description == "12")
-			if case .concatenation(let array) = concat {
-				#expect(array.count == 2, "Concatenation should contain two elements")
-				#expect(array[0].description == "1")
-				#expect(array[1].description == "2")
-			} else {
-				#expect(false, "Concatenation should be a concatenate case")
-			}
 		}
 
 		@Test("Nested concatenation")

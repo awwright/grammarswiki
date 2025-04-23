@@ -31,7 +31,7 @@ struct RegexContentView: View {
 			return
 		}
 		Task.detached(priority: .utility) {
-			let regex: SimpleRegex<UInt32> = fsm.toPattern()
+			let regex: REPattern<UInt32> = fsm.toPattern()
 			let description = regex.description
 			await MainActor.run {
 				regexDescription = description

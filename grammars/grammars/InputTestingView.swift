@@ -1,6 +1,10 @@
 import SwiftUI
 import FSM
 
+// TODO: Show equivalent inputs
+// TODO: Show a multi-line input if the pattern permits newlines
+// TODO: Show an option for newline representation and character encoding
+
 struct InputTestingView: View {
 	@Binding var content_rulelist: ABNFRulelist<UInt32>?
 	@Binding var selectedRule: String?

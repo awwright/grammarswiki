@@ -127,9 +127,6 @@ struct DocumentDetail: View {
 	@State private var rule_partshrink: Dictionary<UInt32, UInt32>? = nil
 	@State private var rule_partexpand: Dictionary<UInt32, Array<UInt32>>? = nil
 
-	@State private var fsm_iterator: DFA<UInt32>.Iterator? = nil
-	@State private var fsm_iterator_result: [String] = []
-
 	// Code editor variables
 	@State private var position: CodeEditor.Position       = CodeEditor.Position()
 	@State private var messages: Set<TextLocated<Message>> = [] // For syntax errors or annotations
@@ -152,6 +149,7 @@ struct DocumentDetail: View {
 	@AppStorage("expandedAlphabet") private var alphabet_expanded = true
 	@State private var fsm_expanded = false
 	@State private var regex_expanded = false
+	@State private var test_expanded = false
 	@State private var inspector_isPresented = true
 
 	// minimized() is necessary here otherwise it won't return a minimized alphabetPartitions
@@ -268,8 +266,7 @@ struct DocumentDetail: View {
 								if let rule_alphabet {
 									ForEach(rule_alphabet.partitions, id: \.self) {
 										part in
-										// Text(String(describing: part)).border(Color.gray, width: 1).frame(maxWidth: .infinity, alignment: .leading)
-										Text(describeCharacterSet(part)).frame(maxWidth: .infinity, alignment: .leading) //.padding(1).border(Color.gray, width: 0.5)
+										Text(describeCharacterSet(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
 									}
 								}else{
 									Text("Computing alphabet...")
@@ -299,12 +296,14 @@ struct DocumentDetail: View {
 							Divider()
 
 							if showTestInput {
-								InputTestingView(
-									content_rulelist: $content_rulelist,
-									selectedRule: $selectedRule,
-									rule_alphabet: $rule_alphabet,
-									rule_fsm_proxy: $rule_fsm_proxy
-								)
+								DisclosureGroup("Test Input", isExpanded: $test_expanded, content: {
+									InputTestingView(
+										content_rulelist: $content_rulelist,
+										selectedRule: $selectedRule,
+										rule_alphabet: $rule_alphabet,
+										rule_fsm_proxy: $rule_fsm_proxy
+									)
+								})
 							}
 						} else if let rule_fsm_error {
 							Text(rule_fsm_error)
@@ -350,9 +349,6 @@ struct DocumentDetail: View {
 		rule_partshrink = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
-		// invalidate updatedInput
-		fsm_iterator = nil
-		fsm_iterator_result = []
 
 		let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 		Task.detached(priority: .utility) {
@@ -396,9 +392,6 @@ struct DocumentDetail: View {
 		rule_partshrink = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
-		// invalidate updatedInput
-		fsm_iterator = nil
-		fsm_iterator_result = []
 
 		guard let content_rulelist, let selectedRule else {
 			rule_fsm_error = "No rule selected"
