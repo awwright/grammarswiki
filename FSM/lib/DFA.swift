@@ -986,6 +986,23 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 	}
 }
 
+extension DFA: Comparable where Symbol: Comparable {
+	public static func < (lhs: Self, rhs: Self) -> Bool {
+		// Generate instances of each side, compare if lhs < rhs
+		// If they are the same, generate next instance (in alphabetical order)
+		// Test if they are equal, and return false if so (this is the same operation performed in func ==)
+		let difference = lhs.symmetricDifference(rhs);
+		if difference.finals.isEmpty {
+			return false;
+		}
+		// Get the first item that exists in only one of the two
+		var first = difference.makeIterator()
+		let next: Element = first.next()!
+		// If it exists in lhs, then lhs < rhs
+		return lhs.contains(next)
+	}
+}
+
 // Conditional protocol compliance
 extension DFA: Sendable where Symbol: Sendable {}
 
