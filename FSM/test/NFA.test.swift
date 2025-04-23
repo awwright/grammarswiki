@@ -4,7 +4,7 @@ import Testing
 @Suite("NFA Tests") struct NFATests {
 	@Test("Initialization") func Initialization() {
 		let nfa = NFA<Character>()
-		#expect(nfa.states.count == 1)
+		#expect(nfa.statesSet.count == 1)
 		#expect(nfa.epsilon.count == 1)
 		#expect(nfa.initials == [0])
 		#expect(nfa.finals.isEmpty)
@@ -24,7 +24,7 @@ import Testing
 
 	@Test("Initialization with verbatim input") func Initialization3() {
 		let nfa = NFA(verbatim: "abc")
-		#expect(nfa.states.count == 4) // 'a', 'b', 'c', and end state
+		#expect(nfa.statesSet.count == 4) // 'a', 'b', 'c', and end state
 		#expect(nfa.initials == [0])
 		#expect(nfa.finals == [3])
 		#expect(nfa.nextStates(states: [0], symbol: "a") == [1])

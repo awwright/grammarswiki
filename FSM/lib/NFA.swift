@@ -1,8 +1,14 @@
+public protocol NFAProtocol: FSMProtocol where Symbol: Hashable {
+	var statesSet: Array<Dictionary<Symbol, Set<Int>>> {get};
+	var epsilon: Array<Set<Int>> {get};
+	var initials: Set<Int> {get};
+	var finals: Set<Int> {get};
+}
 
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
+public struct NFA<Symbol: Comparable & Hashable>: NFAProtocol {
 	public typealias Element = Array<Symbol>
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
@@ -14,11 +20,15 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 		Self(states: [], initial: 0, finals: [0])
 	}
 
-	let states: Array<Dictionary<Symbol, Set<Int>>>;
-	let epsilon: Array<Set<Int>>;
+	/// For each state, a mapping of the next input symbol to the set of states it should transition to
+	public let statesSet: Array<Dictionary<Symbol, Set<Int>>>;
+	/// For each state, a set of the states that should automatically be transitioned to
+	public let epsilon: Array<Set<Int>>;
 	// I allow initials to be a set of states so that the result of following from the initial state can be a closed operation
-	let initials: Set<Int>;
-	let finals: Set<Int>;
+	/// The set of states to start on
+	public let initials: Set<Int>;
+	/// A set of states that matches the input symbols (just one final has to match to accept a given string)
+	public let finals: Set<Int>;
 
 	init(
 		states: Array<Dictionary<Symbol, States>> = [ [:] ],
@@ -55,7 +65,7 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 			assert(state < epsilon.count);
 		}
 
-		self.states = states;
+		self.statesSet = states;
 		self.epsilon = epsilon;
 		self.initials = initials;
 		self.finals = finals;
@@ -87,6 +97,15 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 		);
 	}
 
+	public init<T: NFAProtocol>(_ nfa: T) where T.Symbol == Symbol {
+		self.init(
+			states: nfa.statesSet,
+			epsilon: nfa.epsilon,
+			initials: nfa.initials,
+			finals: nfa.finals
+		)
+	}
+
 	public init(dfa: DFA<Symbol>) {
 		self.init(
 			states: dfa.states.map { $0.mapValues { [$0] } },
@@ -115,7 +134,7 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 		for i in initials {
 			viz += "\t_initial -> \(i) [style=\"dashed\"];\n";
 		}
-		for (i, transitions) in states.enumerated() {
+		for (i, transitions) in statesSet.enumerated() {
 			let shape = finals.contains(i) ? "doublecircle" : "circle";
 			viz += "\t\(i) [label=\"\(i)\", shape=\"\(shape)\"];\n";
 			for target in epsilon[i] {
@@ -133,7 +152,7 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 	}
 
 	lazy var alphabet: Set<Symbol> = {
-		Set(self.states.flatMap(\.keys))
+		Set(self.statesSet.flatMap(\.keys))
 	}()
 
 	public func nextStates(state: StateNo, symbol: Symbol) -> States {
@@ -146,7 +165,7 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 
 	public func nextStates(states: States, symbol: Symbol) -> States {
 		// Map each element in `states` to the next symbol in states[state][symbol], if it exists
-		return self.followε(states: Set(self.followε(states: states).flatMap { self.states[$0][symbol] ?? [] }))
+		return self.followε(states: Set(self.followε(states: states).flatMap { self.statesSet[$0][symbol] ?? [] }))
 	}
 
 	public func nextStates(states: States, string: any Sequence<Symbol>) -> States {
@@ -270,7 +289,7 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 			// enumerate over inStates and get the index
 			for (fsm, states) in zip(fsms, inStates) {
 				for state in states {
-					alphabets.formUnion(fsm.states[state].keys);
+					alphabets.formUnion(fsm.statesSet[state].keys);
 				}
 			}
 			// For each of the symbols in the alphabet, get the next state following the current one
@@ -312,18 +331,18 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 			currentState = nextState
 		}
 
-		return Self.init(states: self.states, epsilon: self.epsilon, initials: currentState, finals: self.finals);
+		return Self.init(states: self.statesSet, epsilon: self.epsilon, initials: currentState, finals: self.finals);
 	}
 
 	public func union(_ other: __owned Self) -> Self {
 //		return Self.parallel(dfas: [self, other], merge: { $0[0] || $0[1] });
-		let offset = self.states.count;
-		let newStates = other.states.map { $0.mapValues { Set($0.map { $0  + offset }) } }
+		let offset = self.statesSet.count;
+		let newStates = other.statesSet.map { $0.mapValues { Set($0.map { $0  + offset }) } }
 		let newEpsilon = other.epsilon.map { Set($0.map { $0  + offset }) }
 		let newInitials = other.initials.map { $0  + offset }
 		let newFinals = other.finals.map { $0  + offset }
 		return Self(
-			states: self.states + newStates,
+			states: self.statesSet + newStates,
 			epsilon: self.epsilon + newEpsilon,
 			initials: self.initials.union(newInitials),
 			finals: self.finals.union(newFinals)
@@ -361,9 +380,9 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 		}
 		return languages[1...].reduce(languages[0], {
 			previous, other in
-			let offset = previous.states.count;
+			let offset = previous.statesSet.count;
 			// Remap all of the state IDs
-			let newStates = other.states.map { $0.mapValues { Set($0.map { $0  + offset }) } }
+			let newStates = other.statesSet.map { $0.mapValues { Set($0.map { $0  + offset }) } }
 			let newEpsilon = other.epsilon.map { Set($0.map { $0  + offset }) };
 			let newInitials = Set(other.initials.map { $0  + offset });
 			let newFinals = Set(other.finals.map { $0  + offset });
@@ -374,7 +393,7 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 				return previous.finals.contains(stateNo) ? set.union(newInitials) : set;
 			};
 			return Self(
-				states: previous.states + newStates,
+				states: previous.statesSet + newStates,
 				epsilon: combinedEpsilon + newEpsilon,
 				initials: previous.initials,
 				finals: newFinals
@@ -398,9 +417,9 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 	public func optional() -> Self {
 		// Append a single state that is both a start and final state.
 		// It has no transitions, so it won't match any other input.
-		let lastNo = self.states.count;
+		let lastNo = self.statesSet.count;
 		return Self.init(
-			states: self.states + [[:]],
+			states: self.statesSet + [[:]],
 			epsilon: self.epsilon + [[]],
 			initials: self.initials.union([lastNo]),
 			finals: self.finals.union([lastNo])
@@ -409,9 +428,9 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 
 	public func plus() -> Self {
 		Self.init(
-			states: self.states,
+			states: self.statesSet,
 			// Add an epsilon transition from the final states to the initial states
-			epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? self.initials : [] },
+			epsilon: self.statesSet.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? self.initials : [] },
 			initials: self.initials,
 			finals: self.finals
 		);
@@ -437,8 +456,8 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 	}
 
 	public func homomorphism<Target>(mapping: [(some Collection<Symbol>, some Collection<Target>)]) -> NFA<Target> where Target: Hashable {
-		var newStates: [[Target: Set<Int>]] = self.states.map { _ in [:] }
-		var newEpsilon: [States] = self.states.map { _ in [] }
+		var newStates: [[Target: Set<Int>]] = self.statesSet.map { _ in [:] }
+		var newEpsilon: [States] = self.statesSet.map { _ in [] }
 
 		func addTransition( _ states: inout [[Target: Set<Int>]], _ from: Int, _ element: Target, _ to: Int) {
 			if from >= states.count {
@@ -450,7 +469,7 @@ public struct NFA<Symbol: Comparable & Hashable>: FSMProtocol {
 			states[from][element]!.insert(to)
 		}
 
-		for source in 0..<self.states.count {
+		for source in 0..<self.statesSet.count {
 			for (sourceSymbols, targetSymbols) in mapping {
 				var targetStates = Set([source])
 				let sourceSymbolsArray = Array(sourceSymbols)

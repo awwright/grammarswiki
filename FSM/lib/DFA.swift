@@ -15,7 +15,7 @@
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashable {
+public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashable, NFAProtocol {
 	// TODO: Implement BidirectionalCollection
 
 	/// Default element type produced reading this as a Sequence
@@ -38,6 +38,26 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 	public let initial: StateNo;
 	/// The set of accepting (final) states.
 	public let finals: Set<StateNo>;
+
+	/// Implements NFAProtocol
+	/// In a DFA, there is exactly one transition per state
+	public var statesSet: Array<Dictionary<Symbol, Set<Int>>> {
+		states.map {
+			$0.mapValues { Set([$0]) }
+		}
+	}
+
+	/// Implements NFAProtocol
+	/// In a DFA, there is exactly one initial state
+	public var initials: Set<Int> {
+		Set([initial])
+	}
+
+	/// Implements NFAProtocol
+	/// In a DFA, there are no epsilon transitions, so this is filled in.
+	public var epsilon: Array<Set<Int>> {
+		return Array(repeating: [], count: states.count)
+	}
 
 	/// Creates an empty DFA that accepts no sequences.
 	public init() {
@@ -97,8 +117,8 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 	/// - Precondition: The NFA must have at most one transition per symbol per state.
 	public init(nfa: NFA<Symbol>){
 		let translation = NFA<Symbol>.parallel(fsms: [nfa], merge: { $0[0] });
-		assert(translation.states.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
-		self.states = translation.states.map { $0.mapValues { $0.first! } }
+		assert(translation.statesSet.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
+		self.states = translation.statesSet.map { $0.mapValues { $0.first! } }
 		self.initial = translation.initials.first!;
 		self.finals = translation.finals;
 	}
