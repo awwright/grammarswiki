@@ -617,9 +617,6 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternProtocol where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
 	public typealias Element = Array<Symbol>;
 
-	public static var empty: Self { ABNFAlternation<Symbol>(matches: []) }
-	public static var epsilon: Self { ABNFAlternation<Symbol>(matches: [ABNFConcatenation(repetitions: [])]) }
-
 	public let matches: [ABNFConcatenation<Symbol>]
 
 	public init(matches: [ABNFConcatenation<Symbol>]) {
