@@ -43,7 +43,7 @@ extension DFAProtocol {
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, DFAProtocol {
+public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	// TODO: Implement BidirectionalCollection
 
 	/// Default element type produced reading this as a Sequence
@@ -674,7 +674,7 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, DFAProtoco
 	/// ```
 	/// for element in dfa { print(element) }
 	/// ```
-	public func makeIterator() -> Iterator {
+	public func makeIterator() -> Iterator where Symbol: Comparable {
 		return Iterator(self);
 	}
 
@@ -691,16 +691,9 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, DFAProtoco
 		}
 	}
 
-	// A sequence that walks over all of the different paths
-	public var paths: IteratorFactory<PathIterator> {
-		return IteratorFactory(self) {
-			PathIterator($0)
-		}
-	};
-
 	/// Returns an iterator that walks over all of the possible of the paths in the state graph.
 	/// - Parameter filter: A function that decides if the paths in the given state should be walked. This is for filtering out paths that have already been visited or otherwise don't mean anything.
-	public func pathIterator(filter: @escaping (PathIterator, PathIterator.Path) -> Bool) -> IteratorFactory<PathIterator> {
+	public func pathIterator(filter: @escaping (PathIterator, PathIterator.Path) -> Bool) -> IteratorFactory<PathIterator> where Symbol: Comparable {
 		return IteratorFactory(self) {
 			PathIterator($0, filter: filter);
 		};
@@ -709,7 +702,7 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, DFAProtoco
 	/// An iterator that can iterate over all of the elements of the FSM.
 	/// Indefinitely, if need be.
 	// TODO: Consider using AsyncStream for this
-	public struct PathIterator: IteratorProtocol {
+	public struct PathIterator: IteratorProtocol where Symbol: Comparable {
 		public struct Segment: Equatable {
 			public var source: StateNo
 			public var index: Int
@@ -816,7 +809,7 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, DFAProtoco
 		}
 	}
 
-	public struct Iterator: IteratorProtocol {
+	public struct Iterator: IteratorProtocol where Symbol: Comparable {
 		public typealias Element = Array<Symbol>
 
 		let fsm: DFA<Symbol>;
@@ -851,7 +844,7 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, DFAProtoco
 	// Now we're really getting into alchemy land
 	/// This follows all the paths walked by a set of strings provided as another DFA
 	/// It takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
-	public func nextStates(initial: StateNo, input: DFA<Symbol>) -> Set<StateNo> {
+	public func nextStates(initial: StateNo, input: DFA<Symbol>) -> Set<StateNo> where Symbol: Comparable {
 		var finalStates: Set<StateNo> = [];
 		//var derivative = DFA<Symbol>(
 		//	states: self.states,
@@ -1015,7 +1008,7 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, DFAProtoco
 	}
 }
 
-extension DFA: Comparable where Symbol: Comparable {
+extension DFA: Comparable, Sequence where Symbol: Comparable {
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		// Generate instances of each side, compare if lhs < rhs
 		// If they are the same, generate next instance (in alphabetical order)
@@ -1030,6 +1023,13 @@ extension DFA: Comparable where Symbol: Comparable {
 		// If it exists in lhs, then lhs < rhs
 		return lhs.contains(next)
 	}
+
+	// A sequence that walks over all of the different paths
+	public var paths: IteratorFactory<PathIterator> {
+		return IteratorFactory(self) {
+			PathIterator($0)
+		}
+	};
 }
 
 // Conditional protocol compliance

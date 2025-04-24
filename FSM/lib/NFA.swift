@@ -26,7 +26,7 @@ public protocol NFAProtocol: RegularLanguageProtocol where Symbol: Hashable {
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct NFA<Symbol: Comparable & Hashable>: NFAProtocol {
+public struct NFA<Symbol: Hashable>: NFAProtocol {
 	public typealias Element = Array<Symbol>
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
