@@ -1,23 +1,5 @@
-/// A protocol that allows more more sophisticated set operations than a normal Regular Expression language
-public protocol FSMProtocol: SetAlgebra, RegularPatternProtocol where Element: SymbolSequenceProtocol {
-	associatedtype StateNo: Hashable;
-	associatedtype States: Hashable;
-	//associatedtype ID: IDProtocol;
-
-	//public let states: Array<Dictionary<Symbol, States>>;
-	//public let epsilon: Array<States>;
-	//var initial: States {get};
-	//var finals: Set<StateNo> {get};
-
-	init();
-	init(verbatim: Element);
-
-	//func nextState(states: States, symbol: Symbol) -> States;
-	//func nextState(states: States, string: Element) -> States;
-	//func nextState(states: States, string: any Sequence<Symbol>) -> States;
-
-	func isFinal(_ state: States) -> Bool;
-
+/// An abstraction of a regular language
+public protocol RegularLanguageProtocol<Symbol>: SetAlgebra, ExpressibleByArrayLiteral, RegularPatternProtocol {
 	/// Checks if the DFA accepts a given sequence (element of the language)
 	func contains(_ input: Element) -> Bool
 

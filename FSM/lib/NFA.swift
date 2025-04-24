@@ -1,8 +1,11 @@
-public protocol NFAProtocol: FSMProtocol where Symbol: Hashable {
+public protocol NFAProtocol: RegularLanguageProtocol where Symbol: Hashable {
 	var statesSet: Array<Dictionary<Symbol, Set<Int>>> {get};
 	var epsilon: Array<Set<Int>> {get};
 	var initials: Set<Int> {get};
 	var finals: Set<Int> {get};
+
+	func isFinal(_ state: Int?) -> Bool;
+	func isFinal(_ state: Set<Int>) -> Bool;
 }
 
 // TODO: LosslessStringConvertible
@@ -106,15 +109,6 @@ public struct NFA<Symbol: Comparable & Hashable>: NFAProtocol {
 		)
 	}
 
-	public init(dfa: DFA<Symbol>) {
-		self.init(
-			states: dfa.states.map { $0.mapValues { [$0] } },
-			epsilon: Array(repeating: [], count: dfa.states.count),
-			initials: [dfa.initial],
-			finals: dfa.finals
-		)
-	}
-
 	//	static func == (lhs: Self, rhs: Self) -> Bool {
 	//		if(
 	//			lhs.states == rhs.states &&
@@ -176,8 +170,21 @@ public struct NFA<Symbol: Comparable & Hashable>: NFAProtocol {
 		return currentState;
 	}
 
-	public func isFinal(_ state: States) -> Bool {
-		return self.finals.intersection(state).isEmpty == false
+	/// Checks if a state is accepting.
+	///
+	/// - Parameter state: The state to check (may be `nil`).
+	/// - Returns: `true` if the state is final, `false` otherwise (always `false` for `nil`).
+	public func isFinal(_ state: StateNo?) -> Bool {
+		guard let state else { return false }
+		return self.finals.contains(state)
+	}
+
+	/// Checks if a state is accepting.
+	///
+	/// - Parameter states: The state to check (may be `nil`).
+	/// - Returns: `true` when any state is a final state, `false` otherwise.
+	public func isFinal(_ states: Set<StateNo>) -> Bool {
+		self.finals.contains(where: { states.contains($0) })
 	}
 
 	/// Tries to match as many characters from input as possible, returning the last final state
@@ -408,6 +415,7 @@ public struct NFA<Symbol: Comparable & Hashable>: NFAProtocol {
 	public static func symbol(_ element: Symbol) -> Self {
 		return Self(
 			states: [[element: [1]], [:]],
+			epsilon: [[], []],
 			initials: [ 0 ],
 			finals: [ 1 ]
 		)

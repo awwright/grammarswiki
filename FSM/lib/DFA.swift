@@ -15,7 +15,7 @@
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashable, NFAProtocol {
+public struct DFA<Symbol: Comparable & Hashable>: Sequence, RegularLanguageProtocol, Hashable, NFAProtocol {
 	// TODO: Implement BidirectionalCollection
 
 	/// Default element type produced reading this as a Sequence
@@ -24,13 +24,6 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 	public typealias StateNo = Int;
 	/// The type of a set of states, which in the case of a DFA is optional to include the oblivion state (`nil`).
 	public typealias States = StateNo?;
-
-	public static var empty: Self {
-		Self(states: [[:]], initial: 0, finals: [])
-	}
-	public static var epsilon: Self {
-		Self(states: [[:]], initial: 0, finals: [0])
-	}
 
 	/// The transition table, mapping each state to a dictionary of symbol-to-next-state transitions.
 	public let states: Array<Dictionary<Symbol, StateNo>>;
@@ -215,10 +208,17 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 	///
 	/// - Parameter state: The state to check (may be `nil`).
 	/// - Returns: `true` if the state is final, `false` otherwise (always `false` for `nil`).
-	public func isFinal(_ state: States) -> Bool {
-		// The oblivion state (nil) is never final
-		guard let state else {return false};
-		return self.finals.contains(state);
+	public func isFinal(_ state: StateNo?) -> Bool {
+		guard let state else { return false }
+		return self.finals.contains(state)
+	}
+
+	/// Checks if a state is accepting.
+	///
+	/// - Parameter states: The state to check (may be `nil`).
+	/// - Returns: `true` when any state is a final state, `false` otherwise.
+	public func isFinal(_ states: Set<StateNo>) -> Bool {
+		self.finals.contains(where: { states.contains($0) })
 	}
 
 	/// Attempts to match the longest prefix of the input that reaches a final state.
@@ -578,11 +578,12 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
 	public static func concatenate(_ languages: Array<DFA<Symbol>>) -> DFA<Symbol> {
 		if(languages.count == 0){
-			return DFA<Symbol>();
+			// Concatenation identity is epsilon
+			return DFA<Symbol>(states: [[:]], initial: 0, finals: [0]);
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
-		let nfa = NFA<Symbol>.concatenate(languages.map { NFA<Symbol>(dfa: $0) });
+		let nfa = NFA<Symbol>.concatenate(languages.map { NFA<Symbol>($0) });
 		return DFA<Symbol>(nfa: nfa);
 	}
 
@@ -874,12 +875,12 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, FSMProtocol, Hashabl
 	}
 
 	public func homomorphism<Target>(mapping: [(some Collection<Symbol>, some Collection<Target>)]) -> DFA<Target> {
-		let nfa: NFA<Target> = NFA<Symbol>(dfa: self).homomorphism(mapping: mapping);
+		let nfa: NFA<Target> = NFA<Symbol>(self).homomorphism(mapping: mapping);
 		return DFA<Target>(nfa: nfa)
 	}
 
 	public func homomorphism<Target>(mapping: [(DFA<Symbol>, DFA<Target>)]) -> DFA<Target> {
-		let nfa: NFA<Target> = NFA<Symbol>(dfa: self).homomorphism(mapping: mapping);
+		let nfa: NFA<Target> = NFA<Symbol>(self).homomorphism(mapping: mapping);
 		return DFA<Target>(nfa: nfa)
 	}
 

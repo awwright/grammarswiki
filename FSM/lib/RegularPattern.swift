@@ -7,6 +7,9 @@ public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 	/// An instance of this type that has no elements
 	static var empty: Self { get }
 
+	/// An instance of this type that has no elements
+	init();
+
 	/// Return a new sequence concatenated with the given sequence
 	/// This is usually implemented by Array and String.
 	static func + (_: Self, _: Self) -> Self;
@@ -15,7 +18,7 @@ public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 	func appending(_: Symbol) -> Self;
 }
 
-/// A protocol allowing the construction of regular languages.
+/// A language that can be constructed through a combination of symbol, union, concatenation, and repetition operations.
 /// It is very flexible and allows constructing a regular expression of any type from any other conforming type.
 ///
 /// Default implementations for most methods are provided, except for:
@@ -30,10 +33,17 @@ public protocol RegularPatternProtocol: Equatable {
 	associatedtype Symbol;
 
 	/// An instance representing the empty language, which accepts no sequences.
+	/// Equivalent to `init()`
 	static var empty: Self { get }
 
 	/// An instance representing the language that accepts only the empty sequence (epsilon).
 	static var epsilon: Self { get }
+
+	/// Creates an empty automaton that accepts no strings
+	init();
+
+	/// Creates an automaton that matches exactly the given strings
+	init(arrayLiteral: Array<Symbol>...)
 
 	/// Creates a pattern accepting the union of the languages defined by the given patterns.
 	/// - Parameter elements: An array of patterns to union with this one.
@@ -91,6 +101,23 @@ public protocol RegularPatternProtocol: Equatable {
 infix operator ++: AdditionPrecedence;
 
 extension RegularPatternProtocol {
+	/// Default implementation of empty set constructor
+	public init(){
+		self = Self.union([])
+	}
+
+	/// Default implementation of array literal constructor.
+	/// This is not likely to be very efficent, but it is generic.
+	public init(arrayLiteral: Array<Symbol>...) {
+		self = Self.union(arrayLiteral.map { Self.concatenate($0.map { Self.symbol($0) }) })
+	}
+
+	/// Default implementation of empty
+	public static var empty: Self { Self() }
+
+	/// Default implementation of epsilon
+	public static var epsilon: Self { Self.concatenate([]) }
+
 	/// Convenience method to union this pattern with another.
 	/// - Parameter other: The pattern to union with.
 	/// - Returns: A pattern accepting sequences from either this pattern or `other`.
@@ -198,17 +225,21 @@ public protocol RegularPattern where Symbol: Hashable {
 /// A very simple implementation of RegularPatternProtocol. Likely the simplest possible implementation.
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.
-public indirect enum SimpleRegex<S>: RegularPattern, RegularPatternProtocol, Hashable where S: BinaryInteger {
-	public typealias Element = Array<S>
-	public typealias Symbol = S
-
-	public static var empty: Self { Self.alternation([]) }
-	public static var epsilon: Self { Self.concatenation([]) }
+public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternProtocol, Hashable where Symbol: BinaryInteger {
+	public typealias Element = Array<Symbol>
 
 	case alternation([Self])
 	case concatenation([Self])
 	case star(Self)
 	case symbol(Symbol)
+
+	public init() {
+		self = .alternation([])
+	}
+
+	public init(arrayLiteral: Array<Symbol>...) {
+		self = .alternation( arrayLiteral.map{ .concatenation($0.map { Self.symbol($0) }) } )
+	}
 
 	public init (_ sequence: any Sequence<Symbol>) {
 		self = .concatenation(sequence.map{ Self.symbol($0) })

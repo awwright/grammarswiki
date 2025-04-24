@@ -4,13 +4,18 @@
 public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternProtocol, Hashable where Symbol: BinaryInteger {
 	public typealias Element = Array<Symbol>
 
-	public static var empty: Self { Self.alternation([]) }
-	public static var epsilon: Self { Self.concatenation([]) }
-
 	case alternation([Self])
 	case concatenation([Self])
 	case star(Self)
 	case symbol(Symbol)
+
+	public init() {
+		self = .alternation([])
+	}
+
+	public init(arrayLiteral: Array<Symbol>...) {
+		self = .alternation( arrayLiteral.map{ .concatenation($0.map { Self.symbol($0) }) } )
+	}
 
 	public init (_ sequence: any Sequence<Symbol>) {
 		self = .concatenation(sequence.map{ Self.symbol($0) })

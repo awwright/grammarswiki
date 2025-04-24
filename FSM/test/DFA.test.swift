@@ -234,7 +234,13 @@ import Testing
 
 	@Test("concatenate")
 	func test_concatenate() {
+		let epsilon = DFA<Character>.concatenate([])
+		#expect(epsilon.contains(""))
+
 		let dfa1 = DFA<Character>(["a", "b"])
+		let single = DFA.concatenate([dfa1]);
+		#expect(single.contains("a"))
+
 		let dfa2 = DFA<Character>(["x", "y"])
 		let concatenation = dfa1.concatenate(dfa2);
 		let language = Array(concatenation.map { String($0) });
@@ -243,6 +249,14 @@ import Testing
 		#expect(language.contains("ay"))
 		#expect(language.contains("bx"))
 		#expect(language.contains("by"))
+
+		let triple = DFA.concatenate([dfa1, dfa1, dfa1]);
+		#expect(triple.contains("aba"))
+
+		let range = DFA.concatenate([dfa1.optional(), dfa1, dfa1.optional()]);
+		#expect(range.contains("a"))
+		#expect(range.contains("ab"))
+		#expect(range.contains("aba"))
 	}
 
 	@Test("optional")

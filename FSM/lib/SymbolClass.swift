@@ -51,9 +51,13 @@ protocol PartitionedMultidictProtocol: PartitionedSetProtocol {
 public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternProtocol {
 	public typealias Partition = Set<Symbol>
 
-	init() {
+	public init() {
 		symbols = []
 		parents = []
+	}
+
+	public init(arrayLiteral: Array<Symbol>...) {
+		fatalError("Unimplemented")
 	}
 
 	public init(partitions: Array<Partition>) {
@@ -486,7 +490,7 @@ public func compressPartitions<Symbol>(_ partitions: Set<Set<Symbol>>) -> (reduc
 }
 
 /// Transparently maps a regular language with a large alphabet onto a DFA with a smaller alphabet where some symbols are equivalent
-public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable, FSMProtocol {
+public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageProtocol {
 	public typealias StateNo = DFA<Symbol>.StateNo
 	public typealias States = DFA<Symbol>.States
 	public typealias ArrayLiteralElement = DFA<Symbol>.ArrayLiteralElement
