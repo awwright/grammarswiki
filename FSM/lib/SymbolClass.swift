@@ -532,6 +532,10 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 		alphabet = []
 	}
 
+	public func contains(_ member: DFA<Symbol>.Element) -> Bool {
+		inner.contains(member.map { mapping[$0] ?? $0 })
+	}
+
 	public func nextState(state: StateNo, input: Element) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
@@ -559,11 +563,6 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 		//SymbolClassDFA(inner: inner.symmetricDifference(other.inner), mapping: mapping)
 	}
 
-	public static func - (lhs: SymbolClassDFA<Symbol>, rhs: SymbolClassDFA<Symbol>) -> SymbolClassDFA<Symbol> {
-		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: lhs.inner - rhs.inner, mapping: lhs.mapping)
-	}
-
 	public func star() -> SymbolClassDFA<Symbol> {
 		fatalError("Unimplemented")
 		//SymbolClassDFA(inner: inner.star(), mapping: mapping)
@@ -582,14 +581,6 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 	public mutating func formSymmetricDifference(_ other: __owned SymbolClassDFA<Symbol>) {
 		fatalError("Unimplemented")
 		//self = SymbolClassDFA(inner: inner.symmetricDifference(other.inner), mapping: mapping)
-	}
-
-	public static var empty: SymbolClassDFA<Symbol> {
-		SymbolClassDFA(inner: DFA<Symbol>.empty, mapping: [:])
-	}
-
-	public static var epsilon: SymbolClassDFA<Symbol> {
-		SymbolClassDFA(inner: DFA<Symbol>.epsilon, mapping: [:])
 	}
 
 	public func isFinal(_ state: DFA<Symbol>.States) -> Bool {
@@ -623,10 +614,6 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 		//let value = newSet.update(with: newMember);
 		//self = SymbolClassDFA(inner: newSet, mapping: mapping);
 		//return value;
-	}
-
-	public func contains(_ member: DFA<Symbol>.Element) -> Bool {
-		inner.contains(member.map { mapping[$0] ?? $0 })
 	}
 
 	public static func union(_ elements: [SymbolClassDFA<Symbol>]) -> SymbolClassDFA<Symbol> {

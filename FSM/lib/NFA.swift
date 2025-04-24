@@ -6,6 +6,21 @@ public protocol NFAProtocol: RegularLanguageProtocol where Symbol: Hashable {
 
 	func isFinal(_ state: Int?) -> Bool;
 	func isFinal(_ state: Set<Int>) -> Bool;
+
+	// RegularLanguageProtocol implementation includes:
+	//func contains(_ input: Element) -> Bool
+	//func union(_ other: __owned Self) -> Self
+	//func intersection(_ other: Self) -> Self
+	//func symmetricDifference(_ other: __owned Self) -> Self
+	//static func union(_ languages: Array<Self>) -> Self
+	//static func concatenate(_ languages: Array<Self>) -> Self
+	//func concatenate(_ other: Self) -> Self
+	//func optional() -> Self
+	//func plus() -> Self
+	//func star() -> Self
+	//func repeating(_ count: Int) -> Self
+	//func repeating(_ range: ClosedRange<Int>) -> Self
+	//func repeating(_ range: PartialRangeFrom<Int>) -> Self
 }
 
 // TODO: LosslessStringConvertible
@@ -545,18 +560,6 @@ public struct NFA<Symbol: Comparable & Hashable>: NFAProtocol {
 
 	public mutating func formSymmetricDifference(_ other: __owned Self) {
 		self = self.symmetricDifference(other);
-	}
-
-	public static func ++ (lhs: Self, rhs: Self) -> Self {
-		return Self.concatenate([lhs, rhs]);
-	}
-
-	public static func | (lhs: Self, rhs: Self) -> Self {
-		return Self.parallel(fsms: [lhs, rhs], merge: { $0[0] || $0[1] });
-	}
-
-	public static func - (lhs: Self, rhs: Self) -> Self {
-		return Self.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
 	}
 }
 

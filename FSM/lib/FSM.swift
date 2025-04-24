@@ -79,3 +79,10 @@ public protocol RegularLanguageProtocol<Symbol>: SetAlgebra, ExpressibleByArrayL
 	/// Note: I think (-) is pretty unambiguous here, but some math notation uses \ for this operation.
 	static func - (lhs: Self, rhs: Self) -> Self
 }
+
+extension RegularLanguageProtocol {
+	/// Subtraction default implementation
+	public static func - (lhs: Self, rhs: Self) -> Self {
+		return lhs.subtracting(rhs)
+	}
+}

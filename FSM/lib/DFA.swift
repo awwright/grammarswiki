@@ -15,7 +15,7 @@
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Symbol: Comparable & Hashable>: Sequence, RegularLanguageProtocol, Hashable, NFAProtocol {
+public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, NFAProtocol {
 	// TODO: Implement BidirectionalCollection
 
 	/// Default element type produced reading this as a Sequence
