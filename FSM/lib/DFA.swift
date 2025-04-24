@@ -1,37 +1,10 @@
-/// A Deterministic Finite Automaton (DFA) that recognizes a set of sequences over a given alphabet.
-/// It is an optimized form of ``NFA`` where each state has at most one "next" state.
-/// It represents a set of strings (possibily infinitely large), where each string is a finitely long sequence of symbols, from a finitely large alphabet.
-/// It can represent any such set of strings that are "regular" (describable with a finite state machine).
-///
-/// An element of the set is also known as a "string".
-/// A character in the string/element is also known as a "symbol".
-/// The set of possible symbols that can be used is called the "alphabnet". In this implementation, the alphabet is computed implicitly.
-///
-/// States are represented by an Int, or nil, the oblivion state.
-/// The initial state cannot be `nil`, so at least one state must be provided.
-///
-/// - Type Parameters:
-///   - `Element`: The type of sequence (e.g., `Array<UInt8>`), which must conform to `Hashable`, `Sequence`, `EmptyInitial`, and `Comparable`.
-///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
-///
-/// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, NFAProtocol {
-	// TODO: Implement BidirectionalCollection
+public protocol DFAProtocol: NFAProtocol {
+	var states: Array<Dictionary<Symbol, Int>> { get }
+	var initial: Int { get }
+	// `finals` from NFAProtocol
+}
 
-	/// Default element type produced reading this as a Sequence
-	public typealias Element = Array<Symbol>
-	/// The type used to index states
-	public typealias StateNo = Int;
-	/// The type of a set of states, which in the case of a DFA is optional to include the oblivion state (`nil`).
-	public typealias States = StateNo?;
-
-	/// The transition table, mapping each state to a dictionary of symbol-to-next-state transitions.
-	public let states: Array<Dictionary<Symbol, StateNo>>;
-	/// The initial state of the DFA.
-	public let initial: StateNo;
-	/// The set of accepting (final) states.
-	public let finals: Set<StateNo>;
-
+extension DFAProtocol {
 	/// Implements NFAProtocol
 	/// In a DFA, there is exactly one transition per state
 	public var statesSet: Array<Dictionary<Symbol, Set<Int>>> {
@@ -51,6 +24,41 @@ public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, NFAProtoco
 	public var epsilon: Array<Set<Int>> {
 		return Array(repeating: [], count: states.count)
 	}
+}
+
+/// A Deterministic Finite Automaton (DFA) that recognizes a set of sequences over a given alphabet.
+/// It is an optimized form of ``NFA`` where each state has at most one "next" state.
+/// It represents a set of strings (possibily infinitely large), where each string is a finitely long sequence of symbols, from a finitely large alphabet.
+/// It can represent any such set of strings that are "regular" (describable with a finite state machine).
+///
+/// An element of the set is also known as a "string".
+/// A character in the string/element is also known as a "symbol".
+/// The set of possible symbols that can be used is called the "alphabnet". In this implementation, the alphabet is computed implicitly.
+///
+/// States are represented by an Int, or nil, the oblivion state.
+/// The initial state cannot be `nil`, so at least one state must be provided.
+///
+/// - Type Parameters:
+///   - `Element`: The type of sequence (e.g., `Array<UInt8>`), which must conform to `Hashable`, `Sequence`, `EmptyInitial`, and `Comparable`.
+///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
+///
+/// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
+public struct DFA<Symbol: Comparable & Hashable>: Sequence, Hashable, DFAProtocol {
+	// TODO: Implement BidirectionalCollection
+
+	/// Default element type produced reading this as a Sequence
+	public typealias Element = Array<Symbol>
+	/// The type used to index states
+	public typealias StateNo = Int;
+	/// The type of a set of states, which in the case of a DFA is optional to include the oblivion state (`nil`).
+	public typealias States = StateNo?;
+
+	/// The transition table, mapping each state to a dictionary of symbol-to-next-state transitions.
+	public let states: Array<Dictionary<Symbol, StateNo>>;
+	/// The initial state of the DFA.
+	public let initial: StateNo;
+	/// The set of accepting (final) states.
+	public let finals: Set<StateNo>;
 
 	/// Creates an empty DFA that accepts no sequences.
 	public init() {
