@@ -16,13 +16,6 @@ public struct NFA<Symbol: Comparable & Hashable>: NFAProtocol {
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
 
-	public static var empty: Self {
-		Self(states: [], initial: 0, finals: [])
-	}
-	public static var epsilon: Self {
-		Self(states: [], initial: 0, finals: [0])
-	}
-
 	/// For each state, a mapping of the next input symbol to the set of states it should transition to
 	public let statesSet: Array<Dictionary<Symbol, Set<Int>>>;
 	/// For each state, a set of the states that should automatically be transitioned to
@@ -381,7 +374,8 @@ public struct NFA<Symbol: Comparable & Hashable>: NFAProtocol {
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
 	public static func concatenate(_ languages: Array<Self>) -> Self {
 		if(languages.count == 0){
-			return Self();
+			// Concatenation identity is epsilon
+			return NFA<Symbol>(states: [[:]], epsilon: [[]], initials: [0], finals: [0]);
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
