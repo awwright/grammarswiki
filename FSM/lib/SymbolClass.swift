@@ -77,7 +77,9 @@ public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSe
 	}
 
 	public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
-		self.siblings(of: lhs).contains(rhs)
+		guard self.contains(lhs) else { return false }
+		guard self.contains(rhs) else { return false }
+		return self.siblings(of: lhs).contains(rhs)
 	}
 
 	public func siblings(of: Symbol) -> Set<Symbol> {
