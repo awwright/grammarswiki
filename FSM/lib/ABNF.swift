@@ -1070,6 +1070,14 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		isEmpty ? SymbolClass() : repeating.alphabetPartitions(rulelist: rulelist)
 	}
 
+	private var separatorPattern: DFA<Symbol> {
+		switch(self.rangeop) {
+			case 0x2A: DFA<Symbol>.epsilon; //DFA<Symbol>.epsilon.toPattern();
+			case 0x23: ABNFBuiltins<DFA<Symbol>>.CSEP.toPattern();
+			default: fatalError("Unsupported repetition range operator \(rangeop)")
+		}
+	}
+
 	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
 	}
