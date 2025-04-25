@@ -83,7 +83,10 @@ public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSe
 	}
 
 	public func siblings(of: Symbol) -> Set<Symbol> {
-		let parent = parents[symbols.firstIndex(of: of)!]
+		// It may seem natural to return nil, but it's unnecessary, the result always includes `of`, so
+		// the only time this will have result.isEmpty is if the symbol does not exist.
+		guard let i = symbols.firstIndex(of: of) else { return [] }
+		let parent = parents[i]
 		return Set(symbols.enumerated().compactMap { parents[$0.0] == parent ? $0.1 : nil })
 	}
 
@@ -105,7 +108,13 @@ public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSe
 	public static func symbol(_ element: Symbol) -> Self { .init(partitions: [[element]]) }
 	public func star() -> Self { self }
 	public static func union(_ elements: [Self]) -> Self {
-		Self()
+		let symbols = Set(elements.flatMap(\.symbols)).sorted()
+		let labels = symbols.map { s in elements.map { $0.siblings(of: s) } }
+		var partitions = Dictionary<Array<Set<Symbol>>, Set<Symbol>>()
+		for (part, s) in zip(labels, symbols) {
+			partitions[part, default: []].insert(s);
+		}
+		return Self(partitions: Array(partitions.values))
 	}
 	public static func concatenate(_ elements: [Self]) -> Self {
 		Self()

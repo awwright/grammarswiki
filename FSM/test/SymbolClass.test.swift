@@ -113,12 +113,17 @@ import Testing;
 			#expect(partitions.symbols == [1])
 			#expect(partitions.partitions == [ [1] ])
 		}
+		@Test("union of symbols") func test_union1() async throws {
+			let partitions: SymbolPartitionedSet<Int> = [ [1] ]
+			#expect(partitions.symbols == [1])
+			#expect(partitions.partitions == [ [1] ])
+		}
 		@Test("union of concatenation") func test_union2() async throws {
 			let partitions = SymbolPartitionedSet.union([
 				SymbolPartitionedSet.union([ SymbolPartitionedSet.symbol(1) ])
 			])
-			#expect(partitions.symbols == [])
-			#expect(partitions.partitions == [])
+			#expect(partitions.symbols == [1])
+			#expect(partitions.partitions == [ [1] ])
 		}
 	}
 }
