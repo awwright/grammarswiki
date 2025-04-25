@@ -226,6 +226,7 @@ import Testing;
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
+			#expect(rule.description == "foo bar")
 		}
 
 		@Test("repetition 0")
@@ -241,6 +242,7 @@ import Testing;
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == true)
 			#expect(rule.isOptional == true)
+			#expect(rule.description == "0foo")
 		}
 
 		@Test("repetition 1")
@@ -257,6 +259,7 @@ import Testing;
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
+			#expect(rule.description == "foo") // 1*1 is the default so it gets omitted
 		}
 
 		@Test("repetition min")
@@ -273,6 +276,7 @@ import Testing;
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
+			#expect(rule.description == "1*foo")
 		}
 
 		@Test("repetition max")
@@ -289,6 +293,7 @@ import Testing;
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == true)
+			#expect(rule.description == "*4foo")
 		}
 
 		@Test("repetition min/max")
@@ -305,6 +310,7 @@ import Testing;
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
+			#expect(rule.description == "2*4foo")
 		}
 
 		@Test("repetition any")
@@ -320,6 +326,7 @@ import Testing;
 			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == true)
+			#expect(rule.description == "*foo")
 		}
 
 		@Test("list 0")

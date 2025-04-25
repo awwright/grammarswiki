@@ -1134,7 +1134,8 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		let repeatStr =
 		if let max {
 			if min == 1 && max == 1 { "" }
-			else if(min == max){ "\(min)" }
+			else if(min == max && self.rangeop == 0x2A){ "\(min)" }
+			else if min == 0 { "\(rangeop)\(max)" }
 			else{ "\(min)\(rangeop)\(max)" }
 		} else {
 			if min == 0 { "\(rangeop)" }
