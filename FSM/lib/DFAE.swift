@@ -27,9 +27,9 @@ public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashabl
 /// DFAE (DFA with Equivalence) is a struct that maps elements in the FSM to some target element.
 /// You can also get a FSM denoting the set of elements in the same partition.
 public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>: PartitionedDictionaryProtocol {
-	typealias Partition = DFA<Symbol>
+	public typealias Partition = DFA<Symbol>
 
-	typealias Partitions = Dictionary<Label, DFA<Symbol>>.Values
+	public typealias Partitions = Dictionary<Label, DFA<Symbol>>.Values
 	public var partitions: Dictionary<Label, DFA<Symbol>>.Values { partitionsDict.values }
 
 	typealias Inner = SymbolOrTag<Symbol, Label>;
@@ -44,7 +44,7 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>:
 	/// Final states and the partition they are members of
 	let stateToTarget: Dictionary<DFA<Symbol>.StateNo, Label>
 
-	init() {
+	public init() {
 		self.partitionsDict = [:]
 		self.inner = []
 		self.stateToTarget = [:]
@@ -108,7 +108,11 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>:
 		fatalError("Unimplemented")
 	}
 
-	func siblings(of val: Array<Symbol>) -> DFA<Symbol> {
+	public func siblings(of val: Array<Symbol>) -> DFA<Symbol> {
 		fatalError("Unimplemented")
+	}
+
+	public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
+		return self[lhs] == self[rhs]
 	}
 }

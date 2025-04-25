@@ -1,6 +1,8 @@
 /// A protocol that is able to store a set of set of symbols, such that all the sets are disjoint from each other, each element only appearing in one partition
 /// This is a protocol so that various ways of indexing the elements based on tyoe can be used
-protocol PartitionedSetProtocol {
+///
+/// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
+public protocol PartitionedSetProtocol {
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype Partition: SetAlgebra;
 	typealias Component = Partition.Element
@@ -16,12 +18,13 @@ protocol PartitionedSetProtocol {
 	init(partitions: some Collection<Partition>)
 	/// Get the set of symbols from the partition of the given symbol
 	func siblings(of: Component) -> Partition
+	func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool
 }
 
 /// Default implementations of functions for PartitionedSetProtocol
 extension PartitionedSetProtocol {
 	/// Create from an array of Symbols
-	init(partitions: some Collection<Partition>) {
+	public init(partitions: some Collection<Partition>) {
 		self.init(partitions: partitions.map{ $0 })
 	}
 }
@@ -48,7 +51,7 @@ protocol PartitionedMultidictProtocol: PartitionedSetProtocol {
 	func labels(component: Component) -> Array<Label>
 }
 
-public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternProtocol {
+public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternProtocol, ExpressibleByArrayLiteral {
 	public typealias Partition = Set<Symbol>
 
 	public init() {
@@ -57,7 +60,7 @@ public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSe
 	}
 
 	public init(arrayLiteral: Array<Symbol>...) {
-		fatalError("Unimplemented")
+		self.init(partitions: arrayLiteral.map { Set($0) })
 	}
 
 	public init(partitions: Array<Partition>) {
@@ -69,7 +72,15 @@ public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSe
 	var symbols: Array<Symbol>
 	var parents: Array<Int>
 
-	func siblings(of: Symbol) -> Set<Symbol> {
+	public func contains(_ element: Symbol) -> Bool {
+		symbols.contains(element)
+	}
+
+	public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
+		self.siblings(of: lhs).contains(rhs)
+	}
+
+	public func siblings(of: Symbol) -> Set<Symbol> {
 		let parent = parents[symbols.firstIndex(of: of)!]
 		return Set(symbols.enumerated().compactMap { parents[$0.0] == parent ? $0.1 : nil })
 	}
