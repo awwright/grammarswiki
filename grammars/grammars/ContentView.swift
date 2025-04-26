@@ -236,8 +236,6 @@ struct DocumentDetail: View {
 							}
 						}
 						.pickerStyle(MenuPickerStyle())
-						.onChange(of: selectedRule) { updatedRule() }
-						.onAppear { updatedRule() }
 
 						if let selectedRule {
 							let deps = content_rulelist.dependencies(rulename: selectedRule)
@@ -329,7 +327,8 @@ struct DocumentDetail: View {
 			}
 		} // HStack
 		.onChange(of: document.content) { updatedDocument() }
-		.onAppear { updatedDocument() }
+		.onChange(of: selectedRule) { updatedRule() }
+		.onAppear { updatedDocument(); updatedRule() }
 		.toolbar {
 			Button {
 				inspector_isPresented.toggle()
