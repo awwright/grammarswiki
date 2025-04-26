@@ -88,6 +88,10 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>:
 		self.stateToTarget = stateToTarget
 	}
 
+	public func contains(_ component: Component) -> Bool {
+		self[component] != nil
+	}
+
 	subscript(_ value: some Sequence<Symbol>) -> Label? {
 		let resultState = self.inner.nextState(state: self.inner.initial, input: value.map { SymbolOrTag<Symbol, Label>.symbol($0) })
 		guard self.inner.isFinal(resultState) else { return nil }

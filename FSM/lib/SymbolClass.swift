@@ -9,15 +9,16 @@ public protocol PartitionedSetProtocol {
 
 	associatedtype Partitions: Collection where Partitions.Element == Partition
 	var partitions: Partitions { get }
-	// Initialization
-	/// Initialize an empty set (no elements, no partitions)
-	init()
+
 	/// Initialize a PartitionedSet with the given elements, taking the union-meet of the subsets
 	/// If elements appear in multiple partitions, elements found in the same partitions are split out and merged into a new partition
 	/// (so that they never share a partition with elements they didn't share with in all partitions).
 	init(partitions: some Collection<Partition>)
+	/// Determine if the partitioned set contains the given value as a component
+	func contains(_ component: Component) -> Bool
 	/// Get the set of symbols from the partition of the given symbol
 	func siblings(of: Component) -> Partition
+	/// Determine if the given two components exist in the same partition
 	func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool
 }
 
@@ -53,6 +54,7 @@ protocol PartitionedMultidictProtocol: PartitionedSetProtocol {
 
 public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternProtocol, ExpressibleByArrayLiteral {
 	public typealias Partition = Set<Symbol>
+	public typealias Component = Symbol
 
 	public init() {
 		symbols = []
@@ -119,6 +121,47 @@ public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSe
 	public static func concatenate(_ elements: [Self]) -> Self {
 		Self()
 	}
+}
+
+public protocol SymbolClassProtocol: PartitionedSetProtocol {
+
+}
+
+public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol, ExpressibleByArrayLiteral {
+	public typealias Partition = Set<Symbol>
+	public typealias Partitions = Set<Partition>
+	public typealias ArrayLiteralElement = Array<Symbol>
+
+	public var partitions: Set<Partition>
+
+	public init() {
+		self.partitions = []
+	}
+
+	public init<T: SymbolClassProtocol>(_ input: T) where T.Partitions == Partitions, T.Component == Symbol {
+		self.partitions = input.partitions
+	}
+
+	public init(arrayLiteral elements: Array<Symbol>...) {
+		self.init(partitions: Set(elements.map { Set($0) }))
+	}
+
+	public init(partitions: Set<Set<Symbol>>) {
+		self.partitions = partitions
+	}
+
+	public func contains(_ symbol: Symbol) -> Bool{
+		partitions.contains(where: { $0.contains(symbol) })
+	}
+
+	public func siblings(of: Component) -> Set<Symbol> {
+		partitions.filter { $0.contains(of) }.first ?? []
+	}
+
+	public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
+		siblings(of: lhs).contains(rhs)
+	}
+
 }
 
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
@@ -257,6 +300,37 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: Expressible
 	public init(arrayLiteral elements: ArrayLiteralElement...) {
 		self.symbols = elements.map { $0...$0 }.sorted { $0.lowerBound < $1.lowerBound }
 		self.parents = self.symbols.enumerated().map { i, _ in i }
+	}
+
+	/// A view on the current ClosedRangeSymbolClass that looks like a normal SymbolClass
+	/// It is read-only.
+	public struct Expanded: SymbolClassProtocol {
+		
+		public typealias Partition = Set<Symbol>
+		public typealias Partitions = Set<Partition>
+
+		let underlying: ClosedRangeSymbolClass<Symbol>
+
+		public var partitions: Set<Partition> {
+			Set<Set<Symbol>>(underlying.partitions.map { Set($0.flatMap { $0 }) })
+		}
+
+		public func contains(_ symbol: Symbol) -> Bool {
+			underlying.findIndex(symbol) != nil
+		}
+
+		public func siblings(of: Component) -> Set<Symbol> {
+			Set(underlying.siblings(of).flatMap { $0 })
+		}
+
+		public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
+			// FIXME this is going to be horribly show for large ranges
+			siblings(of: lhs).contains(rhs)
+		}
+	}
+	
+	public var expanded: Expanded {
+		Expanded(underlying: self)
 	}
 
 	// MARK: RegularPatternProtocol
