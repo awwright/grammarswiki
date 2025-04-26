@@ -214,7 +214,7 @@ import Testing;
 @Suite("ClosedRangeSymbolClass") struct ClosedRangeSymbolClassTests {
 	@Suite("contains") struct ClosedRangeSymbolClassTests_partitionReduce {
 		@Test("array literal") func test_array_literal() async throws {
-			let partitions: ClosedRangeSymbolClass<Int> = [0, 1]
+			let partitions: ClosedRangeSymbolClass<Int> = [0...0, 1...1]
 			#expect(partitions.contains(0))
 			#expect(partitions.contains(1))
 			#expect(!partitions.contains(2))
@@ -237,7 +237,7 @@ import Testing;
 			#expect(!partitions.contains(3))
 		}
 		@Test("range of values") func test_contains_range() async throws {
-			let partitions = ClosedRangeSymbolClass<Int>(0x30...0x39)
+			let partitions: ClosedRangeSymbolClass<Int> = [0x30...0x39]
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))
@@ -320,7 +320,7 @@ import Testing;
 			#expect(!partitions.contains(3))
 		}
 		@Test("range of values") func test_contains_range() async throws {
-			let partitions = ClosedRangeSymbolClass<Int>(0x30...0x39)
+			let partitions: ClosedRangeSymbolClass<Int> = [0x30...0x39]
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))

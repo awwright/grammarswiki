@@ -43,7 +43,7 @@ extension DFAProtocol {
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
+public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra {
 	// TODO: Implement BidirectionalCollection
 
 	/// Default element type produced reading this as a Sequence
@@ -885,7 +885,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 		return DFA<Target>(nfa: nfa)
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
 		// Make a new initial state at 0, epsilon transition to old initial state
 		// Create an empty new-final state at 1
 		// And add epsilon transitions for all old-final states to new-final state at 1
@@ -983,18 +983,6 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 
 	public mutating func update(with newMember: __owned Element) -> (Element)? {
 		return insert(newMember).1
-	}
-
-	public mutating func formUnion(_ other: __owned DFA<Symbol>) {
-		self = self.union(other);
-	}
-
-	public mutating func formIntersection(_ other: DFA<Symbol>) {
-		self = self.intersection(other);
-	}
-
-	public mutating func formSymmetricDifference(_ other: __owned DFA<Symbol>) {
-		self = self.symmetricDifference(other);
 	}
 
 	// Operator shortcuts

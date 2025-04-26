@@ -52,7 +52,7 @@ protocol PartitionedMultidictProtocol: PartitionedSetProtocol {
 	func labels(component: Component) -> Array<Label>
 }
 
-public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternProtocol, ExpressibleByArrayLiteral {
+public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternBuilder, ExpressibleByArrayLiteral {
 	public typealias Partition = Set<Symbol>
 	public typealias Component = Symbol
 
@@ -173,12 +173,12 @@ public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol, ExpressibleByA
 /// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 // TODO: Rename this to SymbolRangePartitionedSet or something
-public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral, SetAlgebra, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
 	public typealias Partition = Array<ClosedRange<Symbol>>
 	/// Implements ExpressibleByArrayLiteral
-	public typealias ArrayLiteralElement = Symbol
+	public typealias ArrayLiteralElement = ClosedRange<Symbol>
 	/// Implements SetAlgebra
 	public typealias Element = Symbol
 
@@ -298,7 +298,7 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: Expressible
 
 	// MARK: ExpressibleByArrayLiteral
 	public init(arrayLiteral elements: ArrayLiteralElement...) {
-		self.symbols = elements.map { $0...$0 }.sorted { $0.lowerBound < $1.lowerBound }
+		self.symbols = elements.sorted { $0.lowerBound < $1.lowerBound }
 		self.parents = self.symbols.enumerated().map { i, _ in i }
 	}
 
@@ -478,18 +478,6 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: Expressible
 		fatalError("Unimplemented")
 	}
 
-	public mutating func formUnion(_ other: __owned Self) {
-		self = self.union(other)
-	}
-
-	public mutating func formIntersection(_ other: Self) {
-		self = self.intersection(other)
-	}
-
-	public mutating func formSymmetricDifference(_ other: __owned Self) {
-		self = self.symmetricDifference(other)
-	}
-
 	public mutating func insert(_ newMember: __owned Symbol) -> (inserted: Bool, memberAfterInsert: Symbol) {
 		let range = ClosedRange(uncheckedBounds: (newMember, newMember))
 		// Find insertion point
@@ -586,7 +574,7 @@ public func compressPartitions<Symbol>(_ partitions: Set<Set<Symbol>>) -> (reduc
 }
 
 /// Transparently maps a regular language with a large alphabet onto a DFA with a smaller alphabet where some symbols are equivalent
-public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageProtocol {
+public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageSetAlgebra {
 	public typealias StateNo = DFA<Symbol>.StateNo
 	public typealias States = DFA<Symbol>.States
 	public typealias ArrayLiteralElement = DFA<Symbol>.ArrayLiteralElement

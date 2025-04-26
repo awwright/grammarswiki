@@ -6,27 +6,12 @@ public protocol NFAProtocol: RegularLanguageProtocol where Symbol: Hashable {
 
 	func isFinal(_ state: Int?) -> Bool;
 	func isFinal(_ state: Set<Int>) -> Bool;
-
-	// RegularLanguageProtocol implementation includes:
-	//func contains(_ input: Element) -> Bool
-	//func union(_ other: __owned Self) -> Self
-	//func intersection(_ other: Self) -> Self
-	//func symmetricDifference(_ other: __owned Self) -> Self
-	//static func union(_ languages: Array<Self>) -> Self
-	//static func concatenate(_ languages: Array<Self>) -> Self
-	//func concatenate(_ other: Self) -> Self
-	//func optional() -> Self
-	//func plus() -> Self
-	//func star() -> Self
-	//func repeating(_ count: Int) -> Self
-	//func repeating(_ range: ClosedRange<Int>) -> Self
-	//func repeating(_ range: PartialRangeFrom<Int>) -> Self
 }
 
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct NFA<Symbol: Hashable>: NFAProtocol {
+public struct NFA<Symbol: Hashable>: NFAProtocol, RegularLanguageSetAlgebra {
 	public typealias Element = Array<Symbol>
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
@@ -528,7 +513,7 @@ public struct NFA<Symbol: Hashable>: NFAProtocol {
 		return NFA<Target>();
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
 		// Can this be optimized?
 		DFA<Symbol>(nfa: self).toPattern(as: PatternType.self)
 	}
@@ -548,18 +533,6 @@ public struct NFA<Symbol: Hashable>: NFAProtocol {
 
 	public mutating func update(with newMember: __owned Element) -> (Element)? {
 		return insert(newMember).1
-	}
-
-	public mutating func formUnion(_ other: __owned Self) {
-		self = self.union(other);
-	}
-
-	public mutating func formIntersection(_ other: Self) {
-		self = self.intersection(other);
-	}
-
-	public mutating func formSymmetricDifference(_ other: __owned Self) {
-		self = self.symmetricDifference(other);
 	}
 }
 

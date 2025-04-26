@@ -28,7 +28,7 @@ public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 /// - static func concatenate
 /// - func optional
 /// - func toPattern
-public protocol RegularPatternProtocol: Equatable {
+public protocol RegularPatternBuilder: Equatable {
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
 	associatedtype Symbol;
 
@@ -90,17 +90,24 @@ public protocol RegularPatternProtocol: Equatable {
 	func repeating(_ range: PartialRangeFrom<Int>) -> Self
 
 	// Interfaces to implement later, depending on need
-	//func intersection(_ other: Self) -> Self
-	//func subtracting(_ other: Self) -> Self
-	//func symmetricDifference(_ other: Self) -> Self
-
 	//func mapSymbol<Target>(_: (Symbol) throws -> Target) rethrows -> Target;
+
+	/// Concatenation operator
+	///
+	/// The selection of symbol for operator is fraught because most of these symbols have been used for most different things
+	/// String concatenation is slightly different than language concatenation,
+	/// I want to suggest the string concatenation of the cross product of any string from ordered pair languages
+	static func ++ (lhs: Self, rhs: Self) -> Self
+
+	/// Union/alternation
+	static func | (lhs: Self, rhs: Self) -> Self
+
 }
 
 /// Language concatenate (string concatenation of cross-product)
 infix operator ++: AdditionPrecedence;
 
-extension RegularPatternProtocol {
+extension RegularPatternBuilder {
 	/// Default implementation of empty set constructor
 	public init(){
 		self = Self.union([])
@@ -181,7 +188,7 @@ extension RegularPatternProtocol {
 }
 
 // For symbol types that support it, allow generating a range of symbols
-extension RegularPatternProtocol where Symbol: Comparable & Strideable, Symbol.Stride: SignedInteger {
+extension RegularPatternBuilder where Symbol: Comparable & Strideable, Symbol.Stride: SignedInteger {
 	/// Creates a pattern that accepts any single symbol within the given range (exclusive upper bound).
 	/// - Parameter range: The range of symbols (e.g., `0...10`). 
 	public static func range(_ range: ClosedRange<Symbol>) -> Self {
@@ -212,7 +219,7 @@ public protocol RegularPattern where Symbol: Hashable {
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
 	associatedtype Symbol;
 
-	func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol;
+	func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol;
 
 	/// Get exactly symbols used in the pattern
 	var alphabet: Set<Symbol> { get }
@@ -225,7 +232,7 @@ public protocol RegularPattern where Symbol: Hashable {
 /// A very simple implementation of RegularPatternProtocol. Likely the simplest possible implementation.
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.
-public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternProtocol, Hashable where Symbol: BinaryInteger {
+public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternBuilder, Hashable where Symbol: BinaryInteger {
 	public typealias Element = Array<Symbol>
 
 	case alternation([Self])
@@ -342,7 +349,7 @@ public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternProtocol
 		}
 	}
 
-	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternProtocol, PatternType.Symbol == Symbol {
+	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternBuilder, PatternType.Symbol == Symbol {
 		switch self {
 			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))

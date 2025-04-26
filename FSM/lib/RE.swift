@@ -1,7 +1,7 @@
 // Structures for parsing and generating most dialects of Regular Expressions
 
 /// A parser for a common form of regular expressions
-public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternProtocol, Hashable where Symbol: BinaryInteger {
+public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternBuilder, Hashable where Symbol: BinaryInteger {
 	public typealias Element = Array<Symbol>
 
 	case alternation([Self])
@@ -179,7 +179,7 @@ public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternProtocol, 
 		}
 	}
 
-	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternProtocol, PatternType.Symbol == Symbol {
+	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternBuilder, PatternType.Symbol == Symbol {
 		switch self {
 			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))
