@@ -131,30 +131,30 @@ import Testing;
 @Suite("SymbolClass") struct SymbolClassTests {
 	@Suite("contains") struct SymbolClassTests_partitionReduce {
 		@Test("array literal") func test_array_literal() async throws {
-			let partitions: SymbolClass<Int> = [0, 1]
+			let partitions: ClosedRangeSymbolClass<Int> = [0, 1]
 			#expect(partitions.contains(0))
 			#expect(partitions.contains(1))
 			#expect(!partitions.contains(2))
 		}
 		@Test("init ranges") func test_partitionReduce_empty() async throws {
-			let partitions: SymbolClass<Int> = []
+			let partitions: ClosedRangeSymbolClass<Int> = []
 			#expect(!partitions.contains(1))
 			#expect(!partitions.contains(2))
 		}
 		@Test("single symbol") func test_partitionReduce_single() async throws {
-			let partitions = SymbolClass<Int>([ 1 ])
+			let partitions = ClosedRangeSymbolClass<Int>([ 1 ])
 			#expect(partitions.contains(1))
 			#expect(!partitions.contains(2))
 		}
 		@Test("single set multi-symbol") func test_partitionReduce_multi() async throws {
-			let partitions = SymbolClass<Int>([0, 1, 2])
+			let partitions = ClosedRangeSymbolClass<Int>([0, 1, 2])
 			#expect(partitions.contains(0))
 			#expect(partitions.contains(1))
 			#expect(partitions.contains(2))
 			#expect(!partitions.contains(3))
 		}
 		@Test("range of values") func test_contains_range() async throws {
-			let partitions = SymbolClass<Int>(0x30...0x39)
+			let partitions = ClosedRangeSymbolClass<Int>(0x30...0x39)
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))
@@ -163,7 +163,7 @@ import Testing;
 			#expect(!partitions.contains(0x3A))
 		}
 		@Test("two ranges of values") func test_contains_ranges() async throws {
-			let partitions = SymbolClass<Int>([0x41...0x5A], [0x61...0x7A])
+			let partitions = ClosedRangeSymbolClass<Int>([0x41...0x5A], [0x61...0x7A])
 			#expect(!partitions.contains(0x40))
 			#expect(partitions.contains(0x41))
 			#expect(partitions.contains(0x42))
@@ -178,7 +178,7 @@ import Testing;
 			#expect(!partitions.contains(0x7B))
 		}
 		@Test("three ranges of values") func test_contains_ranges3() async throws {
-			let partitions = SymbolClass<Int>([0x30...0x39], [0x41...0x5A], [0x61...0x7A])
+			let partitions = ClosedRangeSymbolClass<Int>([0x30...0x39], [0x41...0x5A], [0x61...0x7A])
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))
@@ -201,7 +201,7 @@ import Testing;
 	}
 	@Suite("get partition label") struct SymbolClassTests_getPartitionLabel {
 		@Test("three partitions") func test_three_parts() async throws {
-			let partitions = SymbolClass<Int>([0, 1, 2], [3, 4, 5], [6, 7, 8])
+			let partitions = ClosedRangeSymbolClass<Int>([0, 1, 2], [3, 4, 5], [6, 7, 8])
 			#expect(partitions.getPartitionLabel(0) == 0)
 			#expect(partitions.getPartitionLabel(1) == 0)
 			#expect(partitions.getPartitionLabel(2) == 0)
@@ -213,7 +213,7 @@ import Testing;
 			#expect(partitions.getPartitionLabel(8) == 6)
 		}
 		@Test("three ranges") func test_three_parts_ranges() async throws {
-			let partitions = SymbolClass<Int>([0...2], [3...4, 5...5], [6...7, 7...7, 8...8])
+			let partitions = ClosedRangeSymbolClass<Int>([0...2], [3...4, 5...5], [6...7, 7...7, 8...8])
 			#expect(partitions.getPartitionLabel(0) == 0)
 			#expect(partitions.getPartitionLabel(1) == 0)
 			#expect(partitions.getPartitionLabel(2) == 0)
@@ -225,19 +225,19 @@ import Testing;
 			#expect(partitions.getPartitionLabel(8) == 6)
 		}
 		@Test("single symbol") func test_partitionReduce_single() async throws {
-			let partitions = SymbolClass<Int>([ 1 ])
+			let partitions = ClosedRangeSymbolClass<Int>([ 1 ])
 			#expect(partitions.contains(1))
 			#expect(!partitions.contains(2))
 		}
 		@Test("single set multi-symbol") func test_partitionReduce_multi() async throws {
-			let partitions = SymbolClass<Int>([0, 1, 2])
+			let partitions = ClosedRangeSymbolClass<Int>([0, 1, 2])
 			#expect(partitions.contains(0))
 			#expect(partitions.contains(1))
 			#expect(partitions.contains(2))
 			#expect(!partitions.contains(3))
 		}
 		@Test("range of values") func test_contains_range() async throws {
-			let partitions = SymbolClass<Int>(0x30...0x39)
+			let partitions = ClosedRangeSymbolClass<Int>(0x30...0x39)
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))
@@ -248,18 +248,18 @@ import Testing;
 	}
 	@Suite("isEquivalent") struct SymbolClassTests_isEquivalent {
 		@Test("single symbol") func test__single() async throws {
-			let partitions = SymbolClass<Int>([ 1 ])
+			let partitions = ClosedRangeSymbolClass<Int>([ 1 ])
 			#expect(partitions.isEquivalent(1, 1))
 		}
 		@Test("single set multi-symbol") func test_isEquivalent_multi() async throws {
-			let partitions = SymbolClass<Int>([0, 1, 2])
+			let partitions = ClosedRangeSymbolClass<Int>([0, 1, 2])
 			#expect(partitions.isEquivalent(0, 1))
 		}
 	}
 	@Suite("meet") struct SymbolClassTests_meet {
 		@Test("two nested partitions") func test_two_nested_parts() async throws {
-			let part1 = SymbolClass<Int>([ 0x30...0x39 ])
-			let part2 = SymbolClass<Int>([ 0x32 ])
+			let part1 = ClosedRangeSymbolClass<Int>([ 0x30...0x39 ])
+			let part2 = ClosedRangeSymbolClass<Int>([ 0x32 ])
 			let partitions = part1.meet(part2)
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
@@ -272,8 +272,8 @@ import Testing;
 			#expect(partitions.getPartitionLabel(0x38) == 0x30)
 		}
 		@Test("two nested partitions (range)") func test_two_nested_parts_range() async throws {
-			let part1 = SymbolClass<Int>([ 0x30...0x39 ])
-			let part2 = SymbolClass<Int>([ 0x32...0x35 ])
+			let part1 = ClosedRangeSymbolClass<Int>([ 0x30...0x39 ])
+			let part2 = ClosedRangeSymbolClass<Int>([ 0x32...0x35 ])
 			let partitions = part1.meet(part2)
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
@@ -286,8 +286,8 @@ import Testing;
 			#expect(partitions.getPartitionLabel(0x38) == 0x30)
 		}
 		@Test("two overlapping partitions") func test_two_overlapping_parts() async throws {
-			let part1 = SymbolClass<Int>([ 0x30...0x35 ])
-			let part2 = SymbolClass<Int>([ 0x32...0x39 ])
+			let part1 = ClosedRangeSymbolClass<Int>([ 0x30...0x35 ])
+			let part2 = ClosedRangeSymbolClass<Int>([ 0x32...0x39 ])
 			let partitions = part1.meet(part2)
 			print(partitions.symbols)
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
@@ -301,8 +301,8 @@ import Testing;
 			#expect(partitions.getPartitionLabel(0x38) == 0x36)
 		}
 		@Test("two disjoint partitions") func test_two_disjoint_parts() async throws {
-			let part1 = SymbolClass<Int>([ 0x30...0x32 ])
-			let part2 = SymbolClass<Int>([ 0x35...0x39 ])
+			let part1 = ClosedRangeSymbolClass<Int>([ 0x30...0x32 ])
+			let part2 = ClosedRangeSymbolClass<Int>([ 0x35...0x39 ])
 			let partitions = part1.meet(part2)
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
@@ -315,10 +315,10 @@ import Testing;
 			#expect(partitions.getPartitionLabel(0x38) == 0x35)
 		}
 		@Test("3 partitions") func test_3_parts() async throws {
-			let part1 = SymbolClass<Int>([ 0x30...0x36 ])
-			let part2 = SymbolClass<Int>([ 0x32...0x34 ])
-			let part3 = SymbolClass<Int>([ 0x33...0x39 ])
-			let partitions = SymbolClass<Int>.meet([part1, part2, part3])
+			let part1 = ClosedRangeSymbolClass<Int>([ 0x30...0x36 ])
+			let part2 = ClosedRangeSymbolClass<Int>([ 0x32...0x34 ])
+			let part3 = ClosedRangeSymbolClass<Int>([ 0x33...0x39 ])
+			let partitions = ClosedRangeSymbolClass<Int>.meet([part1, part2, part3])
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
 			#expect(partitions.getPartitionLabel(0x32) == 0x32)
@@ -331,11 +331,11 @@ import Testing;
 			#expect(partitions.getPartitionLabel(0x39) == 0x37)
 		}
 		@Test("4 partitions") func test_4_parts() async throws {
-			let part1 = SymbolClass<Int>([ 0x30...0x36 ])
-			let part2 = SymbolClass<Int>([ 0x32...0x34 ])
-			let part3 = SymbolClass<Int>([ 0x33...0x38 ])
-			let part4 = SymbolClass<Int>([ 0x30...0x39 ])
-			let partitions = SymbolClass<Int>.meet([part1, part2, part3, part4])
+			let part1 = ClosedRangeSymbolClass<Int>([ 0x30...0x36 ])
+			let part2 = ClosedRangeSymbolClass<Int>([ 0x32...0x34 ])
+			let part3 = ClosedRangeSymbolClass<Int>([ 0x33...0x38 ])
+			let part4 = ClosedRangeSymbolClass<Int>([ 0x30...0x39 ])
+			let partitions = ClosedRangeSymbolClass<Int>.meet([part1, part2, part3, part4])
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
 			#expect(partitions.getPartitionLabel(0x32) == 0x32)

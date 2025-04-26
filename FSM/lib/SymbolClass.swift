@@ -130,7 +130,7 @@ public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSe
 /// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 // TODO: Rename this to SymbolRangePartitionedSet or something
-public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral, SetAlgebra, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral, SetAlgebra, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
 	public typealias Partition = Array<ClosedRange<Symbol>>
@@ -386,7 +386,7 @@ public struct SymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLite
 		return Self.meet([self, other])
 	}
 	public static func meet(_ i: Array<Self>) -> Self {
-		return SymbolClass(partitions: i.flatMap(\.partitions))
+		return ClosedRangeSymbolClass(partitions: i.flatMap(\.partitions))
 	}
 
 	/// The union of a partitioned set is the meet of the union of each cross products of the two sets of partitions
