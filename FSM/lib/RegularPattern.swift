@@ -176,28 +176,28 @@ extension RegularPatternBuilder {
 	// String concatenation is slightly different than language concatenation,
 	// I want to suggest the string concatenation of the cross product of any string from ordered pair languages
 	public static func ++ (lhs: Self, rhs: Self) -> Self {
-		return Self.concatenate([lhs, rhs]);
+		return lhs.concatenate(rhs);
 	}
 	/// Union/alternation
 	// This is another case where the operator is confusing.
 	// SQL uses || for string concatenation, but in C it would suggest union.
 	// You could also use + to suggest union, but many languages including Swift use it for string concatenation.
 	public static func | (lhs: Self, rhs: Self) -> Self {
-		return Self.union([lhs, rhs])
+		return lhs.union(rhs)
 	}
 }
 
 // For symbol types that support it, allow generating a range of symbols
-extension RegularPatternBuilder where Symbol: Comparable & Strideable, Symbol.Stride: SignedInteger {
+extension RegularPatternBuilder {
 	/// Creates a pattern that accepts any single symbol within the given range (exclusive upper bound).
 	/// - Parameter range: The range of symbols (e.g., `0...10`). 
-	public static func range(_ range: ClosedRange<Symbol>) -> Self {
+	public static func range(_ range: ClosedRange<Symbol>) -> Self where Symbol: Strideable, Symbol.Stride: SignedInteger {
 		return Self.union(range.map{ Self.symbol($0) });
 	}
 
 	/// Creates a pattern that accepts any single symbol within the given range (exclusive upper bound).
 	/// - Parameter range: The range of symbols (e.g., `0..<10`).
-	public static func range(_ range: Range<Symbol>) -> Self {
+	public static func range(_ range: Range<Symbol>) -> Self where Symbol: Strideable, Symbol.Stride: SignedInteger {
 		return Self.union(range.map{ Self.symbol($0) });
 	}
 
@@ -214,25 +214,11 @@ extension RegularPatternBuilder where Symbol: Comparable & Strideable, Symbol.St
 	}
 }
 
-/// Indicates that the conforming structure can be exported to a RegularPatternProtocol object
-public protocol RegularPattern where Symbol: Hashable {
-	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
-	associatedtype Symbol;
-
-	func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol;
-
-	/// Get exactly symbols used in the pattern
-	var alphabet: Set<Symbol> { get }
-
-	// TODO: It may be very difficult to add this to ABNF, even though ABNF does have a concept of an alphabet
-	/// Partition the alphabet by equivalent symbols
-	var alphabetPartitions: Set<Set<Symbol>> { get }
-}
-
 /// A very simple implementation of RegularPatternProtocol. Likely the simplest possible implementation.
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.
-public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternBuilder, Hashable where Symbol: BinaryInteger {
+public indirect enum SimpleRegex<Symbol>: RegularPatternBuilder, Hashable where Symbol: BinaryInteger {
+	public typealias Alphabet = SymbolClass<Symbol>
 	public typealias Element = Array<Symbol>
 
 	case alternation([Self])
@@ -265,20 +251,20 @@ public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternBuilder,
 
 	/// The alphabet, partitioned into sets whose behaviors are equivalent
 	/// (i.e. changing the symbol with an equivalent symbol won't change validation)
-	public var alphabetPartitions: Set<Set<Symbol>> {
+	public var alphabetPartitions: Alphabet {
 		switch self {
 			case .alternation(let array):
 				// A union of symbols will always result in an equivalent result, so group symbols in the alternation together
 				let symbols: Set<Symbol> = Set(array.compactMap { if case .symbol(let s) = $0 { s } else { nil } })
-				let nonsymbols: Array<Set<Set<Symbol>>> = array.compactMap { if case .symbol = $0 { return nil } else { return $0.alphabetPartitions } }
-				return alphabetCombine([symbols] + nonsymbols.flatMap { $0 })
+				let nonsymbols: Array<Alphabet.Partition> = array.flatMap { if case .symbol = $0 { return Array<Alphabet.Partition>() } else { return Array($0.alphabetPartitions.partitions) } }
+				return Alphabet(partitions: nonsymbols + [symbols])
 			case .concatenation(let array):
-				return alphabetCombine(array.flatMap { $0.alphabetPartitions })
+				return Alphabet(partitions: array.flatMap { $0.alphabetPartitions.partitions })
 			case .star(let regex):
 				return regex.alphabetPartitions
 			case .symbol(let c):
 				// This won't usually be called, unless the regex is literally a single symbol
-				return Set([Set([c])])
+				return Alphabet(partitions: [[c]])
 		}
 	}
 

@@ -2,7 +2,7 @@ import SwiftUI
 import FSM
 
 struct RegexContentView: View {
-	@Binding var rule_fsm: DFA<UInt32>?
+	@Binding var rule_fsm: ClosedRangeDFA<UInt32>?
 	@State private var regexDescription: String?
 	@State private var error: String?
 
@@ -31,12 +31,13 @@ struct RegexContentView: View {
 			return
 		}
 		Task.detached(priority: .utility) {
-			let regex: REPattern<UInt32> = fsm.toPattern()
-			let description = regex.description
-			await MainActor.run {
-				regexDescription = description
-				error = nil
-			}
+			// FIXME: This
+			//let regex: REPattern<UInt32> = fsm.toPattern()
+			//let description = regex.description
+			//await MainActor.run {
+			//	regexDescription = description
+			//	error = nil
+			//}
 		}
 	}
 }

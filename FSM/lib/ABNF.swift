@@ -679,7 +679,7 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder whe
 
 	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
 		var symbols: Array<ClosedRange<Symbol>> = []
-		var partitions: Array<Array<ClosedRange<Symbol>>> = []
+		var partitions: Array<ClosedRangeSymbolClass<Symbol>.Partition> = []
 
 		for match in matches {
 			let matchPartitions = match.alphabetPartitions(rulelist: rulelist)
@@ -689,7 +689,7 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder whe
 				partitions += matchPartitions.partitions
 			}
 		}
-		return ClosedRangeSymbolClass<Symbol>(partitions: [symbols] + partitions)
+		return ClosedRangeSymbolClass<Symbol>(partitions: [ClosedRangeSymbolClass<Symbol>.Partition(segments: symbols)] + partitions)
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {

@@ -551,7 +551,7 @@ import Testing
 		}
 
 		func testAlphabetPartitionsEqual<T>(_ val: DFA<T>) -> Bool {
-			return alphabetPartitionsByContext(val) == val.alphabetPartitions
+			return alphabetPartitionsByContext(val) == val.alphabetPartitions.partitions
 		}
 
 		@Test("empty") func empty() async throws {

@@ -1,7 +1,8 @@
 // Structures for parsing and generating most dialects of Regular Expressions
 
 /// A parser for a common form of regular expressions
-public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternBuilder, Hashable where Symbol: BinaryInteger {
+public indirect enum REPattern<Symbol>: RegularPatternBuilder, Hashable where Symbol: BinaryInteger {
+	public typealias Alphabet = SymbolClass<Symbol>
 	public typealias Element = Array<Symbol>
 
 	case alternation([Self])
@@ -34,20 +35,20 @@ public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternBuilder, H
 
 	/// The alphabet, partitioned into sets whose behaviors are equivalent
 	/// (i.e. changing the symbol with an equivalent symbol won't change validation)
-	public var alphabetPartitions: Set<Set<Symbol>> {
+	public var alphabetPartitions: Alphabet {
 		switch self {
 			case .alternation(let array):
 				// A union of symbols will always result in an equivalent result, so group symbols in the alternation together
 				let symbols: Set<Symbol> = Set(array.compactMap { if case .symbol(let s) = $0 { s } else { nil } })
-				let nonsymbols: Array<Set<Set<Symbol>>> = array.compactMap { if case .symbol = $0 { return nil } else { return $0.alphabetPartitions } }
-				return alphabetCombine([symbols] + nonsymbols.flatMap { $0 })
+				let nonsymbols: Array<Alphabet.Partition> = array.flatMap { if case .symbol = $0 { return Array<Alphabet.Partition>() } else { return Array($0.alphabetPartitions.partitions) } }
+				return Alphabet(partitions: nonsymbols + [symbols])
 			case .concatenation(let array):
-				return alphabetCombine(array.flatMap { $0.alphabetPartitions })
+				return Alphabet(partitions: array.flatMap { $0.alphabetPartitions.partitions })
 			case .star(let regex):
 				return regex.alphabetPartitions
 			case .symbol(let c):
 				// This won't usually be called, unless the regex is literally a single symbol
-				return Set([Set([c])])
+				return Alphabet(partitions: [[c]])
 		}
 	}
 

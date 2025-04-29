@@ -12,6 +12,7 @@ public protocol NFAProtocol: RegularLanguageProtocol where Symbol: Hashable {
 // TODO: CustomDebugStringConvertible
 
 public struct NFA<Symbol: Hashable>: NFAProtocol, RegularLanguageSetAlgebra {
+	public typealias Alphabet = SymbolClass<Symbol>
 	public typealias Element = Array<Symbol>
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
@@ -138,9 +139,13 @@ public struct NFA<Symbol: Hashable>: NFAProtocol, RegularLanguageSetAlgebra {
 		return viz;
 	}
 
-	lazy var alphabet: Set<Symbol> = {
+	public var alphabet: Set<Symbol> {
 		Set(self.statesSet.flatMap(\.keys))
-	}()
+	}
+
+	public var alphabetPartitions: Alphabet {
+		fatalError()
+	}
 
 	public func nextStates(state: StateNo, symbol: Symbol) -> States {
 		return self.nextStates(states: [state], symbol: symbol);
@@ -400,10 +405,6 @@ public struct NFA<Symbol: Hashable>: NFAProtocol, RegularLanguageSetAlgebra {
 				finals: newFinals
 			);
 		});
-	}
-
-	public func concatenate(_ other: Self) -> Self {
-		return Self.concatenate([self, other]);
 	}
 
 	public static func symbol(_ element: Symbol) -> Self {

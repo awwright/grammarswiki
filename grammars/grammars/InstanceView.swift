@@ -7,7 +7,7 @@ import FSM
 // TODO: Generate negative instances and off-by-one errors
 
 struct InstanceGeneratorView: View {
-	@Binding var rule_fsm: DFA<UInt32>?
+	@Binding var rule_fsm: ClosedRangeDFA<UInt32>?
 	@State private var iterator: DFA<UInt32>.Iterator?
 	@State private var instances: [String] = []
 
@@ -41,7 +41,8 @@ struct InstanceGeneratorView: View {
 
 	private func resetIterator() {
 		if let fsm = rule_fsm {
-			iterator = fsm.makeIterator()
+			// FIXME: This
+			//iterator = fsm.makeIterator()
 			instances = []
 			generateMoreInstances()
 		} else {

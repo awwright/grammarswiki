@@ -121,9 +121,8 @@ struct DocumentDetail: View {
 
 	@State private var rule_error: String? = nil
 	@State private var rule_alphabet: ClosedRangeSymbolClass<UInt32>? = nil
-	@State private var rule_fsm: DFA<UInt32>? = nil
+	@State private var rule_fsm: ClosedRangeDFA<UInt32>? = nil
 	@State private var rule_fsm_error: String? = nil
-	@State private var rule_fsm_proxy: SymbolClassDFA<UInt32>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
 	@State private var rule_partshrink: Dictionary<UInt32, UInt32>? = nil
 	@State private var rule_partexpand: Dictionary<UInt32, Array<UInt32>>? = nil
 
@@ -213,7 +212,7 @@ struct DocumentDetail: View {
 									content_rulelist: $content_rulelist,
 									selectedRule: $selectedRule,
 									rule_alphabet: $rule_alphabet,
-									rule_fsm_proxy: $rule_fsm_proxy
+									rule_fsm: $rule_fsm
 								)
 								Spacer()
 							}
@@ -262,10 +261,11 @@ struct DocumentDetail: View {
 						if showAlphabet {
 							DisclosureGroup("Alphabet", isExpanded: $alphabet_expanded, content: {
 								if let rule_alphabet {
-									ForEach(rule_alphabet.partitions, id: \.self) {
-										part in
-										Text(describeCharacterSet(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
-									}
+									// FIXME: This
+									//ForEach(rule_alphabet.partitions, id: \.self) {
+									//	part in
+									//	Text(describeCharacterSet(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
+									//}
 								}else{
 									Text("Computing alphabet...")
 										.foregroundColor(.gray)
@@ -299,7 +299,7 @@ struct DocumentDetail: View {
 										content_rulelist: $content_rulelist,
 										selectedRule: $selectedRule,
 										rule_alphabet: $rule_alphabet,
-										rule_fsm_proxy: $rule_fsm_proxy
+										rule_fsm: $rule_fsm
 									)
 								})
 							}
@@ -405,46 +405,31 @@ struct DocumentDetail: View {
 
 		// Compute alphabets
 		Task.detached(priority: .utility) {
-			let result_alphabet = reduce(definitions: dependencies, initial: builtins.mapValues({ $0.toPattern(as: ClosedRangeSymbolClass<UInt32>.self) }), combine: { $0.alphabetPartitions(rulelist: $1) })
-			await MainActor.run {
-				rule_alphabet = result_alphabet
-				rule_partshrink = result_alphabet.alphabetReduce
-				let reducedAlphabet = Set(result_alphabet.partitionLabels)
-
-				// Compute DFA
-				Task.detached(priority: .utility) {
-					func reduce<S, T>(definitions: Array<(String, S)>, initial: Dictionary<String, T>, combine: (S, Dictionary<String, T>) throws -> T) rethrows -> T {
-						var current = initial;
-						var last: T?
-						for (rulename, definition) in definitions {
-							last = try combine(definition, current)
-							current[rulename] = last
-						}
-						return last!
-					}
-					do {
-						// Cut the builtins down to match the reducedAlphabet... let's see if this works
-						let reducedAlphabetLanguage = DFA<UInt32>.union( reducedAlphabet.map { DFA<UInt32>.symbol($0) } ).star().minimized();
-						//print(reducedAlphabetLanguage.toViz())
-						let reducedBuiltins = builtins.mapValues { $0.intersection(reducedAlphabetLanguage).minimized() }
-						let result = try reduce(definitions: dependencies, initial: reducedBuiltins, combine: { try $0.toPattern(rules: $1, alphabet: reducedAlphabet).minimized() })
-						await MainActor.run {
-							rule_fsm = result
-							rule_fsm_proxy = SymbolClassDFA(inner: result, mapping: rule_partshrink!)
-							rule_fsm_error = nil
-						}
-					} catch let error as ABNFExportError {
-						print(error)
-						await MainActor.run {
-							rule_fsm = nil
-							rule_fsm_error = "ABNFExportError: " + String(describing: error)
-						}
-					} catch {
-						await MainActor.run {
-							rule_fsm = nil
-							rule_fsm_error = error.localizedDescription
-						}
-					}
+			do {
+				let builtins: Dictionary<String, DFA<UInt32>> = ABNFBuiltins<DFA<UInt32>>.dictionary
+				var rule_fsm_dict: Dictionary<String, ClosedRangeDFA<UInt32>> = builtins.mapValues { ClosedRangeDFA<UInt32>($0.mapSymbols { $0...$0 }) }
+				var rule_alphabet_dict: Dictionary<String, ClosedRangeSymbolClass<UInt32>> = rule_fsm_dict.mapValues { $0.alphabetPartitions }
+				for rulename in dependencies_list.dependencies {
+					rule_alphabet_dict[rulename] = dict[rulename]!.alphabetPartitions(rulelist: rule_alphabet_dict)
+					rule_fsm_dict[rulename] = try dict[rulename]!.toClosedRangePattern(rules: rule_fsm_dict)
+				}
+				let rule_alphabet_result = rule_alphabet_dict[selectedRule];
+				let rule_fsm_result = rule_fsm_dict[selectedRule];
+				await MainActor.run {
+					rule_alphabet = rule_alphabet_result
+					rule_fsm = rule_fsm_result
+					rule_fsm_error = nil
+				}
+			} catch let error as ABNFExportError {
+				print(error)
+				await MainActor.run {
+					rule_fsm = nil
+					rule_fsm_error = "ABNFExportError: " + String(describing: error)
+				}
+			} catch {
+				await MainActor.run {
+					rule_fsm = nil
+					rule_fsm_error = error.localizedDescription
 				}
 			}
 		}
@@ -467,17 +452,6 @@ struct DocumentDetail: View {
 			reservedOperators: []
 		)
 	}
-}
-
-// Build a number of rules in a certain order, later rules possibly depending on results from earlier on
-func reduce<S, T>(definitions: Array<(String, S)>, initial: Dictionary<String, T>, combine: (S, Dictionary<String, T>) throws -> T) rethrows -> T {
-	var current = initial;
-	var last: T?
-	for (rulename, definition) in definitions {
-		last = try combine(definition, current)
-		current[rulename] = last
-	}
-	return last!
 }
 
 func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>) -> String {

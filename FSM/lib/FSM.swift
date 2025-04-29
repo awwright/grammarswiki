@@ -1,11 +1,17 @@
 /// An abstraction of a regular language
-public protocol RegularLanguageProtocol<Symbol>: SetAlgebra, ExpressibleByArrayLiteral, RegularPatternBuilder {
+public protocol RegularLanguageProtocol: Equatable {
+	associatedtype Symbol: Hashable;
+	associatedtype Element: Sequence where Element.Element == Symbol;
+	associatedtype Alphabet: SymbolClassProtocol
+	var alphabet: Set<Symbol> { get }
+	var alphabetPartitions: Alphabet { get }
 	/// Checks if the DFA accepts a given sequence (element of the language)
 	func contains(_ input: Element) -> Bool
+	func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol;
 }
 
 /// A regular language structure that provides set algebra operations
-public protocol RegularLanguageSetAlgebra<Symbol>: SetAlgebra, ExpressibleByArrayLiteral, RegularPatternBuilder {
+public protocol RegularLanguageSetAlgebra: SetAlgebra, ExpressibleByArrayLiteral, RegularPatternBuilder, Equatable {
 	// RegularPatternBuilder provides:
 	//associatedtype Symbol;
 	//static var empty: Self { get }
@@ -26,6 +32,8 @@ public protocol RegularLanguageSetAlgebra<Symbol>: SetAlgebra, ExpressibleByArra
 	/// Implements ``SetAlgebra``
 	func union(_ other: __owned Self) -> Self
 
+	func concatenate(_ other: Self) -> Self
+
 	/// Returns a DFA accepting the intersection of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
 	func intersection(_ other: Self) -> Self
@@ -34,8 +42,6 @@ public protocol RegularLanguageSetAlgebra<Symbol>: SetAlgebra, ExpressibleByArra
 	/// That is, the set of elements in exactly one set or the other set, and not both.
 	/// To only remove elements, see ``subtracting(_:)`` or the ``-(lhs:rhs:)`` operator
 	func symmetricDifference(_ other: __owned Self) -> Self
-
-	func concatenate(_ other: Self) -> Self
 
 	/// Required by ``SetAlgebra``
 	///
@@ -65,7 +71,17 @@ public protocol RegularLanguageSetAlgebra<Symbol>: SetAlgebra, ExpressibleByArra
 }
 
 extension RegularLanguageSetAlgebra {
-	/// Subtraction default implementation
+	/// Default implementation, if static func union is provided
+	public func union(_ other: Self) -> Self {
+		Self.union([self, other])
+	}
+
+	/// Default implementation, if static func concatenate is provided
+	public func concatenate(_ other: Self) -> Self {
+		Self.concatenate([self, other])
+	}
+
+	/// Subtraction default implementation, if subtracting() is provided
 	public static func - (lhs: Self, rhs: Self) -> Self {
 		return lhs.subtracting(rhs)
 	}

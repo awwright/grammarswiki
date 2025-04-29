@@ -340,22 +340,22 @@ import Testing;
 		@Test("Empty pattern")
 		func test_UInt8_empty() async throws {
 			let pattern = SimpleRegex<Int>.empty
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("Epsilon pattern")
 		func test_UInt8_epsilon() async throws {
 			let pattern = SimpleRegex<Int>.epsilon
 			#expect(pattern.alphabet == Set())
-			#expect(pattern.alphabetPartitions == Set())
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("Symbol pattern")
 		func test_UInt8_symbol() async throws {
 			let pattern = SimpleRegex<Int>.symbol(10)
 			#expect(pattern.alphabet == Set([10]))
-			#expect(pattern.alphabetPartitions == Set([ Set([10]) ]))
+			#expect(pattern.alphabetPartitions == [ [10] ])
 		}
 
 		@Test("Union of patterns")
@@ -364,7 +364,7 @@ import Testing;
 			let b = SimpleRegex.symbol(2);
 			let pattern = a.union(b)
 			#expect(pattern.alphabet == Set([1, 2]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 2]) ]))
+			#expect(pattern.alphabetPartitions == [ [1, 2] ])
 		}
 
 		@Test("Nested union")
@@ -376,7 +376,7 @@ import Testing;
 			let union2 = c.union(a)
 			let pattern = union1.union(union2)
 			#expect(pattern.alphabet == Set([1, 2, 3]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 2, 3]) ]))
+			#expect(pattern.alphabetPartitions == [ [1, 2, 3] ])
 		}
 
 		@Test("Concatenation of patterns")
@@ -386,18 +386,18 @@ import Testing;
 			let pattern = a.concatenate(b)
 			#expect(Set(1...3) == Set([1,2,3]))
 			#expect(pattern.alphabet == Set(1...6))
-			#expect(pattern.alphabetPartitions == Set([ Set(1...2), Set(3...4), Set(5...6) ]))
+			#expect(pattern.alphabetPartitions == [ [1, 2], [3, 4], [5, 6] ])
 		}
 
 		@Test("Nested concatenation")
 		func test_UInt8_nestedConcatenate() async throws {
-			let a = SimpleRegex.range(1...20);
-			let b = SimpleRegex.range(2...19);
-			let c = SimpleRegex.range(3...18);
+			let a = SimpleRegex.range(1...10);
+			let b = SimpleRegex.range(2...9);
+			let c = SimpleRegex.range(3...8);
 			let concat1 = a.concatenate(b)
 			let pattern = concat1.concatenate(c)
-			#expect(pattern.alphabet == Set(1...20))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 20]), Set([2, 19]), Set(3...18) ]))
+			#expect(pattern.alphabet == Set(1...10))
+			#expect(pattern.alphabetPartitions == [ [1, 10], [2, 9], [3, 4, 5, 6, 7, 8] ])
 		}
 
 		@Test("Kleene star")
@@ -405,7 +405,7 @@ import Testing;
 			let a = SimpleRegex.range(1...3);
 			let pattern = a.star()
 			#expect(pattern.alphabet == Set([1, 2, 3]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 2, 3]) ]))
+			#expect(pattern.alphabetPartitions == [ [1, 2, 3] ])
 		}
 
 		@Test("Precedence: union over concatenation")
@@ -416,7 +416,7 @@ import Testing;
 			let union = a.union(b)
 			let pattern = union.concatenate(c)
 			#expect(pattern.alphabet == Set(1...3))
-			#expect(pattern.alphabetPartitions == Set([ Set(1...2), Set([3]) ]))
+			#expect(pattern.alphabetPartitions == [ [1, 2], [3] ])
 		}
 
 		@Test("Precedence: concatenation over star")
@@ -426,7 +426,7 @@ import Testing;
 			let star = b.star()
 			let pattern = a.concatenate(star)
 			#expect(pattern.alphabet == Set(1...6))
-			#expect(pattern.alphabetPartitions == Set([ Set(1...2),  Set(3...4),  Set(5...6) ]))
+			#expect(pattern.alphabetPartitions == [ [1, 2],  [3, 4],  [5, 6] ])
 		}
 
 		@Test("Optional pattern")
@@ -434,7 +434,7 @@ import Testing;
 			let a = SimpleRegex.range(1...3);
 			let pattern = a.optional()
 			#expect(pattern.alphabet == Set([1, 2, 3]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 2, 3]) ]))
+			#expect(pattern.alphabetPartitions == [ [1, 2, 3] ])
 		}
 
 		@Test("Plus pattern")
@@ -442,7 +442,7 @@ import Testing;
 			let a = SimpleRegex.symbol(1);
 			let pattern = a.plus()
 			#expect(pattern.alphabet == Set([1]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1]) ]))
+			#expect(pattern.alphabetPartitions == [ [1] ])
 		}
 
 		@Test("Repeating exact count")
@@ -450,7 +450,7 @@ import Testing;
 			let a = SimpleRegex.symbol(1);
 			let pattern = a.repeating(3)
 			#expect(pattern.alphabet == Set([1]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1]) ]))
+			#expect(pattern.alphabetPartitions == [ [1] ])
 		}
 
 		@Test("Repeating range")
@@ -458,7 +458,7 @@ import Testing;
 			let a = SimpleRegex.symbol(1);
 			let pattern = a.repeating(1...3)
 			#expect(pattern.alphabet == Set([1]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1]) ]))
+			#expect(pattern.alphabetPartitions == [ [1] ])
 		}
 
 		@Test("Repeating at least")
@@ -466,126 +466,126 @@ import Testing;
 			let a = SimpleRegex.range(1...3);
 			let pattern = a.repeating(2...)
 			#expect(pattern.alphabet == Set(1...3))
-			#expect(pattern.alphabetPartitions == Set([ Set(1...3) ]))
+			#expect(pattern.alphabetPartitions == [ [1, 2, 3] ])
 		}
 
 		@Test("Sequence initialization")
 		func test_UInt8_sequenceInit() async throws {
 			let pattern = SimpleRegex([1, 2, 3])
 			#expect(pattern.alphabet == Set(1...3))
-			#expect(pattern.alphabetPartitions == Set([ Set([1]), Set([2]), Set([3]) ]))
+			#expect(pattern.alphabetPartitions == [ [1], [2], [3] ])
 		}
 
 		@Test("empty.union(empty)")
 		func test_UInt8_empty_union_empty() async throws {
 			let pattern = SimpleRegex<UInt8>.empty.union(SimpleRegex<UInt8>.empty)
 			// Union of two empty sets is empty
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("empty.union(epsilon)")
 		func test_UInt8_empty_union_epsilon() async throws {
 			let pattern = SimpleRegex<UInt8>.empty.union(SimpleRegex<UInt8>.epsilon)
 			// Union of of empty set and singleton is singleton
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("empty.union(symbol)")
 		func test_UInt8_empty_union_symbol() async throws {
 			let pattern = SimpleRegex<UInt8>.empty.union(SimpleRegex<UInt8>.symbol(0x20))
 			// Union of of empty set and singleton is singleton
-			#expect(pattern.alphabet == Set([0x20]))
-			#expect(pattern.alphabetPartitions == Set([ Set([0x20]) ]))
+			#expect(pattern.alphabet == [0x20])
+			#expect(pattern.alphabetPartitions == [ [0x20] ])
 		}
 
 		@Test("empty.concatenate(empty)")
 		func test_UInt8_empty_concatenate_empty() async throws {
 			let pattern = SimpleRegex<UInt8>.empty.concatenate(SimpleRegex<UInt8>.empty)
 			// Concatenation with empty set is empty set
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("empty.concatenate(epsilon)")
 		func test_UInt8_empty_concatenate_epsilon() async throws {
 			let pattern = SimpleRegex<UInt8>.empty.concatenate(SimpleRegex<UInt8>.epsilon)
 			// Concatenation with empty set is empty set
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("empty.concatenate(symbol)")
 		func test_UInt8_empty_concatenate_symbol() async throws {
 			let pattern = SimpleRegex<UInt8>.empty.concatenate(SimpleRegex<UInt8>.symbol(0x20))
 			// Concatenation with empty set is empty set
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("empty.star")
 		func test_UInt8_empty_star() async throws {
 			let pattern = SimpleRegex<UInt8>.empty.star()
 			// This becomes epsilon, because empty set repeated zero times is epsilon
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("epsilon.union(empty)")
 		func test_UInt8_epsilon_union_empty() async throws {
 			let pattern = SimpleRegex<UInt8>.epsilon.union(SimpleRegex<UInt8>.empty)
 			// Union with epsilon contains epsilon
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("epsilon.union(epsilon)")
 		func test_UInt8_epsilon_union_epsilon() async throws {
 			let pattern = SimpleRegex<UInt8>.epsilon.union(SimpleRegex<UInt8>.epsilon)
 			// Union with epsilon and itself contains epsilon
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("epsilon.union(symbol)")
 		func test_UInt8_epsilon_union_symbol() async throws {
 			let pattern = SimpleRegex<UInt8>.epsilon.union(SimpleRegex<UInt8>.symbol(0x20))
 			// Union of of empty set and singleton is singleton
-			#expect(pattern.alphabet == Set([0x20]))
-			#expect(pattern.alphabetPartitions == Set([ Set([0x20]) ]))
+			#expect(pattern.alphabet == [0x20])
+			#expect(pattern.alphabetPartitions == [ [0x20] ])
 		}
 
 		@Test("epsilon.concatenate(empty)")
 		func test_UInt8_epsilon_concatenate_empty() async throws {
 			let pattern = SimpleRegex<UInt8>.epsilon.concatenate(SimpleRegex<UInt8>.empty)
 			// Concatenation with empty set is empty set
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("epsilon.concatenate(epsilon)")
 		func test_UInt8_epsilon_concatenate_epsilon() async throws {
 			let pattern = SimpleRegex<UInt8>.epsilon.concatenate(SimpleRegex<UInt8>.epsilon)
 			// Concatenation with epsilon is itself
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("epsilon.concatenate(symbol)")
 		func test_UInt8_epsilon_concatenate_symbol() async throws {
 			let pattern = SimpleRegex<UInt8>.epsilon.concatenate(SimpleRegex<UInt8>.symbol(0x20))
 			// Concatenation with epsilon is itself
-			#expect(pattern.alphabet == Set([0x20]))
-			#expect(pattern.alphabetPartitions == Set([ Set([0x20]) ]))
+			#expect(pattern.alphabet == [0x20])
+			#expect(pattern.alphabetPartitions == [ [0x20] ])
 		}
 
 		@Test("epsilon.star")
 		func test_UInt8_epsilon_star() async throws {
 			let pattern = SimpleRegex<UInt8>.epsilon.star()
 			// Nothing never grows adding nothing
-			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
+			#expect(pattern.alphabet == [])
+			#expect(pattern.alphabetPartitions == [])
 		}
 
 		@Test("union(union(union))")
@@ -599,8 +599,8 @@ import Testing;
 				]),
 				SimpleRegex<UInt8>.symbol(0x22),
 			])
-			#expect(pattern.alphabet == Set(0x20...0x22))
-			#expect(pattern.alphabetPartitions == Set([ Set(0x20...0x22) ]))
+			#expect(pattern.alphabet == [0x20, 0x21, 0x22])
+			#expect(pattern.alphabetPartitions == [ [0x20, 0x21, 0x22] ])
 		}
 
 		@Test("union.star")
@@ -609,15 +609,15 @@ import Testing;
 				SimpleRegex<UInt8>.symbol(0x20),
 				SimpleRegex<UInt8>.symbol(0x21),
 			]).star()
-			#expect(pattern.alphabet == Set(0x20...0x21))
-			#expect(pattern.alphabetPartitions == Set([ Set(0x20...0x21) ]))
+			#expect(pattern.alphabet == [0x20, 0x21])
+			#expect(pattern.alphabetPartitions == [ [0x20, 0x21] ])
 		}
 
 		@Test("epsilon.star")
 		func test_UInt8_symbol_star() async throws {
-			let pattern = SimpleRegex<UInt8>.range(0x30...0x39).star()
-			#expect(pattern.alphabet == Set(0x30...0x39))
-			#expect(pattern.alphabetPartitions == Set([ Set(0x30...0x39) ]))
+			let pattern = SimpleRegex<UInt8>.range(0x30...0x32).star()
+			#expect(pattern.alphabet == Set(0x30...0x32))
+			#expect(pattern.alphabetPartitions == [ [0x30, 0x31, 0x32] ])
 		}
 	}
 }

@@ -46,6 +46,8 @@ extension DFAProtocol {
 public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra {
 	// TODO: Implement BidirectionalCollection
 
+	/// The SymbolClassProtocol
+	public typealias Alphabet = SymbolClass<Symbol>
 	/// Default element type produced reading this as a Sequence
 	public typealias Element = Array<Symbol>
 	/// The type used to index states
@@ -140,9 +142,9 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		Set(self.states.flatMap(\.keys))
 	}
 
-	public var alphabetPartitions: Set<Set<Symbol>> {
+	public var alphabetPartitions: Alphabet {
 		// If two symbols follow the same path, they might have the same behavior.
-		return alphabetCombine(states.indices.flatMap { v in targets(source: v).values })
+		return Alphabet(partitions: states.indices.flatMap { v in targets(source: v).values })
 	}
 
 	/// Generates a Graphviz DOT representation of the DFA for visualization.
