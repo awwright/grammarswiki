@@ -2,10 +2,10 @@
 /// This is a protocol so that various ways of indexing the elements based on tyoe can be used
 ///
 /// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
-public protocol SymbolClassProtocol {
+public protocol SymbolClassProtocol: ExpressibleByArrayLiteral, Equatable {
 	/// This type may be any type that can compute intersections, etc.
-	associatedtype Partition: SetAlgebra;
-	typealias Component = Partition.Element
+	associatedtype Partition: Equatable & Hashable;
+	associatedtype Component: Equatable & Hashable;
 
 	associatedtype Partitions: Collection where Partitions.Element == Partition
 	var partitions: Partitions { get }
@@ -28,14 +28,10 @@ extension SymbolClassProtocol {
 	public init(partitions: some Collection<Partition>) {
 		self.init(partitions: partitions.map{ $0 })
 	}
-}
 
-/// A variation of PartitionedSetProtocol where the elements can be individually iterated
-protocol PartitionedSetElementsProtocol: SymbolClassProtocol where Partition: Collection, Component: Hashable {
-	associatedtype Components: Collection where Components.Element == Component
-	var components: Components { get }
-	var alphabetReduce: Dictionary<Component, Component> { get }
-	var alphabetExpand: Dictionary<Component, Array<Component>> { get }
+	public init(arrayLiteral elements: Partition...) {
+		self.init(partitions: elements)
+	}
 }
 
 /// A variation of PartitionedSetProtocol that can store multiple sets of symbols, associating each set with a label
@@ -45,24 +41,13 @@ protocol PartitionedDictionaryProtocol: SymbolClassProtocol {
 	func label(component: Component) -> Label?
 }
 
-// TODO: There may plausibly a PartitionedMultidictProtocol for mapping one element to zero-or-more values
-protocol PartitionedMultidictProtocol: SymbolClassProtocol {
-	associatedtype Label;
-	func siblings(label: Label) -> Partition?
-	func labels(component: Component) -> Array<Label>
-}
-
-public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: SymbolClassProtocol, ExpressibleByArrayLiteral {
+public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: SymbolClassProtocol {
 	public typealias Partition = Set<Symbol>
 	public typealias Component = Symbol
 
 	public init() {
 		symbols = []
 		parents = []
-	}
-
-	public init(arrayLiteral: Array<Symbol>...) {
-		self.init(partitions: arrayLiteral.map { Set($0) })
 	}
 
 	public init(partitions: Array<Partition>) {
@@ -104,10 +89,10 @@ public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: SymbolClassPr
 	}
 }
 
-public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol, ExpressibleByArrayLiteral {
+public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol {
 	public typealias Partition = Set<Symbol>
 	public typealias Partitions = Set<Partition>
-	public typealias ArrayLiteralElement = Array<Symbol>
+	public typealias ArrayLiteralElement = Partition
 
 	public var partitions: Set<Partition>
 
@@ -117,10 +102,6 @@ public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol, ExpressibleByA
 
 	public init<T: SymbolClassProtocol>(_ input: T) where T.Partitions == Partitions, T.Component == Symbol {
 		self.partitions = input.partitions
-	}
-
-	public init(arrayLiteral elements: Array<Symbol>...) {
-		self.init(partitions: Set(elements.map { Set($0) }))
 	}
 
 	public init(partitions: Set<Set<Symbol>>) {
@@ -150,12 +131,12 @@ public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol, ExpressibleByA
 /// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 // TODO: Rename this to SymbolRangePartitionedSet or something
-public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: ExpressibleByArrayLiteral, SetAlgebra, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClassProtocol, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
 	public typealias Partition = Array<ClosedRange<Symbol>>
 	/// Implements ExpressibleByArrayLiteral
-	public typealias ArrayLiteralElement = Symbol
+	public typealias ArrayLiteralElement = Partition
 	/// Implements SetAlgebra
 	public typealias Element = Symbol
 
@@ -186,6 +167,10 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: Expressible
 	/// Convenience function for writing `SymbolClass([0...5], [10...20], ...)`
 	public init(_ partitions: Partition...) {
 		self.init(partitions: partitions)
+	}
+
+	public init(arrayLiteral elements: Partition...) {
+		self.init(partitions: elements)
 	}
 
 	/// Create from an array of Symbols
@@ -273,16 +258,10 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: Expressible
 		self.parents = parents
 	}
 
-	// MARK: ExpressibleByArrayLiteral
-	public init(arrayLiteral elements: ArrayLiteralElement...) {
-		self.symbols = elements.map { $0...$0 }.sorted { $0.lowerBound < $1.lowerBound }
-		self.parents = self.symbols.enumerated().map { i, _ in i }
-	}
-
 	/// A view on the current ClosedRangeSymbolClass that looks like a normal SymbolClass
 	/// It is read-only.
 	public struct Expanded: SymbolClassProtocol {
-		
+		public typealias ArrayLiteralElement = Partition
 		public typealias Partition = Set<Symbol>
 		public typealias Partitions = Set<Partition>
 
@@ -297,7 +276,7 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: Expressible
 		}
 
 		public func siblings(of: Component) -> Set<Symbol> {
-			Set(underlying.siblings(of).flatMap { $0 })
+			Set(underlying.siblings(of: of).flatMap { $0 })
 		}
 
 		public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
@@ -407,7 +386,7 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: Expressible
 	}
 
 	/// Get all the set of symbols in the same partition as the given symbol
-	public func siblings(_ symbol: Symbol) -> Partition {
+	public func siblings(of symbol: Symbol) -> Partition {
 		let index = self.findIndex(symbol)
 		guard let index else { fatalError("Cannot find \(symbol) in \(symbols)") }
 		let parent = self.parents[index]
@@ -438,56 +417,6 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: Expressible
 	}
 	public static func meet(_ i: Array<Self>) -> Self {
 		return ClosedRangeSymbolClass(partitions: i.flatMap(\.partitions))
-	}
-
-	/// The union of a partitioned set is the meet of the union of each cross products of the two sets of partitions
-	/// So the union of two part-sets with one partition each will have one partition
-	/// But the union of part-sets with more than one partition will be the meet of their partitions.
-	public func union(_ other: __owned Self) -> Self {
-		fatalError("Unimplemented")
-	}
-
-	public func intersection(_ other: Self) -> Self {
-		fatalError("Unimplemented")
-	}
-
-	public func symmetricDifference(_ other: __owned Self) -> Self {
-		fatalError("Unimplemented")
-	}
-
-	public mutating func formUnion(_ other: __owned Self) {
-		self = self.union(other)
-	}
-
-	public mutating func formIntersection(_ other: Self) {
-		self = self.intersection(other)
-	}
-
-	public mutating func formSymmetricDifference(_ other: __owned Self) {
-		self = self.symmetricDifference(other)
-	}
-
-	public mutating func insert(_ newMember: __owned Symbol) -> (inserted: Bool, memberAfterInsert: Symbol) {
-		let range = ClosedRange(uncheckedBounds: (newMember, newMember))
-		// Find insertion point
-		let insertionIndex = symbols.firstIndex(where: { $0.lowerBound > newMember }) ?? symbols.count
-		symbols.insert(range, at: insertionIndex)
-		symbols.insert(range, at: insertionIndex)
-		return (true, newMember)
-	}
-
-	public mutating func remove(_ member: Symbol) -> Symbol? {
-		guard let index = symbols.firstIndex(where: { $0.contains(member) }) else {
-			return nil
-		}
-		symbols.remove(at: index)
-		parents.remove(at: index)
-		return member
-	}
-
-	public mutating func update(with newMember: __owned Symbol) -> Symbol? {
-		let (inserted, _) = insert(newMember)
-		return inserted ? nil : newMember
 	}
 
 	public static func == (lhs: Self, rhs: Self) -> Bool {

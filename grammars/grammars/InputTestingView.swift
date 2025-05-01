@@ -60,7 +60,7 @@ struct InputTestingView: View {
 		let fsm_test_state = selected_fsm.nextState(state: selected_fsm.initial, input: input)
 		fsm_test_result = selected_fsm.isFinal(fsm_test_state)
 		if let fsm_test_state {
-			fsm_test_next = selected_fsm.states[fsm_test_state].keys.flatMap { rule_alphabet?.siblings($0) ?? [] }
+			fsm_test_next = selected_fsm.states[fsm_test_state].keys.flatMap { rule_alphabet?.siblings(of: $0) ?? [] }
 		}
 		if fsm_test_result == false {
 			if fsm_test_state != nil {

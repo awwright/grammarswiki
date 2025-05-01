@@ -30,7 +30,7 @@ struct GraphVizSourceView: View {
 		  }
 		  Task.detached(priority: .userInitiated) {
 				let reducedAlphabetLanguage = DFA<UInt32>.union(alphabet.partitionLabels.map { DFA<UInt32>.symbol($0) }).star()
-				let expanded: DFA<String> = fsm.intersection(reducedAlphabetLanguage).mapSymbols { describeCharacterSet(alphabet.siblings($0)) }
+			  let expanded: DFA<String> = fsm.intersection(reducedAlphabetLanguage).mapSymbols { describeCharacterSet(alphabet.siblings(of: $0)) }
 				let result = expanded.minimized().toViz()
 				await MainActor.run {
 					 vizSource = result
