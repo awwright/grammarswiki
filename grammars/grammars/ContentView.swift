@@ -405,7 +405,12 @@ struct DocumentDetail: View {
 
 		// Compute alphabets
 		Task.detached(priority: .utility) {
-			let result_alphabet = reduce(definitions: dependencies, initial: builtins.mapValues({ $0.toPattern(as: ClosedRangeSymbolClass<UInt32>.self) }), combine: { $0.alphabetPartitions(rulelist: $1) })
+			var result_alphabet_dict = builtins.mapValues({ $0.toPattern(as: ClosedRangeSymbolClass<UInt32>.self) });
+			for (rulename, definition) in dependencies {
+				result_alphabet_dict[rulename] = definition.alphabetPartitions(rulelist: result_alphabet_dict)
+			}
+			let result_alphabet =  result_alphabet_dict[selectedRule]!
+
 			await MainActor.run {
 				rule_alphabet = result_alphabet
 				rule_partshrink = result_alphabet.alphabetReduce
@@ -413,21 +418,16 @@ struct DocumentDetail: View {
 
 				// Compute DFA
 				Task.detached(priority: .utility) {
-					func reduce<S, T>(definitions: Array<(String, S)>, initial: Dictionary<String, T>, combine: (S, Dictionary<String, T>) throws -> T) rethrows -> T {
-						var current = initial;
-						var last: T?
-						for (rulename, definition) in definitions {
-							last = try combine(definition, current)
-							current[rulename] = last
-						}
-						return last!
-					}
 					do {
 						// Cut the builtins down to match the reducedAlphabet... let's see if this works
 						let reducedAlphabetLanguage = DFA<UInt32>.union( reducedAlphabet.map { DFA<UInt32>.symbol($0) } ).star().minimized();
 						//print(reducedAlphabetLanguage.toViz())
-						let reducedBuiltins = builtins.mapValues { $0.intersection(reducedAlphabetLanguage).minimized() }
-						let result = try reduce(definitions: dependencies, initial: reducedBuiltins, combine: { try $0.toPattern(rules: $1, alphabet: reducedAlphabet).minimized() })
+						var result_fsm_dict = builtins.mapValues { $0.intersection(reducedAlphabetLanguage).minimized() }
+						for (rulename, definition) in dependencies {
+							result_fsm_dict[rulename] = try definition.toPattern(rules: result_fsm_dict, alphabet: reducedAlphabet).minimized()
+						}
+						let result = result_fsm_dict[selectedRule]!
+
 						await MainActor.run {
 							rule_fsm = result
 							rule_fsm_proxy = SymbolClassDFA(inner: result, mapping: rule_partshrink!)
@@ -467,17 +467,6 @@ struct DocumentDetail: View {
 			reservedOperators: []
 		)
 	}
-}
-
-// Build a number of rules in a certain order, later rules possibly depending on results from earlier on
-func reduce<S, T>(definitions: Array<(String, S)>, initial: Dictionary<String, T>, combine: (S, Dictionary<String, T>) throws -> T) rethrows -> T {
-	var current = initial;
-	var last: T?
-	for (rulename, definition) in definitions {
-		last = try combine(definition, current)
-		current[rulename] = last
-	}
-	return last!
 }
 
 func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>) -> String {
