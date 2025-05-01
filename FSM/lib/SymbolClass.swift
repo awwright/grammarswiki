@@ -2,7 +2,7 @@
 /// This is a protocol so that various ways of indexing the elements based on tyoe can be used
 ///
 /// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
-public protocol PartitionedSetProtocol {
+public protocol SymbolClassProtocol {
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype Partition: SetAlgebra;
 	typealias Component = Partition.Element
@@ -23,7 +23,7 @@ public protocol PartitionedSetProtocol {
 }
 
 /// Default implementations of functions for PartitionedSetProtocol
-extension PartitionedSetProtocol {
+extension SymbolClassProtocol {
 	/// Create from an array of Symbols
 	public init(partitions: some Collection<Partition>) {
 		self.init(partitions: partitions.map{ $0 })
@@ -31,7 +31,7 @@ extension PartitionedSetProtocol {
 }
 
 /// A variation of PartitionedSetProtocol where the elements can be individually iterated
-protocol PartitionedSetElementsProtocol: PartitionedSetProtocol where Partition: Collection, Component: Hashable {
+protocol PartitionedSetElementsProtocol: SymbolClassProtocol where Partition: Collection, Component: Hashable {
 	associatedtype Components: Collection where Components.Element == Component
 	var components: Components { get }
 	var alphabetReduce: Dictionary<Component, Component> { get }
@@ -39,20 +39,20 @@ protocol PartitionedSetElementsProtocol: PartitionedSetProtocol where Partition:
 }
 
 /// A variation of PartitionedSetProtocol that can store multiple sets of symbols, associating each set with a label
-protocol PartitionedDictionaryProtocol: PartitionedSetProtocol {
+protocol PartitionedDictionaryProtocol: SymbolClassProtocol {
 	associatedtype Label;
 	func siblings(label: Label) -> Partition?
 	func label(component: Component) -> Label?
 }
 
 // TODO: There may plausibly a PartitionedMultidictProtocol for mapping one element to zero-or-more values
-protocol PartitionedMultidictProtocol: PartitionedSetProtocol {
+protocol PartitionedMultidictProtocol: SymbolClassProtocol {
 	associatedtype Label;
 	func siblings(label: Label) -> Partition?
 	func labels(component: Component) -> Array<Label>
 }
 
-public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSetProtocol, RegularPatternProtocol, ExpressibleByArrayLiteral {
+public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: SymbolClassProtocol, ExpressibleByArrayLiteral {
 	public typealias Partition = Set<Symbol>
 	public typealias Component = Symbol
 
@@ -102,29 +102,6 @@ public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: PartitionedSe
 		}
 		return labels.map { Set(dict[$0]!) }
 	}
-
-	// MARK: RegularPatternProtocol
-	// For building a partitioned alphabet
-	public static var empty: Self { Self() }
-	public static var epsilon: Self { Self() }
-	public static func symbol(_ element: Symbol) -> Self { .init(partitions: [[element]]) }
-	public func star() -> Self { self }
-	public static func union(_ elements: [Self]) -> Self {
-		let symbols = Set(elements.flatMap(\.symbols)).sorted()
-		let labels = symbols.map { s in elements.map { $0.siblings(of: s) } }
-		var partitions = Dictionary<Array<Set<Symbol>>, Set<Symbol>>()
-		for (part, s) in zip(labels, symbols) {
-			partitions[part, default: []].insert(s);
-		}
-		return Self(partitions: Array(partitions.values))
-	}
-	public static func concatenate(_ elements: [Self]) -> Self {
-		Self()
-	}
-}
-
-public protocol SymbolClassProtocol: PartitionedSetProtocol {
-
 }
 
 public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol, ExpressibleByArrayLiteral {
@@ -587,6 +564,8 @@ public func compressPartitions<Symbol>(_ partitions: Set<Set<Symbol>>) -> (reduc
 
 /// Transparently maps a regular language with a large alphabet onto a DFA with a smaller alphabet where some symbols are equivalent
 public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageProtocol {
+	public typealias Symbol = Symbol
+	public typealias Partition = Symbol
 	public typealias StateNo = DFA<Symbol>.StateNo
 	public typealias States = DFA<Symbol>.States
 	public typealias ArrayLiteralElement = DFA<Symbol>.ArrayLiteralElement

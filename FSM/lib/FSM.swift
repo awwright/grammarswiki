@@ -1,5 +1,8 @@
 /// An abstraction of a regular language
-public protocol RegularLanguageProtocol<Symbol>: SetAlgebra, ExpressibleByArrayLiteral, RegularPatternProtocol {
+public protocol RegularLanguageProtocol: SetAlgebra, ExpressibleByArrayLiteral, RegularPatternProtocol {
+	associatedtype Symbol;
+	associatedtype Partition;
+
 	/// Checks if the DFA accepts a given sequence (element of the language)
 	func contains(_ input: Element) -> Bool
 

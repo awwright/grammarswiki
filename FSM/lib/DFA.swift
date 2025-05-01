@@ -43,18 +43,21 @@ extension DFAProtocol {
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
+public struct DFA<Partition: Hashable>: Hashable, DFAProtocol {
 	// TODO: Implement BidirectionalCollection
 
+	/// A partition might contain more than one symbols, represented with a different type.
+	/// Presently, each symbol forms its own partition.
+	public typealias Symbol = Partition
 	/// Default element type produced reading this as a Sequence
-	public typealias Element = Array<Symbol>
+	public typealias Element = Array<Partition>
 	/// The type used to index states
 	public typealias StateNo = Int;
 	/// The type of a set of states, which in the case of a DFA is optional to include the oblivion state (`nil`).
 	public typealias States = StateNo?;
 
 	/// The transition table, mapping each state to a dictionary of symbol-to-next-state transitions.
-	public let states: Array<Dictionary<Symbol, StateNo>>;
+	public let states: Array<Dictionary<Partition, StateNo>>;
 	/// The initial state of the DFA.
 	public let initial: StateNo;
 	/// The set of accepting (final) states.
@@ -75,7 +78,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	///   - finals: The set of accepting states; all must be within `states` bounds.
 	/// - Precondition: All referenced states must exist within `states`.
 	public init(
-		states: Array<Dictionary<Symbol, StateNo>> = [],
+		states: Array<Dictionary<Partition, StateNo>> = [],
 		initial: StateNo = 0,
 		finals: Set<StateNo> = []
 	) {
@@ -116,8 +119,8 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	///
 	/// - Parameter nfa: The NFA to convert.
 	/// - Precondition: The NFA must have at most one transition per symbol per state.
-	public init(nfa: NFA<Symbol>){
-		let translation = NFA<Symbol>.parallel(fsms: [nfa], merge: { $0[0] });
+	public init(nfa: NFA<Partition>){
+		let translation = NFA<Partition>.parallel(fsms: [nfa], merge: { $0[0] });
 		assert(translation.statesSet.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
 		self.states = translation.statesSet.map { $0.mapValues { $0.first! } }
 		self.initial = translation.initials.first!;
@@ -136,11 +139,11 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 		return difference.finals.isEmpty;
 	}
 
-	public var alphabet: Set<Symbol> {
+	public var alphabet: Set<Partition> {
 		Set(self.states.flatMap(\.keys))
 	}
 
-	public var alphabetPartitions: Set<Set<Symbol>> {
+	public var alphabetPartitions: Set<Set<Partition>> {
 		// If two symbols follow the same path, they might have the same behavior.
 		return alphabetCombine(states.indices.flatMap { v in targets(source: v).values })
 	}
@@ -165,8 +168,8 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	}
 
 	/// Get a table of all of the symbols that point to each state, from some given state
-	public func targets(source state: StateNo) -> Dictionary<StateNo, Set<Symbol>> {
-		var partitions: Dictionary<StateNo, Set<Symbol>> = [:];
+	public func targets(source state: StateNo) -> Dictionary<StateNo, Set<Partition>> {
+		var partitions: Dictionary<StateNo, Set<Partition>> = [:];
 		for (symbol, target) in states[state] {
 			partitions[target, default: []].insert(symbol);
 		}
@@ -174,7 +177,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	}
 
 	/// Get a table of all of the symbols that transition from and to the given states
-	public func targets(source state: StateNo, target: StateNo) -> Set<Symbol> {
+	public func targets(source state: StateNo, target: StateNo) -> Set<Partition> {
 		return targets(source: state)[target] ?? []
 	}
 
@@ -184,7 +187,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	///   - state: The state to compute a transition from.
 	///   - symbol: The input symbol.
 	/// - Returns: The next state, or `nil` if no transition exists.
-	public func nextState(state: StateNo, symbol: Symbol) -> States {
+	public func nextState(state: StateNo, symbol: Partition) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
 		return self.states[state][symbol];
@@ -196,7 +199,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	///   - state: The starting state.
 	///   - input: The sequence to process.
 	/// - Returns: The resulting state, or `nil` if any transition fails.
-	public func nextState(state: StateNo, input: any Sequence<Symbol>) -> States {
+	public func nextState(state: StateNo, input: any Sequence<Partition>) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
 		var currentState = state;
@@ -235,7 +238,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	///
 	/// - Parameter input: The input collection to match against.
 	/// - Returns: A tuple of the matched prefix and remaining input, or `nil` if no match exists.
-	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Symbol> {
+	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Partition> {
 		var currentState = self.initial;
 		// Test the initial condition
 		var finalIndex: T.Index? = self.isFinal(currentState) ? input.startIndex : nil;
@@ -263,7 +266,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 
 	/// Instant Description (ID), describes a FSM and its specific state during execution
 	public struct ID {
-		public let fsm: DFA<Symbol>
+		public let fsm: DFA<Partition>
 		public let state: StateNo
 
 		/// Indicates if the current state of the ID is a final state
@@ -272,7 +275,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 		}
 
 		/// Returns new ID after consuming the given symbol
-		public subscript(symbol: Symbol) -> Self? {
+		public subscript(symbol: Partition) -> Self? {
 			let state = self.fsm.states[self.state][symbol];
 			if let state {
 				return Self.init(fsm: self.fsm, state: state)
@@ -282,8 +285,8 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 		}
 
 		/// Returns a new DFA whose initial state is the current state
-		public var derived: DFA<Symbol> {
-			DFA<Symbol>(
+		public var derived: DFA<Partition> {
+			DFA<Partition>(
 				states: self.fsm.states,
 				initial: self.state,
 				finals: self.fsm.finals
@@ -307,7 +310,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	/// Combine this with tags on states to distinguish different end states that have different semantics
 	/// However, this will return `nil` if input lands on a non-live state.
 	/// In this case, it is equivalent to all inputs that land on a non-live state, which canot be enumerated without an alphabet. So don't do that.
-	public func equivalentInputs(input: any Sequence<Symbol>) -> Self? {
+	public func equivalentInputs(input: any Sequence<Partition>) -> Self? {
 		// Minimizing the FSM ensures that there's no equivalent final states
 		// If the FSM is already minimized this should be a somewhat speedy operation
 		let minimized = self.minimized()
@@ -317,7 +320,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 			else { return nil } //uh-oh, now we have to find all of the oblivion states
 			currentState = nextState
 		}
-		return DFA<Symbol>(
+		return DFA<Partition>(
 			states: minimized.states,
 			initial: minimized.initial,
 			finals: [currentState]
@@ -335,16 +338,16 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	/// Symbol matches the input symbol and any other symbols that can be found in between alpha and beta.
 	/// This function is used to partition
 	// TODO: This could also return a Dict? A beta value is unique per alpha value
-	public func symbolContext(input: Symbol) -> Array<(alpha: Self, symbols: Self, beta: Self)> {
+	public func symbolContext(input: Partition) -> Array<(alpha: Self, symbols: Self, beta: Self)> {
 		self.states.enumerated().compactMap {
 			(source, table) in
 			let target = table[input]
 			guard let target else { return nil }
 			// Get all of the keys that map to the same target
-			let symbols: Array<Symbol> = table.keys.filter { table[$0] == target }
+			let symbols: Array<Partition> = table.keys.filter { table[$0] == target }
 			return (
 				alpha: self.subpaths(source: self.initial, target: [source]),
-				symbols: DFA<Symbol>(symbols.map { [$0] }),
+				symbols: DFA<Partition>(symbols.map { [$0] }),
 				beta: self.subpaths(source: target, target: self.finals)
 			)
 		}
@@ -359,7 +362,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	/// 	To find a union, return true if any is true. To find the intersection, return true only when all are true.
 	///
 	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
-		var newStates = Array<Dictionary<Symbol, StateNo>>();
+		var newStates = Array<Dictionary<Partition, StateNo>>();
 		var newFinals = Set<StateNo>();
 		var forward = Dictionary<Array<States>, StateNo>();
 		var backward = Array<Array<States>>();
@@ -385,9 +388,9 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 
 		var newStateId = 0;
 		while(newStateId < backward.count){
-			var newStateTransitions = Dictionary<Symbol, StateNo>();
+			var newStateTransitions = Dictionary<Partition, StateNo>();
 			let inStates = backward[newStateId];
-			var alphabets = Set<Symbol>();
+			var alphabets = Set<Partition>();
 			// enumerate over inStates and build the alphabet for the new state
 			for (fsm, state) in zip(fsms, inStates) {
 				if let state {
@@ -416,7 +419,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	/// It does this by merging states with the "same" behavior into the same state.
 	/// Implemented by Hopcroft's Algorithm.
 	/// - Returns: The minimized DFA
-	public func minimized() -> DFA<Symbol> {
+	public func minimized() -> DFA<Partition> {
 		// Step 1: Remove unreachable states
 		var reachable = Set<Int>([initial])
 		var reachableStates = [initial]
@@ -449,7 +452,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 		reachableStates = reachableStates.filter { coReachable.contains($0) }
 		let stateMap = Dictionary(uniqueKeysWithValues: reachableStates.enumerated().map { ($1, $0) })
 		if(stateMap.isEmpty) {
-			return DFA<Symbol>.empty
+			return DFA<Partition>.empty
 		}
 		let trimmedStates = reachableStates.map { state in
 			// Remove transitions to dead states, remap remaining transitions
@@ -523,7 +526,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	///
 	/// - Parameter transform: A function mapping each symbol to a new symbol type.
 	/// - Returns: A new DFA with transformed transitions.
-	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> DFA<Target> {
+	public func mapSymbols<Target>(_ transform: (Partition) -> Target) -> DFA<Target> {
 		let newStates = states.map {
 			// Map the key of the dictionary using `transform`
 			Dictionary(uniqueKeysWithValues: $0.map { (key, value) in
@@ -556,25 +559,25 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 
 	/// Returns a DFA accepting the union of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
-	public func union(_ other: __owned DFA<Symbol>) -> DFA<Symbol> {
+	public func union(_ other: __owned DFA<Partition>) -> DFA<Partition> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] });
 	}
 
 	/// Returns a DFA accepting the intersection of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
-	public func intersection(_ other: DFA<Symbol>) -> DFA<Symbol> {
+	public func intersection(_ other: DFA<Partition>) -> DFA<Partition> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] });
 	}
 
 	/// Returns a DFA accepting the symmetric difference of this DFA’s language and another’s.
 	/// That is, the set of elements in exactly one set or the other set, and not both.
 	/// To only remove elements, see ``subtracting(_:)`` or the ``-(lhs:rhs:)`` operator
-	public func symmetricDifference(_ other: __owned DFA<Symbol>) -> DFA<Symbol> {
+	public func symmetricDifference(_ other: __owned DFA<Partition>) -> DFA<Partition> {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
 
 	// Also provide a static implementation of union since it applies to any number of inputs
-	public static func union(_ languages: Array<DFA<Symbol>>) -> DFA<Symbol> {
+	public static func union(_ languages: Array<DFA<Partition>>) -> DFA<Partition> {
 		if(languages.count == 0){
 			return Self();
 		} else if(languages.count == 1) {
@@ -584,22 +587,22 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	}
 
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
-	public static func concatenate(_ languages: Array<DFA<Symbol>>) -> DFA<Symbol> {
+	public static func concatenate(_ languages: Array<DFA<Partition>>) -> DFA<Partition> {
 		if(languages.count == 0){
 			// Concatenation identity is epsilon
-			return DFA<Symbol>(states: [[:]], initial: 0, finals: [0]);
+			return DFA<Partition>(states: [[:]], initial: 0, finals: [0]);
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
-		let nfa = NFA<Symbol>.concatenate(languages.map { NFA<Symbol>($0) });
-		return DFA<Symbol>(nfa: nfa);
+		let nfa = NFA<Partition>.concatenate(languages.map { NFA<Partition>($0) });
+		return DFA<Partition>(nfa: nfa);
 	}
 
-	public func concatenate(_ other: DFA<Symbol>) -> DFA<Symbol> {
+	public func concatenate(_ other: DFA<Partition>) -> DFA<Partition> {
 		return Self.concatenate([self, other]);
 	}
 
-	public static func symbol(_ element: Symbol) -> DFA<Symbol> {
+	public static func symbol(_ element: Partition) -> DFA<Partition> {
 		return Self(
 			states: [[element: 1], [:]],
 			initial: 0,
@@ -609,7 +612,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 
 	/// Return a DFA that also accepts the empty sequence
 	/// i.e. adds the initial state to the set of final states
-	public func optional() -> DFA<Symbol> {
+	public func optional() -> DFA<Partition> {
 		return Self(
 			states: self.states,
 			initial: self.initial,
@@ -618,8 +621,8 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	}
 
 	/// Returns a DFA accepting one or more repetitions of its language.
-	public func plus() -> DFA<Symbol> {
-		let nfa = NFA<Symbol>(
+	public func plus() -> DFA<Partition> {
+		let nfa = NFA<Partition>(
 			states: self.states.map { $0.mapValues { Set([$0]) } },
 			// Add an epsilon transition from the final states to the initial state
 			epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? [self.initial] : [] },
@@ -630,7 +633,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	}
 
 	/// Returns a DFA accepting zero or more repetitions of its language.
-	public func star() -> DFA<Symbol> {
+	public func star() -> DFA<Partition> {
 		return self.plus().optional();
 		// Should be equal to:
 		//let nfa = NFA<Element>(
@@ -644,19 +647,19 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	}
 
 	/// Returns a DFA accepting exactly `count` repetitions of its language.
-	public func repeating(_ count: Int) -> DFA<Symbol> {
+	public func repeating(_ count: Int) -> DFA<Partition> {
 		precondition(count >= 0)
 		return DFA.concatenate(Array(repeating: self, count: count))
 	}
 
 	/// Returns a DFA accepting between `range.lowerBound` and `range.upperBound` repetitions.
-	public func repeating(_ range: ClosedRange<Int>) -> DFA<Symbol> {
+	public func repeating(_ range: ClosedRange<Int>) -> DFA<Partition> {
 		precondition(range.lowerBound >= 0)
 		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + Array(repeating: self.optional(), count: Int(range.upperBound-range.lowerBound)));
 	}
 
 	/// Returns a DFA accepting `range.lowerBound` or more repetitions.
-	public func repeating(_ range: PartialRangeFrom<Int>) -> DFA<Symbol> {
+	public func repeating(_ range: PartialRangeFrom<Int>) -> DFA<Partition> {
 		precondition(range.lowerBound >= 0)
 		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
@@ -674,15 +677,15 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	/// ```
 	/// for element in dfa { print(element) }
 	/// ```
-	public func makeIterator() -> Iterator where Symbol: Comparable {
+	public func makeIterator() -> Iterator where Partition: Comparable {
 		return Iterator(self);
 	}
 
 	/// A simple way to create a view on a struct to change how it is iterated or enumerated
 	public struct IteratorFactory<T>: Sequence where T: IteratorProtocol {
-		let dfa: DFA<Symbol>;
-		let constructor: (DFA<Symbol>) -> T;
-		init(_ dfa: DFA<Symbol>, constructor: @escaping (DFA<Symbol>) -> T) {
+		let dfa: DFA<Partition>;
+		let constructor: (DFA<Partition>) -> T;
+		init(_ dfa: DFA<Partition>, constructor: @escaping (DFA<Partition>) -> T) {
 			self.dfa = dfa;
 			self.constructor = constructor;
 		}
@@ -693,7 +696,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 
 	/// Returns an iterator that walks over all of the possible of the paths in the state graph.
 	/// - Parameter filter: A function that decides if the paths in the given state should be walked. This is for filtering out paths that have already been visited or otherwise don't mean anything.
-	public func pathIterator(filter: @escaping (PathIterator, PathIterator.Path) -> Bool) -> IteratorFactory<PathIterator> where Symbol: Comparable {
+	public func pathIterator(filter: @escaping (PathIterator, PathIterator.Path) -> Bool) -> IteratorFactory<PathIterator> where Partition: Comparable {
 		return IteratorFactory(self) {
 			PathIterator($0, filter: filter);
 		};
@@ -702,23 +705,23 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	/// An iterator that can iterate over all of the elements of the FSM.
 	/// Indefinitely, if need be.
 	// TODO: Consider using AsyncStream for this
-	public struct PathIterator: IteratorProtocol where Symbol: Comparable {
+	public struct PathIterator: IteratorProtocol where Partition: Comparable {
 		public struct Segment: Equatable {
 			public var source: StateNo
 			public var index: Int
-			public var symbol: Symbol
+			public var symbol: Partition
 			public var target: StateNo
 		};
 		public typealias Path = Array<Segment>;
-		let fsm: DFA<Symbol>;
-		let states: Array<Array<(symbol: Symbol, toState: StateNo)>>
+		let fsm: DFA<Partition>;
+		let states: Array<Array<(symbol: Partition, toState: StateNo)>>
 		let filter: (Self, Path) -> Bool;
 
 		var stack: Path;
 		var visited: Set<StateNo>?;
 		var started = false;
 
-		init(_ fsm: DFA<Symbol>, filter: @escaping (Self, Path) -> Bool) {
+		init(_ fsm: DFA<Partition>, filter: @escaping (Self, Path) -> Bool) {
 			// let fsm = options.fsm;
 			self.fsm = fsm;
 			self.filter = filter;
@@ -751,7 +754,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 			self.stack = [];
 		}
 
-		init(_ fsm: DFA<Symbol>) {
+		init(_ fsm: DFA<Partition>) {
 			self.init(fsm, filter: { _, _ in true });
 		}
 
@@ -809,21 +812,21 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 		}
 	}
 
-	public struct Iterator: IteratorProtocol where Symbol: Comparable {
-		public typealias Element = Array<Symbol>
+	public struct Iterator: IteratorProtocol where Partition: Comparable {
+		public typealias Element = Array<Partition>
 
-		let fsm: DFA<Symbol>;
+		let fsm: DFA<Partition>;
 		var iterator: PathIterator;
 		var currentDepth: Int;
 
-		init(_ fsm: DFA<Symbol>) {
+		init(_ fsm: DFA<Partition>) {
 			// let fsm = options.fsm;
 			self.fsm = fsm;
 			self.iterator = PathIterator(fsm, filter: { _, path in path.count <= 0 });
 			self.currentDepth = 0;
 		}
 
-		public mutating func next<T>() -> T? where T: SymbolSequenceProtocol, T.Element == Symbol {
+		public mutating func next<T>() -> T? where T: SymbolSequenceProtocol, T.Element == Partition {
 			while currentDepth <= fsm.states.count {
 				while let stack = iterator.next() {
 					if stack.count < currentDepth { continue }
@@ -844,7 +847,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	// Now we're really getting into alchemy land
 	/// This follows all the paths walked by a set of strings provided as another DFA
 	/// It takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
-	public func nextStates(initial: StateNo, input: DFA<Symbol>) -> Set<StateNo> where Symbol: Comparable {
+	public func nextStates(initial: StateNo, input: DFA<Partition>) -> Set<StateNo> where Partition: Comparable {
 		var finalStates: Set<StateNo> = [];
 		//var derivative = DFA<Symbol>(
 		//	states: self.states,
@@ -875,17 +878,17 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 		return finalStates;
 	}
 
-	public func homomorphism<Target>(mapping: [(some Collection<Symbol>, some Collection<Target>)]) -> DFA<Target> {
-		let nfa: NFA<Target> = NFA<Symbol>(self).homomorphism(mapping: mapping);
+	public func homomorphism<Target>(mapping: [(some Collection<Partition>, some Collection<Target>)]) -> DFA<Target> {
+		let nfa: NFA<Target> = NFA<Partition>(self).homomorphism(mapping: mapping);
 		return DFA<Target>(nfa: nfa)
 	}
 
-	public func homomorphism<Target>(mapping: [(DFA<Symbol>, DFA<Target>)]) -> DFA<Target> {
-		let nfa: NFA<Target> = NFA<Symbol>(self).homomorphism(mapping: mapping);
+	public func homomorphism<Target>(mapping: [(DFA<Partition>, DFA<Target>)]) -> DFA<Target> {
+		let nfa: NFA<Target> = NFA<Partition>(self).homomorphism(mapping: mapping);
 		return DFA<Target>(nfa: nfa)
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Partition {
 		// Make a new initial state at 0, epsilon transition to old initial state
 		// Create an empty new-final state at 1
 		// And add epsilon transitions for all old-final states to new-final state at 1
@@ -985,15 +988,15 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 		return insert(newMember).1
 	}
 
-	public mutating func formUnion(_ other: __owned DFA<Symbol>) {
+	public mutating func formUnion(_ other: __owned DFA<Partition>) {
 		self = self.union(other);
 	}
 
-	public mutating func formIntersection(_ other: DFA<Symbol>) {
+	public mutating func formIntersection(_ other: DFA<Partition>) {
 		self = self.intersection(other);
 	}
 
-	public mutating func formSymmetricDifference(_ other: __owned DFA<Symbol>) {
+	public mutating func formSymmetricDifference(_ other: __owned DFA<Partition>) {
 		self = self.symmetricDifference(other);
 	}
 
@@ -1004,11 +1007,11 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	///
 	/// Note: I think (-) is pretty unambiguous here, but some math notation uses \ for this operation.
 	public static func - (lhs: Self, rhs: Self) -> Self {
-		return DFA<Symbol>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
+		return DFA<Partition>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
 	}
 }
 
-extension DFA: Comparable, Sequence where Symbol: Comparable {
+extension DFA: Comparable, Sequence where Partition: Comparable {
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		// Generate instances of each side, compare if lhs < rhs
 		// If they are the same, generate next instance (in alphabetical order)
@@ -1033,9 +1036,9 @@ extension DFA: Comparable, Sequence where Symbol: Comparable {
 }
 
 // Conditional protocol compliance
-extension DFA: Sendable where Symbol: Sendable {}
+extension DFA: Sendable where Partition: Sendable {}
 
-extension DFA where Symbol == Character {
+extension DFA where Partition == Character {
 //	typealias Element = String
 	init (_ val: Array<String>) {
 		self.init(val.map{ Array($0) })

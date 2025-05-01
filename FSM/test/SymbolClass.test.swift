@@ -97,35 +97,6 @@ import Testing;
 			#expect(partitions.isEquivalent(1, 5))
 		}
 	}
-	@Suite("set operations") struct SymbolPartitionedSetTests_SetAlgebra {
-		@Test("empty") func test_single() async throws {
-			let partitions = SymbolPartitionedSet<Int>.empty
-			#expect(partitions.symbols == [])
-			#expect(partitions.partitions == [])
-		}
-		@Test("epsilon") func test_epsilon() async throws {
-			let partitions = SymbolPartitionedSet<Int>.epsilon
-			#expect(partitions.symbols == [])
-			#expect(partitions.partitions == [])
-		}
-		@Test("symbol") func test_symbol() async throws {
-			let partitions = SymbolPartitionedSet<Int>.symbol(1)
-			#expect(partitions.symbols == [1])
-			#expect(partitions.partitions == [ [1] ])
-		}
-		@Test("union of symbols") func test_union1() async throws {
-			let partitions: SymbolPartitionedSet<Int> = [ [1] ]
-			#expect(partitions.symbols == [1])
-			#expect(partitions.partitions == [ [1] ])
-		}
-		@Test("union of concatenation") func test_union2() async throws {
-			let partitions = SymbolPartitionedSet.union([
-				SymbolPartitionedSet.union([ SymbolPartitionedSet.symbol(1) ])
-			])
-			#expect(partitions.symbols == [1])
-			#expect(partitions.partitions == [ [1] ])
-		}
-	}
 }
 
 @Suite("SymbolClass") struct SymbolClassTests {
