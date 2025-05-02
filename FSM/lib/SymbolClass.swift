@@ -13,7 +13,7 @@ public protocol SymbolClassProtocol: ExpressibleByArrayLiteral, Equatable {
 	/// Initialize a PartitionedSet with the given elements, taking the union-meet of the subsets
 	/// If elements appear in multiple partitions, elements found in the same partitions are split out and merged into a new partition
 	/// (so that they never share a partition with elements they didn't share with in all partitions).
-	init(partitions: some Collection<Partition>)
+	init(partitions: Array<Partition>)
 	/// Determine if the partitioned set contains the given value as a component
 	func contains(_ component: Component) -> Bool
 	/// Get the set of symbols from the partition of the given symbol
@@ -24,21 +24,9 @@ public protocol SymbolClassProtocol: ExpressibleByArrayLiteral, Equatable {
 
 /// Default implementations of functions for PartitionedSetProtocol
 extension SymbolClassProtocol {
-	/// Create from an array of Symbols
-	public init(partitions: some Collection<Partition>) {
-		self.init(partitions: partitions.map{ $0 })
-	}
-
 	public init(arrayLiteral elements: Partition...) {
 		self.init(partitions: elements)
 	}
-}
-
-/// A variation of PartitionedSetProtocol that can store multiple sets of symbols, associating each set with a label
-protocol PartitionedDictionaryProtocol: SymbolClassProtocol {
-	associatedtype Label;
-	func siblings(label: Label) -> Partition?
-	func label(component: Component) -> Label?
 }
 
 public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: SymbolClassProtocol {
@@ -104,8 +92,8 @@ public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol {
 		self.partitions = input.partitions
 	}
 
-	public init(partitions: Set<Set<Symbol>>) {
-		self.partitions = partitions
+	public init(partitions: some Collection<Set<Symbol>>) {
+		self.partitions = Set(partitions)
 	}
 
 	public func contains(_ symbol: Symbol) -> Bool{
@@ -266,6 +254,14 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClass
 		public typealias Partitions = Set<Partition>
 
 		let underlying: ClosedRangeSymbolClass<Symbol>
+
+		public init(underlying: ClosedRangeSymbolClass<Symbol>) {
+			self.underlying = underlying
+		}
+
+		public init(partitions: Array<Set<Symbol>>) {
+			fatalError()
+		}
 
 		public var partitions: Set<Partition> {
 			Set<Set<Symbol>>(underlying.partitions.map { Set($0.flatMap { $0 }) })

@@ -72,7 +72,7 @@ import Testing;
 			#expect(!partitions.contains(3))
 		}
 		@Test("range of values") func test_contains_range() async throws {
-			let partitions: SymbolPartitionedSet<Int> = [ Array(0x30...0x39) ]
+			let partitions: SymbolPartitionedSet<Int> = [ Set(0x30...0x39) ]
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))
@@ -125,7 +125,7 @@ import Testing;
 			#expect(!partitions.contains(3))
 		}
 		@Test("range of values") func test_contains_range() async throws {
-			let partitions: SymbolClass<Int> = [Array(0x30...0x39)]
+			let partitions: SymbolClass<Int> = [Set(0x30...0x39)]
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))
@@ -134,7 +134,7 @@ import Testing;
 			#expect(!partitions.contains(0x3A))
 		}
 		@Test("two ranges of values") func test_contains_ranges() async throws {
-			let partitions: SymbolClass<Int> = [ Array(0x41...0x5A), Array(0x61...0x7A) ]
+			let partitions: SymbolClass<Int> = [ Set(0x41...0x5A), Set(0x61...0x7A) ]
 			#expect(!partitions.contains(0x40))
 			#expect(partitions.contains(0x41))
 			#expect(partitions.contains(0x42))
@@ -149,7 +149,7 @@ import Testing;
 			#expect(!partitions.contains(0x7B))
 		}
 		@Test("three ranges of values") func test_contains_ranges3() async throws {
-			let partitions: SymbolClass<Int> = [ Array(0x30...0x39), Array(0x41...0x5A), Array(0x61...0x7A) ]
+			let partitions: SymbolClass<Int> = [ Set(0x30...0x39), Set(0x41...0x5A), Set(0x61...0x7A) ]
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))

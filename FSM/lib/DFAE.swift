@@ -26,23 +26,24 @@ public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashabl
 
 /// DFAE (DFA with Equivalence) is a struct that maps elements in the FSM to some target element.
 /// You can also get a FSM denoting the set of elements in the same partition.
-public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>: PartitionedDictionaryProtocol {
+public struct DFAE<Symbol: Comparable & Hashable, Value: Comparable & Hashable> {
+	public typealias Key = Array<Symbol>
 	public typealias Partition = DFA<Symbol>
 
-	public typealias Partitions = Dictionary<Label, DFA<Symbol>>.Values
-	public var partitions: Dictionary<Label, DFA<Symbol>>.Values { partitionsDict.values }
+	public typealias Partitions = Dictionary<Value, DFA<Symbol>>.Values
+	public var partitions: Dictionary<Value, DFA<Symbol>>.Values { partitionsDict.values }
 
-	typealias Inner = SymbolOrTag<Symbol, Label>;
-	typealias SymTag = SymbolOrTag<Symbol, Label>;
+	typealias Inner = SymbolOrTag<Symbol, Value>;
+	typealias SymTag = SymbolOrTag<Symbol, Value>;
 
 	/// Specifies a set of elements and the partition they map to
-	public let partitionsDict: Dictionary<Label, DFA<Symbol>>
+	public let partitionsDict: Dictionary<Value, DFA<Symbol>>
 
 	/// The union of all the partitions, tagged with the partition
 	let inner: DFA<SymTag>
 
 	/// Final states and the partition they are members of
-	let stateToTarget: Dictionary<DFA<Symbol>.StateNo, Label>
+	let stateToTarget: Dictionary<DFA<Symbol>.StateNo, Value>
 
 	public init() {
 		self.partitionsDict = [:]
@@ -50,7 +51,7 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>:
 		self.stateToTarget = [:]
 	}
 
-	init(partitions: Dictionary<Label, DFA<Symbol>>){
+	init(partitions: Dictionary<Value, DFA<Symbol>>){
 		let innerMap: Array<DFA<SymTag>> = partitions.map {
 			(partNo, fsm) in
 			DFA<SymTag>(
@@ -68,10 +69,10 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>:
 			)
 		}
 		let inner = DFA<SymTag>.union(innerMap)
-		let stateToTarget = Dictionary<DFA<Symbol>.StateNo, Label>(uniqueKeysWithValues: inner.finals.compactMap {
+		let stateToTarget = Dictionary<DFA<Symbol>.StateNo, Value>(uniqueKeysWithValues: inner.finals.compactMap {
 			stateNo in
 			let table = inner.states[stateNo]
-			var value: (DFA.StateNo, Label)? = nil
+			var value: (DFA.StateNo, Value)? = nil
 			for (key, _) in table {
 				if case .tag(let tag) = key {
 					if value != nil {
@@ -88,27 +89,27 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>:
 		self.stateToTarget = stateToTarget
 	}
 
-	public func contains(_ component: Component) -> Bool {
+	public func contains(_ component: Key) -> Bool {
 		self[component] != nil
 	}
 
-	subscript(_ value: some Sequence<Symbol>) -> Label? {
-		let resultState = self.inner.nextState(state: self.inner.initial, input: value.map { SymbolOrTag<Symbol, Label>.symbol($0) })
+	subscript(_ value: some Sequence<Symbol>) -> Value? {
+		let resultState = self.inner.nextState(state: self.inner.initial, input: value.map { SymbolOrTag<Symbol, Value>.symbol($0) })
 		guard self.inner.isFinal(resultState) else { return nil }
 		guard let resultState else { return nil }
 		assert(resultState < self.inner.states.count)
 		let resultTarget = stateToTarget[resultState]
 		guard let resultTarget else { return nil }
-		assert(self.inner.states[resultState][SymbolOrTag<Symbol, Label>.tag(resultTarget)] != nil)
+		assert(self.inner.states[resultState][SymbolOrTag<Symbol, Value>.tag(resultTarget)] != nil)
 		return resultTarget
 	}
 
 
-	func siblings(label: Label) -> DFA<Symbol>? {
+	func siblings(label: Value) -> DFA<Symbol>? {
 		fatalError("Unimplemented")
 	}
 
-	func label(component: Component) -> Label? {
+	func label(component: Key) -> Value? {
 		fatalError("Unimplemented")
 	}
 
@@ -116,7 +117,7 @@ public struct DFAE<Symbol: Comparable & Hashable, Label: Comparable & Hashable>:
 		fatalError("Unimplemented")
 	}
 
-	public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
+	public func isEquivalent(_ lhs: Key, _ rhs: Key) -> Bool {
 		return self[lhs] == self[rhs]
 	}
 }
