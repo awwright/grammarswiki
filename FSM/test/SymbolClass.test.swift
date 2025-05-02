@@ -46,86 +46,33 @@ import Testing;
 	}
 }
 
-@Suite("SymbolPartitionedSet") struct SymbolPartitionedSetTests {
-	@Suite("contains") struct SymbolPartitionedSet_partitionReduce {
-		@Test("array literal") func test_array_literal() async throws {
-			let partitions: SymbolPartitionedSet<Int> = [[0, 1]]
-			#expect(partitions.contains(0))
-			#expect(partitions.contains(1))
-			#expect(!partitions.contains(2))
-		}
-		@Test("init ranges") func test_partitionReduce_empty() async throws {
-			let partitions: SymbolPartitionedSet<Int> = []
-			#expect(!partitions.contains(1))
-			#expect(!partitions.contains(2))
-		}
-		@Test("single symbol") func test_partitionReduce_single() async throws {
-			let partitions: SymbolPartitionedSet<Int> = [ [1] ]
-			#expect(partitions.contains(1))
-			#expect(!partitions.contains(2))
-		}
-		@Test("single set multi-symbol") func test_partitionReduce_multi() async throws {
-			let partitions: SymbolPartitionedSet<Int> = [ [0, 1, 2] ]
-			#expect(partitions.contains(0))
-			#expect(partitions.contains(1))
-			#expect(partitions.contains(2))
-			#expect(!partitions.contains(3))
-		}
-		@Test("range of values") func test_contains_range() async throws {
-			let partitions: SymbolPartitionedSet<Int> = [ Set(0x30...0x39) ]
-			#expect(!partitions.contains(0x2F))
-			#expect(partitions.contains(0x30))
-			#expect(partitions.contains(0x31))
-			#expect(partitions.contains(0x38))
-			#expect(partitions.contains(0x39))
-			#expect(!partitions.contains(0x3A))
-		}
-	}
-	@Suite("isEquivalent") struct SymbolPartitionedSetTests_isEquivalent {
-		@Test("single symbol") func test__single() async throws {
-			let partitions: SymbolPartitionedSet<Int> = [ [1] ]
-			#expect(partitions.isEquivalent(1, 1))
-		}
-		@Test("single part multi-symbol") func test_isEquivalent_2() async throws {
-			let partitions: SymbolPartitionedSet<Int> = [ [0, 1, 2] ]
-			#expect(partitions.isEquivalent(0, 1))
-		}
-		@Test("multi-part") func test_isEquivalent_3() async throws {
-			let partitions: SymbolPartitionedSet<Int> = [ [0, 2, 4], [1, 3, 5] ]
-			#expect(!partitions.isEquivalent(0, 1))
-			#expect(partitions.isEquivalent(0, 2))
-			#expect(partitions.isEquivalent(1, 5))
-		}
-	}
-}
-
 @Suite("SymbolClass") struct SymbolClassTests {
 	@Suite("contains") struct SymbolClassTests_partitionReduce {
 		@Test("array literal") func test_array_literal() async throws {
-			let partitions: SymbolClass<Int> = [[0], [1]]
+			let partitions: SetSymbolClass<Int> = [[0], [1]]
 			#expect(partitions.contains(0))
 			#expect(partitions.contains(1))
 			#expect(!partitions.contains(2))
 		}
 		@Test("init ranges") func test_partitionReduce_empty() async throws {
-			let partitions: SymbolClass<Int> = []
+			let partitions: SetSymbolClass<Int> = []
 			#expect(!partitions.contains(1))
 			#expect(!partitions.contains(2))
 		}
 		@Test("single symbol") func test_partitionReduce_single() async throws {
-			let partitions: SymbolClass<Int> = [ [1] ]
+			let partitions: SetSymbolClass<Int> = [ [1] ]
 			#expect(partitions.contains(1))
 			#expect(!partitions.contains(2))
 		}
 		@Test("single set multi-symbol") func test_partitionReduce_multi() async throws {
-			let partitions: SymbolClass<Int> = [ [0, 1, 2] ]
+			let partitions: SetSymbolClass<Int> = [ [0, 1, 2] ]
 			#expect(partitions.contains(0))
 			#expect(partitions.contains(1))
 			#expect(partitions.contains(2))
 			#expect(!partitions.contains(3))
 		}
 		@Test("range of values") func test_contains_range() async throws {
-			let partitions: SymbolClass<Int> = [Set(0x30...0x39)]
+			let partitions: SetSymbolClass<Int> = [Set(0x30...0x39)]
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))
@@ -134,7 +81,7 @@ import Testing;
 			#expect(!partitions.contains(0x3A))
 		}
 		@Test("two ranges of values") func test_contains_ranges() async throws {
-			let partitions: SymbolClass<Int> = [ Set(0x41...0x5A), Set(0x61...0x7A) ]
+			let partitions: SetSymbolClass<Int> = [ Set(0x41...0x5A), Set(0x61...0x7A) ]
 			#expect(!partitions.contains(0x40))
 			#expect(partitions.contains(0x41))
 			#expect(partitions.contains(0x42))
@@ -149,7 +96,7 @@ import Testing;
 			#expect(!partitions.contains(0x7B))
 		}
 		@Test("three ranges of values") func test_contains_ranges3() async throws {
-			let partitions: SymbolClass<Int> = [ Set(0x30...0x39), Set(0x41...0x5A), Set(0x61...0x7A) ]
+			let partitions: SetSymbolClass<Int> = [ Set(0x30...0x39), Set(0x41...0x5A), Set(0x61...0x7A) ]
 			#expect(!partitions.contains(0x2F))
 			#expect(partitions.contains(0x30))
 			#expect(partitions.contains(0x31))
@@ -172,11 +119,11 @@ import Testing;
 	}
 	@Suite("isEquivalent") struct SymbolClassTests_isEquivalent {
 		@Test("single symbol") func test__single() async throws {
-			let partitions: SymbolClass<Int> = [ [1] ]
+			let partitions: SetSymbolClass<Int> = [ [1] ]
 			#expect(partitions.isEquivalent(1, 1))
 		}
 		@Test("single set multi-symbol") func test_isEquivalent_multi() async throws {
-			let partitions: SymbolClass<Int> = [[0, 1, 2]]
+			let partitions: SetSymbolClass<Int> = [[0, 1, 2]]
 			#expect(partitions.isEquivalent(0, 1))
 		}
 	}

@@ -5,7 +5,7 @@
 public protocol SymbolClassProtocol: ExpressibleByArrayLiteral, Equatable {
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype Partition: Equatable & Hashable;
-	associatedtype Component: Equatable & Hashable;
+	associatedtype Symbol: Equatable & Hashable;
 
 	associatedtype Partitions: Collection where Partitions.Element == Partition
 	var partitions: Partitions { get }
@@ -15,11 +15,11 @@ public protocol SymbolClassProtocol: ExpressibleByArrayLiteral, Equatable {
 	/// (so that they never share a partition with elements they didn't share with in all partitions).
 	init(partitions: Array<Partition>)
 	/// Determine if the partitioned set contains the given value as a component
-	func contains(_ component: Component) -> Bool
+	func contains(_ component: Symbol) -> Bool
 	/// Get the set of symbols from the partition of the given symbol
-	func siblings(of: Component) -> Partition
+	func siblings(of: Symbol) -> Partition
 	/// Determine if the given two components exist in the same partition
-	func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool
+	func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool
 }
 
 /// Default implementations of functions for PartitionedSetProtocol
@@ -29,55 +29,7 @@ extension SymbolClassProtocol {
 	}
 }
 
-public struct SymbolPartitionedSet<Symbol: Comparable & Hashable>: SymbolClassProtocol {
-	public typealias Partition = Set<Symbol>
-	public typealias Component = Symbol
-
-	public init() {
-		symbols = []
-		parents = []
-	}
-
-	public init(partitions: Array<Partition>) {
-		symbols = Set(partitions.flatMap { $0 }).sorted()
-		let members = symbols.map { s in partitions.enumerated().compactMap { $0.1.contains(s) ? $0.0 : nil } }
-		parents = members.map { members.firstIndex(of: $0)! }
-	}
-
-	var symbols: Array<Symbol>
-	var parents: Array<Int>
-
-	public func contains(_ element: Symbol) -> Bool {
-		symbols.contains(element)
-	}
-
-	public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
-		guard self.contains(lhs) else { return false }
-		guard self.contains(rhs) else { return false }
-		return self.siblings(of: lhs).contains(rhs)
-	}
-
-	public func siblings(of: Symbol) -> Set<Symbol> {
-		// It may seem natural to return nil, but it's unnecessary, the result always includes `of`, so
-		// the only time this will have result.isEmpty is if the symbol does not exist.
-		guard let i = symbols.firstIndex(of: of) else { return [] }
-		let parent = parents[i]
-		return Set(symbols.enumerated().compactMap { parents[$0.0] == parent ? $0.1 : nil })
-	}
-
-	public typealias Partitions = Array<Partition>
-	public var partitions: Partitions {
-		let labels = Set(parents).sorted()
-		var dict: Dictionary<Int, Array<Symbol>> = Dictionary(uniqueKeysWithValues: labels.map { ($0, []) })
-		for i in 0..<symbols.count {
-			let label = parents[i]
-			dict[label]!.append(symbols[i])
-		}
-		return labels.map { Set(dict[$0]!) }
-	}
-}
-
-public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol {
+public struct SetSymbolClass<Symbol: Hashable>: SymbolClassProtocol {
 	public typealias Partition = Set<Symbol>
 	public typealias Partitions = Set<Partition>
 	public typealias ArrayLiteralElement = Partition
@@ -88,7 +40,7 @@ public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol {
 		self.partitions = []
 	}
 
-	public init<T: SymbolClassProtocol>(_ input: T) where T.Partitions == Partitions, T.Component == Symbol {
+	public init<T: SymbolClassProtocol>(_ input: T) where T.Partitions == Partitions, T.Symbol == Symbol {
 		self.partitions = input.partitions
 	}
 
@@ -100,11 +52,11 @@ public struct SymbolClass<Symbol: Hashable>: SymbolClassProtocol {
 		partitions.contains(where: { $0.contains(symbol) })
 	}
 
-	public func siblings(of: Component) -> Set<Symbol> {
+	public func siblings(of: Symbol) -> Set<Symbol> {
 		partitions.filter { $0.contains(of) }.first ?? []
 	}
 
-	public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
+	public func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool {
 		siblings(of: lhs).contains(rhs)
 	}
 
@@ -271,11 +223,11 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClass
 			underlying.findIndex(symbol) != nil
 		}
 
-		public func siblings(of: Component) -> Set<Symbol> {
+		public func siblings(of: Symbol) -> Set<Symbol> {
 			Set(underlying.siblings(of: of).flatMap { $0 })
 		}
 
-		public func isEquivalent(_ lhs: Component, _ rhs: Component) -> Bool {
+		public func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool {
 			// FIXME this is going to be horribly show for large ranges
 			siblings(of: lhs).contains(rhs)
 		}
