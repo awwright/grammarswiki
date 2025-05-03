@@ -1,46 +1,45 @@
-/// A protocol that is able to store a set of set of symbols, such that all the sets are disjoint from each other, each element only appearing in one partition
-/// This is a protocol so that various ways of indexing the elements based on tyoe can be used
-///
-/// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
-public protocol SymbolClassProtocol: ExpressibleByArrayLiteral, Equatable {
+/// An Alphabet stores a set of symbol classes: Partitions on a set of symbols that all have the same behavior within some context.
+/// The Alphabet has two core features: Iterating over the partitions, and intersecting multiple partitions to create a new symbol class.
+public protocol AlphabetProtocol: ExpressibleByArrayLiteral, Equatable {
+	// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
 	/// This type may be any type that can compute intersections, etc.
-	associatedtype Partition: Equatable & Hashable;
+	associatedtype SymbolClass: Equatable & Hashable;
 	associatedtype Symbol: Equatable & Hashable;
 
-	associatedtype Partitions: Collection where Partitions.Element == Partition
+	associatedtype Partitions: Collection where Partitions.Element == SymbolClass
 	var partitions: Partitions { get }
 
 	/// Initialize a PartitionedSet with the given elements, taking the union-meet of the subsets
 	/// If elements appear in multiple partitions, elements found in the same partitions are split out and merged into a new partition
 	/// (so that they never share a partition with elements they didn't share with in all partitions).
-	init(partitions: Array<Partition>)
+	init(partitions: Array<SymbolClass>)
 	/// Determine if the partitioned set contains the given value as a component
 	func contains(_ component: Symbol) -> Bool
 	/// Get the set of symbols from the partition of the given symbol
-	func siblings(of: Symbol) -> Partition
+	func siblings(of: Symbol) -> SymbolClass
 	/// Determine if the given two components exist in the same partition
 	func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool
 }
 
 /// Default implementations of functions for PartitionedSetProtocol
-extension SymbolClassProtocol {
-	public init(arrayLiteral elements: Partition...) {
+extension AlphabetProtocol {
+	public init(arrayLiteral elements: SymbolClass...) {
 		self.init(partitions: elements)
 	}
 }
 
-public struct SetSymbolClass<Symbol: Hashable>: SymbolClassProtocol {
-	public typealias Partition = Set<Symbol>
-	public typealias Partitions = Set<Partition>
-	public typealias ArrayLiteralElement = Partition
+public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
+	public typealias SymbolClass = Set<Symbol>
+	public typealias Partitions = Set<SymbolClass>
+	public typealias ArrayLiteralElement = SymbolClass
 
-	public var partitions: Set<Partition>
+	public var partitions: Set<SymbolClass>
 
 	public init() {
 		self.partitions = []
 	}
 
-	public init<T: SymbolClassProtocol>(_ input: T) where T.Partitions == Partitions, T.Symbol == Symbol {
+	public init<T: AlphabetProtocol>(_ input: T) where T.Partitions == Partitions, T.Symbol == Symbol {
 		self.partitions = input.partitions
 	}
 
@@ -71,12 +70,12 @@ public struct SetSymbolClass<Symbol: Hashable>: SymbolClassProtocol {
 /// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 // TODO: Rename this to SymbolRangePartitionedSet or something
-public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClassProtocol, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtocol, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
-	public typealias Partition = Array<ClosedRange<Symbol>>
+	public typealias SymbolClass = Array<ClosedRange<Symbol>>
 	/// Implements ExpressibleByArrayLiteral
-	public typealias ArrayLiteralElement = Partition
+	public typealias ArrayLiteralElement = SymbolClass
 	/// Implements SetAlgebra
 	public typealias Element = Symbol
 
@@ -105,11 +104,11 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClass
 	}
 
 	/// Convenience function for writing `SymbolClass([0...5], [10...20], ...)`
-	public init(_ partitions: Partition...) {
+	public init(_ partitions: SymbolClass...) {
 		self.init(partitions: partitions)
 	}
 
-	public init(arrayLiteral elements: Partition...) {
+	public init(arrayLiteral elements: SymbolClass...) {
 		self.init(partitions: elements)
 	}
 
@@ -200,14 +199,14 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClass
 
 	/// A view on the current ClosedRangeSymbolClass that looks like a normal SymbolClass
 	/// It is read-only.
-	public struct Expanded: SymbolClassProtocol {
-		public typealias ArrayLiteralElement = Partition
-		public typealias Partition = Set<Symbol>
-		public typealias Partitions = Set<Partition>
+	public struct Expanded: AlphabetProtocol {
+		public typealias ArrayLiteralElement = SymbolClass
+		public typealias SymbolClass = Set<Symbol>
+		public typealias Partitions = Set<SymbolClass>
 
-		let underlying: ClosedRangeSymbolClass<Symbol>
+		let underlying: ClosedRangeAlphabet<Symbol>
 
-		public init(underlying: ClosedRangeSymbolClass<Symbol>) {
+		public init(underlying: ClosedRangeAlphabet<Symbol>) {
 			self.underlying = underlying
 		}
 
@@ -215,7 +214,7 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClass
 			fatalError()
 		}
 
-		public var partitions: Set<Partition> {
+		public var partitions: Set<SymbolClass> {
 			Set<Set<Symbol>>(underlying.partitions.map { Set($0.flatMap { $0 }) })
 		}
 
@@ -274,12 +273,12 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClass
 	}
 
 	/// Maps partition label to set of values in partition
-	public var alphabet: Partition {
+	public var alphabet: SymbolClass {
 		symbols
 	}
 
 	/// Maps partition label to set of values in partition
-	public var partitions: Array<Partition> {
+	public var partitions: Array<SymbolClass> {
 		let labels = Set(parents).sorted()
 		var dict: Dictionary<Int, Array<ClosedRange<Symbol>>> = Dictionary(uniqueKeysWithValues: labels.map { ($0, []) })
 		for i in 0..<symbols.count {
@@ -334,7 +333,7 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClass
 	}
 
 	/// Get all the set of symbols in the same partition as the given symbol
-	public func siblings(of symbol: Symbol) -> Partition {
+	public func siblings(of symbol: Symbol) -> SymbolClass {
 		let index = self.findIndex(symbol)
 		guard let index else { fatalError("Cannot find \(symbol) in \(symbols)") }
 		let parent = self.parents[index]
@@ -364,7 +363,7 @@ public struct ClosedRangeSymbolClass<Symbol: Comparable & Hashable>: SymbolClass
 		return Self.meet([self, other])
 	}
 	public static func meet(_ i: Array<Self>) -> Self {
-		return ClosedRangeSymbolClass(partitions: i.flatMap(\.partitions))
+		return ClosedRangeAlphabet(partitions: i.flatMap(\.partitions))
 	}
 
 	public static func == (lhs: Self, rhs: Self) -> Bool {
@@ -442,7 +441,7 @@ public func compressPartitions<Symbol>(_ partitions: Set<Set<Symbol>>) -> (reduc
 /// Transparently maps a regular language with a large alphabet onto a DFA with a smaller alphabet where some symbols are equivalent
 public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageProtocol {
 	public typealias Symbol = Symbol
-	public typealias Partition = Symbol
+	public typealias SymbolClass = Symbol
 	public typealias StateNo = DFA<Symbol>.StateNo
 	public typealias States = DFA<Symbol>.States
 	public typealias ArrayLiteralElement = DFA<Symbol>.ArrayLiteralElement

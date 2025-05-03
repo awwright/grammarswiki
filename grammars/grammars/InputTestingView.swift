@@ -8,7 +8,7 @@ import FSM
 struct InputTestingView: View {
 	@Binding var content_rulelist: ABNFRulelist<UInt32>?
 	@Binding var selectedRule: String?
-	@Binding var rule_alphabet: ClosedRangeSymbolClass<UInt32>?
+	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
 	@Binding var rule_fsm_proxy: SymbolClassDFA<UInt32>?
 	@State private var testInput: String = ""
 	@State private var fsm_test_result: Bool? = nil

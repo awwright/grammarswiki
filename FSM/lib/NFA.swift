@@ -26,14 +26,16 @@ public protocol NFAProtocol: RegularLanguageProtocol where Symbol: Hashable {
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct NFA<Partition: Hashable>: NFAProtocol {
-	public typealias Symbol = Partition
-	public typealias Element = Array<Partition>
+public struct NFA<SymbolClass: Hashable>: NFAProtocol {
+	// TODO: Implement BidirectionalCollection
+	public typealias Alphabet = SetAlphabet<SymbolClass>
+	public typealias Symbol = Alphabet.Symbol
+	public typealias Element = Array<SymbolClass>
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
 
 	/// For each state, a mapping of the next input symbol to the set of states it should transition to
-	public let statesSet: Array<Dictionary<Partition, Set<Int>>>;
+	public let statesSet: Array<Dictionary<SymbolClass, Set<Int>>>;
 	/// For each state, a set of the states that should automatically be transitioned to
 	public let epsilon: Array<Set<Int>>;
 	// I allow initials to be a set of states so that the result of following from the initial state can be a closed operation
@@ -43,7 +45,7 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 	public let finals: Set<Int>;
 
 	init(
-		states: Array<Dictionary<Partition, States>> = [ [:] ],
+		states: Array<Dictionary<SymbolClass, States>> = [ [:] ],
 		epsilon: Array<States> = [ [] ],
 		initials: States = [0],
 		finals: Set<Int> = []
@@ -90,7 +92,7 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 
 	// Variation with single initial state
 	public init(
-		states: Array<Dictionary<Partition, States>> = [],
+		states: Array<Dictionary<SymbolClass, States>> = [],
 		epsilon: Array<States> = [],
 		initial: StateNo = 0,
 		finals: Set<StateNo> = []
@@ -98,7 +100,7 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 		self.init(states: states, epsilon: epsilon, initials: [initial], finals: finals)
 	}
 
-	public init(verbatim: some Sequence<Partition>){
+	public init(verbatim: some Sequence<SymbolClass>){
 		// Generate one state per symbol in Element, plus a final state
 		let states = verbatim.enumerated().map { [ $1: Set([$0 + 1]) ] } + [[:]]
 		self.init(
@@ -109,7 +111,7 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 		);
 	}
 
-	public init<T: NFAProtocol>(_ nfa: T) where T.Symbol == Partition {
+	public init<T: NFAProtocol>(_ nfa: T) where T.Symbol == SymbolClass {
 		self.init(
 			states: nfa.statesSet,
 			epsilon: nfa.epsilon,
@@ -154,24 +156,24 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 		return viz;
 	}
 
-	lazy var alphabet: Set<Partition> = {
+	lazy var alphabet: Set<SymbolClass> = {
 		Set(self.statesSet.flatMap(\.keys))
 	}()
 
-	public func nextStates(state: StateNo, symbol: Partition) -> States {
+	public func nextStates(state: StateNo, symbol: SymbolClass) -> States {
 		return self.nextStates(states: [state], symbol: symbol);
 	}
 
-	public func nextStates(state: StateNo, string: any Sequence<Partition>) -> States {
+	public func nextStates(state: StateNo, string: any Sequence<SymbolClass>) -> States {
 		return self.nextStates(states: [state], string: string);
 	}
 
-	public func nextStates(states: States, symbol: Partition) -> States {
+	public func nextStates(states: States, symbol: SymbolClass) -> States {
 		// Map each element in `states` to the next symbol in states[state][symbol], if it exists
 		return self.followε(states: Set(self.followε(states: states).flatMap { self.statesSet[$0][symbol] ?? [] }))
 	}
 
-	public func nextStates(states: States, string: any Sequence<Partition>) -> States {
+	public func nextStates(states: States, string: any Sequence<SymbolClass>) -> States {
 		var currentState = states;
 		for symbol in string {
 			currentState = self.nextStates(states: currentState, symbol: symbol)
@@ -197,7 +199,7 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 	}
 
 	/// Tries to match as many characters from input as possible, returning the last final state
-	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Partition> {
+	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<SymbolClass> {
 		var currentState = self.initials;
 		var finalIndex: T.Index? = nil;
 
@@ -230,14 +232,14 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 
 	/// Get the ID of the state machine without any input
 	public struct ID {
-		public let fsm: NFA<Partition>
+		public let fsm: NFA<SymbolClass>
 		public let states: States
 
 		public var isFinal: Bool {
 			fsm.isFinal(states)
 		}
 
-		public subscript(symbol: Partition) -> ID {
+		public subscript(symbol: SymbolClass) -> ID {
 			let nextStates = self.fsm.nextStates(states: self.states, symbol: symbol)
 			return ID(fsm: self.fsm, states: nextStates)
 		}
@@ -275,7 +277,7 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 	}
 
 	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
-		var newStates = Array<Dictionary<Partition, States>>();
+		var newStates = Array<Dictionary<SymbolClass, States>>();
 		var newFinals = Set<Int>();
 		var forward = Dictionary<Array<States>, Int>();
 		var backward = Array<Array<States>>();
@@ -299,9 +301,9 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 
 		var newStateId = 0;
 		while(newStateId < backward.count){
-			var newStateTransitions = Dictionary<Partition, States>();
+			var newStateTransitions = Dictionary<SymbolClass, States>();
 			let inStates = backward[newStateId];
-			var alphabets = Set<Partition>();
+			var alphabets = Set<SymbolClass>();
 			// enumerate over inStates and get the index
 			for (fsm, states) in zip(fsms, inStates) {
 				for state in states {
@@ -325,17 +327,17 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 		return Self.init(states: newStates, epsilon: Array(repeating: [], count: newStates.count), initial: newInitialState, finals: newFinals);
 	}
 
-	public func contains(_ input: some Sequence<Partition>) -> Bool {
+	public func contains(_ input: some Sequence<SymbolClass>) -> Bool {
 		let final = self.nextStates(states: self.initials, string: input)
 		return self.isFinal(final)
 	}
 
-	public func contains(_ input: Array<Partition>) -> Bool {
+	public func contains(_ input: Array<SymbolClass>) -> Bool {
 		let final = self.nextStates(states: self.initials, string: input)
 		return self.isFinal(final)
 	}
 
-	public func derive(_ input: any Sequence<Partition>) -> Self
+	public func derive(_ input: any Sequence<SymbolClass>) -> Self
 	{
 		var currentState = self.initials;
 
@@ -391,7 +393,7 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 	public static func concatenate(_ languages: Array<Self>) -> Self {
 		if(languages.count == 0){
 			// Concatenation identity is epsilon
-			return NFA<Partition>(states: [[:]], epsilon: [[]], initials: [0], finals: [0]);
+			return NFA<SymbolClass>(states: [[:]], epsilon: [[]], initials: [0], finals: [0]);
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
@@ -422,7 +424,7 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 		return Self.concatenate([self, other]);
 	}
 
-	public static func symbol(_ element: Partition) -> Self {
+	public static func symbol(_ element: SymbolClass) -> Self {
 		return Self(
 			states: [[element: [1]], [:]],
 			epsilon: [[], []],
@@ -473,7 +475,7 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 		return Self.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
 
-	public func homomorphism<Target>(mapping: [(some Collection<Partition>, some Collection<Target>)]) -> NFA<Target> where Target: Hashable {
+	public func homomorphism<Target>(mapping: [(some Collection<SymbolClass>, some Collection<Target>)]) -> NFA<Target> where Target: Hashable {
 		var newStates: [[Target: Set<Int>]] = self.statesSet.map { _ in [:] }
 		var newEpsilon: [States] = self.statesSet.map { _ in [] }
 
@@ -525,13 +527,13 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 	}
 
 	/// Convert one NFA to another by translating a FSM to an FSM
-	public func homomorphism<Target>(mapping: [(DFA<Partition>, DFA<Target>)]) -> NFA<Target> {
+	public func homomorphism<Target>(mapping: [(DFA<SymbolClass>, DFA<Target>)]) -> NFA<Target> {
 		return NFA<Target>();
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Partition {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == SymbolClass {
 		// Can this be optimized?
-		DFA<Partition>(nfa: self).toPattern(as: PatternType.self)
+		DFA<SymbolClass>(nfa: self).toPattern(as: PatternType.self)
 	}
 
 	public mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element) {
@@ -565,9 +567,9 @@ public struct NFA<Partition: Hashable>: NFAProtocol {
 }
 
 // Conditional protocol compliance
-extension NFA: Sendable where Partition: Sendable {}
+extension NFA: Sendable where SymbolClass: Sendable {}
 
-extension NFA where Partition == Character {
+extension NFA where SymbolClass == Character {
 //	typealias Element = String
 	init (_ val: Array<String>) {
 		self.init(val.map{ Array($0) })

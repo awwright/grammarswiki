@@ -120,7 +120,7 @@ struct DocumentDetail: View {
 	@State private var content_rulelist_error: String? = nil
 
 	@State private var rule_error: String? = nil
-	@State private var rule_alphabet: ClosedRangeSymbolClass<UInt32>? = nil
+	@State private var rule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
 	@State private var rule_fsm: DFA<UInt32>? = nil
 	@State private var rule_fsm_error: String? = nil
 	@State private var rule_fsm_proxy: SymbolClassDFA<UInt32>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
@@ -405,7 +405,7 @@ struct DocumentDetail: View {
 
 		// Compute alphabets
 		Task.detached(priority: .utility) {
-			var result_alphabet_dict = builtins.mapValues({ $0.toPattern(as: ClosedRangeSymbolClass<UInt32>.self) });
+			var result_alphabet_dict = builtins.mapValues({ $0.toPattern(as: ClosedRangeAlphabet<UInt32>.self) });
 			for (rulename, definition) in dependencies {
 				result_alphabet_dict[rulename] = definition.alphabetPartitions(rulelist: result_alphabet_dict)
 			}

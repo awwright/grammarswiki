@@ -3,7 +3,7 @@ import FSM
 import SwiftUI
 
 struct GraphVizSourceView: View {
-	 @Binding var rule_alphabet: ClosedRangeSymbolClass<UInt32>?
+	 @Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
 	 @Binding var rule_fsm: DFA<UInt32>?
 	 @State private var vizSource: String? = nil
 

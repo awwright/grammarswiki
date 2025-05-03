@@ -454,7 +454,7 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 	public func alphabet(rulelist: Dictionary<String, Set<Symbol>> = [:]) -> Set<Symbol> {
 		alternation.alphabet(rulelist: rulelist)
 	}
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		alternation.alphabetPartitions(rulelist: rulelist)
 	}
 
@@ -557,7 +557,7 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		return rule
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		guard let rule = rulelist[label] else { print("No alphabet provided for \(label)"); return [] }
 		// Remove this rule from the rulelist to prevent recursion
 		return rule
@@ -677,7 +677,7 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternProtocol wh
 		matches.reduce(Set<Symbol>([]), { $0.union($1.alphabet(rulelist: rulelist)) })
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		var symbols: Array<ClosedRange<Symbol>> = []
 		var partitions: Array<Array<ClosedRange<Symbol>>> = []
 
@@ -689,7 +689,7 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternProtocol wh
 				partitions += matchPartitions.partitions
 			}
 		}
-		return ClosedRangeSymbolClass<Symbol>(partitions: [symbols] + partitions)
+		return ClosedRangeAlphabet<Symbol>(partitions: [symbols] + partitions)
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
@@ -904,8 +904,8 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 		repetitions.reduce(Set<Symbol>([]), { $0.union($1.alphabet(rulelist: rulelist)) })
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
-		ClosedRangeSymbolClass(partitions: repetitions.flatMap { $0.alphabetPartitions(rulelist: rulelist).partitions })
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
+		ClosedRangeAlphabet(partitions: repetitions.flatMap { $0.alphabetPartitions(rulelist: rulelist).partitions })
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
@@ -1066,8 +1066,8 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		repeating.alphabet(rulelist: rulelist)
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
-		isEmpty ? ClosedRangeSymbolClass() : repeating.alphabetPartitions(rulelist: rulelist)
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
+		isEmpty ? ClosedRangeAlphabet() : repeating.alphabetPartitions(rulelist: rulelist)
 	}
 
 	private var separatorPattern: DFA<Symbol> {
@@ -1270,7 +1270,7 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		}
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		switch self {
 			case .rulename(let r): return r.alphabetPartitions(rulelist: rulelist)
 			case .group(let g): return g.alphabetPartitions(rulelist: rulelist)
@@ -1480,7 +1480,7 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		alternation.alphabet(rulelist: rulelist)
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		alternation.alphabetPartitions(rulelist: rulelist)
 	}
 
@@ -1567,7 +1567,7 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		optionalAlternation.alphabet(rulelist: rulelist)
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		optionalAlternation.alphabetPartitions(rulelist: rulelist)
 	}
 
@@ -1655,7 +1655,7 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 		return Set(arr)
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		let arr: Array<Set<Symbol>>;
 		if caseSensitive {
 			arr = sequence.map { Set([$0]) }
@@ -1666,7 +1666,7 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 				else { return Set([codepoint]) }
 			}
 		}
-		return ClosedRangeSymbolClass(partitions: arr)
+		return ClosedRangeAlphabet(partitions: arr)
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
@@ -1777,10 +1777,10 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		}
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		switch self.value {
-			case .sequence(let seq): return ClosedRangeSymbolClass(seq)
-			case .range(let range): return ClosedRangeSymbolClass([range])
+			case .sequence(let seq): return ClosedRangeAlphabet(seq)
+			case .range(let range): return ClosedRangeAlphabet([range])
 		}
 	}
 
@@ -2022,7 +2022,7 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		fatalError("Cannot produce alphabet from prose")
 	}
 
-	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeSymbolClass<Symbol>> = [:]) -> ClosedRangeSymbolClass<Symbol> {
+	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		fatalError("Cannot produce alphabetPartitions from prose")
 	}
 
