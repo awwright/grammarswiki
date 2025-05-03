@@ -1,5 +1,5 @@
-public protocol NFAProtocol: RegularLanguageProtocol where Symbol: Hashable {
-	var statesSet: Array<Dictionary<Symbol, Set<Int>>> {get};
+public protocol NFAProtocol: RegularLanguageProtocol where SymbolClass: Hashable {
+	var statesSet: Array<Dictionary<SymbolClass, Set<Int>>> {get};
 	var epsilon: Array<Set<Int>> {get};
 	var initials: Set<Int> {get};
 	var finals: Set<Int> {get};
@@ -26,10 +26,10 @@ public protocol NFAProtocol: RegularLanguageProtocol where Symbol: Hashable {
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct NFA<SymbolClass: Hashable>: NFAProtocol {
+public struct NFA<Symbol: Hashable>: NFAProtocol {
 	// TODO: Implement BidirectionalCollection
-	public typealias Alphabet = SetAlphabet<SymbolClass>
-	public typealias Symbol = Alphabet.Symbol
+	public typealias Alphabet = SymbolAlphabet<Symbol>
+	public typealias SymbolClass = Alphabet.Symbol
 	public typealias Element = Array<SymbolClass>
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
@@ -111,7 +111,7 @@ public struct NFA<SymbolClass: Hashable>: NFAProtocol {
 		);
 	}
 
-	public init<T: NFAProtocol>(_ nfa: T) where T.Symbol == SymbolClass {
+	public init<T: NFAProtocol>(_ nfa: T) where T.SymbolClass == SymbolClass {
 		self.init(
 			states: nfa.statesSet,
 			epsilon: nfa.epsilon,
@@ -156,9 +156,9 @@ public struct NFA<SymbolClass: Hashable>: NFAProtocol {
 		return viz;
 	}
 
-	lazy var alphabet: Set<SymbolClass> = {
-		Set(self.statesSet.flatMap(\.keys))
-	}()
+	public var alphabet: Alphabet {
+		Alphabet(partitions: self.statesSet.flatMap(\.keys))
+	}
 
 	public func nextStates(state: StateNo, symbol: SymbolClass) -> States {
 		return self.nextStates(states: [state], symbol: symbol);
@@ -531,7 +531,7 @@ public struct NFA<SymbolClass: Hashable>: NFAProtocol {
 		return NFA<Target>();
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == SymbolClass {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.SymbolClass == SymbolClass {
 		// Can this be optimized?
 		DFA<SymbolClass>(nfa: self).toPattern(as: PatternType.self)
 	}

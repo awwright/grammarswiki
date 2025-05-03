@@ -77,8 +77,7 @@ import Testing
 	@Test("Alphabet generation")
 	func testAlphabet() {
 		let dfa = DFA<Character>(verbatim: "abc")
-		let expectedAlphabet: Set<Character> = ["a", "b", "c"]
-		#expect(dfa.alphabet == expectedAlphabet)
+		#expect(dfa.alphabet == ["a", "b", "c"])
 	}
 
 	@Test("nextState for symbol")

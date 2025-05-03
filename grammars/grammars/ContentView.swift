@@ -407,7 +407,7 @@ struct DocumentDetail: View {
 
 		// Compute alphabets
 		Task.detached(priority: .utility) {
-			var result_alphabet_dict = builtins.mapValues({ $0.toPattern(as: ClosedRangeAlphabet<UInt32>.self) });
+			var result_alphabet_dict: Dictionary<String, ClosedRangeAlphabet<UInt32>> = builtins.mapValues({ ClosedRangeAlphabet<UInt32>($0.alphabet) });
 			for (rulename, definition) in dependencies {
 				result_alphabet_dict[rulename] = definition.alphabetPartitions(rulelist: result_alphabet_dict)
 			}

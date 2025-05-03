@@ -30,7 +30,7 @@ public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 /// - func toPattern
 public protocol RegularPatternProtocol: Equatable {
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
-	associatedtype Symbol;
+	associatedtype SymbolClass;
 
 	/// An instance representing the empty language, which accepts no sequences.
 	/// Equivalent to `init()`
@@ -43,7 +43,7 @@ public protocol RegularPatternProtocol: Equatable {
 	init();
 
 	/// Creates an automaton that matches exactly the given strings
-	init(arrayLiteral: Array<Symbol>...)
+	init(arrayLiteral: Array<SymbolClass>...)
 
 	/// Creates a pattern accepting the union of the languages defined by the given patterns.
 	/// - Parameter elements: An array of patterns to union with this one.
@@ -60,7 +60,7 @@ public protocol RegularPatternProtocol: Equatable {
 	/// Creates a pattern that accepts only a single input with one element of the given symbol
 	/// - Parameter element: The symbol to turn into a regular expression
 	/// - Returns: A pattern accepting the given symbol
-	static func symbol(_ element: Symbol) -> Self
+	static func symbol(_ element: SymbolClass) -> Self
 
 	/// Returns a pattern to also accept the empty sequence, making it optional.
 	/// - Returns: A pattern that accepts either the empty sequence or any sequence this pattern accepts.
@@ -108,7 +108,7 @@ extension RegularPatternProtocol {
 
 	/// Default implementation of array literal constructor.
 	/// This is not likely to be very efficent, but it is generic.
-	public init(arrayLiteral: Array<Symbol>...) {
+	public init(arrayLiteral: Array<SymbolClass>...) {
 		self = Self.union(arrayLiteral.map { Self.concatenate($0.map { Self.symbol($0) }) })
 	}
 
@@ -181,28 +181,28 @@ extension RegularPatternProtocol {
 }
 
 // For symbol types that support it, allow generating a range of symbols
-extension RegularPatternProtocol where Symbol: Comparable & Strideable, Symbol.Stride: SignedInteger {
+extension RegularPatternProtocol where SymbolClass: Comparable & Strideable, SymbolClass.Stride: SignedInteger {
 	/// Creates a pattern that accepts any single symbol within the given range (exclusive upper bound).
 	/// - Parameter range: The range of symbols (e.g., `0...10`). 
-	public static func range(_ range: ClosedRange<Symbol>) -> Self {
+	public static func range(_ range: ClosedRange<SymbolClass>) -> Self {
 		return Self.union(range.map{ Self.symbol($0) });
 	}
 
 	/// Creates a pattern that accepts any single symbol within the given range (exclusive upper bound).
 	/// - Parameter range: The range of symbols (e.g., `0..<10`).
-	public static func range(_ range: Range<Symbol>) -> Self {
+	public static func range(_ range: Range<SymbolClass>) -> Self {
 		return Self.union(range.map{ Self.symbol($0) });
 	}
 
 	/// Creates an alternation between all of the symbols in the given sequence
 	/// - Parameter range: The range of symbols (e.g., `0..<10`).
-	public static func range<T: Sequence>(_ range: T) -> Self where T.Element == Symbol {
+	public static func range<T: Sequence>(_ range: T) -> Self where T.Element == SymbolClass {
 		return Self.union(range.map{ Self.symbol($0) });
 	}
 
 	/// Creates a concatenation from the symbols in the given sequence
 	/// - Parameter range: The range of symbols (e.g., `0..<10`).
-	public static func sequence<T: Sequence>(_ sequence: T) -> Self where T.Element == Symbol {
+	public static func sequence<T: Sequence>(_ sequence: T) -> Self where T.Element == SymbolClass {
 		return Self.concatenate(sequence.map{ Self.symbol($0) });
 	}
 }
@@ -212,7 +212,7 @@ public protocol RegularPattern where Symbol: Hashable {
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
 	associatedtype Symbol;
 
-	func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol;
+	func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type?) -> PatternType where PatternType.SymbolClass == Symbol;
 
 	/// Get exactly symbols used in the pattern
 	var alphabet: Set<Symbol> { get }
@@ -226,28 +226,30 @@ public protocol RegularPattern where Symbol: Hashable {
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.
 public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternProtocol, Hashable where Symbol: BinaryInteger {
-	public typealias Element = Array<Symbol>
+	public typealias Alphabet = SymbolAlphabet<Symbol>
+	public typealias SymbolClass = Alphabet.SymbolClass
+	public typealias Element = Array<SymbolClass>
 
 	case alternation([Self])
 	case concatenation([Self])
 	case star(Self)
-	case symbol(Symbol)
+	case symbol(SymbolClass)
 
 	public init() {
 		self = .alternation([])
 	}
 
-	public init(arrayLiteral: Array<Symbol>...) {
+	public init(arrayLiteral: Array<SymbolClass>...) {
 		self = .alternation( arrayLiteral.map{ .concatenation($0.map { Self.symbol($0) }) } )
 	}
 
-	public init (_ sequence: any Sequence<Symbol>) {
+	public init (_ sequence: any Sequence<SymbolClass>) {
 		self = .concatenation(sequence.map{ Self.symbol($0) })
 	}
 
 	/// A set of all the symbols in use in this regex.
 	/// Using any symbols outside this set guarantees a transition to the oblivion state (rejection).
-	public var alphabet: Set<Symbol> {
+	public var alphabet: Set<SymbolClass> {
 		switch self {
 			case .alternation(let array): return Set(array.flatMap(\.alphabet))
 			case .concatenation(let array): return Set(array.flatMap(\.alphabet))
@@ -258,12 +260,12 @@ public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternProtocol
 
 	/// The alphabet, partitioned into sets whose behaviors are equivalent
 	/// (i.e. changing the symbol with an equivalent symbol won't change validation)
-	public var alphabetPartitions: Set<Set<Symbol>> {
+	public var alphabetPartitions: Set<Set<SymbolClass>> {
 		switch self {
 			case .alternation(let array):
 				// A union of symbols will always result in an equivalent result, so group symbols in the alternation together
-				let symbols: Set<Symbol> = Set(array.compactMap { if case .symbol(let s) = $0 { s } else { nil } })
-				let nonsymbols: Array<Set<Set<Symbol>>> = array.compactMap { if case .symbol = $0 { return nil } else { return $0.alphabetPartitions } }
+				let symbols: Set<SymbolClass> = Set(array.compactMap { if case .symbol(let s) = $0 { s } else { nil } })
+				let nonsymbols: Array<Set<Set<SymbolClass>>> = array.compactMap { if case .symbol = $0 { return nil } else { return $0.alphabetPartitions } }
 				return alphabetCombine([symbols] + nonsymbols.flatMap { $0 })
 			case .concatenation(let array):
 				return alphabetCombine(array.flatMap { $0.alphabetPartitions })
@@ -342,7 +344,7 @@ public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternProtocol
 		}
 	}
 
-	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternProtocol, PatternType.Symbol == Symbol {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.SymbolClass == SymbolClass {
 		switch self {
 			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))

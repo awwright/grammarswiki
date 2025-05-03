@@ -1,5 +1,5 @@
 public protocol DFAProtocol: NFAProtocol {
-	var states: Array<Dictionary<Symbol, Int>> { get }
+	var states: Array<Dictionary<SymbolClass, Int>> { get }
 	var initial: Int { get }
 	// `finals` from NFAProtocol
 }
@@ -7,7 +7,7 @@ public protocol DFAProtocol: NFAProtocol {
 extension DFAProtocol {
 	/// Implements NFAProtocol
 	/// In a DFA, there is exactly one transition per state
-	public var statesSet: Array<Dictionary<Symbol, Set<Int>>> {
+	public var statesSet: Array<Dictionary<SymbolClass, Set<Int>>> {
 		states.map {
 			$0.mapValues { Set([$0]) }
 		}
@@ -43,13 +43,13 @@ extension DFAProtocol {
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<SymbolClass: Hashable>: Hashable, DFAProtocol {
+public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol {
 	// TODO: Implement BidirectionalCollection
-	public typealias Alphabet = SetAlphabet<SymbolClass>
+	public typealias Alphabet = SymbolAlphabet<Symbol>
 
 	/// A partition might contain more than one symbols, represented with a different type.
 	/// Presently, each symbol forms its own partition.
-	public typealias Symbol = Alphabet.Symbol
+	public typealias SymbolClass = Alphabet.SymbolClass
 	/// Default element type produced reading this as a Sequence
 	public typealias Element = Array<SymbolClass>
 	/// The type used to index states
@@ -140,8 +140,8 @@ public struct DFA<SymbolClass: Hashable>: Hashable, DFAProtocol {
 		return difference.finals.isEmpty;
 	}
 
-	public var alphabet: Set<SymbolClass> {
-		Set(self.states.flatMap(\.keys))
+	public var alphabet: Alphabet {
+		Alphabet(partitions: self.states.flatMap(\.keys))
 	}
 
 	public var alphabetPartitions: Set<Set<SymbolClass>> {
@@ -889,7 +889,7 @@ public struct DFA<SymbolClass: Hashable>: Hashable, DFAProtocol {
 		return DFA<Target>(nfa: nfa)
 	}
 
-	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == SymbolClass {
+	public func toPattern<PatternType: RegularPatternProtocol>(as: PatternType.Type? = nil) -> PatternType where PatternType.SymbolClass == SymbolClass {
 		// Make a new initial state at 0, epsilon transition to old initial state
 		// Create an empty new-final state at 1
 		// And add epsilon transitions for all old-final states to new-final state at 1

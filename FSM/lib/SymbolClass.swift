@@ -4,11 +4,12 @@
 /// RandomAccessCollection is required to be used in ForEach in SwiftUI
 /// ExpressibleByArrayLiteral for initializing with default values
 /// Equatable for comparison
-public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLiteral, Equatable {
+public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLiteral, Equatable where Element == SymbolClass {
 	// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype SymbolClass: Equatable & Hashable;
 	associatedtype Symbol: Equatable & Hashable;
+//	typealias Element = SymbolClass
 
 	/// Initialize a PartitionedSet with the given elements, taking the union-meet of the subsets
 	/// If elements appear in multiple partitions, elements found in the same partitions are split out and merged into a new partition
@@ -20,6 +21,9 @@ public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLite
 	func siblings(of: Symbol) -> SymbolClass
 	/// Determine if the given two components exist in the same partition
 	func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool
+//	/// Create an Alphabet that contains the same (or some related) set of symbols, in a different shaped symbol class.
+//	/// The partitions can legally be split apart, but cannot be merged together.
+//	func mapSymbolClass<Target: AlphabetProtocol>(_ transform: (Self.SymbolClass) -> Target.SymbolClass) -> Target where Target.Symbol == Symbol
 }
 
 /// Default implementations of functions for PartitionedSetProtocol
@@ -27,10 +31,15 @@ extension AlphabetProtocol {
 	public init(arrayLiteral elements: SymbolClass...) {
 		self.init(partitions: elements)
 	}
+
+//	public func mapSymbolClass<Target: AlphabetProtocol>(_ transform: (SymbolClass) -> Target.SymbolClass) -> Target where Self.Symbol == Target.Symbol {
+//		Target(partitions: self.map { transform($0) })
+//	}
 }
 
 /// An Alphabet where every symbol is its own SymbolClass
 public struct SymbolAlphabet<Symbol: Hashable>: AlphabetProtocol {
+	
 	public typealias SymbolClass = Symbol
 	public typealias ArrayLiteralElement = SymbolClass
 
@@ -187,6 +196,14 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 		self.init(partitions: partitions.map{ $0.map { $0...$0 } })
 	}
 
+	/// Initialize from a lower SetAlphabet
+	public init(_ from: SymbolAlphabet<Symbol>) {
+		self.init(partitions: from.map{ $0...$0 })
+	}
+	public init(_ from: SetAlphabet<Symbol>) {
+		self.init(partitions: from.map{ $0.map { $0...$0 } })
+	}
+
 	// If a symbol appears in multiple partitions,
 	public init(partitions: some Collection<some Collection<ClosedRange<Symbol>>>) {
 		// Sort the elements within the partitions and merge adjacent symbols into a ClosedRange
@@ -274,7 +291,10 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 	public static var epsilon: Self { Self() }
 	/// An element with a single symbol has one symbol in the alphabet
 	public static func symbol(_ element: Symbol) -> Self {
-		Self([element])
+		Self([element...element])
+	}
+	public static func symbol(_ element: SymbolClass) -> Self {
+		Self(element)
 	}
 	public static func concatenate(_ elements: [Self]) -> Self {
 		Self(partitions: elements.flatMap(\.self))
@@ -491,7 +511,6 @@ public func compressPartitions<Symbol>(_ partitions: Set<Set<Symbol>>) -> (reduc
 
 /// Transparently maps a regular language with a large alphabet onto a DFA with a smaller alphabet where some symbols are equivalent
 public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageProtocol {
-	public typealias Symbol = Symbol
 	public typealias SymbolClass = Symbol
 	public typealias StateNo = DFA<Symbol>.StateNo
 	public typealias States = DFA<Symbol>.States
