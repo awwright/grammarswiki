@@ -354,7 +354,7 @@ import Testing;
 		@Test("two nested partitions") func test_two_nested_parts() async throws {
 			let part1 = ClosedRangeAlphabet<Int>([ 0x30...0x39 ])
 			let part2 = ClosedRangeAlphabet<Int>([ 0x32 ])
-			let partitions = part1.meet(part2).expanded
+			let partitions = part1.meet(part2)
 			#expect(partitions.isEquivalent(0x30, 0x30))
 			#expect(partitions.isEquivalent(0x31, 0x30))
 			#expect(partitions.isEquivalent(0x32, 0x32))

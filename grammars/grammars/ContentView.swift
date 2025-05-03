@@ -262,9 +262,11 @@ struct DocumentDetail: View {
 						if showAlphabet {
 							DisclosureGroup("Alphabet", isExpanded: $alphabet_expanded, content: {
 								if let rule_alphabet {
-									ForEach(rule_alphabet.partitions, id: \.self) {
+									ForEach(rule_alphabet, id: \.self) {
 										part in
-										Text(describeCharacterSet(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
+										// TODO: Convert to a String
+										//Text(describeCharacterSet(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
+										Text(String(describing: part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
 									}
 								}else{
 									Text("Computing alphabet...")

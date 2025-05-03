@@ -686,7 +686,7 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternProtocol wh
 			if(matchPartitions.partitionCount == 1){
 				symbols += matchPartitions.symbols
 			}else if(matchPartitions.partitionCount > 1){
-				partitions += matchPartitions.partitions
+				partitions += matchPartitions
 			}
 		}
 		return ClosedRangeAlphabet<Symbol>(partitions: [symbols] + partitions)
@@ -905,7 +905,7 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 	}
 
 	public func alphabetPartitions(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
-		ClosedRangeAlphabet(partitions: repetitions.flatMap { $0.alphabetPartitions(rulelist: rulelist).partitions })
+		ClosedRangeAlphabet(partitions: repetitions.flatMap { $0.alphabetPartitions(rulelist: rulelist) })
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {

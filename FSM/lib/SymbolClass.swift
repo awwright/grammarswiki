@@ -1,13 +1,14 @@
 /// An Alphabet stores a set of symbol classes: Partitions on a set of symbols that all have the same behavior within some context.
 /// The Alphabet has two core features: Iterating over the partitions, and intersecting multiple partitions to create a new symbol class.
-public protocol AlphabetProtocol: ExpressibleByArrayLiteral, Equatable {
+///
+/// RandomAccessCollection is required to be used in ForEach in SwiftUI
+/// ExpressibleByArrayLiteral for initializing with default values
+/// Equatable for comparison
+public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLiteral, Equatable {
 	// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype SymbolClass: Equatable & Hashable;
 	associatedtype Symbol: Equatable & Hashable;
-
-	associatedtype Partitions: Collection where Partitions.Element == SymbolClass
-	var partitions: Partitions { get }
 
 	/// Initialize a PartitionedSet with the given elements, taking the union-meet of the subsets
 	/// If elements appear in multiple partitions, elements found in the same partitions are split out and merged into a new partition
@@ -28,19 +29,71 @@ extension AlphabetProtocol {
 	}
 }
 
+/// An Alphabet where every symbol is its own SymbolClass
+public struct SymbolAlphabet<Symbol: Hashable>: AlphabetProtocol {
+	public typealias SymbolClass = Symbol
+	public typealias ArrayLiteralElement = SymbolClass
+
+	public var symbols: Set<Symbol>
+
+	public init() {
+		self.symbols = []
+	}
+
+	public init(partitions: some Collection<SymbolClass>) {
+		self.symbols = Set(partitions)
+	}
+
+	public func contains(_ symbol: Symbol) -> Bool{
+		symbols.contains(symbol)
+	}
+
+	public func siblings(of: Symbol) -> SymbolClass {
+		guard contains(of) else { fatalError() }
+		return of
+	}
+
+	public func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool {
+		lhs == rhs
+	}
+
+	// MARK: Collection
+	public typealias Element = SymbolClass
+	public typealias Index = Set<Symbol>.Index
+
+	public var startIndex: Index {
+		symbols.startIndex
+	}
+
+	public var endIndex: Index {
+		symbols.endIndex
+	}
+
+	public func index(before i: Index) -> Index {
+		fatalError()
+	}
+
+	public func index(after i: Index) -> Index {
+		symbols.index(after: i)
+	}
+
+	public subscript(position: Index) -> Element {
+		symbols[position]
+	}
+}
+
 public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
+	public func index(before i: Set<SymbolClass>.Index) -> Set<SymbolClass>.Index {
+		fatalError()
+	}
+	
 	public typealias SymbolClass = Set<Symbol>
-	public typealias Partitions = Set<SymbolClass>
 	public typealias ArrayLiteralElement = SymbolClass
 
 	public var partitions: Set<SymbolClass>
 
 	public init() {
 		self.partitions = []
-	}
-
-	public init<T: AlphabetProtocol>(_ input: T) where T.Partitions == Partitions, T.Symbol == Symbol {
-		self.partitions = input.partitions
 	}
 
 	public init(partitions: some Collection<Set<Symbol>>) {
@@ -59,6 +112,25 @@ public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
 		siblings(of: lhs).contains(rhs)
 	}
 
+	// MARK: Collection
+	public typealias Element = SymbolClass
+	public typealias Index = Set<SymbolClass>.Index
+
+	public var startIndex: Index {
+		partitions.startIndex
+	}
+
+	public var endIndex: Index {
+		partitions.endIndex
+	}
+
+	public func index(after i: Index) -> Index {
+		partitions.index(after: i)
+	}
+
+	public subscript(position: Index) -> Element {
+		partitions[position]
+	}
 }
 
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
@@ -76,8 +148,6 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 	public typealias SymbolClass = Array<ClosedRange<Symbol>>
 	/// Implements ExpressibleByArrayLiteral
 	public typealias ArrayLiteralElement = SymbolClass
-	/// Implements SetAlgebra
-	public typealias Element = Symbol
 
 	// MARK: Properties
 	/// Ordered list of all symbols (and ranges) in the class
@@ -138,7 +208,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 				// Check if current range is adjacent to or overlaps with the last merged range
 				if current.lowerBound <= last.upperBound + 1 {
 					// Merge by creating a new range with the same lower bound and the maximum upper bound
-					let newUpper = max(last.upperBound, current.upperBound)
+					let newUpper = Swift.max(last.upperBound, current.upperBound)
 					merged[merged.count - 1] = last.lowerBound...newUpper
 				} else {
 					// If not adjacent or overlapping, add the current range as a new segment
@@ -197,45 +267,6 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 		self.parents = parents
 	}
 
-	/// A view on the current ClosedRangeSymbolClass that looks like a normal SymbolClass
-	/// It is read-only.
-	public struct Expanded: AlphabetProtocol {
-		public typealias ArrayLiteralElement = SymbolClass
-		public typealias SymbolClass = Set<Symbol>
-		public typealias Partitions = Set<SymbolClass>
-
-		let underlying: ClosedRangeAlphabet<Symbol>
-
-		public init(underlying: ClosedRangeAlphabet<Symbol>) {
-			self.underlying = underlying
-		}
-
-		public init(partitions: Array<Set<Symbol>>) {
-			fatalError()
-		}
-
-		public var partitions: Set<SymbolClass> {
-			Set<Set<Symbol>>(underlying.partitions.map { Set($0.flatMap { $0 }) })
-		}
-
-		public func contains(_ symbol: Symbol) -> Bool {
-			underlying.findIndex(symbol) != nil
-		}
-
-		public func siblings(of: Symbol) -> Set<Symbol> {
-			Set(underlying.siblings(of: of).flatMap { $0 })
-		}
-
-		public func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool {
-			// FIXME this is going to be horribly show for large ranges
-			siblings(of: lhs).contains(rhs)
-		}
-	}
-	
-	public var expanded: Expanded {
-		Expanded(underlying: self)
-	}
-
 	// MARK: RegularPatternProtocol
 	/// A pattern without any elements has an empty alphabet
 	public static var empty: Self { Self() }
@@ -246,7 +277,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 		Self([element])
 	}
 	public static func concatenate(_ elements: [Self]) -> Self {
-		Self(partitions: elements.flatMap(\.partitions))
+		Self(partitions: elements.flatMap(\.self))
 	}
 	public static func union(_ elements: [Self]) -> Self {
 		// Merge partitions that are the only partition in their alternation
@@ -278,7 +309,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 	}
 
 	/// Maps partition label to set of values in partition
-	public var partitions: Array<SymbolClass> {
+	private var partitions: Array<SymbolClass> {
 		let labels = Set(parents).sorted()
 		var dict: Dictionary<Int, Array<ClosedRange<Symbol>>> = Dictionary(uniqueKeysWithValues: labels.map { ($0, []) })
 		for i in 0..<symbols.count {
@@ -363,7 +394,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 		return Self.meet([self, other])
 	}
 	public static func meet(_ i: Array<Self>) -> Self {
-		return ClosedRangeAlphabet(partitions: i.flatMap(\.partitions))
+		return ClosedRangeAlphabet(partitions: i.flatMap(\.self))
 	}
 
 	public static func == (lhs: Self, rhs: Self) -> Bool {
@@ -407,6 +438,26 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 			}
 		}
 		return lowerBound
+	}
+
+	// MARK: Collection
+	public typealias Element = SymbolClass
+	public typealias Index = Array<SymbolClass>.Index
+
+	public var startIndex: Index {
+		partitions.startIndex
+	}
+
+	public var endIndex: Index {
+		partitions.endIndex
+	}
+
+	public func index(after i: Index) -> Index {
+		partitions.index(after: i)
+	}
+
+	public subscript(position: Index) -> Element {
+		partitions[position]
 	}
 }
 
