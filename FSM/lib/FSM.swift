@@ -1,11 +1,14 @@
 /// An abstraction of a regular language
-public protocol RegularLanguageProtocol: SetAlgebra, ExpressibleByArrayLiteral, RegularPatternProtocol {
-	associatedtype Symbol;
-	associatedtype SymbolClass;
+public protocol RegularLanguageProtocol: ExpressibleByArrayLiteral, RegularPatternBuilder {
+	associatedtype Symbol: Equatable;
+	associatedtype Element: Collection where Element.Element == Symbol
 
 	/// Checks if the DFA accepts a given sequence (element of the language)
 	func contains(_ input: Element) -> Bool
+}
 
+/// A regular language structure that provides set algebra operations
+public protocol RegularLanguageSetAlgebra: SetAlgebra, ExpressibleByArrayLiteral, RegularPatternBuilder {
 	/// Returns a DFA accepting the union of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
 	func union(_ other: __owned Self) -> Self
@@ -66,16 +69,6 @@ public protocol RegularLanguageProtocol: SetAlgebra, ExpressibleByArrayLiteral, 
 	/// Required by ``SetAlgebra``
 	mutating func formSymmetricDifference(_ other: __owned Self)
 
-	/// Concatenation operator
-	///
-	/// The selection of symbol for operator is fraught because most of these symbols have been used for most different things
-	/// String concatenation is slightly different than language concatenation,
-	/// I want to suggest the string concatenation of the cross product of any string from ordered pair languages
-	static func ++ (lhs: Self, rhs: Self) -> Self
-
-	/// Union/alternation
-	static func | (lhs: Self, rhs: Self) -> Self
-
 	/// Subtract/difference
 	/// Returns a version of `lhs` but removing any elements in `rhs`
 	///
@@ -83,9 +76,21 @@ public protocol RegularLanguageProtocol: SetAlgebra, ExpressibleByArrayLiteral, 
 	static func - (lhs: Self, rhs: Self) -> Self
 }
 
-extension RegularLanguageProtocol {
+extension RegularLanguageSetAlgebra {
 	/// Subtraction default implementation
 	public static func - (lhs: Self, rhs: Self) -> Self {
 		return lhs.subtracting(rhs)
+	}
+
+	public mutating func formUnion(_ other: __owned Self) {
+		self = self.union(other);
+	}
+
+	public mutating func formIntersection(_ other: Self) {
+		self = self.intersection(other);
+	}
+
+	public mutating func formSymmetricDifference(_ other: __owned Self) {
+		self = self.symmetricDifference(other);
 	}
 }

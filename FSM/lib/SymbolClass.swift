@@ -151,7 +151,7 @@ public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
 /// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 // TODO: Rename this to SymbolRangePartitionedSet or something
-public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtocol, RegularPatternProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtocol, RegularPatternBuilder where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
 	public typealias SymbolClass = Array<ClosedRange<Symbol>>
