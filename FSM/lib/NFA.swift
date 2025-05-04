@@ -217,7 +217,8 @@ public struct NFA<Symbol: Hashable>: NFAProtocol {
 
 	/// Get the ID of the state machine without any input
 	public struct ID {
-		public let fsm: NFA<SymbolClass>
+		public typealias OuterNFA = NFA<Symbol>
+		public let fsm: OuterNFA
 		public let states: States
 
 		public var isFinal: Bool {
@@ -378,7 +379,7 @@ public struct NFA<Symbol: Hashable>: NFAProtocol {
 	public static func concatenate(_ languages: Array<Self>) -> Self {
 		if(languages.count == 0){
 			// Concatenation identity is epsilon
-			return NFA<SymbolClass>(states: [[:]], epsilon: [[]], initials: [0], finals: [0]);
+			return Self(states: [[:]], epsilon: [[]], initials: [0], finals: [0]);
 		} else if(languages.count == 1) {
 			return languages[0];
 		}

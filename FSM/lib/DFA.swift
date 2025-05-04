@@ -267,7 +267,9 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 
 	/// Instant Description (ID), describes a FSM and its specific state during execution
 	public struct ID {
-		public let fsm: DFA<SymbolClass>
+		public typealias OuterDFA = DFA<Symbol>
+
+		public let fsm: OuterDFA
 		public let state: StateNo
 
 		/// Indicates if the current state of the ID is a final state
@@ -286,8 +288,8 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		}
 
 		/// Returns a new DFA whose initial state is the current state
-		public var derived: DFA<SymbolClass> {
-			DFA<SymbolClass>(
+		public var derived: OuterDFA {
+			OuterDFA(
 				states: self.fsm.states,
 				initial: self.state,
 				finals: self.fsm.finals
@@ -321,7 +323,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 			else { return nil } //uh-oh, now we have to find all of the oblivion states
 			currentState = nextState
 		}
-		return DFA<SymbolClass>(
+		return Self(
 			states: minimized.states,
 			initial: minimized.initial,
 			finals: [currentState]
@@ -348,7 +350,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 			let symbols: Array<SymbolClass> = table.keys.filter { table[$0] == target }
 			return (
 				alpha: self.subpaths(source: self.initial, target: [source]),
-				symbols: DFA<SymbolClass>(symbols.map { [$0] }),
+				symbols: Self(symbols.map { [$0] }),
 				beta: self.subpaths(source: target, target: self.finals)
 			)
 		}
@@ -420,7 +422,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	/// It does this by merging states with the "same" behavior into the same state.
 	/// Implemented by Hopcroft's Algorithm.
 	/// - Returns: The minimized DFA
-	public func minimized() -> DFA<SymbolClass> {
+	public func minimized() -> Self {
 		// Step 1: Remove unreachable states
 		var reachable = Set<Int>([initial])
 		var reachableStates = [initial]
@@ -453,7 +455,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		reachableStates = reachableStates.filter { coReachable.contains($0) }
 		let stateMap = Dictionary(uniqueKeysWithValues: reachableStates.enumerated().map { ($1, $0) })
 		if(stateMap.isEmpty) {
-			return DFA<SymbolClass>.empty
+			return Self.empty
 		}
 		let trimmedStates = reachableStates.map { state in
 			// Remove transitions to dead states, remap remaining transitions
@@ -520,7 +522,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		let newInitial = stateToPartition[trimmedInitial]!
 		let newFinals = Set(partition.enumerated().filter { trimmedFinals.contains($1.first!) }.map { $0.offset })
 
-		return DFA(states: newStates, initial: newInitial, finals: newFinals)
+		return Self(states: newStates, initial: newInitial, finals: newFinals)
 	}
 
 	/// Maps the DFA’s symbols to a new type.
@@ -560,25 +562,25 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 
 	/// Returns a DFA accepting the union of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
-	public func union(_ other: __owned DFA<SymbolClass>) -> DFA<SymbolClass> {
+	public func union(_ other: __owned Self) -> Self {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] });
 	}
 
 	/// Returns a DFA accepting the intersection of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
-	public func intersection(_ other: DFA<SymbolClass>) -> DFA<SymbolClass> {
+	public func intersection(_ other: Self) -> Self {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] });
 	}
 
 	/// Returns a DFA accepting the symmetric difference of this DFA’s language and another’s.
 	/// That is, the set of elements in exactly one set or the other set, and not both.
 	/// To only remove elements, see ``subtracting(_:)`` or the ``-(lhs:rhs:)`` operator
-	public func symmetricDifference(_ other: __owned DFA<SymbolClass>) -> DFA<SymbolClass> {
+	public func symmetricDifference(_ other: __owned Self) -> Self {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
 	}
 
 	// Also provide a static implementation of union since it applies to any number of inputs
-	public static func union(_ languages: Array<DFA<SymbolClass>>) -> DFA<SymbolClass> {
+	public static func union(_ languages: Array<Self>) -> Self {
 		if(languages.count == 0){
 			return Self();
 		} else if(languages.count == 1) {
@@ -588,22 +590,22 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	}
 
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
-	public static func concatenate(_ languages: Array<DFA<SymbolClass>>) -> DFA<SymbolClass> {
+	public static func concatenate(_ languages: Array<Self>) -> Self {
 		if(languages.count == 0){
 			// Concatenation identity is epsilon
-			return DFA<SymbolClass>(states: [[:]], initial: 0, finals: [0]);
+			return Self(states: [[:]], initial: 0, finals: [0]);
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
 		let nfa = NFA<SymbolClass>.concatenate(languages.map { NFA<SymbolClass>($0) });
-		return DFA<SymbolClass>(nfa: nfa);
+		return Self(nfa: nfa);
 	}
 
-	public func concatenate(_ other: DFA<SymbolClass>) -> DFA<SymbolClass> {
+	public func concatenate(_ other: Self) -> Self {
 		return Self.concatenate([self, other]);
 	}
 
-	public static func symbol(_ element: SymbolClass) -> DFA<SymbolClass> {
+	public static func symbol(_ element: SymbolClass) -> Self {
 		return Self(
 			states: [[element: 1], [:]],
 			initial: 0,
@@ -613,7 +615,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 
 	/// Return a DFA that also accepts the empty sequence
 	/// i.e. adds the initial state to the set of final states
-	public func optional() -> DFA<SymbolClass> {
+	public func optional() -> Self {
 		return Self(
 			states: self.states,
 			initial: self.initial,
@@ -622,7 +624,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	}
 
 	/// Returns a DFA accepting one or more repetitions of its language.
-	public func plus() -> DFA<SymbolClass> {
+	public func plus() -> Self {
 		let nfa = NFA<SymbolClass>(
 			states: self.states.map { $0.mapValues { Set([$0]) } },
 			// Add an epsilon transition from the final states to the initial state
@@ -630,11 +632,11 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 			initial: self.initial,
 			finals: self.finals
 		);
-		return DFA(nfa: nfa);
+		return Self(nfa: nfa);
 	}
 
 	/// Returns a DFA accepting zero or more repetitions of its language.
-	public func star() -> DFA<SymbolClass> {
+	public func star() -> Self {
 		return self.plus().optional();
 		// Should be equal to:
 		//let nfa = NFA<Element>(
@@ -644,25 +646,25 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		//	initial: self.initial,
 		//	finals: self.finals.union([self.initial])
 		//);
-		//return DFA(nfa: nfa);
+		//return Self(nfa: nfa);
 	}
 
 	/// Returns a DFA accepting exactly `count` repetitions of its language.
-	public func repeating(_ count: Int) -> DFA<SymbolClass> {
+	public func repeating(_ count: Int) -> Self {
 		precondition(count >= 0)
-		return DFA.concatenate(Array(repeating: self, count: count))
+		return Self.concatenate(Array(repeating: self, count: count))
 	}
 
 	/// Returns a DFA accepting between `range.lowerBound` and `range.upperBound` repetitions.
-	public func repeating(_ range: ClosedRange<Int>) -> DFA<SymbolClass> {
+	public func repeating(_ range: ClosedRange<Int>) -> Self {
 		precondition(range.lowerBound >= 0)
-		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + Array(repeating: self.optional(), count: Int(range.upperBound-range.lowerBound)));
+		return Self.concatenate(Array(repeating: self, count: range.lowerBound) + Array(repeating: self.optional(), count: Int(range.upperBound-range.lowerBound)));
 	}
 
 	/// Returns a DFA accepting `range.lowerBound` or more repetitions.
-	public func repeating(_ range: PartialRangeFrom<Int>) -> DFA<SymbolClass> {
+	public func repeating(_ range: PartialRangeFrom<Int>) -> Self {
 		precondition(range.lowerBound >= 0)
-		return DFA.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
+		return Self.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
 
 	//func derive(_ input: Element) -> Self
@@ -677,16 +679,18 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	///
 	/// ```
 	/// for element in dfa { print(element) }
-	/// ```
+	/// ```x1
 	public func makeIterator() -> Iterator where SymbolClass: Comparable {
 		return Iterator(self);
 	}
 
 	/// A simple way to create a view on a struct to change how it is iterated or enumerated
 	public struct IteratorFactory<T>: Sequence where T: IteratorProtocol {
-		let dfa: DFA<SymbolClass>;
-		let constructor: (DFA<SymbolClass>) -> T;
-		init(_ dfa: DFA<SymbolClass>, constructor: @escaping (DFA<SymbolClass>) -> T) {
+		public typealias OuterDFA = DFA<Symbol>
+
+		let dfa: OuterDFA;
+		let constructor: (OuterDFA) -> T;
+		init(_ dfa: OuterDFA, constructor: @escaping (OuterDFA) -> T) {
 			self.dfa = dfa;
 			self.constructor = constructor;
 		}
@@ -707,6 +711,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	/// Indefinitely, if need be.
 	// TODO: Consider using AsyncStream for this
 	public struct PathIterator: IteratorProtocol where SymbolClass: Comparable {
+		public typealias OuterDFA = DFA<Symbol>
 		public struct Segment: Equatable {
 			public var source: StateNo
 			public var index: Int
@@ -714,7 +719,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 			public var target: StateNo
 		};
 		public typealias Path = Array<Segment>;
-		let fsm: DFA<SymbolClass>;
+		let fsm: OuterDFA;
 		let states: Array<Array<(symbol: SymbolClass, toState: StateNo)>>
 		let filter: (Self, Path) -> Bool;
 
@@ -722,7 +727,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		var visited: Set<StateNo>?;
 		var started = false;
 
-		init(_ fsm: DFA<SymbolClass>, filter: @escaping (Self, Path) -> Bool) {
+		init(_ fsm: OuterDFA, filter: @escaping (Self, Path) -> Bool) {
 			// let fsm = options.fsm;
 			self.fsm = fsm;
 			self.filter = filter;
@@ -755,7 +760,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 			self.stack = [];
 		}
 
-		init(_ fsm: DFA<SymbolClass>) {
+		init(_ fsm: OuterDFA) {
 			self.init(fsm, filter: { _, _ in true });
 		}
 
@@ -814,13 +819,14 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	}
 
 	public struct Iterator: IteratorProtocol where SymbolClass: Comparable {
+		public typealias OuterDFA = DFA<Symbol>
 		public typealias Element = Array<SymbolClass>
 
-		let fsm: DFA<SymbolClass>;
+		let fsm: OuterDFA;
 		var iterator: PathIterator;
 		var currentDepth: Int;
 
-		init(_ fsm: DFA<SymbolClass>) {
+		init(_ fsm: OuterDFA) {
 			// let fsm = options.fsm;
 			self.fsm = fsm;
 			self.iterator = PathIterator(fsm, filter: { _, path in path.count <= 0 });
@@ -848,7 +854,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	// Now we're really getting into alchemy land
 	/// This follows all the paths walked by a set of strings provided as another DFA
 	/// It takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
-	public func nextStates(initial: StateNo, input: DFA<SymbolClass>) -> Set<StateNo> where SymbolClass: Comparable {
+	public func nextStates(initial: StateNo, input: Self) -> Set<StateNo> where SymbolClass: Comparable {
 		var finalStates: Set<StateNo> = [];
 		//var derivative = DFA<Symbol>(
 		//	states: self.states,
@@ -884,7 +890,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		return DFA<Target>(nfa: nfa)
 	}
 
-	public func homomorphism<Target>(mapping: [(DFA<SymbolClass>, DFA<Target>)]) -> DFA<Target> {
+	public func homomorphism<Target>(mapping: [(Self, DFA<Target>)]) -> DFA<Target> {
 		let nfa: NFA<Target> = NFA<SymbolClass>(self).homomorphism(mapping: mapping);
 		return DFA<Target>(nfa: nfa)
 	}
@@ -976,12 +982,12 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		if(contains(newMember)) {
 			return (false, newMember)
 		}
-		self = self.union(DFA(verbatim: newMember));
+		self = self.union(Self(verbatim: newMember));
 		return (true, newMember)
 	}
 
 	public mutating func remove(_ member: Element) -> (Element)? {
-		self.formSymmetricDifference(DFA(verbatim: member));
+		self.formSymmetricDifference(Self(verbatim: member));
 		return member;
 	}
 
@@ -996,7 +1002,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	///
 	/// Note: I think (-) is pretty unambiguous here, but some math notation uses \ for this operation.
 	public static func - (lhs: Self, rhs: Self) -> Self {
-		return DFA<SymbolClass>.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
+		return Self.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
 	}
 }
 
@@ -1037,12 +1043,12 @@ extension DFA where SymbolClass == Character {
 		if(contains(newMember)) {
 			return (false, newMember)
 		}
-		self = self.union(DFA(verbatim: newMember));
+		self = self.union(Self(verbatim: newMember));
 		return (true, newMember)
 	}
 
 	public mutating func remove(_ member: String) -> (String)? {
-		self.formSymmetricDifference(DFA(verbatim: member));
+		self.formSymmetricDifference(Self(verbatim: member));
 		return member;
 	}
 }

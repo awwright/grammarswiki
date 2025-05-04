@@ -155,6 +155,7 @@ public struct DFT<Symbol: Comparable & Hashable>: Hashable {
 		for s in input {
 			let table = self.states[state]
 			guard let transition = table[s] else { return nil }
+			state = transition
 			if let o = self.output[state][s] {
 				output += o
 			}
