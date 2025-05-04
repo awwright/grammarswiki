@@ -510,7 +510,7 @@ public func compressPartitions<Symbol>(_ partitions: Set<Set<Symbol>>) -> (reduc
 }
 
 /// Transparently maps a regular language with a large alphabet onto a DFA with a smaller alphabet where some symbols are equivalent
-public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageProtocol {
+public struct DFARemap<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageProtocol {
 	public typealias SymbolClass = Symbol
 	public typealias StateNo = DFA<Symbol>.StateNo
 	public typealias States = DFA<Symbol>.States
@@ -574,81 +574,28 @@ public struct SymbolClassDFA<Symbol: Comparable & Hashable>: Sequence, Equatable
 		return currentState;
 	}
 
-	public func intersection(_ other: SymbolClassDFA<Symbol>) -> SymbolClassDFA<Symbol> {
-		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: inner.intersection(other.inner), mapping: mapping)
-	}
-
-	public func symmetricDifference(_ other: __owned SymbolClassDFA<Symbol>) -> SymbolClassDFA<Symbol> {
-		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: inner.symmetricDifference(other.inner), mapping: mapping)
-	}
-
-	public func star() -> SymbolClassDFA<Symbol> {
-		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: inner.star(), mapping: mapping)
-	}
-
-	public mutating func formUnion(_ other: __owned SymbolClassDFA<Symbol>) {
-		fatalError("Unimplemented")
-		//self = SymbolClassDFA(inner: inner.union(other.inner), mapping: mapping)
-	}
-
-	public mutating func formIntersection(_ other: SymbolClassDFA<Symbol>) {
-		fatalError("Unimplemented")
-		//self = SymbolClassDFA(inner: inner.intersection(other.inner), mapping: mapping)
-	}
-
-	public mutating func formSymmetricDifference(_ other: __owned SymbolClassDFA<Symbol>) {
-		fatalError("Unimplemented")
-		//self = SymbolClassDFA(inner: inner.symmetricDifference(other.inner), mapping: mapping)
-	}
-
 	public func isFinal(_ state: DFA<Symbol>.States) -> Bool {
 		inner.isFinal(state)
 	}
 
 	public func makeIterator() -> DFA<Symbol>.Iterator {
 		fatalError("Unimplemented")
-		//return inner.makeIterator()
 	}
 
-	public mutating func insert(_ newMember: __owned DFA<Symbol>.Element) -> (inserted: Bool, memberAfterInsert: DFA<Symbol>.Element) {
+	public static func union(_ elements: [DFARemap<Symbol>]) -> DFARemap<Symbol> {
 		fatalError("Unimplemented")
-		//var newSet = self.inner;
-		//let value = newSet.insert(newMember);
-		//self = SymbolClassDFA(inner: newSet, mapping: mapping);
-		//return value;
 	}
 
-	public mutating func remove(_ member: DFA<Symbol>.Element) -> (DFA<Symbol>.Element)? {
+	public static func concatenate(_ elements: [DFARemap<Symbol>]) -> DFARemap<Symbol> {
 		fatalError("Unimplemented")
-		//var newSet = self.inner;
-		//let value = newSet.remove(member);
-		//self = SymbolClassDFA(inner: newSet, mapping: mapping);
-		//return value;
 	}
 
-	public mutating func update(with newMember: __owned DFA<Symbol>.Element) -> (DFA<Symbol>.Element)? {
+	public static func symbol(_ element: Symbol) -> DFARemap<Symbol> {
 		fatalError("Unimplemented")
-		//var newSet = self.inner;
-		//let value = newSet.update(with: newMember);
-		//self = SymbolClassDFA(inner: newSet, mapping: mapping);
-		//return value;
 	}
 
-	public static func union(_ elements: [SymbolClassDFA<Symbol>]) -> SymbolClassDFA<Symbol> {
+	public func star() -> DFARemap<Symbol> {
 		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: DFA<Symbol>.union(elements.map(\.inner)), mapping: [:])
 	}
 
-	public static func concatenate(_ elements: [SymbolClassDFA<Symbol>]) -> SymbolClassDFA<Symbol> {
-		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: DFA<Symbol>.concatenate(elements.map(\.inner)), mapping: [:])
-	}
-
-	public static func symbol(_ element: Symbol) -> SymbolClassDFA<Symbol> {
-		fatalError("Unimplemented")
-		//SymbolClassDFA(inner: DFA<Symbol>.symbol(element), mapping: [:])
-	}
 }

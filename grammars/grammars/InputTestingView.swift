@@ -9,7 +9,7 @@ struct InputTestingView: View {
 	@Binding var content_rulelist: ABNFRulelist<UInt32>?
 	@Binding var selectedRule: String?
 	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
-	@Binding var rule_fsm_proxy: SymbolClassDFA<UInt32>?
+	@Binding var rule_fsm_proxy: DFARemap<UInt32>?
 	@State private var testInput: String = ""
 	@State private var fsm_test_result: Bool? = nil
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil

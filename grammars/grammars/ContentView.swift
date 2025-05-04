@@ -123,7 +123,7 @@ struct DocumentDetail: View {
 	@State private var rule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
 	@State private var rule_fsm: DFA<UInt32>? = nil
 	@State private var rule_fsm_error: String? = nil
-	@State private var rule_fsm_proxy: SymbolClassDFA<UInt32>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
+	@State private var rule_fsm_proxy: DFARemap<UInt32>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
 	@State private var rule_partshrink: Dictionary<UInt32, UInt32>? = nil
 	@State private var rule_partexpand: Dictionary<UInt32, Array<UInt32>>? = nil
 
@@ -432,7 +432,7 @@ struct DocumentDetail: View {
 
 						await MainActor.run {
 							rule_fsm = result
-							rule_fsm_proxy = SymbolClassDFA(inner: result, mapping: rule_partshrink!)
+							rule_fsm_proxy = DFARemap(inner: result, mapping: rule_partshrink!)
 							rule_fsm_error = nil
 						}
 					} catch let error as ABNFExportError {
