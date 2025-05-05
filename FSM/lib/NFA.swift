@@ -1,5 +1,5 @@
 public protocol NFAProtocol: RegularLanguageProtocol, RegularLanguageSetAlgebra where SymbolClass: Hashable {
-	var statesSet: Array<Dictionary<SymbolClass, Set<Int>>> {get};
+	var statesSet: Array<Alphabet.NFATable> {get};
 	var epsilon: Array<Set<Int>> {get};
 	var initials: Set<Int> {get};
 	var finals: Set<Int> {get};
@@ -20,7 +20,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 	public typealias States = Set<StateNo>;
 
 	/// For each state, a mapping of the next input symbol to the set of states it should transition to
-	public let statesSet: Array<Dictionary<SymbolClass, Set<Int>>>;
+	public let statesSet: Array<Alphabet.NFATable>;
 	/// For each state, a set of the states that should automatically be transitioned to
 	public let epsilon: Array<Set<Int>>;
 	// I allow initials to be a set of states so that the result of following from the initial state can be a closed operation
@@ -30,7 +30,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 	public let finals: Set<Int>;
 
 	init(
-		states: Array<Dictionary<SymbolClass, States>> = [ [:] ],
+		states: Array<Alphabet.NFATable> = [ [:] ],
 		epsilon: Array<States> = [ [] ],
 		initials: States = [0],
 		finals: Set<Int> = []
@@ -77,7 +77,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 
 	// Variation with single initial state
 	public init(
-		states: Array<Dictionary<SymbolClass, States>> = [],
+		states: Array<Alphabet.NFATable> = [],
 		epsilon: Array<States> = [],
 		initial: StateNo = 0,
 		finals: Set<StateNo> = []
@@ -87,7 +87,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 
 	public init(verbatim: some Sequence<SymbolClass>){
 		// Generate one state per symbol in Element, plus a final state
-		let states = verbatim.enumerated().map { [ $1: Set([$0 + 1]) ] } + [[:]]
+		let states: Array<Alphabet.NFATable> = verbatim.enumerated().map { [ $1: Set([$0 + 1]) ] } + [[:]]
 		self.init(
 			states: states,
 			epsilon: Array(repeating: [], count: states.count),
@@ -96,7 +96,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 		);
 	}
 
-	public init<T: NFAProtocol>(_ nfa: T) where T.SymbolClass == SymbolClass {
+	public init<T: NFAProtocol>(_ nfa: T) where T.Alphabet == Alphabet {
 		self.init(
 			states: nfa.statesSet,
 			epsilon: nfa.epsilon,
@@ -142,7 +142,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 	}
 
 	public var alphabet: Alphabet {
-		Alphabet(partitions: self.statesSet.flatMap(\.keys))
+		Alphabet(partitions: self.statesSet.flatMap(\.alphabet))
 	}
 
 	public func nextStates(state: StateNo, symbol: SymbolClass) -> States {
@@ -263,7 +263,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 	}
 
 	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
-		var newStates = Array<Dictionary<SymbolClass, States>>();
+		var newStates = Array<Alphabet.NFATable>();
 		var newFinals = Set<Int>();
 		var forward = Dictionary<Array<States>, Int>();
 		var backward = Array<Array<States>>();
@@ -287,13 +287,13 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 
 		var newStateId = 0;
 		while(newStateId < backward.count){
-			var newStateTransitions = Dictionary<SymbolClass, States>();
+			var newStateTransitions = Alphabet.NFATable();
 			let inStates = backward[newStateId];
 			var alphabets = Set<SymbolClass>();
 			// enumerate over inStates and get the index
 			for (fsm, states) in zip(fsms, inStates) {
 				for state in states {
-					alphabets.formUnion(fsm.statesSet[state].keys);
+					alphabets.formUnion(fsm.statesSet[state].alphabet);
 				}
 			}
 			// For each of the symbols in the alphabet, get the next state following the current one
@@ -341,7 +341,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 	public func union(_ other: __owned Self) -> Self {
 //		return Self.parallel(dfas: [self, other], merge: { $0[0] || $0[1] });
 		let offset = self.statesSet.count;
-		let newStates = other.statesSet.map { $0.mapValues { Set($0.map { $0  + offset }) } }
+		let newStates = other.statesSet.map { Alphabet.NFATable(uniqueKeysWithValues: $0.map { ($0.0, Set($0.1.map { $0  + offset })) }) }
 		let newEpsilon = other.epsilon.map { Set($0.map { $0  + offset }) }
 		let newInitials = other.initials.map { $0  + offset }
 		let newFinals = other.finals.map { $0  + offset }
@@ -387,7 +387,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 			previous, other in
 			let offset = previous.statesSet.count;
 			// Remap all of the state IDs
-			let newStates = other.statesSet.map { $0.mapValues { Set($0.map { $0  + offset }) } }
+			let newStates = other.statesSet.map { Alphabet.NFATable(uniqueKeysWithValues: $0.map { ($0.0, Set($0.1.map { $0  + offset })) }) }
 			let newEpsilon = other.epsilon.map { Set($0.map { $0  + offset }) };
 			let newInitials = Set(other.initials.map { $0  + offset });
 			let newFinals = Set(other.finals.map { $0  + offset });
@@ -462,10 +462,10 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 	}
 
 	public func homomorphism<Target: AlphabetProtocol>(mapping: [(some Collection<SymbolClass>, some Collection<Target.SymbolClass>)]) -> SymbolClassNFA<Target> where Target: Hashable {
-		var newStates: [[Target.SymbolClass: Set<Int>]] = self.statesSet.map { _ in [:] }
+		var newStates: [Target.NFATable] = self.statesSet.map { _ in [:] }
 		var newEpsilon: [States] = self.statesSet.map { _ in [] }
 
-		func addTransition( _ states: inout [[Target.SymbolClass: Set<Int>]], _ from: Int, _ element: Target.SymbolClass, _ to: Int) {
+		func addTransition( _ states: inout [Target.NFATable], _ from: Int, _ element: Target.SymbolClass, _ to: Int) {
 			if from >= states.count {
 				states.insert([:], at: from);
 			}

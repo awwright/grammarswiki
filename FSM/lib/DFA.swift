@@ -1,5 +1,5 @@
 public protocol DFAProtocol: NFAProtocol {
-	var states: Array<Dictionary<SymbolClass, Int>> { get }
+	var states: Array<Alphabet.DFATable> { get }
 	var initial: Int { get }
 	// `finals` from NFAProtocol
 }
@@ -7,9 +7,9 @@ public protocol DFAProtocol: NFAProtocol {
 extension DFAProtocol {
 	/// Implements NFAProtocol
 	/// In a DFA, there is exactly one transition per state
-	public var statesSet: Array<Dictionary<SymbolClass, Set<Int>>> {
+	public var statesSet: Array<Alphabet.NFATable> {
 		states.map {
-			$0.mapValues { Set([$0]) }
+			Alphabet.NFATable(uniqueKeysWithValues: $0.map { ($0.0, Set([$0.1])) })
 		}
 	}
 
@@ -58,7 +58,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	public typealias States = StateNo?;
 
 	/// The transition table, mapping each state to a dictionary of symbol-to-next-state transitions.
-	public let states: Array<Dictionary<SymbolClass, StateNo>>;
+	public let states: Array<Alphabet.DFATable>;
 	/// The initial state of the DFA.
 	public let initial: StateNo;
 	/// The set of accepting (final) states.
@@ -79,7 +79,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	///   - finals: The set of accepting states; all must be within `states` bounds.
 	/// - Precondition: All referenced states must exist within `states`.
 	public init(
-		states: Array<Dictionary<SymbolClass, StateNo>> = [],
+		states: Array<Alphabet.DFATable> = [],
 		initial: StateNo = 0,
 		finals: Set<StateNo> = []
 	) {
@@ -108,7 +108,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	///
 	/// You can also provide an array literal, e.g. `SymbolClassDFA([element])`
 	public init(verbatim: some Collection<Symbol>){
-		let states = verbatim.enumerated().map { [ $1: $0 + 1 ] } + [[:]]
+		let states: Array<Alphabet.DFATable> = verbatim.enumerated().map { Alphabet.DFATable([ $1: $0 + 1 ]) } + [[:]]
 		self.init(
 			states: states,
 			initial: 0,
@@ -123,7 +123,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	public init(nfa: SymbolClassNFA<Alphabet>){
 		let translation = SymbolClassNFA<Alphabet>.parallel(fsms: [nfa], merge: { $0[0] });
 		assert(translation.statesSet.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
-		self.states = translation.statesSet.map { $0.mapValues { $0.first! } }
+		self.states = translation.statesSet.map { Alphabet.DFATable(uniqueKeysWithValues: $0.map { ($0.0, $0.1.first!) }) }
 		self.initial = translation.initials.first!;
 		self.finals = translation.finals;
 	}
@@ -141,7 +141,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	}
 
 	public var alphabet: Alphabet {
-		Alphabet(partitions: self.states.flatMap(\.keys))
+		Alphabet(partitions: self.states.flatMap(\.alphabet))
 	}
 
 	public var alphabetPartitions: Set<Set<Symbol>> {
@@ -343,11 +343,11 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	// TODO: This could also return a Dict? A beta value is unique per alpha value
 	public func symbolContext(input: Symbol) -> Array<(alpha: Self, symbols: Self, beta: Self)> {
 		self.states.enumerated().compactMap {
-			(source, table) in
+			(source, table) -> (alpha: Self, symbols: Self, beta: Self)? in
 			let target = table[input]
 			guard let target else { return nil }
 			// Get all of the keys that map to the same target
-			let symbols: Array<SymbolClass> = table.keys.filter { table[$0] == target }
+			let symbols: Array<SymbolClass> = table.alphabet.filter { table[$0] == target }
 			return (
 				alpha: self.subpaths(source: self.initial, target: [source]),
 				symbols: Self(symbols.map { [$0] }),
@@ -365,7 +365,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// 	To find a union, return true if any is true. To find the intersection, return true only when all are true.
 	///
 	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
-		var newStates = Array<Dictionary<SymbolClass, StateNo>>();
+		var newStates = Array<Alphabet.DFATable>();
 		var newFinals = Set<StateNo>();
 		var forward = Dictionary<Array<States>, StateNo>();
 		var backward = Array<Array<States>>();
@@ -391,13 +391,13 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 		var newStateId = 0;
 		while(newStateId < backward.count){
-			var newStateTransitions = Dictionary<SymbolClass, StateNo>();
+			var newStateTransitions = Alphabet.DFATable();
 			let inStates = backward[newStateId];
 			var alphabets = Set<SymbolClass>();
 			// enumerate over inStates and build the alphabet for the new state
 			for (fsm, state) in zip(fsms, inStates) {
 				if let state {
-					alphabets.formUnion(fsm.states[state].keys);
+					alphabets.formUnion(fsm.states[state].alphabet);
 				}
 			}
 			// For each of the symbols in the alphabet, get the next state following the current one
@@ -516,8 +516,8 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		}
 
 		let stateToPartition = Dictionary(uniqueKeysWithValues: partition.enumerated().flatMap { (index, set) in set.map { ($0, index) } })
-		let newStates = partition.map {
-			return Dictionary(uniqueKeysWithValues: trimmedStates[$0.first!].map { ($0.key, stateToPartition[$0.value]!) })
+		let newStates: [Alphabet.DFATable] = partition.map {
+			return Alphabet.DFATable(uniqueKeysWithValues: trimmedStates[$0.first!].map { ($0.key, stateToPartition[$0.value]!) })
 		}
 		let newInitial = stateToPartition[trimmedInitial]!
 		let newFinals = Set(partition.enumerated().filter { trimmedFinals.contains($1.first!) }.map { $0.offset })
@@ -530,9 +530,9 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// - Parameter transform: A function mapping each symbol to a new symbol type.
 	/// - Returns: A new DFA with transformed transitions.
 	public func mapSymbols<Target: AlphabetProtocol>(_ transform: (SymbolClass) -> Target.SymbolClass) -> SymbolClassDFA<Target> {
-		let newStates = states.map {
+		let newStates: Array<Target.DFATable> = states.map {
 			// Map the key of the dictionary using `transform`
-			Dictionary(uniqueKeysWithValues: $0.map { (key, value) in
+			Target.DFATable(uniqueKeysWithValues: $0.map { (key, value) in
 				(transform(key), value)
 			})
 		}
@@ -626,7 +626,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// Returns a DFA accepting one or more repetitions of its language.
 	public func plus() -> Self {
 		let nfa = SymbolClassNFA<Alphabet>(
-			states: self.states.map { $0.mapValues { Set([$0]) } },
+			states: self.states.map { Alphabet.NFATable(uniqueKeysWithValues: $0.map { ($0.0, Set([$0.1])) }) },
 			// Add an epsilon transition from the final states to the initial state
 			epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? [self.initial] : [] },
 			initial: self.initial,

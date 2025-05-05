@@ -9,8 +9,8 @@ public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLite
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype SymbolClass: Equatable & Hashable;
 	associatedtype Symbol: Equatable & Hashable;
-	associatedtype DFATable: AlphabetTableProtocol where DFATable.Alphabet == Self, DFATable.Value == Int
-	associatedtype NFATable: AlphabetTableProtocol where NFATable.Alphabet == Self, NFATable.Value == Set<Int>
+	associatedtype DFATable: AlphabetTableProtocol where DFATable.Alphabet == Self, DFATable.Value == Int, DFATable.Element == (key: DFATable.Key, value: DFATable.Value)
+	associatedtype NFATable: AlphabetTableProtocol where NFATable.Alphabet == Self, NFATable.Value == Set<Int>, NFATable.Element == (key: NFATable.Key, value: NFATable.Value)
 //	typealias Element = SymbolClass
 
 	/// Initialize a PartitionedSet with the given elements, taking the union-meet of the subsets
@@ -639,7 +639,7 @@ public struct DFARemap<Symbol: Comparable & Hashable>: Sequence, Equatable, Regu
 	}
 }
 
-public protocol AlphabetTableProtocol: Collection, ExpressibleByDictionaryLiteral, Equatable, Hashable where Key == Alphabet.SymbolClass {
+public protocol AlphabetTableProtocol: Collection, ExpressibleByDictionaryLiteral, Equatable, Hashable where Key == Alphabet.SymbolClass, Element == (key: Key, value: Value) {
 	associatedtype Alphabet: AlphabetProtocol
 	associatedtype Values: Collection where Values.Element == Value
 //	typealias Element = (key: Key, value: Value)
@@ -647,9 +647,15 @@ public protocol AlphabetTableProtocol: Collection, ExpressibleByDictionaryLitera
 	init<S: Sequence>(uniqueKeysWithValues: S) where S.Element == (Key, Value)
 	var alphabet: Alphabet { get }
 	var values: Values { get }
+
+//	func get(element: Alphabet.Symbol) -> Value?
+//	func get(forKey: Alphabet.SymbolClass) -> Value?
+//	func updateValue(_: Value, forKey: Alphabet.SymbolClass) -> Value?
 	subscript(_ of: Alphabet.SymbolClass) -> Value? { get set }
-	subscript(_ of: Alphabet.Symbol) -> Value? { get }
-//	func mapValues<T: AlphabetTableProtocol>(_: (Value) throws -> T.Value) rethrows -> T where T.Key == Key
+	subscript(symbol of: Alphabet.Symbol) -> Value? { get }
+
+	// TODO: I can't figure out how you would write this
+	//func mapValues<T: AlphabetTableProtocol>(_: (Value) throws -> T.Value) rethrows -> T where T.Key == Key
 }
 
 extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatable & Hashable {
@@ -659,6 +665,9 @@ extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatabl
 	}
 	public var alphabet: SymbolAlphabet<Key> {
 		SymbolAlphabet(partitions: keys)
+	}
+	public subscript(symbol of: Alphabet.Symbol) -> Value? {
+		self[of]
 	}
 }
 
@@ -709,7 +718,7 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equata
 	}
 
 
-	public subscript(_ of: Alphabet.SymbolClass) -> Value? {
+	public subscript(of: Alphabet.SymbolClass) -> Value? {
 		get {
 			dict[alphabet.label(of: of)]
 		}
@@ -725,7 +734,7 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equata
 			dict[alphabet.label(of: of)] = newValue
 		}
 	}
-	public subscript(_ of: Alphabet.Symbol) -> Value? {
+	public subscript(symbol of: Alphabet.Symbol) -> Value? {
 		dict[alphabet.label(of: of)]
 	}
 
