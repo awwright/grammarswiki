@@ -367,3 +367,20 @@ import Testing;
 		}
 	}
 }
+
+@Suite("AlphabetTable") struct AlphabetTableTests {
+	@Test("test") func test_two_nested_parts() async throws {
+//		let alphabet: ClosedRangeAlphabet<Int> = [ [0...2], [3...5] ]
+		var dict = AlphabetTable<ClosedRangeAlphabet<Int>, Int>()
+		dict[ [3...9] ] = 1;
+		dict[ [5...7] ] = 2;
+		#expect(dict[3] == 1)
+		#expect(dict[4] == 1)
+		#expect(dict[5] == 2)
+		#expect(dict[6] == 2)
+		#expect(dict[7] == 2)
+		#expect(dict[8] == 1)
+		#expect(dict[9] == 1)
+	}
+}
+
