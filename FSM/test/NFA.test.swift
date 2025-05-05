@@ -33,7 +33,7 @@ import Testing
 	}
 
 	@Test("Contains for valid input") func Initialization4() {
-		let nfa = NFA(verbatim: "abc")
+		let nfa = NFA<Character>(verbatim: "abc")
 		#expect(nfa.contains("abc"))
 		#expect(!nfa.contains("ab"))
 	}
@@ -239,7 +239,7 @@ import Testing
 	@Test("Simple Homomorphism - Identity Mapping") func Test01() {
 		let nfa = NFA<Character>(verbatim: "abc")
 		let mapping: [(String, String)] = [("a", "a"), ("b", "b"), ("c", "c")]
-		let newNFA = nfa.homomorphism(mapping: mapping)
+		let newNFA: NFA<Character> = nfa.homomorphism(mapping: mapping)
 
 		#expect(newNFA.contains("abc"))
 		#expect(!newNFA.contains("ab"))
@@ -248,7 +248,7 @@ import Testing
 	@Test("Homomorphism - Symbol Replacement") func Test02() {
 		let nfa = NFA<Character>(verbatim: "abc")
 		let mapping: [(String, String)] = [("a", "x"), ("b", "y"), ("c", "z")]
-		let newNFA = nfa.homomorphism(mapping: mapping)
+		let newNFA: NFA<Character> = nfa.homomorphism(mapping: mapping)
 
 		#expect(newNFA.contains("xyz"))
 		#expect(!newNFA.contains("abc"))
@@ -258,7 +258,7 @@ import Testing
 	@Test("Homomorphism - Symbol to Multiple Symbols") func Test03() {
 		let nfa = NFA<Character>(verbatim: "a")
 		let mapping: [(String, String)] = [("a", "bb")]
-		let newNFA = nfa.homomorphism(mapping: mapping)
+		let newNFA: NFA<Character> = nfa.homomorphism(mapping: mapping)
 
 		#expect(newNFA.contains("bb"))
 		#expect(!newNFA.contains("a"))
@@ -268,7 +268,7 @@ import Testing
 	@Test("Homomorphism - Multiple Symbols to One Symbol") func Test04() {
 		let nfa = NFA<Character>(verbatim: "ab")
 		let mapping: [(String, String)] = [("a", "x"), ("b", "x")]
-		let newNFA = nfa.homomorphism(mapping: mapping)
+		let newNFA: NFA<Character> = nfa.homomorphism(mapping: mapping)
 
 		#expect(newNFA.contains("xx"))
 		#expect(!newNFA.contains("x"))
@@ -277,7 +277,7 @@ import Testing
 	@Test("Homomorphism - Heterogneous types") func Test05() {
 		let language = NFA<Character>(["ab", "ba"]);
 		let mapping: [(String, Array<UInt8>)] = [("a", [1]), ("b", [2])]
-		let translation = language.homomorphism(mapping: mapping)
+		let translation: NFA<UInt8> = language.homomorphism(mapping: mapping)
 
 		#expect(translation.contains([1, 2]))
 		#expect(translation.contains([2, 1]))
@@ -288,7 +288,7 @@ import Testing
 	@Test("Homomorphism - Complex Mapping") func Test06() {
 		let nfa = NFA<Character>(verbatim: "abc")
 		let mapping: [(String, String)] = [("a", "x"), ("bc", "yz")]
-		let newNFA = nfa.homomorphism(mapping: mapping)
+		let newNFA: NFA<Character> = nfa.homomorphism(mapping: mapping)
 
 		#expect(newNFA.contains("xyz"))
 		#expect(!newNFA.contains("xy"))
@@ -298,7 +298,7 @@ import Testing
 	@Test("Homomorphism - No Mapping for Some Symbols") func Test07() {
 		let language = NFA<Character>(verbatim: "abc")
 		let mapping: [(String, String)] = [("a", "x"), ("b", "b"), ("c", "c")]
-		let translation = language.homomorphism(mapping: mapping)
+		let translation: NFA<Character> = language.homomorphism(mapping: mapping)
 		#expect(translation.contains("xbc"))
 		#expect(!translation.contains("abc"))
 		#expect(!translation.contains("xb"))

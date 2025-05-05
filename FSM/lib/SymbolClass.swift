@@ -37,9 +37,11 @@ extension AlphabetProtocol {
 //	}
 }
 
+// TODO: Define CharsetProtocol, a subset of AlphabetProtocol that has a guaranteed mapping to Character/String
+
 /// An Alphabet where every symbol is its own SymbolClass
-public struct SymbolAlphabet<Symbol: Hashable>: AlphabetProtocol {
-	
+public struct SymbolAlphabet<Symbol: Hashable>: AlphabetProtocol, Hashable {
+
 	public typealias SymbolClass = Symbol
 	public typealias ArrayLiteralElement = SymbolClass
 
@@ -597,5 +599,30 @@ public struct DFARemap<Symbol: Comparable & Hashable>: Sequence, Equatable, Regu
 	public func star() -> DFARemap<Symbol> {
 		fatalError("Unimplemented")
 	}
-
 }
+
+/// A variation of a Dictionary that allows setting a range of keys (possibly continuous ranges of values) and looking up values within the range.
+//public struct AlphabetTable<Key: AlphabetProtocol, Value>: Collection, ExpressibleByDictionaryLiteral {
+//	public typealias Index = Dictionary<Key.Symbol, Value>.Index
+//	public typealias Element = Dictionary<Key.Symbol, Value>.Element
+//	var dict: Dictionary<Key.Symbol, Value>
+//
+//	init() {
+//		self.dict = [:]
+//	}
+//	public init(dictionaryLiteral elements: (Key, Value)...) {
+//		for (k, v) in elements {
+//			self.dict[k.first!] = v
+//		}
+//	}
+//
+//	public subscript(position: Dictionary<Key.Symbol, Value>.Index) -> Dictionary<Key.Symbol, Value>.Element {
+//		get {
+//			fatalError("init(uniqueKeysWithValues:) has not been implemented")
+//		}
+//		set {
+//			fatalError("init(uniqueKeysWithValues:) has not been implemented")
+//		}
+//	}
+//
+//}

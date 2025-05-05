@@ -186,19 +186,7 @@ extension RegularPatternBuilder {
 }
 
 // For symbol types that support it, allow generating a range of symbols
-extension RegularPatternBuilder where SymbolClass: Comparable & Strideable, SymbolClass.Stride: SignedInteger {
-	/// Creates a pattern that accepts any single symbol within the given range (exclusive upper bound).
-	/// - Parameter range: The range of symbols (e.g., `0...10`). 
-	public static func range(_ range: ClosedRange<SymbolClass>) -> Self {
-		return Self.union(range.map{ Self.symbol($0) });
-	}
-
-	/// Creates a pattern that accepts any single symbol within the given range (exclusive upper bound).
-	/// - Parameter range: The range of symbols (e.g., `0..<10`).
-	public static func range(_ range: Range<SymbolClass>) -> Self {
-		return Self.union(range.map{ Self.symbol($0) });
-	}
-
+extension RegularPatternBuilder where SymbolClass: Comparable {
 	/// Creates an alternation between all of the symbols in the given sequence
 	/// - Parameter range: The range of symbols (e.g., `0..<10`).
 	public static func range<T: Sequence>(_ range: T) -> Self where T.Element == SymbolClass {

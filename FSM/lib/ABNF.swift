@@ -1194,9 +1194,10 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 
 	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
 		let inner = try repeating.toClosedRangePattern(as: PatternType.self, rules: rules)
+		//FIXME: This is temporarially going to be broken...
 		let separator: PatternType? = switch(self.rangeop) {
 			//case 0x2A: PatternType.epsilon
-			case 0x23: ABNFBuiltins<DFA<PatternType.SymbolClass.Bound>>.CSEP.mapSymbols { $0...$0 }.toPattern(as: PatternType.self);
+//			case 0x23: ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<Symbol>>>.CSEP.mapSymbols { ClosedRangeAlphabet<Symbol>($0) }.toPattern(as: PatternType.self);
 			default: fatalError("Unsupported repetition range operator \(rangeop)")
 		}
 		if let max, max == 0 {

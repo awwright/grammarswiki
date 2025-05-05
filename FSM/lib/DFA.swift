@@ -43,12 +43,12 @@ extension DFAProtocol {
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra {
+public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra where Alphabet.Symbol == Alphabet.SymbolClass {
 	// TODO: Implement BidirectionalCollection
-	public typealias Alphabet = SymbolAlphabet<Symbol>
 
 	/// A partition might contain more than one symbols, represented with a different type.
 	/// Presently, each symbol forms its own partition.
+	public typealias Symbol = Alphabet.Symbol
 	public typealias SymbolClass = Alphabet.SymbolClass
 	/// Default element type produced reading this as a Sequence
 	public typealias Element = Array<SymbolClass>
@@ -106,7 +106,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	///
 	/// - Parameter verbatim: The sequence to recognize (e.g., `[UInt8(97), UInt8(98)]` for "ab").
 	///
-	/// You can also provide an array literal, e.g. `DFA([element])`
+	/// You can also provide an array literal, e.g. `SymbolClassDFA([element])`
 	public init(verbatim: some Collection<Symbol>){
 		let states = verbatim.enumerated().map { [ $1: $0 + 1 ] } + [[:]]
 		self.init(
@@ -120,8 +120,8 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	///
 	/// - Parameter nfa: The NFA to convert.
 	/// - Precondition: The NFA must have at most one transition per symbol per state.
-	public init(nfa: NFA<SymbolClass>){
-		let translation = NFA<SymbolClass>.parallel(fsms: [nfa], merge: { $0[0] });
+	public init(nfa: SymbolClassNFA<Alphabet>){
+		let translation = SymbolClassNFA<Alphabet>.parallel(fsms: [nfa], merge: { $0[0] });
 		assert(translation.statesSet.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
 		self.states = translation.statesSet.map { $0.mapValues { $0.first! } }
 		self.initial = translation.initials.first!;
@@ -144,7 +144,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		Alphabet(partitions: self.states.flatMap(\.keys))
 	}
 
-	public var alphabetPartitions: Set<Set<SymbolClass>> {
+	public var alphabetPartitions: Set<Set<Symbol>> {
 		// If two symbols follow the same path, they might have the same behavior.
 		return alphabetCombine(states.indices.flatMap { v in targets(source: v).values })
 	}
@@ -188,7 +188,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	///   - state: The state to compute a transition from.
 	///   - symbol: The input symbol.
 	/// - Returns: The next state, or `nil` if no transition exists.
-	public func nextState(state: StateNo, symbol: SymbolClass) -> States {
+	public func nextState(state: StateNo, symbol: Symbol) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
 		return self.states[state][symbol];
@@ -200,7 +200,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	///   - state: The starting state.
 	///   - input: The sequence to process.
 	/// - Returns: The resulting state, or `nil` if any transition fails.
-	public func nextState(state: StateNo, input: any Sequence<SymbolClass>) -> States {
+	public func nextState(state: StateNo, input: any Sequence<Symbol>) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
 		var currentState = state;
@@ -239,7 +239,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	///
 	/// - Parameter input: The input collection to match against.
 	/// - Returns: A tuple of the matched prefix and remaining input, or `nil` if no match exists.
-	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<SymbolClass> {
+	public func match<T>(_ input: T) -> (T.SubSequence, T.SubSequence)? where T: Collection<Symbol> {
 		var currentState = self.initial;
 		// Test the initial condition
 		var finalIndex: T.Index? = self.isFinal(currentState) ? input.startIndex : nil;
@@ -267,7 +267,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 
 	/// Instant Description (ID), describes a FSM and its specific state during execution
 	public struct ID {
-		public typealias OuterDFA = DFA<Symbol>
+		public typealias OuterDFA = SymbolClassDFA<Alphabet>
 
 		public let fsm: OuterDFA
 		public let state: StateNo
@@ -278,7 +278,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		}
 
 		/// Returns new ID after consuming the given symbol
-		public subscript(symbol: SymbolClass) -> Self? {
+		public subscript(symbol: Symbol) -> Self? {
 			let state = self.fsm.states[self.state][symbol];
 			if let state {
 				return Self.init(fsm: self.fsm, state: state)
@@ -313,7 +313,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	/// Combine this with tags on states to distinguish different end states that have different semantics
 	/// However, this will return `nil` if input lands on a non-live state.
 	/// In this case, it is equivalent to all inputs that land on a non-live state, which canot be enumerated without an alphabet. So don't do that.
-	public func equivalentInputs(input: any Sequence<SymbolClass>) -> Self? {
+	public func equivalentInputs(input: any Sequence<Symbol>) -> Self? {
 		// Minimizing the FSM ensures that there's no equivalent final states
 		// If the FSM is already minimized this should be a somewhat speedy operation
 		let minimized = self.minimized()
@@ -341,7 +341,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	/// Symbol matches the input symbol and any other symbols that can be found in between alpha and beta.
 	/// This function is used to partition
 	// TODO: This could also return a Dict? A beta value is unique per alpha value
-	public func symbolContext(input: SymbolClass) -> Array<(alpha: Self, symbols: Self, beta: Self)> {
+	public func symbolContext(input: Symbol) -> Array<(alpha: Self, symbols: Self, beta: Self)> {
 		self.states.enumerated().compactMap {
 			(source, table) in
 			let target = table[input]
@@ -529,7 +529,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	///
 	/// - Parameter transform: A function mapping each symbol to a new symbol type.
 	/// - Returns: A new DFA with transformed transitions.
-	public func mapSymbols<Target>(_ transform: (SymbolClass) -> Target) -> DFA<Target> {
+	public func mapSymbols<Target: AlphabetProtocol>(_ transform: (SymbolClass) -> Target.SymbolClass) -> SymbolClassDFA<Target> {
 		let newStates = states.map {
 			// Map the key of the dictionary using `transform`
 			Dictionary(uniqueKeysWithValues: $0.map { (key, value) in
@@ -537,7 +537,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 			})
 		}
 		assert(newStates.count == states.count)
-		return DFA<Target>(
+		return SymbolClassDFA<Target>(
 			states: newStates,
 			initial: self.initial,
 			finals: self.finals
@@ -597,7 +597,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
-		let nfa = NFA<SymbolClass>.concatenate(languages.map { NFA<SymbolClass>($0) });
+		let nfa = SymbolClassNFA<Alphabet>.concatenate(languages.map { SymbolClassNFA<Alphabet>($0) });
 		return Self(nfa: nfa);
 	}
 
@@ -625,7 +625,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 
 	/// Returns a DFA accepting one or more repetitions of its language.
 	public func plus() -> Self {
-		let nfa = NFA<SymbolClass>(
+		let nfa = SymbolClassNFA<Alphabet>(
 			states: self.states.map { $0.mapValues { Set([$0]) } },
 			// Add an epsilon transition from the final states to the initial state
 			epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? [self.initial] : [] },
@@ -686,7 +686,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 
 	/// A simple way to create a view on a struct to change how it is iterated or enumerated
 	public struct IteratorFactory<T>: Sequence where T: IteratorProtocol {
-		public typealias OuterDFA = DFA<Symbol>
+		public typealias OuterDFA = SymbolClassDFA<Alphabet>
 
 		let dfa: OuterDFA;
 		let constructor: (OuterDFA) -> T;
@@ -711,7 +711,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	/// Indefinitely, if need be.
 	// TODO: Consider using AsyncStream for this
 	public struct PathIterator: IteratorProtocol where SymbolClass: Comparable {
-		public typealias OuterDFA = DFA<Symbol>
+		public typealias OuterDFA = SymbolClassDFA<Alphabet>
 		public struct Segment: Equatable {
 			public var source: StateNo
 			public var index: Int
@@ -819,7 +819,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	}
 
 	public struct Iterator: IteratorProtocol where SymbolClass: Comparable {
-		public typealias OuterDFA = DFA<Symbol>
+		public typealias OuterDFA = SymbolClassDFA<Alphabet>
 		public typealias Element = Array<SymbolClass>
 
 		let fsm: OuterDFA;
@@ -856,7 +856,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	/// It takes a state and follows all the states from `state` according to the input FSM and returns the ones that are marked final according to that input FSM
 	public func nextStates(initial: StateNo, input: Self) -> Set<StateNo> where SymbolClass: Comparable {
 		var finalStates: Set<StateNo> = [];
-		//var derivative = DFA<Symbol>(
+		//var derivative = SymbolClassDFA<Alphabet>(
 		//	states: self.states,
 		//	initial: state,
 		//	finals: self.finals
@@ -885,15 +885,15 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 		return finalStates;
 	}
 
-	public func homomorphism<Target>(mapping: [(some Collection<SymbolClass>, some Collection<Target>)]) -> DFA<Target> {
-		let nfa: NFA<Target> = NFA<SymbolClass>(self).homomorphism(mapping: mapping);
-		return DFA<Target>(nfa: nfa)
-	}
-
-	public func homomorphism<Target>(mapping: [(Self, DFA<Target>)]) -> DFA<Target> {
-		let nfa: NFA<Target> = NFA<SymbolClass>(self).homomorphism(mapping: mapping);
-		return DFA<Target>(nfa: nfa)
-	}
+//	public func homomorphism<Target: AlphabetProtocol & Hashable>(mapping: [(some Collection<Alphabet.SymbolClass>, some Collection<Target.SymbolClass>)]) -> SymbolClassDFA<Target> {
+//		let nfa: SymbolClassNFA<Target> = SymbolClassNFA<Alphabet>(self).homomorphism(mapping: mapping);
+//		return SymbolClassDFA<Target>(nfa: nfa)
+//	}
+//
+//	public func homomorphism<Target: AlphabetProtocol & Hashable>(mapping: [(Self, SymbolClassDFA<Target>)]) -> SymbolClassDFA<Target> {
+//		let nfa: SymbolClassNFA<Target> = SymbolClassNFA<Alphabet>(self).homomorphism(mapping: mapping);
+//		return SymbolClassDFA<Target>(nfa: nfa)
+//	}
 
 	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil) -> PatternType where PatternType.SymbolClass == SymbolClass {
 		// Make a new initial state at 0, epsilon transition to old initial state
@@ -1006,7 +1006,7 @@ public struct DFA<Symbol: Hashable>: Hashable, DFAProtocol, RegularLanguageSetAl
 	}
 }
 
-extension DFA: Comparable, Sequence where SymbolClass: Comparable {
+extension SymbolClassDFA: Comparable, Sequence where SymbolClass: Comparable {
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		// Generate instances of each side, compare if lhs < rhs
 		// If they are the same, generate next instance (in alphabetical order)
@@ -1031,9 +1031,9 @@ extension DFA: Comparable, Sequence where SymbolClass: Comparable {
 }
 
 // Conditional protocol compliance
-extension DFA: Sendable where SymbolClass: Sendable {}
+extension SymbolClassDFA: Sendable where SymbolClass: Sendable {}
 
-extension DFA where SymbolClass == Character {
+extension SymbolClassDFA where SymbolClass == Character {
 //	typealias Element = String
 	init (_ val: Array<String>) {
 		self.init(val.map{ Array($0) })
@@ -1052,3 +1052,5 @@ extension DFA where SymbolClass == Character {
 		return member;
 	}
 }
+
+public typealias DFA<Symbol: Hashable> = SymbolClassDFA<SymbolAlphabet<Symbol>>

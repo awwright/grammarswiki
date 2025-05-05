@@ -72,7 +72,7 @@ public struct DFAE<Symbol: Comparable & Hashable, Value: Comparable & Hashable> 
 		let stateToTarget = Dictionary<DFA<Symbol>.StateNo, Value>(uniqueKeysWithValues: inner.finals.compactMap {
 			stateNo in
 			let table = inner.states[stateNo]
-			var value: (DFA.StateNo, Value)? = nil
+			var value: (DFA<Symbol>.StateNo, Value)? = nil
 			for (key, _) in table {
 				if case .tag(let tag) = key {
 					if value != nil {
