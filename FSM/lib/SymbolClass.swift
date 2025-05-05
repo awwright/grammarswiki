@@ -4,13 +4,13 @@
 /// RandomAccessCollection is required to be used in ForEach in SwiftUI
 /// ExpressibleByArrayLiteral for initializing with default values
 /// Equatable for comparison
-public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLiteral, Equatable where Element == SymbolClass {
+public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLiteral, Equatable, Hashable where Element == SymbolClass {
 	// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype SymbolClass: Equatable & Hashable;
 	associatedtype Symbol: Equatable & Hashable;
-	associatedtype DFATable: Collection, ExpressibleByDictionaryLiteral, Equatable where DFATable.Element == (key: SymbolClass, value: Int)
-	associatedtype NFATable: Collection, ExpressibleByDictionaryLiteral, Equatable where NFATable.Element == (key: SymbolClass, value: Set<Int>)
+	associatedtype DFATable: AlphabetTableProtocol where DFATable.Alphabet == Self, DFATable.Value == Int
+	associatedtype NFATable: AlphabetTableProtocol where NFATable.Alphabet == Self, NFATable.Value == Set<Int>
 //	typealias Element = SymbolClass
 
 	/// Initialize a PartitionedSet with the given elements, taking the union-meet of the subsets
@@ -107,11 +107,12 @@ public struct SymbolAlphabet<Symbol: Hashable>: AlphabetProtocol, Hashable {
 }
 
 public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
+	public typealias Symbol = Symbol
 	public typealias SymbolClass = Set<Symbol>
 	public typealias ArrayLiteralElement = SymbolClass
-	public typealias NFATable = Dictionary<SymbolClass, Set<Int>>
-	public typealias DFATable = Dictionary<SymbolClass, Int>
-	public typealias Table<T: Equatable> = AlphabetTable<Self, T>
+	public typealias NFATable = AlphabetTable<Self, Set<Int>>
+	public typealias DFATable = AlphabetTable<Self, Int>
+	public typealias Table<T: Equatable> = AlphabetTable<Self, T> where T: Hashable
 
 	public var partitions: Set<SymbolClass>
 
@@ -186,7 +187,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 	public typealias ArrayLiteralElement = SymbolClass
 	public typealias DFATable = AlphabetTable<Self, Int>
 	public typealias NFATable = AlphabetTable<Self, Set<Int>>
-	public typealias Table<T: Equatable> = AlphabetTable<Self, T>
+	public typealias Table<T: Equatable> = AlphabetTable<Self, T> where T: Hashable
 	public typealias Element = SymbolClass
 	public typealias Index = Array<SymbolClass>.Index
 
@@ -548,6 +549,8 @@ public func compressPartitions<Symbol>(_ partitions: Set<Set<Symbol>>) -> (reduc
 
 /// Transparently maps a regular language with a large alphabet onto a DFA with a smaller alphabet where some symbols are equivalent
 public struct DFARemap<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageProtocol where Symbol: BinaryInteger {
+	public typealias Alphabet = DFA<Symbol>.Alphabet
+
 	public typealias SymbolClass = Symbol
 	public typealias StateNo = DFA<Symbol>.StateNo
 	public typealias States = DFA<Symbol>.States
@@ -562,7 +565,7 @@ public struct DFARemap<Symbol: Comparable & Hashable>: Sequence, Equatable, Regu
 	public let alphabet: Set<Symbol>;
 
 	public var initial: StateNo { inner.initial }
-	public var states: Array<Dictionary<Symbol, StateNo>> { inner.states }
+	public var states: Array<Alphabet.DFATable> { inner.states }
 	public var finals: Set<StateNo> { inner.finals }
 
 	public init() {
@@ -636,12 +639,35 @@ public struct DFARemap<Symbol: Comparable & Hashable>: Sequence, Equatable, Regu
 	}
 }
 
+public protocol AlphabetTableProtocol: Collection, ExpressibleByDictionaryLiteral, Equatable, Hashable where Key == Alphabet.SymbolClass {
+	associatedtype Alphabet: AlphabetProtocol
+	associatedtype Values: Collection where Values.Element == Value
+//	typealias Element = (key: Key, value: Value)
+	init(_ elements: Dictionary<Alphabet.SymbolClass, Value>)
+	init<S: Sequence>(uniqueKeysWithValues: S) where S.Element == (Key, Value)
+	var alphabet: Alphabet { get }
+	var values: Values { get }
+	subscript(_ of: Alphabet.SymbolClass) -> Value? { get set }
+	subscript(_ of: Alphabet.Symbol) -> Value? { get }
+//	func mapValues<T: AlphabetTableProtocol>(_: (Value) throws -> T.Value) rethrows -> T where T.Key == Key
+}
+
+extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatable & Hashable {
+	public typealias Alphabet = SymbolAlphabet<Key>
+	public init(_ elements: Dictionary<Alphabet.SymbolClass, Value>) {
+		self = elements
+	}
+	public var alphabet: SymbolAlphabet<Key> {
+		SymbolAlphabet(partitions: keys)
+	}
+}
+
 /// A variation of a Dictionary that allows setting a range of keys (possibly continuous ranges of values) and looking up values within the range.
-public struct AlphabetTable<Alphabet: AlphabetProtocol, Value: Equatable>: Collection, ExpressibleByDictionaryLiteral, Equatable {
+public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equatable>: AlphabetTableProtocol where Alphabet.Symbol: Hashable, Value: Hashable {
 	public typealias Index = Alphabet.Index
 	public typealias Element = Dictionary<Alphabet.SymbolClass, Value>.Element
 
-	var alphabet: Alphabet
+	public var alphabet: Alphabet
 	var dict: Dictionary<Alphabet.Symbol, Value>
 
 	public init() {
@@ -649,20 +675,20 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol, Value: Equatable>: Colle
 		self.dict = [:]
 	}
 
-	public init(dictionaryLiteral elements: (Alphabet.SymbolClass, Value)...) {
+	public init<S>(uniqueKeysWithValues: S) where S : Sequence, S.Element == (Alphabet.Element, Value) {
 		var table = Self.init()
-		for (part, index) in elements {
+		for (part, index) in uniqueKeysWithValues {
 			table[part] = index
 		}
 		self = table
 	}
 
 	public init(_ elements: Dictionary<Alphabet.SymbolClass, Value>) {
-		var table = Self.init()
-		for (part, index) in elements {
-			table[part] = index
-		}
-		self = table
+		self.init(uniqueKeysWithValues: elements.map { ($0.key, $0.value) })
+	}
+
+	public init(dictionaryLiteral elements: (Alphabet.SymbolClass, Value)...) {
+		self.init(uniqueKeysWithValues: elements)
 	}
 
 	public subscript(position: Dictionary<Alphabet.Symbol, Value>.Index) -> Dictionary<Alphabet.Symbol, Value>.Element {
@@ -683,7 +709,7 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol, Value: Equatable>: Colle
 	}
 
 
-	subscript(_ of: Alphabet.SymbolClass) -> Value? {
+	public subscript(_ of: Alphabet.SymbolClass) -> Value? {
 		get {
 			dict[alphabet.label(of: of)]
 		}
@@ -699,7 +725,7 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol, Value: Equatable>: Colle
 			dict[alphabet.label(of: of)] = newValue
 		}
 	}
-	subscript(_ of: Alphabet.Symbol) -> Value? {
+	public subscript(_ of: Alphabet.Symbol) -> Value? {
 		dict[alphabet.label(of: of)]
 	}
 

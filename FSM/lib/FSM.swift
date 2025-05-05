@@ -1,7 +1,7 @@
 /// An abstraction of a regular language
 public protocol RegularLanguageProtocol: ExpressibleByArrayLiteral, RegularPatternBuilder {
-	associatedtype Symbol: Equatable;
-	associatedtype Element: Collection where Element.Element == Symbol
+	associatedtype Alphabet: AlphabetProtocol;
+	associatedtype Element: Collection
 
 	/// Checks if the DFA accepts a given sequence (element of the language)
 	func contains(_ input: Element) -> Bool
