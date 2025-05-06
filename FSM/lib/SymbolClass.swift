@@ -17,6 +17,7 @@ public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLite
 	/// If elements appear in multiple partitions, elements found in the same partitions are split out and merged into a new partition
 	/// (so that they never share a partition with elements they didn't share with in all partitions).
 	init(partitions: Array<SymbolClass>)
+	static func range(_ symbol: Symbol) -> SymbolClass
 	/// Determine if the partitioned set contains the given value as a component
 	func contains(_ component: Symbol) -> Bool
 	/// Get the set of symbols from the partition of the given symbol
@@ -29,7 +30,7 @@ public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLite
 	/// Get some sort of identifier that uniquely identifies the partition with the given symbol
 	/// It is Hashable so it can be used as a Dictionary key.
 	/// It is assumed the symbol exists in the alphabet.
-	func label(of: SymbolClass) -> Symbol
+	static func label(of: SymbolClass) -> Symbol
 	func label(of: Symbol) -> Symbol
 }
 
@@ -44,10 +45,14 @@ extension AlphabetProtocol {
 //	}
 }
 
+public protocol FiniteAlphabetProtocol: AlphabetProtocol {
+	func collection(_: SymbolClass) -> any Collection<Symbol>
+}
+
 // TODO: Define CharsetProtocol, a subset of AlphabetProtocol that has a guaranteed mapping to Character/String
 
 /// An Alphabet where every symbol is its own SymbolClass
-public struct SymbolAlphabet<Symbol: Hashable>: AlphabetProtocol, Hashable {
+public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable {
 	public typealias SymbolClass = Symbol
 	public typealias ArrayLiteralElement = SymbolClass
 	public typealias Table<T> = Dictionary<Symbol, T>
@@ -64,6 +69,10 @@ public struct SymbolAlphabet<Symbol: Hashable>: AlphabetProtocol, Hashable {
 		self.symbols = Set(partitions)
 	}
 
+	public static func range(_ symbol: Symbol) -> SymbolClass {
+		return symbol
+	}
+
 	public func contains(_ symbol: Symbol) -> Bool{
 		symbols.contains(symbol)
 	}
@@ -75,6 +84,10 @@ public struct SymbolAlphabet<Symbol: Hashable>: AlphabetProtocol, Hashable {
 
 	public func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool {
 		lhs == rhs
+	}
+
+	public static func label(of: Symbol) -> Symbol {
+		of
 	}
 
 	public func label(of: Symbol) -> Symbol {
@@ -104,9 +117,13 @@ public struct SymbolAlphabet<Symbol: Hashable>: AlphabetProtocol, Hashable {
 	public subscript(position: Index) -> Element {
 		symbols[position]
 	}
+
+	public func collection(_ range: Symbol) -> any Collection<Symbol> {
+		AnyCollection([range])
+	}
 }
 
-public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
+public struct SetAlphabet<Symbol: Hashable & Comparable>: AlphabetProtocol {
 	public typealias Symbol = Symbol
 	public typealias SymbolClass = Set<Symbol>
 	public typealias ArrayLiteralElement = SymbolClass
@@ -121,7 +138,17 @@ public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
 	}
 
 	public init(partitions: some Collection<Set<Symbol>>) {
-		self.partitions = Set(partitions)
+		let symbols = partitions.flatMap { $0 }
+		var dict: Dictionary<Set<Int>, Set<Symbol>> = [:]
+		for s in symbols {
+			let sets = Set(partitions.enumerated().compactMap { $0.1.contains(s) ? $0.0 : nil })
+			dict[sets, default: []].insert(s)
+		}
+		self.partitions = Set(dict.values)
+	}
+
+	public static func range(_ symbol: Symbol) -> SymbolClass {
+		return [symbol]
 	}
 
 	public func contains(_ symbol: Symbol) -> Bool{
@@ -137,11 +164,11 @@ public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
 	}
 
 	/// This may be somewhat inefficent! But it's the best one can do as a stable identifier when Symbol is not Comparable.
-	public func label(of: Symbol) -> Symbol {
-		siblings(of: of).first!
+	public static func label(of: SymbolClass) -> Symbol {
+		of.sorted().first!
 	}
-	public func label(of: SymbolClass) -> Symbol {
-		siblings(of: of.first!).first!
+	public func label(of: Symbol) -> Symbol {
+		siblings(of: of).sorted().first!
 	}
 
 	// MARK: Collection
@@ -167,6 +194,10 @@ public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
 	public subscript(position: Index) -> Element {
 		partitions[position]
 	}
+
+	public func collection(_ range: SymbolClass) -> AnyCollection<Symbol> {
+		AnyCollection<Symbol>(range)
+	}
 }
 
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
@@ -178,7 +209,7 @@ public struct SetAlphabet<Symbol: Hashable>: AlphabetProtocol {
 /// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 // TODO: Rename this to SymbolRangePartitionedSet or something
-public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtocol, RegularPatternBuilder, Hashable where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabetProtocol, RegularPatternBuilder, Hashable where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	public typealias Symbol = Symbol
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
@@ -315,6 +346,10 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 		}
 		self.symbols = symbols
 		self.parents = parents
+	}
+
+	public static func range(_ symbol: Symbol) -> SymbolClass {
+		return [symbol...symbol]
 	}
 
 	// MARK: RegularPatternProtocol
@@ -458,7 +493,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 	public func label(of: Symbol) -> Symbol {
 		siblings(of: of).sorted { $0.lowerBound < $1.lowerBound }.first!.lowerBound
 	}
-	public func label(of: SymbolClass) -> Symbol {
+	public static func label(of: SymbolClass) -> Symbol {
 		of.sorted { $0.lowerBound < $1.lowerBound }.first!.lowerBound
 	}
 
@@ -517,125 +552,9 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: AlphabetProtoc
 	public subscript(position: Index) -> Element {
 		partitions[position]
 	}
-}
 
-/// Find the partition-intersection of multiple sets, i.e. a set partitioned into the largest possible subsets that are always in the same input sets
-func partitionReduce<Symbol>(_ base: Set<Set<Symbol>>, _ with: Set<Symbol>) -> Set<Set<Symbol>> where Symbol: Hashable {
-	let extra = with.subtracting(Set(base.flatMap { $0 }))
-	return Set((base.flatMap { [ $0.intersection(with), $0.subtracting(with)] } + [extra]).filter { !$0.isEmpty })
-}
-
-/// Find the intersection of multiple alphabets; the partitioned set with the largest possible partitions such that each set contains all or none of the elements in each partition
-func alphabetCombine<Symbol>(_ seq: any Sequence<Set<Symbol>>) -> Set<Set<Symbol>> where Symbol: Hashable {
-	Set(seq.reduce(Set<Set<Symbol>>([]), partitionReduce))
-}
-
-/// Makes a Dictionary that maps each character in the alphabet to the lowest-values character in its partition
-public func compressPartitions<Symbol>(_ partitions: Set<Set<Symbol>>) -> (reduce: Dictionary<Symbol, Symbol>, expand: Dictionary<Symbol, Array<Symbol>>, alphabet: Set<Symbol>) where Symbol: Hashable & Comparable {
-	var reduce: [Symbol: Symbol] = [:]
-	var expand: [Symbol: Array<Symbol>] = [:]
-	var alphabet: Set<Symbol> = []
-	for partition in partitions {
-		let ordered = partition.sorted();
-		let key = ordered.first!
-		for char in ordered {
-			reduce[char] = key
-			expand[key, default: []].append(char)
-			alphabet.insert(key)
-		}
-	}
-	return (reduce, expand.mapValues{$0.sorted()}, alphabet)
-}
-
-/// Transparently maps a regular language with a large alphabet onto a DFA with a smaller alphabet where some symbols are equivalent
-public struct DFARemap<Symbol: Comparable & Hashable>: Sequence, Equatable, RegularLanguageProtocol where Symbol: BinaryInteger {
-	public typealias Alphabet = DFA<Symbol>.Alphabet
-
-	public typealias SymbolClass = Symbol
-	public typealias StateNo = DFA<Symbol>.StateNo
-	public typealias States = DFA<Symbol>.States
-	public typealias ArrayLiteralElement = DFA<Symbol>.ArrayLiteralElement
-	public typealias Iterator = DFA<Symbol>.Iterator
-
-	// TODO: a variation that replaces the symbol with a character class matching the whole character class
-	// Type signature would be DFA<Array<SimplePattern<Symbol>>>
-
-	public let inner: DFA<Symbol>;
-	public let mapping: Dictionary<Symbol, Symbol>;
-	public let alphabet: Set<Symbol>;
-
-	public var initial: StateNo { inner.initial }
-	public var states: Array<Alphabet.DFATable> { inner.states }
-	public var finals: Set<StateNo> { inner.finals }
-
-	public init() {
-		inner = DFA()
-		mapping = [:]
-		alphabet = []
-	}
-
-	public init(inner: DFA<Symbol>, mapping: Dictionary<Symbol, Symbol>) {
-		self.inner = inner
-		self.mapping = mapping;
-		self.alphabet = Set(mapping.keys);
-	}
-
-	public init(inner: DFA<Symbol>) where Element: Comparable & Hashable {
-		let (reduce, _, alphabet) = compressPartitions(inner.alphabetPartitions)
-		self.inner = inner
-		self.mapping = reduce
-		self.alphabet = alphabet
-	}
-
-	public init(verbatim: DFA<Symbol>.Element) {
-		inner = DFA(verbatim: verbatim)
-		mapping = [:]
-		alphabet = []
-	}
-
-	public func contains(_ member: DFA<Symbol>.Element) -> Bool {
-		inner.contains(member.map { mapping[$0] ?? $0 })
-	}
-
-	public func nextState(state: StateNo, input: Element) -> States {
-		assert(state >= 0)
-		assert(state < self.states.count)
-		var currentState = state;
-		for char in input {
-			guard currentState < self.states.count,
-					let mappedSymbol = self.mapping[char],
-					let nextState = self.states[currentState][mappedSymbol]
-			else {
-				return nil
-			}
-			currentState = nextState
-		}
-
-		return currentState;
-	}
-
-	public func isFinal(_ state: DFA<Symbol>.States) -> Bool {
-		inner.isFinal(state)
-	}
-
-	public func makeIterator() -> DFA<Symbol>.Iterator {
-		fatalError("Unimplemented")
-	}
-
-	public static func union(_ elements: [DFARemap<Symbol>]) -> DFARemap<Symbol> {
-		fatalError("Unimplemented")
-	}
-
-	public static func concatenate(_ elements: [DFARemap<Symbol>]) -> DFARemap<Symbol> {
-		fatalError("Unimplemented")
-	}
-
-	public static func symbol(_ element: Symbol) -> DFARemap<Symbol> {
-		fatalError("Unimplemented")
-	}
-
-	public func star() -> DFARemap<Symbol> {
-		fatalError("Unimplemented")
+	public func collection(_ range: SymbolClass) -> any Collection<Symbol> {
+		AnyCollection(range.lazy.joined())
 	}
 }
 
@@ -720,22 +639,22 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equata
 
 	public subscript(of: Alphabet.SymbolClass) -> Value? {
 		get {
-			dict[alphabet.label(of: of)]
+			dict[Alphabet.label(of: of)]
 		}
 		set(newValue) {
 			// Subdivide the alphabet
 			let newAlphabet = Alphabet(partitions: Array(alphabet) + [of])
 			// Assign values for any new partitions that appeared
 			for range in newAlphabet {
-				dict[alphabet.label(of: range)] = dict[alphabet.label(of: range)]
+				dict[Alphabet.label(of: range)] = dict[Alphabet.label(of: range)]
 			}
 			// Assign the value for the partition with the updated value
 			alphabet = newAlphabet
-			dict[alphabet.label(of: of)] = newValue
+			dict[Alphabet.label(of: of)] = newValue
 		}
 	}
 	public subscript(symbol of: Alphabet.Symbol) -> Value? {
-		dict[alphabet.label(of: of)]
+		alphabet.contains(of) ? dict[alphabet.label(of: of)] : nil
 	}
 
 	// MARK: Collection

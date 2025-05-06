@@ -269,26 +269,23 @@ import Testing;
 	}
 
 	// Test Suite
-	@Suite("alphabet/alphabetPartitions") struct REPatternTests_alphabet {
+	@Suite("alphabet") struct REPatternTests_alphabet {
 		@Test("Empty pattern")
 		func test_UInt8_empty() async throws {
 			let pattern = REPattern<Int>.empty
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("Epsilon pattern")
 		func test_UInt8_epsilon() async throws {
 			let pattern = REPattern<Int>.epsilon
 			#expect(pattern.alphabet == Set())
-			#expect(pattern.alphabetPartitions == Set())
 		}
 
 		@Test("Symbol pattern")
 		func test_UInt8_symbol() async throws {
 			let pattern = REPattern<Int>.symbol(10)
 			#expect(pattern.alphabet == Set([10]))
-			#expect(pattern.alphabetPartitions == Set([ Set([10]) ]))
 		}
 
 		@Test("Union of patterns")
@@ -297,7 +294,6 @@ import Testing;
 			let b = REPattern.symbol(2);
 			let pattern = a.union(b)
 			#expect(pattern.alphabet == Set([1, 2]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 2]) ]))
 		}
 
 		@Test("Nested union")
@@ -309,7 +305,6 @@ import Testing;
 			let union2 = c.union(a)
 			let pattern = union1.union(union2)
 			#expect(pattern.alphabet == Set([1, 2, 3]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 2, 3]) ]))
 		}
 
 		@Test("Concatenation of patterns")
@@ -319,7 +314,6 @@ import Testing;
 			let pattern = a.concatenate(b)
 			#expect(Set(1...3) == Set([1,2,3]))
 			#expect(pattern.alphabet == Set(1...6))
-			#expect(pattern.alphabetPartitions == Set([ Set(1...2), Set(3...4), Set(5...6) ]))
 		}
 
 		@Test("Nested concatenation")
@@ -330,7 +324,6 @@ import Testing;
 			let concat1 = a.concatenate(b)
 			let pattern = concat1.concatenate(c)
 			#expect(pattern.alphabet == Set(1...20))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 20]), Set([2, 19]), Set(3...18) ]))
 		}
 
 		@Test("Kleene star")
@@ -338,7 +331,6 @@ import Testing;
 			let a = REPattern.range(1...3);
 			let pattern = a.star()
 			#expect(pattern.alphabet == Set([1, 2, 3]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 2, 3]) ]))
 		}
 
 		@Test("Precedence: union over concatenation")
@@ -349,7 +341,6 @@ import Testing;
 			let union = a.union(b)
 			let pattern = union.concatenate(c)
 			#expect(pattern.alphabet == Set(1...3))
-			#expect(pattern.alphabetPartitions == Set([ Set(1...2), Set([3]) ]))
 		}
 
 		@Test("Precedence: concatenation over star")
@@ -359,7 +350,6 @@ import Testing;
 			let star = b.star()
 			let pattern = a.concatenate(star)
 			#expect(pattern.alphabet == Set(1...6))
-			#expect(pattern.alphabetPartitions == Set([ Set(1...2),  Set(3...4),  Set(5...6) ]))
 		}
 
 		@Test("Optional pattern")
@@ -367,7 +357,6 @@ import Testing;
 			let a = REPattern.range(1...3);
 			let pattern = a.optional()
 			#expect(pattern.alphabet == Set([1, 2, 3]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1, 2, 3]) ]))
 		}
 
 		@Test("Plus pattern")
@@ -375,7 +364,6 @@ import Testing;
 			let a = REPattern.symbol(1);
 			let pattern = a.plus()
 			#expect(pattern.alphabet == Set([1]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1]) ]))
 		}
 
 		@Test("Repeating exact count")
@@ -383,7 +371,6 @@ import Testing;
 			let a = REPattern.symbol(1);
 			let pattern = a.repeating(3)
 			#expect(pattern.alphabet == Set([1]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1]) ]))
 		}
 
 		@Test("Repeating range")
@@ -391,7 +378,6 @@ import Testing;
 			let a = REPattern.symbol(1);
 			let pattern = a.repeating(1...3)
 			#expect(pattern.alphabet == Set([1]))
-			#expect(pattern.alphabetPartitions == Set([ Set([1]) ]))
 		}
 
 		@Test("Repeating at least")
@@ -399,14 +385,12 @@ import Testing;
 			let a = REPattern.range(1...3);
 			let pattern = a.repeating(2...)
 			#expect(pattern.alphabet == Set(1...3))
-			#expect(pattern.alphabetPartitions == Set([ Set(1...3) ]))
 		}
 
 		@Test("Sequence initialization")
 		func test_UInt8_sequenceInit() async throws {
 			let pattern = REPattern([1, 2, 3])
 			#expect(pattern.alphabet == Set(1...3))
-			#expect(pattern.alphabetPartitions == Set([ Set([1]), Set([2]), Set([3]) ]))
 		}
 
 		@Test("empty.union(empty)")
@@ -414,7 +398,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.empty.union(REPattern<UInt8>.empty)
 			// Union of two empty sets is empty
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("empty.union(epsilon)")
@@ -422,7 +405,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.empty.union(REPattern<UInt8>.epsilon)
 			// Union of of empty set and singleton is singleton
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("empty.union(symbol)")
@@ -430,7 +412,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.empty.union(REPattern<UInt8>.symbol(0x20))
 			// Union of of empty set and singleton is singleton
 			#expect(pattern.alphabet == Set([0x20]))
-			#expect(pattern.alphabetPartitions == Set([ Set([0x20]) ]))
 		}
 
 		@Test("empty.concatenate(empty)")
@@ -438,7 +419,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.empty.concatenate(REPattern<UInt8>.empty)
 			// Concatenation with empty set is empty set
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("empty.concatenate(epsilon)")
@@ -446,7 +426,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.empty.concatenate(REPattern<UInt8>.epsilon)
 			// Concatenation with empty set is empty set
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("empty.concatenate(symbol)")
@@ -454,7 +433,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.empty.concatenate(REPattern<UInt8>.symbol(0x20))
 			// Concatenation with empty set is empty set
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("empty.star")
@@ -462,7 +440,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.empty.star()
 			// This becomes epsilon, because empty set repeated zero times is epsilon
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("epsilon.union(empty)")
@@ -470,7 +447,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.epsilon.union(REPattern<UInt8>.empty)
 			// Union with epsilon contains epsilon
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("epsilon.union(epsilon)")
@@ -478,7 +454,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.epsilon.union(REPattern<UInt8>.epsilon)
 			// Union with epsilon and itself contains epsilon
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("epsilon.union(symbol)")
@@ -486,7 +461,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.epsilon.union(REPattern<UInt8>.symbol(0x20))
 			// Union of of empty set and singleton is singleton
 			#expect(pattern.alphabet == Set([0x20]))
-			#expect(pattern.alphabetPartitions == Set([ Set([0x20]) ]))
 		}
 
 		@Test("epsilon.concatenate(empty)")
@@ -494,7 +468,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.epsilon.concatenate(REPattern<UInt8>.empty)
 			// Concatenation with empty set is empty set
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("epsilon.concatenate(epsilon)")
@@ -502,7 +475,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.epsilon.concatenate(REPattern<UInt8>.epsilon)
 			// Concatenation with epsilon is itself
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("epsilon.concatenate(symbol)")
@@ -510,7 +482,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.epsilon.concatenate(REPattern<UInt8>.symbol(0x20))
 			// Concatenation with epsilon is itself
 			#expect(pattern.alphabet == Set([0x20]))
-			#expect(pattern.alphabetPartitions == Set([ Set([0x20]) ]))
 		}
 
 		@Test("epsilon.star")
@@ -518,7 +489,6 @@ import Testing;
 			let pattern = REPattern<UInt8>.epsilon.star()
 			// Nothing never grows adding nothing
 			#expect(pattern.alphabet == Set([]))
-			#expect(pattern.alphabetPartitions == Set([]))
 		}
 
 		@Test("union(union(union))")
@@ -533,7 +503,6 @@ import Testing;
 				REPattern<UInt8>.symbol(0x22),
 			])
 			#expect(pattern.alphabet == Set(0x20...0x22))
-			#expect(pattern.alphabetPartitions == Set([ Set(0x20...0x22) ]))
 		}
 
 		@Test("union.star")
@@ -543,14 +512,12 @@ import Testing;
 				REPattern<UInt8>.symbol(0x21),
 			]).star()
 			#expect(pattern.alphabet == Set(0x20...0x21))
-			#expect(pattern.alphabetPartitions == Set([ Set(0x20...0x21) ]))
 		}
 
 		@Test("epsilon.star")
 		func test_UInt8_symbol_star() async throws {
 			let pattern = REPattern<UInt8>.range(0x30...0x39).star()
 			#expect(pattern.alphabet == Set(0x30...0x39))
-			#expect(pattern.alphabetPartitions == Set([ Set(0x30...0x39) ]))
 		}
 	}
 }

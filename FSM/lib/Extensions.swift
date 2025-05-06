@@ -35,6 +35,14 @@ extension Bool: @retroactive Comparable {
 	}
 }
 
+// Add lexicographic comparison to ClosedRange
+// This extension is a hack so that ClosedRangeAlphabet can produce a DFA.Iterator.
+extension ClosedRange: @retroactive Comparable {
+	public static func < (lhs: ClosedRange, rhs: ClosedRange) -> Bool {
+		return (lhs.lowerBound < rhs.lowerBound) || (lhs.lowerBound == rhs.lowerBound && lhs.upperBound < rhs.upperBound)
+	}
+}
+
 // This is going to explode one day I just know it
 extension Character: @retroactive Strideable {
 	public func distance(to: Character) -> Int {

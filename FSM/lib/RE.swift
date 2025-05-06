@@ -32,25 +32,6 @@ public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternBuilder, H
 		}
 	}
 
-	/// The alphabet, partitioned into sets whose behaviors are equivalent
-	/// (i.e. changing the symbol with an equivalent symbol won't change validation)
-	public var alphabetPartitions: Set<Set<Symbol>> {
-		switch self {
-			case .alternation(let array):
-				// A union of symbols will always result in an equivalent result, so group symbols in the alternation together
-				let symbols: Set<Symbol> = Set(array.compactMap { if case .symbol(let s) = $0 { s } else { nil } })
-				let nonsymbols: Array<Set<Set<Symbol>>> = array.compactMap { if case .symbol = $0 { return nil } else { return $0.alphabetPartitions } }
-				return alphabetCombine([symbols] + nonsymbols.flatMap { $0 })
-			case .concatenation(let array):
-				return alphabetCombine(array.flatMap { $0.alphabetPartitions })
-			case .star(let regex):
-				return regex.alphabetPartitions
-			case .symbol(let c):
-				// This won't usually be called, unless the regex is literally a single symbol
-				return Set([Set([c])])
-		}
-	}
-
 	public var description: String {
 		func toString(_ other: Self) -> String {
 			if(other.precedence >= self.precedence) {

@@ -11,11 +11,11 @@ public protocol NFAProtocol: RegularLanguageProtocol, RegularLanguageSetAlgebra 
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alphabet.Symbol == Alphabet.SymbolClass {
+public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 	// TODO: Implement BidirectionalCollection
 	public typealias Symbol = Alphabet.Symbol
 	public typealias SymbolClass = Alphabet.SymbolClass
-	public typealias Element = Array<SymbolClass>
+	public typealias Element = Array<Symbol>
 	public typealias StateNo = Int;
 	public typealias States = Set<StateNo>;
 
@@ -85,9 +85,9 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 		self.init(states: states, epsilon: epsilon, initials: [initial], finals: finals)
 	}
 
-	public init(verbatim: some Sequence<SymbolClass>){
+	public init(verbatim: some Sequence<Symbol>){
 		// Generate one state per symbol in Element, plus a final state
-		let states: Array<Alphabet.NFATable> = verbatim.enumerated().map { [ $1: Set([$0 + 1]) ] } + [[:]]
+		let states: Array<Alphabet.NFATable> = verbatim.enumerated().map { [ Alphabet.range($1): Set([$0 + 1]) ] } + [[:]]
 		self.init(
 			states: states,
 			epsilon: Array(repeating: [], count: states.count),
@@ -145,20 +145,25 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 		Alphabet(partitions: self.statesSet.flatMap(\.alphabet))
 	}
 
-	public func nextStates(state: StateNo, symbol: SymbolClass) -> States {
+	public func nextStates(state: StateNo, symbol: Symbol) -> States {
 		return self.nextStates(states: [state], symbol: symbol);
 	}
 
-	public func nextStates(state: StateNo, string: any Sequence<SymbolClass>) -> States {
+	public func nextStates(state: StateNo, string: any Sequence<Symbol>) -> States {
 		return self.nextStates(states: [state], string: string);
 	}
 
-	public func nextStates(states: States, symbol: SymbolClass) -> States {
+	public func nextStates(states: States, range: SymbolClass) -> States {
 		// Map each element in `states` to the next symbol in states[state][symbol], if it exists
-		return self.followε(states: Set(self.followε(states: states).flatMap { self.statesSet[$0][symbol] ?? [] }))
+		return self.followε(states: Set(self.followε(states: states).flatMap { self.statesSet[$0][range] ?? [] }))
 	}
 
-	public func nextStates(states: States, string: any Sequence<SymbolClass>) -> States {
+	public func nextStates(states: States, symbol: Symbol) -> States {
+		// Map each element in `states` to the next symbol in states[state][symbol], if it exists
+		return self.followε(states: Set(self.followε(states: states).flatMap { self.statesSet[$0][symbol: symbol] ?? [] }))
+	}
+
+	public func nextStates(states: States, string: any Sequence<Symbol>) -> States {
 		var currentState = states;
 		for symbol in string {
 			currentState = self.nextStates(states: currentState, symbol: symbol)
@@ -297,9 +302,9 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 				}
 			}
 			// For each of the symbols in the alphabet, get the next state following the current one
-			for symbol in alphabets {
-				let nextStates = zip(fsms, inStates).map { (fsm, state) in fsm.nextStates(states: state, symbol: symbol) }
-				newStateTransitions[symbol] = [forwardStateId(inStates: nextStates)]
+			for range in alphabets {
+				let nextStates = zip(fsms, inStates).map { (fsm, state) in fsm.nextStates(states: state, range: range) }
+				newStateTransitions[range] = [forwardStateId(inStates: nextStates)]
 			}
 
 			newStates.insert(newStateTransitions, at: newStateId);
@@ -482,7 +487,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 				let targetSymbolsArray = Array(targetSymbols)
 
 				for sourceSymbol in sourceSymbolsArray {
-					targetStates = self.nextStates(states: targetStates, symbol: sourceSymbol)
+					targetStates = self.nextStates(states: targetStates, range: sourceSymbol)
 				}
 
 				for target in targetStates {
@@ -543,7 +548,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol where Alph
 // Conditional protocol compliance
 extension SymbolClassNFA: Sendable where SymbolClass: Sendable {}
 
-extension SymbolClassNFA where SymbolClass == Character {
+extension SymbolClassNFA where Symbol == Character {
 //	typealias Element = String
 	init (_ val: Array<String>) {
 		self.init(val.map{ Array($0) })

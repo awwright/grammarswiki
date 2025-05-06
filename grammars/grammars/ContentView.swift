@@ -123,7 +123,7 @@ struct DocumentDetail: View {
 	@State private var rule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
 	@State private var rule_fsm: DFA<UInt32>? = nil
 	@State private var rule_fsm_error: String? = nil
-	@State private var rule_fsm_proxy: DFARemap<UInt32>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
+	@State private var rule_fsm_proxy: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>? = nil // Translates the full range of input to a DFA that matches an equivalent subset
 	@State private var rule_partshrink: Dictionary<UInt32, UInt32>? = nil
 	@State private var rule_partexpand: Dictionary<UInt32, Array<UInt32>>? = nil
 
@@ -202,7 +202,7 @@ struct DocumentDetail: View {
 
 					if showInstances {
 						Tab("Instances", systemImage: "pencil") {
-							InstanceGeneratorView(rule_fsm: $rule_fsm)
+							InstanceGeneratorView(rule_fsm_proxy: $rule_fsm_proxy)
 						}
 					}
 
@@ -405,48 +405,43 @@ struct DocumentDetail: View {
 		if(dependencies.isEmpty){ rule_fsm_error = "dependencies is empty"; return }
 		if(dependencies_list.recursive.isEmpty == false){ rule_fsm_error = "Rule is recursive"; return }
 
+		var result_alphabet_dict: Dictionary<String, ClosedRangeAlphabet<UInt32>> = builtins.mapValues({ ClosedRangeAlphabet<UInt32>($0.alphabet) });
+		for (rulename, definition) in dependencies {
+			result_alphabet_dict[rulename] = definition.alphabet(rulelist: result_alphabet_dict)
+		}
+		let result_alphabet =  result_alphabet_dict[selectedRule]!
+
+		rule_alphabet = result_alphabet
+		rule_partshrink = result_alphabet.alphabetReduce
+		let reducedAlphabet = Set(result_alphabet.partitionLabels)
+
 		// Compute alphabets
 		Task.detached(priority: .utility) {
-			var result_alphabet_dict: Dictionary<String, ClosedRangeAlphabet<UInt32>> = builtins.mapValues({ ClosedRangeAlphabet<UInt32>($0.alphabet) });
-			for (rulename, definition) in dependencies {
-				result_alphabet_dict[rulename] = definition.alphabetPartitions(rulelist: result_alphabet_dict)
-			}
-			let result_alphabet =  result_alphabet_dict[selectedRule]!
+			do {
+				// Cut the builtins down to match the reducedAlphabet... let's see if this works
+				let reducedAlphabetLanguage = DFA<UInt32>.union( reducedAlphabet.map { DFA<UInt32>.symbol($0) } ).star().minimized();
+				//print(reducedAlphabetLanguage.toViz())
+				var result_fsm_dict = builtins.mapValues { $0.intersection(reducedAlphabetLanguage).minimized() }
+				for (rulename, definition) in dependencies {
+					result_fsm_dict[rulename] = try definition.toPattern(rules: result_fsm_dict, alphabet: reducedAlphabet).minimized()
+				}
+				let result = result_fsm_dict[selectedRule]!
 
-			await MainActor.run {
-				rule_alphabet = result_alphabet
-				rule_partshrink = result_alphabet.alphabetReduce
-				let reducedAlphabet = Set(result_alphabet.partitionLabels)
-
-				// Compute DFA
-				Task.detached(priority: .utility) {
-					do {
-						// Cut the builtins down to match the reducedAlphabet... let's see if this works
-						let reducedAlphabetLanguage = DFA<UInt32>.union( reducedAlphabet.map { DFA<UInt32>.symbol($0) } ).star().minimized();
-						//print(reducedAlphabetLanguage.toViz())
-						var result_fsm_dict = builtins.mapValues { $0.intersection(reducedAlphabetLanguage).minimized() }
-						for (rulename, definition) in dependencies {
-							result_fsm_dict[rulename] = try definition.toPattern(rules: result_fsm_dict, alphabet: reducedAlphabet).minimized()
-						}
-						let result = result_fsm_dict[selectedRule]!
-
-						await MainActor.run {
-							rule_fsm = result
-							rule_fsm_proxy = DFARemap(inner: result, mapping: rule_partshrink!)
-							rule_fsm_error = nil
-						}
-					} catch let error as ABNFExportError {
-						print(error)
-						await MainActor.run {
-							rule_fsm = nil
-							rule_fsm_error = "ABNFExportError: " + String(describing: error)
-						}
-					} catch {
-						await MainActor.run {
-							rule_fsm = nil
-							rule_fsm_error = error.localizedDescription
-						}
-					}
+				await MainActor.run {
+					rule_fsm = result
+//							rule_fsm_proxy = DFARemap(inner: result, mapping: rule_partshrink!)
+					rule_fsm_error = nil
+				}
+			} catch let error as ABNFExportError {
+				print(error)
+				await MainActor.run {
+					rule_fsm = nil
+					rule_fsm_error = "ABNFExportError: " + String(describing: error)
+				}
+			} catch {
+				await MainActor.run {
+					rule_fsm = nil
+					rule_fsm_error = error.localizedDescription
 				}
 			}
 		}

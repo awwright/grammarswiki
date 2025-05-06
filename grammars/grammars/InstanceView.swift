@@ -7,8 +7,8 @@ import FSM
 // TODO: Generate negative instances and off-by-one errors
 
 struct InstanceGeneratorView: View {
-	@Binding var rule_fsm: DFA<UInt32>?
-	@State private var iterator: DFA<UInt32>.Iterator?
+	@Binding var rule_fsm_proxy: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>?
+	@State private var iterator: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.Iterator?
 	@State private var instances: [String] = []
 
 	var body: some View {
@@ -36,11 +36,11 @@ struct InstanceGeneratorView: View {
 			}
 		}
 		.onAppear { resetIterator() }
-		.onChange(of: rule_fsm) { resetIterator() }
+		.onChange(of: rule_fsm_proxy) { resetIterator() }
 	}
 
 	private func resetIterator() {
-		if let fsm = rule_fsm {
+		if let fsm = rule_fsm_proxy {
 			iterator = fsm.makeIterator()
 			instances = []
 			generateMoreInstances()

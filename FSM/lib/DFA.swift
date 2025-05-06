@@ -43,7 +43,7 @@ extension DFAProtocol {
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra where Alphabet.Symbol == Alphabet.SymbolClass {
+public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra {
 	// TODO: Implement BidirectionalCollection
 
 	/// A partition might contain more than one symbols, represented with a different type.
@@ -51,7 +51,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	public typealias Symbol = Alphabet.Symbol
 	public typealias SymbolClass = Alphabet.SymbolClass
 	/// Default element type produced reading this as a Sequence
-	public typealias Element = Array<SymbolClass>
+	public typealias Element = Array<Symbol>
 	/// The type used to index states
 	public typealias StateNo = Int;
 	/// The type of a set of states, which in the case of a DFA is optional to include the oblivion state (`nil`).
@@ -108,7 +108,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	///
 	/// You can also provide an array literal, e.g. `SymbolClassDFA([element])`
 	public init(verbatim: some Collection<Symbol>){
-		let states: Array<Alphabet.DFATable> = verbatim.enumerated().map { Alphabet.DFATable([ $1: $0 + 1 ]) } + [[:]]
+		let states: Array<Alphabet.DFATable> = verbatim.enumerated().map { Alphabet.DFATable([ Alphabet.range($1): $0 + 1 ]) } + [[:]]
 		self.init(
 			states: states,
 			initial: 0,
@@ -142,11 +142,6 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 	public var alphabet: Alphabet {
 		Alphabet(partitions: self.states.flatMap(\.alphabet))
-	}
-
-	public var alphabetPartitions: Set<Set<Symbol>> {
-		// If two symbols follow the same path, they might have the same behavior.
-		return alphabetCombine(states.indices.flatMap { v in targets(source: v).values })
 	}
 
 	/// Generates a Graphviz DOT representation of the DFA for visualization.
@@ -191,7 +186,13 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	public func nextState(state: StateNo, symbol: Symbol) -> States {
 		assert(state >= 0)
 		assert(state < self.states.count)
-		return self.states[state][symbol];
+		return self.states[state][symbol: symbol];
+	}
+
+	public func nextState(state: StateNo, range: SymbolClass) -> States {
+		assert(state >= 0)
+		assert(state < self.states.count)
+		return self.states[state][range];
 	}
 
 	/// Compute multiple transitions over a whole sequence.
@@ -206,7 +207,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		var currentState = state;
 		for char in input {
 			guard currentState < self.states.count,
-					let nextState = self.states[currentState][char]
+					let nextState = self.states[currentState][symbol: char]
 			else {
 				return nil
 			}
@@ -247,7 +248,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		// If we reach the end or nil, then there can be no more final states.
 		for currentIndex in input.indices {
 			let symbol = input[currentIndex];
-			if let nextState = self.states[currentState][symbol] {
+			if let nextState = self.states[currentState][symbol: symbol] {
 				currentState = nextState;
 			} else {
 				break;
@@ -279,7 +280,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 		/// Returns new ID after consuming the given symbol
 		public subscript(symbol: Symbol) -> Self? {
-			let state = self.fsm.states[self.state][symbol];
+			let state = self.fsm.states[self.state][symbol: symbol];
 			if let state {
 				return Self.init(fsm: self.fsm, state: state)
 			}else{
@@ -319,7 +320,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		let minimized = self.minimized()
 		var currentState = minimized.initial;
 		for char in input {
-			guard currentState < minimized.states.count, let nextState = minimized.states[currentState][char]
+			guard currentState < minimized.states.count, let nextState = minimized.states[currentState][symbol: char]
 			else { return nil } //uh-oh, now we have to find all of the oblivion states
 			currentState = nextState
 		}
@@ -341,18 +342,21 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// Symbol matches the input symbol and any other symbols that can be found in between alpha and beta.
 	/// This function is used to partition
 	// TODO: This could also return a Dict? A beta value is unique per alpha value
-	public func symbolContext(input: Symbol) -> Array<(alpha: Self, symbols: Self, beta: Self)> {
-		self.states.enumerated().compactMap {
-			(source, table) -> (alpha: Self, symbols: Self, beta: Self)? in
-			let target = table[input]
-			guard let target else { return nil }
+	public func symbolContext(input: Symbol) -> Array<(alpha: Self, symbols: Alphabet.SymbolClass, beta: Self)> {
+		self.states.enumerated().flatMap {
+			(source, table) -> [(alpha: Self, symbols: Alphabet.SymbolClass, beta: Self)] in
+			let target = table[symbol: input]
+			guard let target else { return [] }
 			// Get all of the keys that map to the same target
 			let symbols: Array<SymbolClass> = table.alphabet.filter { table[$0] == target }
-			return (
-				alpha: self.subpaths(source: self.initial, target: [source]),
-				symbols: Self(symbols.map { [$0] }),
-				beta: self.subpaths(source: target, target: self.finals)
-			)
+			return symbols.map {
+				symbolClass -> (alpha: Self, symbols: Alphabet.SymbolClass, beta: Self) in
+				(
+					alpha: self.subpaths(source: self.initial, target: [source]),
+					symbols: symbolClass,
+					beta: self.subpaths(source: target, target: self.finals)
+				)
+			}
 		}
 	}
 
@@ -401,9 +405,9 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 				}
 			}
 			// For each of the symbols in the alphabet, get the next state following the current one
-			for symbol in alphabets {
-				let nextStates = zip(fsms, inStates).map { (fsm, state) in state == nil ? nil : fsm.nextState(state: state!, symbol: symbol) }
-				newStateTransitions[symbol] = forwardStateId(inStates: nextStates)
+			for range in alphabets {
+				let nextStates = zip(fsms, inStates).map { (fsm, state) in state == nil ? nil : fsm.nextState(state: state!, range: range) }
+				newStateTransitions[range] = forwardStateId(inStates: nextStates)
 			}
 
 			newStates.insert(newStateTransitions, at: newStateId);
@@ -550,14 +554,14 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 		for symbol in input {
 			guard currentState < self.states.count,
-					let nextState = self.states[currentState][symbol]
+					let nextState = self.states[currentState][symbol: symbol]
 			else {
 				return false
 			}
 			currentState = nextState
 		}
 
-		return self.finals.contains(currentState)
+		return isFinal(currentState)
 	}
 
 	/// Returns a DFA accepting the union of this DFA’s language and another’s.
@@ -628,7 +632,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		let nfa = SymbolClassNFA<Alphabet>(
 			states: self.states.map { Alphabet.NFATable(uniqueKeysWithValues: $0.map { ($0.0, Set([$0.1])) }) },
 			// Add an epsilon transition from the final states to the initial state
-			epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? [self.initial] : [] },
+			epsilon: self.states.enumerated().map { stateNo, _ in isFinal(stateNo) ? [self.initial] : [] },
 			initial: self.initial,
 			finals: self.finals
 		);
@@ -642,7 +646,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		//let nfa = NFA<Element>(
 		//	states: self.states.map { $0.mapValues { Set([$0]) } },
 		//	// Add an epsilon transition from the final states to the initial state
-		//	epsilon: self.states.enumerated().map { stateNo, _ in self.finals.contains(stateNo) ? [self.initial] : [] },
+		//	epsilon: self.states.enumerated().map { stateNo, _ in isFinal(stateNo) ? [self.initial] : [] },
 		//	initial: self.initial,
 		//	finals: self.finals.union([self.initial])
 		//);
@@ -680,37 +684,51 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// ```
 	/// for element in dfa { print(element) }
 	/// ```x1
-	public func makeIterator() -> Iterator where SymbolClass: Comparable {
-		return Iterator(self);
-	}
-
-	/// A simple way to create a view on a struct to change how it is iterated or enumerated
-	public struct IteratorFactory<T>: Sequence where T: IteratorProtocol {
-		public typealias OuterDFA = SymbolClassDFA<Alphabet>
-
-		let dfa: OuterDFA;
-		let constructor: (OuterDFA) -> T;
-		init(_ dfa: OuterDFA, constructor: @escaping (OuterDFA) -> T) {
-			self.dfa = dfa;
-			self.constructor = constructor;
-		}
-		public func makeIterator() -> T {
-			return constructor(dfa)
+	public func makeIterator() -> AnyIterator<Element> {
+		let fsm = self;
+		var iterator: PathIterator = PathIterator(fsm, filter: { _, path in path.count <= 0 });
+		var currentDepth: Int = 0;
+		return AnyIterator<Element> {
+			while currentDepth <= fsm.states.count {
+				while let stack = iterator.next() {
+					if stack.count < currentDepth { continue }
+					// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
+					let state = stack.isEmpty ? fsm.initial : stack.last!.target;
+					if fsm.isFinal(state) {
+						// FIXME: Return the concatenation of the symbol classes in sequence
+						return stack.map { (x: PathIterator.Path.Element) -> Symbol in Alphabet.label(of: iterator.states[x.source][x.index].symbol) }
+//						return stack.reduce(Element.empty, { $0.appending() });
+					}
+				}
+				currentDepth += 1
+				let maxDepth = currentDepth;
+				iterator = PathIterator(fsm, filter: { _, path in path.count <= maxDepth });
+			}
+			return nil;
 		}
 	}
 
 	/// Returns an iterator that walks over all of the possible of the paths in the state graph.
 	/// - Parameter filter: A function that decides if the paths in the given state should be walked. This is for filtering out paths that have already been visited or otherwise don't mean anything.
-	public func pathIterator(filter: @escaping (PathIterator, PathIterator.Path) -> Bool) -> IteratorFactory<PathIterator> where SymbolClass: Comparable {
-		return IteratorFactory(self) {
-			PathIterator($0, filter: filter);
+	public func pathIterator(filter: @escaping (PathIterator, PathIterator.Path) -> Bool) -> AnySequence<PathIterator.Element> {
+		AnySequence<PathIterator.Element> {
+			PathIterator(self, filter: filter);
 		};
 	}
+
+	// A sequence that walks over all of the different paths
+	public var paths: AnySequence<PathIterator.Path> {
+		AnySequence<PathIterator.Path> {
+			PathIterator(self, filter: { _, _ in true });
+		}
+	};
 
 	/// An iterator that can iterate over all of the elements of the FSM.
 	/// Indefinitely, if need be.
 	// TODO: Consider using AsyncStream for this
-	public struct PathIterator: IteratorProtocol where SymbolClass: Comparable {
+	public struct PathIterator: IteratorProtocol {
+		public typealias Element = Path
+
 		public typealias OuterDFA = SymbolClassDFA<Alphabet>
 		public struct Segment: Equatable {
 			public var source: StateNo
@@ -755,7 +773,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 			// Precomputed values
 			// Map the dictionary to an array of tuples, filter out transitions to dead states
-			self.states = fsm.states.map { $0.map { (symbol: $0.key, toState: $0.value) }.filter { live.contains($0.toState) }.sorted { $0.0 < $1.0 } };
+			self.states = fsm.states.map { $0.map { (symbol: $0.key, toState: $0.value) }.filter { live.contains($0.toState) } };
 
 			self.stack = [];
 		}
@@ -818,38 +836,8 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		}
 	}
 
-	public struct Iterator: IteratorProtocol where SymbolClass: Comparable {
-		public typealias OuterDFA = SymbolClassDFA<Alphabet>
-		public typealias Element = Array<SymbolClass>
-
-		let fsm: OuterDFA;
-		var iterator: PathIterator;
-		var currentDepth: Int;
-
-		init(_ fsm: OuterDFA) {
-			// let fsm = options.fsm;
-			self.fsm = fsm;
-			self.iterator = PathIterator(fsm, filter: { _, path in path.count <= 0 });
-			self.currentDepth = 0;
-		}
-
-		public mutating func next<T>() -> T? where T: SymbolSequenceProtocol, T.Element == SymbolClass {
-			while currentDepth <= fsm.states.count {
-				while let stack = iterator.next() {
-					if stack.count < currentDepth { continue }
-					// TODO: if repeats == .Skip then keep iterating this until we have a value that's not used by an ancestor
-					let state = stack.isEmpty ? fsm.initial : stack.last!.target;
-					if fsm.finals.contains(state) {
-						return stack.reduce(T.empty, { $0.appending(iterator.states[$1.source][$1.index].symbol) });
-					}
-				}
-				self.currentDepth += 1
-				let maxDepth = currentDepth;
-				self.iterator = PathIterator(fsm, filter: { _, path in path.count <= maxDepth });
-			}
-			return nil;
-		}
-	}
+	// TODO: get the elements sorted by some given relation
+	//func sorted(by: (Self.Element, Self.Element) throws -> Bool) rethrows -> any Sequence<Self.Element>
 
 	// Now we're really getting into alchemy land
 	/// This follows all the paths walked by a set of strings provided as another DFA
@@ -872,7 +860,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		var iterator = PathIterator(input, filter: filter)
 		loop: while let path = iterator.next() {
 			let inputState = path.isEmpty ? input.initial : path.last!.target;
-			if input.finals.contains(inputState) {
+			if input.isFinal(inputState) {
 				// Compute the cooresponding state in self
 				var current = initial;
 				for segment in path {
@@ -917,7 +905,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 			}
 
 			// If the state was a final state, add an epsilon transition to state 1
-			if(self.finals.contains(oldNo)){
+			if(isFinal(oldNo)){
 				newTable[1] = epsilon
 			}
 			return newTable;
@@ -1006,6 +994,9 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	}
 }
 
+// Define a lexicographic ordering
+// (where one set is always less than the other when they are not equal;
+// the set with the smallest element not in both sets is the lesser set).
 extension SymbolClassDFA: Comparable, Sequence where SymbolClass: Comparable {
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		// Generate instances of each side, compare if lhs < rhs
@@ -1022,18 +1013,15 @@ extension SymbolClassDFA: Comparable, Sequence where SymbolClass: Comparable {
 		return lhs.contains(next)
 	}
 
-	// A sequence that walks over all of the different paths
-	public var paths: IteratorFactory<PathIterator> {
-		return IteratorFactory(self) {
-			PathIterator($0)
-		}
-	};
+	// TODO
+	//func sorted() -> any Sequence<Element> {
+	//}
 }
 
 // Conditional protocol compliance
-extension SymbolClassDFA: Sendable where SymbolClass: Sendable {}
+extension SymbolClassDFA: Sendable where Symbol: Sendable {}
 
-extension SymbolClassDFA where SymbolClass == Character {
+extension SymbolClassDFA where Symbol == Character {
 //	typealias Element = String
 	init (_ val: Array<String>) {
 		self.init(val.map{ Array($0) })
