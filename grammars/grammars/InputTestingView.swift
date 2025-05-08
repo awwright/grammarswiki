@@ -9,7 +9,7 @@ struct InputTestingView: View {
 	@Binding var content_rulelist: ABNFRulelist<UInt32>?
 	@Binding var selectedRule: String?
 	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
-	@Binding var rule_fsm_proxy: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>?
+	@Binding var rule_fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>?
 	@State private var testInput: String = ""
 	@State private var fsm_test_result: Bool? = nil
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
@@ -34,7 +34,7 @@ struct InputTestingView: View {
 		}
 		.onAppear { updatedInput() }
 		.onChange(of: selectedRule) { updatedInput() }
-		.onChange(of: rule_fsm_proxy) { updatedInput() }
+		.onChange(of: rule_fsm) { updatedInput() }
 		.onChange(of: rule_alphabet) { updatedInput() }
 		.onChange(of: testInput) { updatedInput() }
 	}
@@ -52,7 +52,7 @@ struct InputTestingView: View {
 			return
 		}
 		let input = Array(testInput.unicodeScalars.map(\.value))
-		guard let selected_fsm = rule_fsm_proxy else {
+		guard let selected_fsm = rule_fsm else {
 			fsm_test_error = "Rule `\(selectedRule)` is recursive or missing rules"
 			return
 		}

@@ -102,6 +102,11 @@ public protocol ABNFExpression: ABNFProduction {
 	/// If this will accept the empty string (maybe among other values)
 	var isOptional: Bool {get}
 
+	/// A list of all of the single symbols that will be accepted by the rule
+	/// This is used to compute partitions and decompositions
+	var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {get}
+	var remainingSymbols: ClosedRangeAlphabet<Symbol> {get}
+
 	/// Gets a list of the rules referenced by leaf ``ABNFRulename`` productions.
 	/// All of the rules given must be provided to ``toPattern``.
 	var referencedRules: Set<String> {get}
@@ -115,7 +120,7 @@ public protocol ABNFExpression: ABNFProduction {
 	///
 	/// - Parameter rules: A dictionary of resolved rulenames to their DFAs.
 	/// - Returns: The DFA equivalent to the definition of this rule.
-	func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.SymbolClass == Symbol
+	func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.Symbol == Symbol
 }
 
 /// Represents a list of rules in an ABNF grammar, as defined in RFC 5234 with Errata 3076.
@@ -297,7 +302,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 	/// - Note: Rules with circular dependencies that cannot be converted to a DFA will be excluded from the return value without any other warning.
 	///
 	/// - Note: This is a variation of `toPattern` that returns a dictionary, cooresponding with how a rulelist encodes multiple rules.
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules ruleMap: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> Dictionary<String, PatternType> where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules ruleMap: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> Dictionary<String, PatternType> where PatternType.Symbol == Symbol {
 		// Get a Dictionary of each rule by its name to its referencedRules
 		let rulesByName = self.dictionary;
 		let requiredRules = rulesByName.mapValues { $0.referencedRules }.filter { $0.1.contains($0.0) == false }
@@ -320,7 +325,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 	}
 
 	// TODO: Tests for toClosedRangePattern
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules ruleMap: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Alphabet? = nil) throws -> Dictionary<String, PatternType> where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules ruleMap: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Alphabet? = nil) throws -> Dictionary<String, PatternType> where PatternType.Symbol == Symbol {
 		// Get a Dictionary of each rule by its name to its referencedRules
 		let rulesByName = self.dictionary;
 		let requiredRules = rulesByName.mapValues { $0.referencedRules }.filter { $0.1.contains($0.0) == false }
@@ -454,11 +459,11 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 		ABNFRule<Target>(rulename: ABNFRulename(label: rulename.label), definedAs: definedAs, alternation: alternation.mapSymbols(transform))
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
 		try alternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		try alternation.toClosedRangePattern(as: PatternType.self, rules: rules)
 	}
 
@@ -531,6 +536,12 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		// Remove this rule from the rulelist to prevent recursion
 		return rule
 	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		[]
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		[]
+	}
 
 	public var alternation: ABNFAlternation<Symbol> {
 		return ABNFAlternation(matches: [self.concatenation])
@@ -574,14 +585,14 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
 	// This is also a clever way of preventing recursive loops
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
 		guard let pattern = rules[label] else{
 			throw ABNFExportError(message: "Expect rule `\(label)` to be in rules dictionary, only have: \(rules.keys.joined(separator: ", "))");
 		}
 		return pattern
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		guard let pattern = rules[label] else{
 			throw ABNFExportError(message: "Expect rule `\(label)` to be in rules dictionary, only have: \(rules.keys.joined(separator: ", "))");
 		}
@@ -618,7 +629,6 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 ///
 /// - Example: `"0" / "1" / "2"` is an alternation of three concatenations.
 public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
-	public typealias Alphabet = ClosedRangeAlphabet<Symbol>
 	public typealias Element = Array<Symbol>;
 
 	public let matches: [ABNFConcatenation<Symbol>]
@@ -643,9 +653,15 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder whe
 		return lhs.matches < rhs.matches;
 	}
 
-	public func alphabet(rulelist: Dictionary<String, Alphabet> = [:]) -> Alphabet {
+	public func alphabet(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		// TODO: An Alternation of ABNFNumVal or other isolated symbols can be merged together
-		Alphabet(partitions: matches.flatMap { $0.alphabet(rulelist: rulelist) })
+		ClosedRangeAlphabet<Symbol>(partitions: matches.flatMap { $0.alphabet(rulelist: rulelist) })
+	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		ClosedRangeAlphabet<Symbol>(partitions: matches.map(\.nextSymbols)).symbols
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		[]
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
@@ -705,11 +721,11 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder whe
 		self.mapElements({ $0.mapSymbols(transform) })
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
 		PatternType.union(try matches.map({ try $0.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter) }))
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		PatternType.union(try matches.map({ try $0.toClosedRangePattern(as: PatternType.self, rules: rules) }))
 	}
 
@@ -859,6 +875,14 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 	public func alphabet(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		ClosedRangeAlphabet<Symbol>(partitions: repetitions.flatMap { $0.alphabet(rulelist: rulelist) })
 	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		guard repetitions.count == 1 else { return [] }
+		return repetitions[0].nextSymbols
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		guard repetitions.count != 1 else { return [] }
+		return ClosedRangeAlphabet(partitions: repetitions.flatMap { $0.remainingSymbols })
+	}
 
 	public var alternation: ABNFAlternation<Symbol> {
 		if repetitions.count == 1 && repetitions[0].min == 1 && repetitions[0].max == 1, case ABNFElement.group(let group) = repetitions[0].repeating {
@@ -908,11 +932,11 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 		self.mapElements({ $0.mapSymbols(transform) })
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.Symbol == Symbol {
 		PatternType.concatenate(try repetitions.map({ try $0.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter) }))
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		PatternType.concatenate(try repetitions.map({ try $0.toClosedRangePattern(as: PatternType.self, rules: rules) }))
 	}
 
@@ -1017,11 +1041,19 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 	public func alphabet(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		repeating.alphabet(rulelist: rulelist)
 	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		guard min == 1 && max == 1 else { return [] }
+		return repeating.nextSymbols
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		if min == 1 && max == 1 { return [] }
+		return repeating.remainingSymbols
+	}
 
-	private var separatorPattern: DFA<Symbol> {
+	private func separatorPattern<T: SymbolClassPatternBuilder>() -> T? where T.Symbol: BinaryInteger, T.Symbol.Stride: SignedInteger {
 		switch(self.rangeop) {
-			case 0x2A: DFA<Symbol>.epsilon; //DFA<Symbol>.epsilon.toPattern();
-			case 0x23: ABNFBuiltins<DFA<Symbol>>.CSEP.toPattern();
+			case 0x2A: nil
+			case 0x23: ABNFBuiltins<T>.CSEP;
 			default: fatalError("Unsupported repetition range operator \(rangeop)")
 		}
 	}
@@ -1104,11 +1136,11 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		self.mapElements({ $0.mapSymbols(transform) })
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
 		let inner = try repeating.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 		let separator: PatternType? = switch(self.rangeop) {
 			case 0x2A: nil; //DFA<Symbol>.epsilon.toPattern();
-			case 0x23: ABNFBuiltins<DFA<Symbol>>.CSEP.toPattern();
+			case 0x23: ABNFBuiltins<PatternType>.CSEP;
 			default: fatalError("Unsupported repetition range operator \(rangeop)")
 		}
 		if let max, max == 0 {
@@ -1135,12 +1167,12 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		}
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		let inner = try repeating.toClosedRangePattern(as: PatternType.self, rules: rules)
 		//FIXME: This is temporarially going to be broken... But I'm not sure it was used to begin with
 		let separator: PatternType? = switch(self.rangeop) {
-			//case 0x2A: PatternType.epsilon
-//			case 0x23: ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<Symbol>>>.CSEP.mapSymbols { ClosedRangeAlphabet<Symbol>($0) }.toPattern(as: PatternType.self);
+			case 0x2A: nil;
+			case 0x23: ABNFBuiltins<PatternType>.CSEP
 			default: fatalError("Unsupported repetition range operator \(rangeop)")
 		}
 		if let max, max == 0 {
@@ -1216,6 +1248,26 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 			case .charVal(let c): return c.alphabet(rulelist: rulelist)
 			case .numVal(let n): return n.alphabet(rulelist: rulelist)
 			case .proseVal(let p): return p.alphabet(rulelist: rulelist)
+		}
+	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		switch self {
+			case .rulename(let r): return r.nextSymbols
+			case .group(let g): return g.nextSymbols
+			case .option(let o): return o.nextSymbols
+			case .charVal(let c): return c.nextSymbols
+			case .numVal(let n): return n.nextSymbols
+			case .proseVal(let p): return p.nextSymbols
+		}
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		switch self {
+			case .rulename(let r): return r.remainingSymbols
+			case .group(let g): return g.remainingSymbols
+			case .option(let o): return o.remainingSymbols
+			case .charVal(let c): return c.remainingSymbols
+			case .numVal(let n): return n.remainingSymbols
+			case .proseVal(let p): return p.remainingSymbols
 		}
 	}
 
@@ -1301,7 +1353,7 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		}
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
             case .rulename(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
             case .group(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
@@ -1312,7 +1364,7 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		}
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
             case .rulename(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
             case .group(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
@@ -1417,6 +1469,12 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 	public func alphabet(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		alternation.alphabet(rulelist: rulelist)
 	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		alternation.nextSymbols
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		alternation.remainingSymbols
+	}
 
 	// The `alternation` property functions exactly the same
 	//public var alternation: ABNFAlternation {
@@ -1453,11 +1511,11 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		ABNFGroup<Target>(alternation: alternation.mapSymbols(transform))
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.Symbol == Symbol {
 		try alternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		try alternation.toClosedRangePattern(as: PatternType.self, rules: rules)
 	}
 
@@ -1500,6 +1558,12 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 	public func alphabet(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		optionalAlternation.alphabet(rulelist: rulelist)
 	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		optionalAlternation.nextSymbols
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		optionalAlternation.remainingSymbols
+	}
 
 	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
@@ -1536,11 +1600,11 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		ABNFOption<Target>(optionalAlternation: optionalAlternation.mapSymbols(transform))
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.Symbol == Symbol {
 		try optionalAlternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter).optional()
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		try optionalAlternation.toClosedRangePattern(as: PatternType.self, rules: rules).optional()
 	}
 
@@ -1582,7 +1646,24 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 				else { return [codepoint] }
 			}
 		}
-		return ClosedRangeAlphabet<Symbol>(partitions: arr.map { [$0] })
+		return ClosedRangeAlphabet<Symbol>(partitions: arr.map { [$0...$0] })
+	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		guard sequence.count >= 1 else { return [] }
+		let codepoint = sequence[0]
+		if(codepoint >= 0x41 && codepoint <= 0x5A) { return [ codepoint...codepoint, (codepoint+0x20)...(codepoint+0x20) ] }
+		else if(codepoint >= 0x61 && codepoint <= 0x7A) { return [ (codepoint-0x20)...(codepoint-0x20), codepoint...codepoint ] }
+		else { return [codepoint...codepoint] }
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		if sequence.count >= 1 { return [] }
+		let codepoints = sequence[1...].map {
+			codepoint in
+			if(codepoint >= 0x41 && codepoint <= 0x5A) { return [ codepoint...codepoint, (codepoint+0x20)...(codepoint+0x20) ] }
+			else if(codepoint >= 0x61 && codepoint <= 0x7A) { return [ (codepoint-0x20)...(codepoint-0x20), codepoint...codepoint ] }
+			else { return [codepoint...codepoint] }
+		}
+		return ClosedRangeAlphabet<Symbol>(partitions: codepoints)
 	}
 
 	public var alternation: ABNFAlternation<Symbol> {
@@ -1621,7 +1702,7 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 		ABNFCharVal<Target>(sequence: sequence.map(transform))
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) -> PatternType where PatternType.Symbol == Symbol {
 		func sym(_ s: Symbol) -> PatternType { if let alphabetFilter, !alphabetFilter.contains(s) { return PatternType.empty } else { return PatternType.symbol(s) } }
 		return PatternType.concatenate(sequence.map {
 			codepoint in
@@ -1633,8 +1714,8 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 		})
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
-		func sym(_ s: Symbol) -> PatternType { PatternType.symbol(s...s) }
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
+		func sym(_ s: Symbol) -> PatternType { PatternType.symbol(s) }
 		return PatternType.concatenate(sequence.map {
 			codepoint in
 			// Check for uppercase letters, also accept lowercase versions
@@ -1688,8 +1769,20 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 
 	public func alphabet(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		switch self.value {
-			case .sequence(let seq): return ClosedRangeAlphabet<Symbol>(partitions: seq.map { [$0] })
-			case .range(let seq): return ClosedRangeAlphabet<Symbol>(partitions: [seq])
+			case .sequence(let seq): return SetAlphabet<Symbol>(partitions: seq.map { [$0] }).toAlphabet()
+			case .range(let seq): return ClosedRangeAlphabet<Symbol>(partitions: [[seq]])
+		}
+	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		switch self.value {
+			case .sequence: ClosedRangeAlphabet<Symbol>.SymbolClass()
+			case .range(let range): ClosedRangeAlphabet<Symbol>.SymbolClass([range])
+		}
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		switch self.value {
+			case .sequence(let seq): ClosedRangeAlphabet<Symbol>() // FIXME
+			case .range: ClosedRangeAlphabet<Symbol>()
 		}
 	}
 
@@ -1798,7 +1891,7 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		}
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) -> PatternType where PatternType.Symbol == Symbol {
 		func sym(_ s: Symbol) -> PatternType {
 			if let alphabetFilter, !alphabetFilter.contains(s) { return PatternType.empty } else { return PatternType.symbol(s) }
 		}
@@ -1809,9 +1902,9 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		}
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
 		switch self.value {
-			case .sequence(let seq): return PatternType.concatenate(seq.map { PatternType.symbol($0...$0) })
+			case .sequence(let seq): return PatternType.concatenate(seq.map { PatternType.symbol($0) })
 			case .range(let range): return PatternType.symbol(range)
 		}
 	}
@@ -1930,6 +2023,12 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	public func alphabet(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
 		fatalError("Cannot produce alphabet from prose")
 	}
+	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
+		[]
+	}
+	public var remainingSymbols: ClosedRangeAlphabet<Symbol> {
+		[]
+	}
 
 	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
@@ -1967,11 +2066,11 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		return ABNFProseVal<Target>(remark: self.remark)
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.Symbol == Symbol {
 		throw ABNFExportError(message: "Cannot convert prose to FSM")
 	}
 
-	public func toClosedRangePattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.SymbolClass == ClosedRange<Symbol> {
+	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		throw ABNFExportError(message: "Cannot convert prose to FSM")
 	}
 
@@ -1994,8 +2093,8 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 }
 
 // A dictionary of all of the rules that ABNF provides by default
-public struct ABNFBuiltins<Dfn: RegularPatternBuilder> where Dfn.SymbolClass: BinaryInteger, Dfn.SymbolClass.Stride: SignedInteger {
-	typealias Symbol = Dfn.SymbolClass
+public struct ABNFBuiltins<Dfn: RegularPatternBuilder> where Dfn.Symbol: BinaryInteger, Dfn.Symbol.Stride: SignedInteger {
+	typealias Symbol = Dfn.Symbol
 
 	public static var ALPHA : Dfn { Dfn.range(0x41...0x5A) | Dfn.range(0x61...0x7A) }; // %x41-5A / %x61-7A   ; A-Z / a-z
 	public static var BIT   : Dfn { Dfn.symbol(0x30) |  Dfn.symbol(0x31) }; // "0" / "1"
@@ -2042,6 +2141,7 @@ public struct ABNFBuiltins<Dfn: RegularPatternBuilder> where Dfn.SymbolClass: Bi
 	}
 }
 
+// TODO: Rename this to "ABNFSyntax" or something
 /// A set of values for parsing ABNF
 /// Instances of ABNF documents themselves can't refer to these
 struct Terminals {

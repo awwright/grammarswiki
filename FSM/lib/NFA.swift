@@ -1,4 +1,4 @@
-public protocol NFAProtocol: RegularLanguageProtocol, RegularLanguageSetAlgebra where SymbolClass: Hashable {
+public protocol NFAProtocol: RegularLanguageProtocol, RegularLanguageSetAlgebra where Symbol: Hashable {
 	var statesSet: Array<Alphabet.NFATable> {get};
 	var epsilon: Array<Set<Int>> {get};
 	var initials: Set<Int> {get};
@@ -415,9 +415,9 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 		return Self.concatenate([self, other]);
 	}
 
-	public static func symbol(_ element: SymbolClass) -> Self {
+	public static func symbol(_ element: Symbol) -> Self {
 		return Self(
-			states: [[element: [1]], [:]],
+			states: [[Alphabet.range(element): [1]], [:]],
 			epsilon: [[], []],
 			initials: [ 0 ],
 			finals: [ 1 ]

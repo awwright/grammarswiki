@@ -160,7 +160,7 @@ public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternBuilder, H
 		}
 	}
 
-	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternBuilder, PatternType.SymbolClass == Symbol {
+	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternBuilder, PatternType.Symbol == Symbol {
 		switch self {
 			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))

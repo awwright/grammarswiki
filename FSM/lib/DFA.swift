@@ -609,9 +609,9 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		return Self.concatenate([self, other]);
 	}
 
-	public static func symbol(_ element: SymbolClass) -> Self {
+	public static func symbol(_ element: Symbol) -> Self {
 		return Self(
-			states: [[element: 1], [:]],
+			states: [[Alphabet.range(element): 1], [:]],
 			initial: 0,
 			finals: [ 1 ]
 		)
@@ -883,7 +883,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 //		return SymbolClassDFA<Target>(nfa: nfa)
 //	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil) -> PatternType where PatternType.SymbolClass == SymbolClass {
+	public func toPattern<PatternType: SymbolClassPatternBuilder>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol, PatternType.SymbolClass == SymbolClass {
 		// Make a new initial state at 0, epsilon transition to old initial state
 		// Create an empty new-final state at 1
 		// And add epsilon transitions for all old-final states to new-final state at 1
@@ -901,7 +901,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 			// Renumber the states accordingly
 			oldTable.forEach {
 				(symbol, target) in
-				newTable[target + 2] = newTable[target + 2, default: PatternType.empty].union(PatternType.symbol(symbol))
+				newTable[target + 2] = newTable[target + 2, default: PatternType.empty].union(PatternType.symbol(range: symbol))
 			}
 
 			// If the state was a final state, add an epsilon transition to state 1
@@ -1003,14 +1003,13 @@ extension SymbolClassDFA: Comparable, Sequence where SymbolClass: Comparable {
 		// If they are the same, generate next instance (in alphabetical order)
 		// Test if they are equal, and return false if so (this is the same operation performed in func ==)
 		let difference = lhs.symmetricDifference(rhs);
-		if difference.finals.isEmpty {
+		if difference.isEmpty {
 			return false;
 		}
 		// Get the first item that exists in only one of the two
-		var first = difference.makeIterator()
-		let next: Element = first.next()!
+		let first = difference.makeIterator().next()!
 		// If it exists in lhs, then lhs < rhs
-		return lhs.contains(next)
+		return lhs.contains(first)
 	}
 
 	// TODO
@@ -1038,6 +1037,15 @@ extension SymbolClassDFA where Symbol == Character {
 	public mutating func remove(_ member: String) -> (String)? {
 		self.formSymmetricDifference(Self(verbatim: member));
 		return member;
+	}
+}
+
+extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol, Symbol: Comparable {
+	public static func symbol(_ symbol: ClosedRange<Alphabet.Symbol>) -> SymbolClassDFA<Alphabet> {
+		fatalError()
+	}
+	public func toClosedRangePattern<T: ClosedRangePatternBuilder>() -> T {
+		fatalError()
 	}
 }
 

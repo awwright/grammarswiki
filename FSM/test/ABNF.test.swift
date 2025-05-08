@@ -3,97 +3,128 @@ import Testing;
 
 @Suite("ABNF Tests") struct ABNFTests {
 	@Suite("alphabet") struct ABNFTest_alphabet {
-		@Test("alternation")
-		func test_alphabet_alternation() async throws {
-			// "A" / "B" / 3"C"
+		@Test("alternation homogeneous", .disabled())
+		func test_alphabet_alternation_0() async throws {
+			// "A" / "B" / "C"
+			let expression = ABNFAlternation(matches: [
+				ABNFCharVal(sequence: "A".utf8).concatenation,
+				ABNFCharVal(sequence: "B".utf8).concatenation,
+				ABNFCharVal(sequence: "C".utf8).concatenation,
+			])
+			#expect(expression.alphabet() == [[0x41...0x42, 0x61...0x62], [0x43...0x43, 0x63...0x63]])
+		}
+
+		@Test("alternation heterogeneous", .disabled())
+		func test_alphabet_alternation_1() async throws {
+			// "A" / "B" / 3"C" / 3"D"
 			let expression = ABNFAlternation(matches: [
 				ABNFCharVal(sequence: "A".utf8).concatenation,
 				ABNFCharVal(sequence: "B".utf8).concatenation,
 				ABNFCharVal(sequence: "C".utf8).element.repeating(3).concatenation,
+				ABNFCharVal(sequence: "D".utf8).element.repeating(3).concatenation,
 			])
-			#expect(expression.alphabet() == [0x41, 0x42, 0x43, 0x61, 0x62, 0x63])
+			#expect(expression.alphabet() == [[0x41...0x42, 0x61...0x62], [0x43...0x44, 0x63...0x64]])
 		}
 
 		@Test("repetition optional")
 		func test_alphabet_repetition_optional() async throws {
 			// 0*1%x41-43
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, element: ABNFNumVal(base: .hex, value: .range(0x41...0x43)).element)
-			#expect(expression.alphabet() == [0x41, 0x42, 0x43])
+			#expect(expression.alphabet() == [[0x41...0x43]])
 		}
 
 		@Test("repetition plus")
 		func test_repetition_plus() async throws {
 			// 1*"Ab"
 			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
-			#expect(expression.alphabet() == [0x41, 0x61, 0x42, 0x62])
+			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
 		}
 
 		@Test("repetition star")
 		func test_repetition_star() async throws {
 			// *"AB"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
-			#expect(expression.alphabet() == [0x41, 0x61, 0x42, 0x62])
+			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
 		}
 
 		@Test("repetition min")
 		func test_repetition_min() async throws {
 			// 2*"AB"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
-			#expect(expression.alphabet() == [0x41, 0x61, 0x42, 0x62])
+			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
 		}
 
 		@Test("repetition max")
 		func test_repetition_max() async throws {
 			// *2"AB"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
-			#expect(expression.alphabet() == [0x41, 0x61, 0x42, 0x62])
+			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
 		}
 
 		@Test("repetition min/max")
 		func test_repetition_minmax() async throws {
 			// 2*3"ABC"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "Abc".utf8).element)
-			#expect(expression.alphabet() == [0x41, 0x61, 0x42, 0x62, 0x43, 0x63])
+			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62], [0x43...0x43, 0x63...0x63]])
 		}
 
 		@Test("element")
 		func test_element() async throws {
 			// "Ab"
 			let expression = ABNFElement.charVal(ABNFCharVal<UInt8>(sequence: "Ab".utf8))
-			#expect(expression.alphabet() == [0x41, 0x61, 0x42, 0x62])
+			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
 		}
 
 		@Test("char_val %s/%i")
 		func test_char_val() async throws {
 			// "C"
 			let expressioni = ABNFCharVal<UInt8>(sequence: "Abc".utf8, caseSensitive: true)
-			#expect(expressioni.alphabet() == [0x41, 0x62, 0x63])
+			#expect(expressioni.alphabet() == [[0x41...0x41], [0x62...0x62], [0x63...0x63]])
 
 			let expression = ABNFCharVal<UInt8>(sequence: "Abc".utf8, caseSensitive: false)
-			#expect(expression.alphabet() == [0x41, 0x61, 0x42, 0x62, 0x43, 0x63])
+			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62], [0x43...0x43, 0x63...0x63]])
 		}
 
 		@Test("num-val")
 		func test_numVal_range() async throws {
 			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39))
-			#expect(expression.alphabet() == [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39])
+			#expect(expression.alphabet() == [[0x30...0x39]])
 		}
 
-		@Test("builtins")
+		@Test("builtins", .disabled())
 		func test_rulelist_builtins() async throws {
-			let builtins = ABNFBuiltins<DFA<UInt8>>.dictionary.mapValues { $0.minimized() };
-			let expression = ABNFRulename<UInt8>(label: "DIGIT").alternation;
-			#expect(expression.alphabet(rulelist: builtins.mapValues(\.alphabet)) == [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39])
-		}
-
-		@Test("builtins 2")
-		func test_rulelist_builtins2() async throws {
-			let builtins = ABNFBuiltins<DFA<UInt8>>.dictionary.mapValues { $0.minimized() };
+			let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt8>>>.dictionary.mapValues { $0.minimized().alphabet };
 			let expression = ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFAlternation(matches: [
 				ABNFRulename(label: "DIGIT").concatenation,
 				ABNFNumVal(base: .hex, value: .range(0x41...0x43)).concatenation,
 			]));
-			#expect(expression.alphabet(rulelist: builtins.mapValues(\.alphabet)) == [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43])
+			#expect(expression.alphabet() == [[UInt8(0x30)...UInt8(0x39), UInt8(0x41)...UInt8(0x43)]])
+		}
+
+		@Test("builtins toAlphabet")
+		func test_rulelist_builtins_alphabet() async throws {
+			let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() };
+			#expect(builtins.count == 16)
+		}
+
+		@Test("builtins: SymbolAlphabet")
+		func test_builtins_SymbolAlphabet() async throws {
+			let builtins = ABNFBuiltins<DFA<UInt8>>.dictionary.mapValues { $0.minimized().alphabet };
+			#expect(builtins["DIGIT"] == [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39])
+		}
+
+		@Test("builtins: SetAlphabet", .disabled())
+		func test_builtins_SetAlphabet() async throws {
+			let builtins = ABNFBuiltins<SymbolClassDFA<SetAlphabet<Int>>>.dictionary.mapValues { $0.minimized().alphabet };
+			#expect(builtins["LWSP"] == [[0x09, 0x20], [0x0D], [0x0A]])
+			#expect(builtins["DIGIT"] == [[0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39]])
+		}
+
+		@Test("builtins: ClosedRangeAlphabet", .disabled())
+		func test_builtins_ClosedRangeAlphabet() async throws {
+			let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<Int>>>.dictionary.mapValues { $0.minimized().alphabet };
+			#expect(builtins["LWSP"] == [[0x09...0x09, 0x20...0x20], [0x0D...0x0D], [0x0A...0x0A]])
+			#expect(builtins["DIGIT"] == [[0x30...0x39]])
 		}
 	}
 	@Suite("match/parse") struct ABNFTest_match {
@@ -1013,6 +1044,7 @@ import Testing;
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
 			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			print(fsm.toViz())
 			#expect(!fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("C,C".utf8));

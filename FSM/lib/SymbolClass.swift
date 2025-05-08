@@ -17,6 +17,12 @@ public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLite
 	/// If elements appear in multiple partitions, elements found in the same partitions are split out and merged into a new partition
 	/// (so that they never share a partition with elements they didn't share with in all partitions).
 	init(partitions: Array<SymbolClass>)
+	/// Copy symbols from another Alphabet.
+	///
+	/// - Note: Classes may be split apart, but should be preserved as much as possible.
+	init<T: FiniteAlphabetProtocol>(alphabet: T) where T.Symbol == Symbol
+//	init<T: AlphabetProtocol>(range: T) where T: Collection, T.Element == Symbol
+	/// Generate a SymbolClass containing the given Symbol
 	static func range(_ symbol: Symbol) -> SymbolClass
 	/// Determine if the partitioned set contains the given value as a component
 	func contains(_ component: Symbol) -> Bool
@@ -46,7 +52,13 @@ extension AlphabetProtocol {
 }
 
 public protocol FiniteAlphabetProtocol: AlphabetProtocol {
-	func collection(_: SymbolClass) -> any Collection<Symbol>
+	static func collection(_: SymbolClass) -> any Collection<Symbol>
+}
+
+extension FiniteAlphabetProtocol {
+	func toAlphabet<T: FiniteAlphabetProtocol>() -> T where T.Symbol == Symbol {
+		T(alphabet: self)
+	}
 }
 
 // TODO: Define CharsetProtocol, a subset of AlphabetProtocol that has a guaranteed mapping to Character/String
@@ -63,6 +75,11 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 
 	public init() {
 		self.symbols = []
+	}
+
+	public init<T: FiniteAlphabetProtocol>(alphabet: T) where T.Symbol == Symbol {
+		let symbols: Array<Symbol> = alphabet.flatMap { Array(T.collection($0)) }
+		self.symbols = Set(symbols)
 	}
 
 	public init(partitions: some Collection<SymbolClass>) {
@@ -118,12 +135,13 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 		symbols[position]
 	}
 
-	public func collection(_ range: Symbol) -> any Collection<Symbol> {
+	public static func collection(_ range: Symbol) -> any Collection<Symbol> {
 		AnyCollection([range])
 	}
 }
 
-public struct SetAlphabet<Symbol: Hashable & Comparable>: AlphabetProtocol {
+public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol {
+	
 	public typealias Symbol = Symbol
 	public typealias SymbolClass = Set<Symbol>
 	public typealias ArrayLiteralElement = SymbolClass
@@ -135,6 +153,10 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: AlphabetProtocol {
 
 	public init() {
 		self.partitions = []
+	}
+
+	public init<T: FiniteAlphabetProtocol>(alphabet: T) where Symbol == T.Symbol {
+		self.partitions = Set(alphabet.map { Set(T.collection($0)) })
 	}
 
 	public init(partitions: some Collection<Set<Symbol>>) {
@@ -195,10 +217,12 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: AlphabetProtocol {
 		partitions[position]
 	}
 
-	public func collection(_ range: SymbolClass) -> AnyCollection<Symbol> {
+	public static func collection(_ range: SymbolClass) -> any Collection<Symbol> {
 		AnyCollection<Symbol>(range)
 	}
 }
+
+public protocol ClosedRangeAlphabetProtocol: AlphabetProtocol {}
 
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
 /// Optimized for describing ranges of characters.
@@ -209,7 +233,7 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: AlphabetProtocol {
 /// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 // TODO: Rename this to SymbolRangePartitionedSet or something
-public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabetProtocol, RegularPatternBuilder, Hashable where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabetProtocol, ClosedRangeAlphabetProtocol, Hashable, CustomStringConvertible where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	public typealias Symbol = Symbol
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
@@ -251,18 +275,22 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		self.init(partitions: partitions)
 	}
 
+	public init<T: FiniteAlphabetProtocol>(alphabet: T) where Symbol == T.Symbol {
+		self.init(partitions: alphabet.map{ T.collection($0).map{$0...$0} })
+	}
+
 	public init(arrayLiteral elements: SymbolClass...) {
 		self.init(partitions: elements)
 	}
 
 	/// Create from an array of Symbols
-	public init(partitions: some Collection<some Collection<Symbol>>) {
-		self.init(partitions: partitions.map{ $0.map { $0...$0 } })
+	public init(alphabet: some Collection<some Collection<Symbol>>) {
+		self.init(partitions: alphabet.map{ $0.map { $0...$0 } })
 	}
 
 	/// Initialize from a lower SetAlphabet
 	public init(_ from: SymbolAlphabet<Symbol>) {
-		self.init(partitions: from.map{ $0...$0 })
+		self.init(alphabet: from.map{ $0...$0 })
 	}
 	public init(_ from: SetAlphabet<Symbol>) {
 		self.init(partitions: from.map{ $0.map { $0...$0 } })
@@ -350,39 +378,6 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 
 	public static func range(_ symbol: Symbol) -> SymbolClass {
 		return [symbol...symbol]
-	}
-
-	// MARK: RegularPatternProtocol
-	/// A pattern without any elements has an empty alphabet
-	public static var empty: Self { Self() }
-	/// An element with no symbols also has an empty alphabet
-	public static var epsilon: Self { Self() }
-	/// An element with a single symbol has one symbol in the alphabet
-	public static func symbol(_ element: Symbol) -> Self {
-		Self([element...element])
-	}
-	public static func symbol(_ element: SymbolClass) -> Self {
-		Self(element)
-	}
-	public static func concatenate(_ elements: [Self]) -> Self {
-		Self(partitions: elements.flatMap(\.self))
-	}
-	public static func union(_ elements: [Self]) -> Self {
-		// Merge partitions that are the only partition in their alternation
-		// Because they behave the same
-		var symbols: Array<ClosedRange<Symbol>> = []
-		var partitions: Array<Array<ClosedRange<Symbol>>> = []
-		for partition in elements.map(\.partitions) {
-			if(partition.count == 1){
-				symbols += partition[0]
-			}else if(partition.count > 1){
-				partitions += partition
-			}
-		}
-		return Self(partitions: [symbols] + partitions)
-	}
-	public func star() -> Self {
-		self
 	}
 
 	// MARK: Various accessors
@@ -478,17 +473,6 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		return false
 	}
 
-	public func meet(_ other: Self) -> Self {
-		return Self.meet([self, other])
-	}
-	public static func meet(_ i: Array<Self>) -> Self {
-		return ClosedRangeAlphabet(partitions: i.flatMap(\.self))
-	}
-
-	public static func == (lhs: Self, rhs: Self) -> Bool {
-		return lhs.symbols == rhs.symbols
-	}
-
 	/// This may be somewhat inefficent! But it's the best one can do as a stable identifier when Symbol is not Comparable.
 	public func label(of: Symbol) -> Symbol {
 		siblings(of: of).sorted { $0.lowerBound < $1.lowerBound }.first!.lowerBound
@@ -553,8 +537,17 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		partitions[position]
 	}
 
-	public func collection(_ range: SymbolClass) -> any Collection<Symbol> {
+	public static func collection(_ range: SymbolClass) -> any Collection<Symbol> {
 		AnyCollection(range.lazy.joined())
+	}
+
+	// CustomStringConvertable
+	public var description: String {
+		"\(Self.self)(" + self.map { "[" + $0.map { "\($0)" }.joined(separator: ", ") + "]" }.joined(separator: ", ") + ")"
+	}
+
+	public static func == (lhs: Self, rhs: Self) -> Bool {
+		return lhs.symbols == rhs.symbols
 	}
 }
 
@@ -592,6 +585,7 @@ extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatabl
 
 /// A variation of a Dictionary that allows setting a range of keys (possibly continuous ranges of values) and looking up values within the range.
 public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equatable>: AlphabetTableProtocol where Alphabet.Symbol: Hashable, Value: Hashable {
+	
 	public typealias Index = Alphabet.Index
 	public typealias Element = Dictionary<Alphabet.SymbolClass, Value>.Element
 
@@ -671,8 +665,9 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equata
 	}
 
 	public subscript(position: Index) -> Element {
-//		(key: alphabet.siblings(of: position), value: dict[position])
-		fatalError("Unimplemented")
+		let key: Alphabet.Element = alphabet[position]
+		let value: Value = dict[Alphabet.label(of: key)]!
+		return (key: key, value: value)
 	}
 
 	public static func == (lhs: AlphabetTable<Alphabet, Value>, rhs: AlphabetTable<Alphabet, Value>) -> Bool {

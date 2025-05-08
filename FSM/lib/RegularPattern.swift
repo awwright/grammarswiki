@@ -30,7 +30,7 @@ public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 /// - func toPattern
 public protocol RegularPatternBuilder: Equatable {
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
-	associatedtype SymbolClass;
+	associatedtype Symbol;
 
 	/// An instance representing the empty language, which accepts no sequences.
 	/// Equivalent to `init()`
@@ -43,7 +43,7 @@ public protocol RegularPatternBuilder: Equatable {
 	init();
 
 	/// Creates an automaton that matches exactly the given strings
-	init(arrayLiteral: Array<SymbolClass>...)
+	init(arrayLiteral: Array<Symbol>...)
 
 	/// Creates a pattern accepting the union of the languages defined by the given patterns.
 	/// - Parameter elements: An array of patterns to union with this one.
@@ -60,7 +60,7 @@ public protocol RegularPatternBuilder: Equatable {
 	/// Creates a pattern that accepts only a single input with one element of the given symbol
 	/// - Parameter element: The symbol to turn into a regular expression
 	/// - Returns: A pattern accepting the given symbol
-	static func symbol(_ element: SymbolClass) -> Self
+	static func symbol(_ element: Symbol) -> Self
 
 	/// Returns a pattern to also accept the empty sequence, making it optional.
 	/// - Returns: A pattern that accepts either the empty sequence or any sequence this pattern accepts.
@@ -113,7 +113,7 @@ extension RegularPatternBuilder {
 
 	/// Default implementation of array literal constructor.
 	/// This is not likely to be very efficent, but it is generic.
-	public init(arrayLiteral: Array<SymbolClass>...) {
+	public init(arrayLiteral: Array<Symbol>...) {
 		self = Self.union(arrayLiteral.map { Self.concatenate($0.map { Self.symbol($0) }) })
 	}
 
@@ -186,18 +186,27 @@ extension RegularPatternBuilder {
 }
 
 // For symbol types that support it, allow generating a range of symbols
-extension RegularPatternBuilder where SymbolClass: Comparable {
+extension RegularPatternBuilder {
 	/// Creates an alternation between all of the symbols in the given sequence
 	/// - Parameter range: The range of symbols (e.g., `0..<10`).
-	public static func range<T: Sequence>(_ range: T) -> Self where T.Element == SymbolClass {
+	public static func range<T: Sequence>(_ range: T) -> Self where T.Element == Symbol {
 		return Self.union(range.map{ Self.symbol($0) });
 	}
 
 	/// Creates a concatenation from the symbols in the given sequence
 	/// - Parameter range: The range of symbols (e.g., `0..<10`).
-	public static func sequence<T: Sequence>(_ sequence: T) -> Self where T.Element == SymbolClass {
+	public static func sequence<T: Sequence>(_ sequence: T) -> Self where T.Element == Symbol {
 		return Self.concatenate(sequence.map{ Self.symbol($0) });
 	}
+}
+
+public protocol ClosedRangePatternBuilder: RegularPatternBuilder where Symbol: Comparable {
+	static func symbol(_ symbol: ClosedRange<Symbol>) -> Self
+}
+
+public protocol SymbolClassPatternBuilder: RegularPatternBuilder where Symbol: Comparable {
+	associatedtype SymbolClass
+	static func symbol(range: SymbolClass) -> Self
 }
 
 /// Indicates that the conforming structure can be exported to a RegularPatternProtocol object
@@ -205,7 +214,7 @@ public protocol RegularPattern where Symbol: Hashable {
 	/// The type of individual symbols in the sequence, which must be hashable for set-like operations.
 	associatedtype Symbol;
 
-	func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?) -> PatternType where PatternType.SymbolClass == Symbol;
+	func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?) -> PatternType where PatternType.Symbol == Symbol;
 
 	/// Get exactly symbols used in the pattern
 	var alphabet: Set<Symbol> { get }
@@ -214,7 +223,7 @@ public protocol RegularPattern where Symbol: Hashable {
 /// A very simple implementation of RegularPatternProtocol. Likely the simplest possible implementation.
 /// For example, it doesn't support repetition operators except kleene star (required for infinity).
 /// An optional element is represented as an alternation with the empty string.
-public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternBuilder, Hashable where Symbol: BinaryInteger {
+public indirect enum SimpleRegex<Symbol>: RegularPattern, SymbolClassPatternBuilder, Hashable where Symbol: BinaryInteger {
 	public typealias Alphabet = SymbolAlphabet<Symbol>
 	public typealias SymbolClass = Alphabet.SymbolClass
 	public typealias Element = Array<SymbolClass>
@@ -234,6 +243,10 @@ public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternBuilder,
 
 	public init (_ sequence: any Sequence<SymbolClass>) {
 		self = .concatenation(sequence.map{ Self.symbol($0) })
+	}
+
+	public static func symbol(range: Alphabet.SymbolClass) -> SimpleRegex<Symbol> {
+		.symbol(range)
 	}
 
 	/// A set of all the symbols in use in this regex.
@@ -314,7 +327,7 @@ public indirect enum SimpleRegex<Symbol>: RegularPattern, RegularPatternBuilder,
 		}
 	}
 
-	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil) -> PatternType where PatternType.SymbolClass == SymbolClass {
+	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil) -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
 			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))
