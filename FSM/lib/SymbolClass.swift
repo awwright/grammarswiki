@@ -38,6 +38,9 @@ public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLite
 	/// It is assumed the symbol exists in the alphabet.
 	static func label(of: SymbolClass) -> Symbol
 	func label(of: Symbol) -> Symbol
+
+	/// Inserts the given partition into the Alphabet
+	mutating func insert(_ newElement: SymbolClass)
 }
 
 /// Default implementations of functions for PartitionedSetProtocol
@@ -138,10 +141,14 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 	public static func collection(_ range: Symbol) -> any Collection<Symbol> {
 		AnyCollection([range])
 	}
+
+	/// Mutations
+	public mutating func insert(_ newElement: SymbolClass) {
+		symbols.insert(newElement)
+	}
 }
 
 public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol {
-	
 	public typealias Symbol = Symbol
 	public typealias SymbolClass = Set<Symbol>
 	public typealias ArrayLiteralElement = SymbolClass
@@ -219,6 +226,23 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 
 	public static func collection(_ range: SymbolClass) -> any Collection<Symbol> {
 		AnyCollection<Symbol>(range)
+	}
+
+	/// Mutations
+	public mutating func insert(_ newElement: SymbolClass) {
+		var remainingNewElements = newElement;
+		for part in partitions {
+			let common = newElement.intersection(part)
+			if !common.isEmpty {
+				remainingNewElements.subtract(common)
+				partitions.remove(part)
+				partitions.insert(common)
+				partitions.insert(part.subtracting(common))
+			}
+		}
+		if !remainingNewElements.isEmpty {
+			partitions.insert(remainingNewElements)
+		}
 	}
 }
 
@@ -546,8 +570,23 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		"\(Self.self)(" + self.map { "[" + $0.map { "\($0)" }.joined(separator: ", ") + "]" }.joined(separator: ", ") + ")"
 	}
 
-	public static func == (lhs: Self, rhs: Self) -> Bool {
-		return lhs.symbols == rhs.symbols
+	/// Mutations
+	public mutating func insert(_ newElement: SymbolClass) {
+		// Verify that the ranges are in order
+		assert(zip(newElement, newElement[1...]).allSatisfy { $0.upperBound < $1.lowerBound })
+
+		// Merge adjacent or overlapping ranges within the new symbol class
+		var merged: [ClosedRange<Symbol>] = newElement.isEmpty ? [] : [newElement[0]]
+		for current in newElement.dropFirst() {
+			let last = merged.last!
+			if current.lowerBound <= last.upperBound + 1 {
+				merged[merged.count - 1] = last.lowerBound...Swift.max(last.upperBound, current.upperBound)
+			} else {
+				merged.append(current)
+			}
+		}
+
+		// Implementation here
 	}
 }
 
@@ -585,7 +624,6 @@ extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatabl
 
 /// A variation of a Dictionary that allows setting a range of keys (possibly continuous ranges of values) and looking up values within the range.
 public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equatable>: AlphabetTableProtocol where Alphabet.Symbol: Hashable, Value: Hashable {
-	
 	public typealias Index = Alphabet.Index
 	public typealias Element = Dictionary<Alphabet.SymbolClass, Value>.Element
 

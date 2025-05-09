@@ -216,7 +216,7 @@ import Testing;
 		@Test("two nested partitions") func test_two_nested_parts() async throws {
 			let part1 = ClosedRangeAlphabet<Int>([ 0x30...0x39 ])
 			let part2 = ClosedRangeAlphabet<Int>([ 0x32 ])
-			let partitions = part1.meet(part2)
+			let partitions = ClosedRangeAlphabet<Int>(partitions: Array(part1) + Array(part2))
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
 			#expect(partitions.getPartitionLabel(0x32) == 0x32)
@@ -230,7 +230,7 @@ import Testing;
 		@Test("two nested partitions (range)") func test_two_nested_parts_range() async throws {
 			let part1 = ClosedRangeAlphabet<Int>([ 0x30...0x39 ])
 			let part2 = ClosedRangeAlphabet<Int>([ 0x32...0x35 ])
-			let partitions = part1.meet(part2)
+			let partitions = ClosedRangeAlphabet<Int>(partitions: Array(part1) + Array(part2))
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
 			#expect(partitions.getPartitionLabel(0x32) == 0x32)
@@ -244,7 +244,7 @@ import Testing;
 		@Test("two overlapping partitions") func test_two_overlapping_parts() async throws {
 			let part1 = ClosedRangeAlphabet<Int>([ 0x30...0x35 ])
 			let part2 = ClosedRangeAlphabet<Int>([ 0x32...0x39 ])
-			let partitions = part1.meet(part2)
+			let partitions = ClosedRangeAlphabet<Int>(partitions: Array(part1) + Array(part2))
 			print(partitions.symbols)
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
@@ -259,7 +259,7 @@ import Testing;
 		@Test("two disjoint partitions") func test_two_disjoint_parts() async throws {
 			let part1 = ClosedRangeAlphabet<Int>([ 0x30...0x32 ])
 			let part2 = ClosedRangeAlphabet<Int>([ 0x35...0x39 ])
-			let partitions = part1.meet(part2)
+			let partitions = ClosedRangeAlphabet<Int>(partitions: Array(part1) + Array(part2))
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
 			#expect(partitions.getPartitionLabel(0x32) == 0x30)
@@ -274,7 +274,7 @@ import Testing;
 			let part1 = ClosedRangeAlphabet<Int>([ 0x30...0x36 ])
 			let part2 = ClosedRangeAlphabet<Int>([ 0x32...0x34 ])
 			let part3 = ClosedRangeAlphabet<Int>([ 0x33...0x39 ])
-			let partitions = ClosedRangeAlphabet<Int>.meet([part1, part2, part3])
+			let partitions = ClosedRangeAlphabet<Int>(partitions: [part1, part2, part3].reduce([], +))
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
 			#expect(partitions.getPartitionLabel(0x32) == 0x32)
@@ -291,7 +291,7 @@ import Testing;
 			let part2 = ClosedRangeAlphabet<Int>([ 0x32...0x34 ])
 			let part3 = ClosedRangeAlphabet<Int>([ 0x33...0x38 ])
 			let part4 = ClosedRangeAlphabet<Int>([ 0x30...0x39 ])
-			let partitions = ClosedRangeAlphabet<Int>.meet([part1, part2, part3, part4])
+			let partitions = ClosedRangeAlphabet<Int>(partitions: [part1, part2, part3, part4].reduce([], +))
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
 			#expect(partitions.getPartitionLabel(0x32) == 0x32)
@@ -309,7 +309,7 @@ import Testing;
 		@Test("two nested partitions") func test_two_nested_parts() async throws {
 			let part1 = ClosedRangeAlphabet<Int>([ 0x30...0x39 ])
 			let part2 = ClosedRangeAlphabet<Int>([ 0x32 ])
-			let partitions = part1.meet(part2)
+			let partitions = ClosedRangeAlphabet<Int>(partitions: Array(part1) + Array(part2))
 			#expect(partitions.isEquivalent(0x30, 0x30))
 			#expect(partitions.isEquivalent(0x31, 0x30))
 			#expect(partitions.isEquivalent(0x32, 0x32))
@@ -319,6 +319,39 @@ import Testing;
 			#expect(partitions.isEquivalent(0x36, 0x30))
 			#expect(partitions.isEquivalent(0x37, 0x30))
 			#expect(partitions.isEquivalent(0x38, 0x30))
+		}
+	}
+
+	@Suite("insert", .disabled("Tests to be implemented")) struct ClosedRangeSymbolClassTests_insert {
+		@Test("insert before") func test_before() async throws {
+			var alphabet = ClosedRangeAlphabet<Int>([6...9]);
+			alphabet.insert([1...3])
+			#expect(alphabet == [ [1...3], [6...9] ])
+		}
+		@Test("overlapping before") func test_overlap_before() async throws {
+			var alphabet = ClosedRangeAlphabet<Int>([4...9]);
+			alphabet.insert([1...6])
+			#expect(alphabet == [ [1...3], [4...6], [7...9] ])
+		}
+		@Test("overlapping after") func test_overlap_after() async throws {
+			var alphabet = ClosedRangeAlphabet<Int>([0...6]);
+			alphabet.insert([4...9])
+			#expect(alphabet == [ [0...3], [4...6], [7...9] ])
+		}
+		@Test("insert after") func test_after() async throws {
+			var alphabet = ClosedRangeAlphabet<Int>([0...3]);
+			alphabet.insert([6...12])
+			#expect(alphabet == [ [0...3], [6...12] ])
+		}
+		@Test("inside") func test_inside() async throws {
+			var alphabet = ClosedRangeAlphabet<Int>([0...9]);
+			alphabet.insert([3...6])
+			#expect(alphabet == [ [0...2, 7...9], [3...6] ])
+		}
+		@Test("outside") func test_outside() async throws {
+			var alphabet = ClosedRangeAlphabet<Int>([3...6]);
+			alphabet.insert([1...9])
+			#expect(alphabet == [ [1...2, 7...9], [3...6] ])
 		}
 	}
 }
