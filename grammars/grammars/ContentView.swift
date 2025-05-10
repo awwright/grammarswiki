@@ -339,8 +339,6 @@ struct DocumentDetail: View {
 
 	/// Parses the grammar text into a rulelist
 	private func updatedDocument() {
-		return;
-
 		let text = document.content;
 		content_rulelist = nil
 		content_rulelist_error = nil
@@ -385,7 +383,6 @@ struct DocumentDetail: View {
 
 	/// Render the FSM
 	private func updatedRule() {
-		return;
 		rule_alphabet = nil
 		rule_fsm = nil
 		rule_fsm_error = nil

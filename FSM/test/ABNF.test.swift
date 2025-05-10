@@ -1044,7 +1044,6 @@ import Testing;
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
 			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
-			print(fsm.toViz())
 			#expect(!fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("C,C".utf8));

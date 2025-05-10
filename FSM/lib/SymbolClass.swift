@@ -275,18 +275,23 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	var symbols: Array<ClosedRange<Symbol>>
 	/// A tree partitioning elements together
 	var parents: Array<Int>
+	/// Lists the the first range in each partition
+	var parts: Array<SymbolClass>
 
 	// MARK: Initializations
 	/// Empty initialization
 	public init() {
 		self.symbols = []
 		self.parents = []
+		self.parts = []
 	}
 
 	/// Initialize from pre-sorted data
 	init(symbols: Array<ClosedRange<Symbol>>, parents: Array<Int>) {
 		self.symbols = symbols
 		self.parents = parents
+		self.parts = []
+		self.resort()
 	}
 
 	/// Convenience function for writing `SymbolClass([a, b, c, ...], [d, e, f, ...], ...)`
@@ -355,10 +360,13 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		if sortedPartitions.isEmpty {
 			self.symbols = []
 			self.parents = []
+			self.parts = []
 			return
 		} else if sortedPartitions.count == 1 {
 			self.symbols = sortedPartitions[0]
 			self.parents = Array(repeating: 0, count: sortedPartitions[0].count)
+			self.parts = []
+			self.resort()
 			return
 		}
 
@@ -370,22 +378,37 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 
 		// Un-nest ranges by adding lower or upper bounds as necessary
 		// Only add bounds inside one range or another, test this by counting how many bounds are open
-		let nestedUpperBounds: Array<Symbol> = lowerBounds.compactMap {
-			offset in
-			if (lowerBounds.filter { $0 < offset }.count > upperBounds.filter { $0 < offset }.count) { return offset-1 }
-			else { return nil }
-		};
-		let nestedLowerBounds: Array<Symbol> = upperBounds.compactMap {
-			offset in
-			if (lowerBounds.filter { $0 <= offset }.count >= upperBounds.filter { $0 <= offset }.count + 1) { return offset+1 }
-			else { return nil }
-		};
+		var nestedUpperBounds: [Symbol] = []
+		var j = 0
+		for i in 0..<lowerBounds.count {
+			let offset = lowerBounds[i]
+			while j < upperBounds.count && upperBounds[j] < offset {
+				j += 1
+			}
+			if i > j {
+				nestedUpperBounds.append(offset - 1)
+			}
+		}
+
+		var nestedLowerBounds: [Symbol] = []
+		var m = 0
+		for k in 0..<upperBounds.count {
+			let offset = upperBounds[k]
+			while m < lowerBounds.count && lowerBounds[m] <= offset {
+				m += 1
+			}
+			if m >= k + 2 {
+				nestedLowerBounds.append(offset + 1)
+			}
+		}
+
 		lowerBounds = Set(lowerBounds+nestedLowerBounds).sorted()
 		upperBounds = Set(upperBounds+nestedUpperBounds).sorted()
 		assert(lowerBounds.count == upperBounds.count)
 		let symbols: [ClosedRange<Symbol>] = zip(lowerBounds, upperBounds).map { $0...$1 }
 
 		// Determine which input partitions the symbol is a member of
+		// TODO: This can be optimized
 		let parts: Array<Set<Int>> = symbols.map {
 			let symbol = $0.lowerBound
 			return Set(partitions.enumerated().compactMap { (i, ranges) in
@@ -398,6 +421,8 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		}
 		self.symbols = symbols
 		self.parents = parents
+		self.parts = []
+		self.resort()
 	}
 
 	public static func range(_ symbol: Symbol) -> SymbolClass {
@@ -417,6 +442,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 
 	/// Maps partition label to set of values in partition
 	private var partitions: Array<SymbolClass> {
+		return parts;
 		let labels = Set(parents).sorted()
 		var dict: Dictionary<Int, Array<ClosedRange<Symbol>>> = Dictionary(uniqueKeysWithValues: labels.map { ($0, []) })
 		for i in 0..<symbols.count {
@@ -527,6 +553,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		return nil
 	}
 
+	/// Find the first range at or above the given symbol
 	private func findFirstIndex(_ symbol: Symbol) -> Int {
 		var lowerBound = 0
 		var upperBound = symbols.count - 1
@@ -546,19 +573,19 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 
 	// MARK: Collection
 	public var startIndex: Index {
-		partitions.startIndex
+		0
 	}
 
 	public var endIndex: Index {
-		partitions.endIndex
+		parts.endIndex
 	}
 
 	public func index(after i: Index) -> Index {
-		partitions.index(after: i)
+		parts.index(after: i)
 	}
 
 	public subscript(position: Index) -> Element {
-		partitions[position]
+		parts[position]
 	}
 
 	public static func collection(_ range: SymbolClass) -> any Collection<Symbol> {
@@ -572,21 +599,12 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 
 	/// Mutations
 	public mutating func insert(_ newElement: SymbolClass) {
-		// Verify that the ranges are in order
-		assert(zip(newElement, newElement[1...]).allSatisfy { $0.upperBound < $1.lowerBound })
+		// TODO: Optimize this
+		self = Self(partitions: partitions + [newElement])
+	}
 
-		// Merge adjacent or overlapping ranges within the new symbol class
-		var merged: [ClosedRange<Symbol>] = newElement.isEmpty ? [] : [newElement[0]]
-		for current in newElement.dropFirst() {
-			let last = merged.last!
-			if current.lowerBound <= last.upperBound + 1 {
-				merged[merged.count - 1] = last.lowerBound...Swift.max(last.upperBound, current.upperBound)
-			} else {
-				merged.append(current)
-			}
-		}
-
-		// Implementation here
+	private mutating func resort() {
+		self.parts = Array(Dictionary(grouping: self.parents.enumerated(), by: { $0.1 }).mapValues { $0.map { symbols[$0.0] } }.values).sorted()
 	}
 }
 
@@ -675,13 +693,12 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equata
 		}
 		set(newValue) {
 			// Subdivide the alphabet
-			let newAlphabet = Alphabet(partitions: Array(alphabet) + [of])
+			alphabet.insert(of)
 			// Assign values for any new partitions that appeared
-			for range in newAlphabet {
+			for range in alphabet {
 				dict[Alphabet.label(of: range)] = dict[Alphabet.label(of: range)]
 			}
 			// Assign the value for the partition with the updated value
-			alphabet = newAlphabet
 			dict[Alphabet.label(of: of)] = newValue
 		}
 	}

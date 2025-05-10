@@ -245,7 +245,6 @@ import Testing;
 			let part1 = ClosedRangeAlphabet<Int>([ 0x30...0x35 ])
 			let part2 = ClosedRangeAlphabet<Int>([ 0x32...0x39 ])
 			let partitions = ClosedRangeAlphabet<Int>(partitions: Array(part1) + Array(part2))
-			print(partitions.symbols)
 			#expect(partitions.getPartitionLabel(0x30) == 0x30)
 			#expect(partitions.getPartitionLabel(0x31) == 0x30)
 			#expect(partitions.getPartitionLabel(0x32) == 0x32)
@@ -322,7 +321,7 @@ import Testing;
 		}
 	}
 
-	@Suite("insert", .disabled("Tests to be implemented")) struct ClosedRangeSymbolClassTests_insert {
+	@Suite("insert") struct ClosedRangeSymbolClassTests_insert {
 		@Test("insert before") func test_before() async throws {
 			var alphabet = ClosedRangeAlphabet<Int>([6...9]);
 			alphabet.insert([1...3])
