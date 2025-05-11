@@ -352,15 +352,15 @@ import Testing;
 			alphabet.insert([1...9])
 			#expect(alphabet == [ [1...2, 7...9], [3...6] ])
 		}
-		@Test("between multiple", .disabled("failing test")) func test_multi_0() async throws {
+		@Test("between multiple") func test_multi_0() async throws {
 			var alphabet = ClosedRangeAlphabet<Int>([1...3, 6...9]);
 			alphabet.insert([2...7])
-			#expect(alphabet == [ [1...1, 8...9], [2...3, 6...7] ])
+			#expect(alphabet == [ [1...1, 8...9], [2...3, 6...7], [4...5] ])
 		}
-		@Test("between multiple different", .disabled("failing test")) func test_multi_1() async throws {
+		@Test("between multiple different") func test_multi_1() async throws {
 			var alphabet = ClosedRangeAlphabet<Int>([1...3], [6...9]);
 			alphabet.insert([2...7])
-			#expect(alphabet == [ [1...1], [2...3, 6...7], [8...9] ])
+			#expect(alphabet == [ [1...1], [2...3], [4...5], [6...7], [8...9] ])
 		}
 		@Test("multi") func test_multi_2() async throws {
 			var alphabet = ClosedRangeAlphabet<Int>([0x42...0x42, 0x62...0x62]);
@@ -408,5 +408,24 @@ import Testing;
 		#expect(dict[symbol: 7] == 2)
 		#expect(dict[symbol: 8] == 1)
 		#expect(dict[symbol: 9] == 1)
+	}
+	@Test("ClosedRangeAlphabetalphabet single value") func test_alphabet_merge_0() async throws {
+		var dict = AlphabetTable<ClosedRangeAlphabet<Int>, Int>()
+		dict[ [1...3, 4...6, 7...9] ] = 2;
+		#expect(dict.alphabet == [[1...9]])
+	}
+	@Test("ClosedRangeAlphabetalphabet two values") func test_alphabet_merge_1() async throws {
+		var dict = AlphabetTable<ClosedRangeAlphabet<Int>, Int>()
+		dict[ [1...3, 7...9] ] = 1;
+		dict[ [4...6] ] = 2;
+		#expect(dict.alphabet == [[1...3, 7...9], [4...6]])
+	}
+	@Test("ClosedRangeAlphabet merges partitions with same values", .disabled("pending")) func test_alphabet_merge_2() async throws {
+		var dict = AlphabetTable<ClosedRangeAlphabet<Int>, Int>()
+		dict[ [1...3] ] = 1;
+		dict[ [4...6] ] = 2;
+		dict[ [7...9] ] = 1;
+		// The partition should be merged together because they map to the same values
+		#expect(dict.alphabet == [[1...3, 7...9], [4...6]])
 	}
 }

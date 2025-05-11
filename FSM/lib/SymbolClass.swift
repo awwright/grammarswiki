@@ -325,87 +325,58 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		self.init(partitions: from.map{ $0.map { $0...$0 } })
 	}
 
-	// If a symbol appears in multiple partitions,
+	/// Merge together multiple partitions
+	/// Symbols may appear in multiple partitions (the ranges may overlap), in which case the overlap will be split into its own partition.
+	/// Also, ranges may appear out of order, although ranges within a partition may not overlap (I will not guarantee the behavior).
 	public init(partitions: some Collection<some Collection<ClosedRange<Symbol>>>) {
-		// Sort the elements within the partitions and merge adjacent symbols into a ClosedRange
-		let sortedPartitions: Array<Array<ClosedRange<Symbol>>> = partitions.compactMap {
-			ranges in
-			// Return empty array if input is empty
-			guard !ranges.isEmpty else { return nil }
-
-			// Sort ranges by lower bound, then by upper bound for equal lower bounds
-			let sortedRanges = ranges.sorted {
-				$0.lowerBound == $1.lowerBound ? $0.upperBound < $1.upperBound : $0.lowerBound < $1.lowerBound
-			}
-
-			// Initialize result with the first range
-			var merged: [ClosedRange<Symbol>] = [sortedRanges[0]]
-			// Iterate through remaining ranges
-			for current in sortedRanges.dropFirst() {
-				let last = merged.last!
-				// Check if current range is adjacent to or overlaps with the last merged range
-				if current.lowerBound <= last.upperBound + 1 {
-					// Merge by creating a new range with the same lower bound and the maximum upper bound
-					let newUpper = Swift.max(last.upperBound, current.upperBound)
-					merged[merged.count - 1] = last.lowerBound...newUpper
-				} else {
-					// If not adjacent or overlapping, add the current range as a new segment
-					merged.append(current)
-				}
-			}
-			return merged
-		}
-
 		// Trivial cases
-		if sortedPartitions.isEmpty {
+		if partitions.isEmpty {
 			self.symbols = []
 			self.parents = []
 			self.parts = []
 			return
-		} else if sortedPartitions.count == 1 {
-			self.symbols = sortedPartitions[0]
-			self.parents = Array(repeating: 0, count: sortedPartitions[0].count)
-			self.parts = []
-			self.resort()
-			return
 		}
 
-		// Compute the intersection of all symbols (ranges)
-		let allSymbols = sortedPartitions.flatMap { $0 }.sorted { $0.lowerBound < $1.lowerBound }
-		var lowerBounds: Array<Symbol> = allSymbols.map(\.lowerBound).sorted();
-		var upperBounds: Array<Symbol> = allSymbols.map(\.upperBound).sorted();
-		assert(lowerBounds.count == upperBounds.count)
-
-		// Un-nest ranges by adding lower or upper bounds as necessary
-		// Only add bounds inside one range or another, test this by counting how many bounds are open
-		var nestedUpperBounds: [Symbol] = []
-		var j = 0
-		for i in 0..<lowerBounds.count {
-			let offset = lowerBounds[i]
-			while j < upperBounds.count && upperBounds[j] < offset {
-				j += 1
-			}
-			if i > j {
-				nestedUpperBounds.append(offset - 1)
+		var events: [(Bool, Symbol)] = []
+		for innerArray in partitions {
+			let ranges = innerArray.sorted { $0.lowerBound < $1.lowerBound }
+			var i = 0;
+			while i < ranges.count {
+				events.append((true, ranges[i].lowerBound))
+				while i < ranges.count - 1 && ranges[i].upperBound == ranges[i + 1].lowerBound - 1 {
+					i += 1
+				}
+				events.append((false, ranges[i].upperBound))
+				i += 1
 			}
 		}
 
-		var nestedLowerBounds: [Symbol] = []
-		var m = 0
-		for k in 0..<upperBounds.count {
-			let offset = upperBounds[k]
-			while m < lowerBounds.count && lowerBounds[m] <= offset {
-				m += 1
+		events.sort { e1, e2 in
+			if e1.1 != e2.1 {
+				return e1.1 < e2.1
 			}
-			if m >= k + 2 {
-				nestedLowerBounds.append(offset + 1)
-			}
+			// start comes before end
+			return e1.0 && !e2.0
 		}
 
-		lowerBounds = Set(lowerBounds+nestedLowerBounds).sorted()
-		upperBounds = Set(upperBounds+nestedUpperBounds).sorted()
-		assert(lowerBounds.count == upperBounds.count)
-		let symbols: [ClosedRange<Symbol>] = zip(lowerBounds, upperBounds).map { $0...$1 }
+		var symbols: [ClosedRange<Symbol>] = []
+		var currentStart: Symbol? = nil
+		var depth = 0
+		for (side, p) in events {
+			if side {
+				if depth > 0, let start = currentStart, start <= p - 1 {
+					symbols.append(start...(p - 1))
+				}
+				currentStart = p
+				depth += 1
+			} else {
+				if let start = currentStart, start <= p {
+					symbols.append(start...p)
+				}
+				depth -= 1
+				currentStart = (depth > 0) ? (p + 1) : nil
+			}
+		}
 
 		// Determine which input partitions the symbol is a member of
 		// TODO: This can be optimized
@@ -419,6 +390,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		let parents = parts.map {
 			parts.firstIndex(of: $0)!
 		}
+
 		self.symbols = symbols
 		self.parents = parents
 		self.parts = []
@@ -641,6 +613,7 @@ extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatabl
 }
 
 /// A variation of a Dictionary that allows setting a range of keys (possibly continuous ranges of values) and looking up values within the range.
+/// There's no grouping of keys other than the values they can point to, so ranges that point to the same value will become "grouped".
 public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equatable>: AlphabetTableProtocol where Alphabet.Symbol: Hashable, Value: Hashable {
 	public typealias Index = Alphabet.Index
 	public typealias Element = Dictionary<Alphabet.SymbolClass, Value>.Element
