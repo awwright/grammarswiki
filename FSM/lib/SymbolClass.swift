@@ -337,16 +337,16 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 			return
 		}
 
-		var events: [(Bool, Symbol)] = []
-		for innerArray in partitions {
+		var events: [(Bool, Symbol, Int)] = []
+		for (index, innerArray) in partitions.enumerated() {
 			let ranges = innerArray.sorted { $0.lowerBound < $1.lowerBound }
 			var i = 0;
 			while i < ranges.count {
-				events.append((true, ranges[i].lowerBound))
-				while i < ranges.count - 1 && ranges[i].upperBound == ranges[i + 1].lowerBound - 1 {
+				events.append((true, ranges[i].lowerBound, index))
+				while i < ranges.count - 1 && ranges[i].upperBound >= ranges[i + 1].lowerBound - 1 {
 					i += 1
 				}
-				events.append((false, ranges[i].upperBound))
+				events.append((false, ranges[i].upperBound, index))
 				i += 1
 			}
 		}
@@ -362,33 +362,29 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		var symbols: [ClosedRange<Symbol>] = []
 		var currentStart: Symbol? = nil
 		var depth = 0
-		for (side, p) in events {
+		var members = Array(repeating: false, count: partitions.count)
+		var members_parent: Dictionary<Array<Bool>, Int> = [:]
+		var parents: Array<Int> = []
+		for (side, p, index) in events {
 			if side {
 				if depth > 0, let start = currentStart, start <= p - 1 {
+					members_parent[members] = members_parent[members] ?? symbols.count
 					symbols.append(start...(p - 1))
+					parents.append(members_parent[members]!)
 				}
 				currentStart = p
+				members[index] = true
 				depth += 1
 			} else {
 				if let start = currentStart, start <= p {
+					members_parent[members] = members_parent[members] ?? symbols.count
 					symbols.append(start...p)
+					parents.append(members_parent[members]!)
 				}
 				depth -= 1
+				members[index] = false
 				currentStart = (depth > 0) ? (p + 1) : nil
 			}
-		}
-
-		// Determine which input partitions the symbol is a member of
-		// TODO: This can be optimized
-		let parts: Array<Set<Int>> = symbols.map {
-			let symbol = $0.lowerBound
-			return Set(partitions.enumerated().compactMap { (i, ranges) in
-				ranges.contains(where: { $0.contains(symbol) }) ? i : nil
-			})
-		}
-		// For the new partition index, just point to the first range to exist in the same set of partitions
-		let parents = parts.map {
-			parts.firstIndex(of: $0)!
 		}
 
 		self.symbols = symbols
