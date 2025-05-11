@@ -352,6 +352,16 @@ import Testing;
 			alphabet.insert([1...9])
 			#expect(alphabet == [ [1...2, 7...9], [3...6] ])
 		}
+		@Test("multi") func test_multi_2() async throws {
+			var alphabet = ClosedRangeAlphabet<Int>([0x42...0x42, 0x62...0x62]);
+			alphabet.insert([0x41...0x41, 0x61...0x61])
+			#expect(alphabet == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
+		}
+		@Test("multi") func test_multi_3() async throws {
+			var alphabet = ClosedRangeAlphabet<Int>([0x41...0x41, 0x61...0x61]);
+			alphabet.insert([0x42...0x42, 0x62...0x62])
+			#expect(alphabet == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
+		}
 	}
 }
 

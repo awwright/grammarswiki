@@ -1637,16 +1637,16 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 	}
 
 	public func alphabet(rulelist: Dictionary<String, ClosedRangeAlphabet<Symbol>> = [:]) -> ClosedRangeAlphabet<Symbol> {
-		let arr = if caseSensitive {
-			sequence
+		let arr: Array<Array<Symbol>> = if caseSensitive {
+			sequence.map { [$0] }
 		} else {
-			sequence.flatMap{ codepoint in
+			sequence.map{ codepoint in
 				if(codepoint >= 0x41 && codepoint <= 0x5A) { return [ codepoint, codepoint+0x20 ] }
 				else if(codepoint >= 0x61 && codepoint <= 0x7A) { return [ codepoint-0x20, codepoint ] }
 				else { return [codepoint] }
 			}
 		}
-		return ClosedRangeAlphabet<Symbol>(partitions: arr.map { [$0...$0] })
+		return ClosedRangeAlphabet<Symbol>(partitions: arr.map { $0.map { $0...$0 } })
 	}
 	public var nextSymbols: ClosedRangeAlphabet<Symbol>.SymbolClass {
 		guard sequence.count >= 1 else { return [] }
