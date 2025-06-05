@@ -4,14 +4,14 @@
 /// RandomAccessCollection is required to be used in ForEach in SwiftUI
 /// ExpressibleByArrayLiteral for initializing with default values
 /// Equatable for comparison
-public protocol AlphabetProtocol: RandomAccessCollection, ExpressibleByArrayLiteral, Equatable, Hashable where Element == SymbolClass {
+public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatable, Hashable where Element == SymbolClass {
 	// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype SymbolClass: Equatable & Hashable;
 	associatedtype Symbol: Equatable & Hashable;
+	associatedtype PartitionedDictionary: AlphabetTableProtocol where PartitionedDictionary.Alphabet == Self, PartitionedDictionary.Value == AnyHashable, PartitionedDictionary.Element == (key: PartitionedDictionary.Key, value: AnyHashable);
 	associatedtype DFATable: AlphabetTableProtocol where DFATable.Alphabet == Self, DFATable.Value == Int, DFATable.Element == (key: DFATable.Key, value: DFATable.Value)
 	associatedtype NFATable: AlphabetTableProtocol where NFATable.Alphabet == Self, NFATable.Value == Set<Int>, NFATable.Element == (key: NFATable.Key, value: NFATable.Value)
-//	typealias Element = SymbolClass
 
 	/// Initialize a PartitionedSet with the given elements, taking the union-meet of the subsets
 	/// If elements appear in multiple partitions, elements found in the same partitions are split out and merged into a new partition
@@ -68,9 +68,11 @@ extension FiniteAlphabetProtocol {
 
 /// An Alphabet where every symbol is its own SymbolClass
 public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable {
+	public typealias Symbol = Symbol
 	public typealias SymbolClass = Symbol
 	public typealias ArrayLiteralElement = SymbolClass
 	public typealias Table<T> = Dictionary<Symbol, T>
+	public typealias PartitionedDictionary = Dictionary<Symbol, AnyHashable>
 	public typealias NFATable = Dictionary<Symbol, Set<Int>>
 	public typealias DFATable = Dictionary<Symbol, Int>
 
@@ -117,30 +119,11 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 	// MARK: Collection
 	public typealias Element = SymbolClass
 	public typealias Index = Set<Symbol>.Index
-
-	public var startIndex: Index {
-		symbols.startIndex
-	}
-
-	public var endIndex: Index {
-		symbols.endIndex
-	}
-
-	public func index(before i: Index) -> Index {
-		fatalError()
-	}
-
-	public func index(after i: Index) -> Index {
-		symbols.index(after: i)
-	}
-
-	public subscript(position: Index) -> Element {
-		symbols[position]
-	}
-
-	public static func collection(_ range: Symbol) -> any Collection<Symbol> {
-		AnyCollection([range])
-	}
+	public var startIndex: Index { symbols.startIndex }
+	public var endIndex: Index { symbols.endIndex }
+	public func index(after i: Index) -> Index { symbols.index(after: i) }
+	public subscript(position: Index) -> Element { symbols[position] }
+	public static func collection(_ range: Symbol) -> any Collection<Symbol> { AnyCollection([range]) }
 
 	/// Mutations
 	public mutating func insert(_ newElement: SymbolClass) {
@@ -148,13 +131,19 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 	}
 }
 
+extension SymbolAlphabet: ClosedRangeAlphabetProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+	public static func range(_ range: ClosedRange<Symbol>) -> Self {
+		.init(partitions: Set(range))
+	}
+}
+
 public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol {
 	public typealias Symbol = Symbol
 	public typealias SymbolClass = Set<Symbol>
 	public typealias ArrayLiteralElement = SymbolClass
-	public typealias NFATable = AlphabetTable<Self, Set<Int>>
-	public typealias DFATable = AlphabetTable<Self, Int>
-	public typealias Table<T: Equatable> = AlphabetTable<Self, T> where T: Hashable
+	public typealias PartitionedDictionary = Table<AnyHashable>
+	public typealias NFATable = Table<Set<Int>>
+	public typealias DFATable = Table<Int>
 
 	public var partitions: Set<SymbolClass>
 
@@ -212,10 +201,6 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 		partitions.endIndex
 	}
 
-	public func index(before i: Set<SymbolClass>.Index) -> Set<SymbolClass>.Index {
-		fatalError()
-	}
-
 	public func index(after i: Index) -> Index {
 		partitions.index(after: i)
 	}
@@ -244,9 +229,104 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 			partitions.insert(remainingNewElements)
 		}
 	}
+
+	public struct Table<Value: Hashable>: AlphabetTableProtocol {
+		public typealias Alphabet = SetAlphabet
+		public typealias Symbol = SetAlphabet.Symbol
+		public typealias SymbolClass = SetAlphabet.SymbolClass
+		public typealias Key = SymbolClass
+		public typealias Value = Value
+		public typealias Element = (key: Key, value: Value)
+		public typealias Index = Dictionary<Value, SymbolClass>.Index
+		public typealias Values = Dictionary<Value, SymbolClass>.Keys
+
+		var partitions: Dictionary<Value, SymbolClass>;
+
+		public var alphabet: Alphabet { Alphabet(partitions: partitions.values) }
+		public var values: Values { partitions.keys }
+
+		public init() { partitions = [:] }
+		public init(_ elements: Dictionary<Set<Symbol>, Value>) {
+			self.partitions = [:]
+			for (part, value) in elements {
+				self[part] = value
+			}
+		}
+		public init(dictionaryLiteral elements: (SymbolClass, Value)...) {
+			self.partitions = [:]
+			for (part, value) in elements {
+				self[part] = value
+			}
+		}
+
+		public subscript(symbol symbol: Symbol) -> Value? {
+			for (value, part) in self.partitions {
+				if part.contains(symbol) {
+					return value
+				}
+			}
+			return nil
+		}
+
+		public subscript(_ symbol: SymbolClass) -> Value? {
+			get {
+				for (value, part) in self.partitions {
+					if part.isSubset(of: symbol) {
+						return value
+					}
+				}
+				return nil
+			}
+			set(newValue) {
+				if let newValue {
+					for (value, range) in self.partitions {
+						if value == newValue {
+							continue;
+						}
+						let newRange = range.intersection(symbol);
+						if range == newRange {
+							self.partitions.removeValue(forKey: value)
+						} else {
+							self.partitions[value] = range.subtracting(newRange);
+						}
+					}
+					self.partitions[newValue] = self.partitions[newValue, default: []].union(symbol)
+				} else {
+					for (value, range) in self.partitions {
+						if value == newValue {
+							continue;
+						}
+						let newRange = range.intersection(symbol);
+						if range == newRange {
+							self.partitions.removeValue(forKey: value)
+						} else {
+							self.partitions[value] = range.subtracting(newRange);
+						}
+					}
+				}
+			}
+		}
+
+		// MARK: Collection
+		public var startIndex: Index { self.partitions.startIndex }
+		public var endIndex: Index { self.partitions.endIndex }
+		public func index(after i: Index) -> Index { self.partitions.index(after: i) }
+		public subscript(position: Index) -> Element {
+			let (value, symbolClass) = partitions[position]
+			return (key: symbolClass, value: value)
+		}
+	}
 }
 
-public protocol ClosedRangeAlphabetProtocol: AlphabetProtocol {}
+extension SetAlphabet: ClosedRangeAlphabetProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+	public static func range(_ range: ClosedRange<Symbol>) -> Self {
+		.init(partitions: [Set(range)])
+	}
+}
+
+public protocol ClosedRangeAlphabetProtocol: AlphabetProtocol where Symbol: Comparable {
+	static func range(_: ClosedRange<Symbol>) -> Self
+}
 
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
 /// Optimized for describing ranges of characters.
@@ -264,9 +344,9 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	public typealias SymbolClass = Array<ClosedRange<Symbol>>
 	/// Implements ExpressibleByArrayLiteral
 	public typealias ArrayLiteralElement = SymbolClass
-	public typealias DFATable = AlphabetTable<Self, Int>
-	public typealias NFATable = AlphabetTable<Self, Set<Int>>
-	public typealias Table<T: Equatable> = AlphabetTable<Self, T> where T: Hashable
+	public typealias PartitionedDictionary = Table<AnyHashable>
+	public typealias DFATable = Table<Int>
+	public typealias NFATable = Table<Set<Int>>
 	public typealias Element = SymbolClass
 	public typealias Index = Array<SymbolClass>.Index
 
@@ -328,7 +408,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	/// Merge together multiple partitions
 	/// Symbols may appear in multiple partitions (the ranges may overlap), in which case the overlap will be split into its own partition.
 	/// Also, ranges may appear out of order, although ranges within a partition may not overlap (I will not guarantee the behavior).
-	public init(partitions: some Collection<some Collection<ClosedRange<Symbol>>>) {
+	public init(partitions: some Collection<Array<ClosedRange<Symbol>>>) {
 		// Trivial cases
 		if partitions.isEmpty {
 			self.symbols = []
@@ -349,6 +429,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 				events.append((false, ranges[i].upperBound, index))
 				i += 1
 			}
+			// TODO: this can be merged together with the next for loop to avoid an intermediate `events` array and sort call
 		}
 
 		events.sort { e1, e2 in
@@ -360,30 +441,41 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		}
 
 		var symbols: [ClosedRange<Symbol>] = []
+		// Distinguishing which boundary the symbol came from is necessary in order to not overflow the Symbol
 		var currentStart: Symbol? = nil
+		var currentEnd: Symbol? = nil;
 		var depth = 0
 		var members = Array(repeating: false, count: partitions.count)
 		var members_parent: Dictionary<Array<Bool>, Int> = [:]
 		var parents: Array<Int> = []
 		for (side, p, index) in events {
 			if side {
-				if depth > 0, let start = currentStart, start <= p - 1 {
+				if currentStart == nil, let currentEnd {
+					currentStart = currentEnd + 1
+				}
+				if depth > 0, let start = currentStart, start < p {
 					members_parent[members] = members_parent[members] ?? symbols.count
 					symbols.append(start...(p - 1))
 					parents.append(members_parent[members]!)
 				}
 				currentStart = p
+				currentEnd = nil
 				members[index] = true
 				depth += 1
 			} else {
-				if let start = currentStart, start <= p {
+				if let currentStart, currentStart <= p {
 					members_parent[members] = members_parent[members] ?? symbols.count
-					symbols.append(start...p)
+					symbols.append(currentStart...p)
+					parents.append(members_parent[members]!)
+				} else if let currentEnd, currentEnd < p {
+					members_parent[members] = members_parent[members] ?? symbols.count
+					symbols.append((currentEnd+1)...p)
 					parents.append(members_parent[members]!)
 				}
 				depth -= 1
 				members[index] = false
-				currentStart = (depth > 0) ? (p + 1) : nil
+				currentStart = nil
+				currentEnd = (depth > 0) ? p : nil
 			}
 		}
 
@@ -391,6 +483,10 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		self.parents = parents
 		self.parts = []
 		self.resort()
+	}
+
+	public static func range(_ range: ClosedRange<Symbol>) -> ClosedRangeAlphabet<Symbol> {
+		.init(partitions: [[range]])
 	}
 
 	public static func range(_ symbol: Symbol) -> SymbolClass {
@@ -418,28 +514,6 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 			dict[label]!.append(symbols[i])
 		}
 		return labels.map { dict[$0]! }
-	}
-
-	/// Computes a mapping of symbol to partition label
-	public var alphabetReduce: Dictionary<Symbol, Symbol> {
-		var result: Dictionary<Symbol, Symbol> = [:]
-		for (index, parent) in parents.enumerated() {
-			let label = symbols[parent].lowerBound
-			for symbol in symbols[index] {
-				result[symbol] = label
-			}
-		}
-		return result
-	}
-
-	/// Maps partition label to set of values in partition
-	public var alphabetExpand: Dictionary<Symbol, Array<Symbol>> {
-		var dict: Dictionary<Symbol, Array<Symbol>> = [:]
-		for i in 0..<symbols.count {
-			let label = symbols[parents[i]].lowerBound
-			dict[label, default: []] += Array(symbols[i])
-		}
-		return dict
 	}
 
 	public var partitionCount: Int {
@@ -574,14 +648,185 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	private mutating func resort() {
 		self.parts = Array(Dictionary(grouping: self.parents.enumerated(), by: { $0.1 }).mapValues { $0.map { symbols[$0.0] } }.values).sorted()
 	}
+
+	public struct Table<Value: Hashable>: AlphabetTableProtocol {
+		public typealias Alphabet = ClosedRangeAlphabet
+		public typealias SymbolClass = ClosedRangeAlphabet.SymbolClass
+		public typealias Symbol = ClosedRangeAlphabet.Symbol
+		public typealias Key = SymbolClass
+		public typealias Value = Value
+		public typealias Element = (key: Key, value: Value)
+		public typealias Keys = ClosedRangeAlphabet<Symbol>
+		public typealias Values = Array<Value>
+		public typealias Index = Dictionary<Value, SymbolClass>.Index
+
+		var partitions: Dictionary<Value, SymbolClass>;
+
+		public var alphabet: Alphabet {
+			Alphabet(partitions: partitions.values)
+		}
+
+		public var values: Values {
+			partitions.keys.map { $0 as Value }
+		}
+
+		public init() {
+			partitions = [:]
+		}
+
+		public init(_ elements: Dictionary<Array<ClosedRange<Symbol>>, Value>) {
+			self.partitions = [:]
+			for (part, value) in elements {
+				self[part] = value
+			}
+		}
+		public init(dictionaryLiteral elements: (SymbolClass, Value)...) {
+			self.partitions = [:]
+			for (part, value) in elements {
+				self[part] = value
+			}
+		}
+
+		public subscript(symbol symbol: Symbol) -> Value? {
+			for (value, part) in self.partitions {
+				// TODO: Performance improvement
+				if part.contains(where: { $0.contains(symbol) }) {
+					return value
+				}
+			}
+			return nil
+		}
+
+		public subscript(partition: SymbolClass) -> Value? {
+			get {
+				var matchingValue: Value? = nil
+				for (value, storedPartition) in partitions {
+					// Check if storedPartition completely contains the input partition
+					let isContained = partition.allSatisfy { range in
+						storedPartition.contains { storedRange in
+							storedRange.lowerBound <= range.lowerBound && range.upperBound <= storedRange.upperBound
+						}
+					}
+					if isContained {
+						// If we already found a match, multiple partitions contain the input, so return nil
+						if matchingValue != nil {
+							return nil
+						}
+						matchingValue = value
+					}
+				}
+				return matchingValue
+			}
+			set {
+				if let newValue {
+					for (value, range) in self.partitions {
+						if value == newValue {
+							continue;
+						}
+						let newRange = ClosedRangeAlphabet.intersection(range, partition);
+						if range == newRange {
+							self.partitions.removeValue(forKey: value)
+						} else {
+							self.partitions[value] = ClosedRangeAlphabet.difference(range, newRange);
+						}
+					}
+					self.partitions[newValue] = ClosedRangeAlphabet.union(self.partitions[newValue, default: []], partition)
+				} else {
+					for (value, range) in self.partitions {
+						if value == newValue {
+							continue;
+						}
+						let newRange = ClosedRangeAlphabet.intersection(range, partition);
+						if range == newRange {
+							self.partitions.removeValue(forKey: value)
+						} else {
+							self.partitions[value] = ClosedRangeAlphabet.difference(range, newRange);
+						}
+					}
+				}
+			}
+		}
+
+		// MARK: Collection
+		public var startIndex: Index { self.partitions.startIndex }
+		public var endIndex: Index { self.partitions.endIndex }
+		public func index(after i: Index) -> Index { self.partitions.index(after: i) }
+		public subscript(position: Index) -> Element {
+			let (value, symbolClass) = partitions[position]
+			return (key: symbolClass, value: value)
+		}
+	}
+
+	// MARK: Utility
+	private static func union(_ lhs: SymbolClass, _ rhs: SymbolClass) -> SymbolClass {
+		let merged = (lhs + rhs).sorted(by: { $0.lowerBound < $1.lowerBound })
+		var result: [ClosedRange<Symbol>] = []
+		for range in merged {
+			if result.isEmpty || result.last!.upperBound < range.lowerBound - 1 {
+				result.append(range)
+			} else {
+				let last = result.removeLast()
+				result.append(last.lowerBound...Swift.max(last.upperBound, range.upperBound))
+			}
+		}
+		return result
+	}
+
+	private static func intersection(_ lhs: SymbolClass, _ rhs: SymbolClass) -> SymbolClass {
+		var result: [ClosedRange<Symbol>] = []
+		var i = 0
+		var j = 0
+		let sortedA = lhs.sorted(by: { $0.lowerBound < $1.lowerBound })
+		let sortedB = rhs.sorted(by: { $0.lowerBound < $1.lowerBound })
+		while i < sortedA.count && j < sortedB.count {
+			let rangeA = sortedA[i]
+			let rangeB = sortedB[j]
+			if rangeA.upperBound < rangeB.lowerBound {
+				i += 1
+			} else if rangeB.upperBound < rangeA.lowerBound {
+				j += 1
+			} else {
+				let lower = Swift.max(rangeA.lowerBound, rangeB.lowerBound)
+				let upper = Swift.min(rangeA.upperBound, rangeB.upperBound)
+				result.append(lower...upper)
+				if rangeA.upperBound < rangeB.upperBound {
+					i += 1
+				} else {
+					j += 1
+				}
+			}
+		}
+		return result
+	}
+
+	private static func difference(_ lhs: SymbolClass, _ rhs: SymbolClass) -> SymbolClass {
+		var result: [ClosedRange<Symbol>] = []
+		for rangeA in lhs {
+			var current = rangeA.lowerBound
+			let overlappingB = rhs.filter { $0.overlaps(rangeA) }.sorted(by: { $0.lowerBound < $1.lowerBound })
+			for rangeB in overlappingB {
+				if current < rangeB.lowerBound {
+					result.append(current...(rangeB.lowerBound - 1))
+				}
+				current = Swift.max(current, rangeB.upperBound + 1)
+			}
+			if current <= rangeA.upperBound {
+				result.append(current...rangeA.upperBound)
+			}
+		}
+		return result
+	}
 }
+
+public typealias RangeDFA<Symbol: BinaryInteger> = SymbolClassDFA<ClosedRangeAlphabet<Symbol>> where Symbol.Stride: SignedInteger;
 
 public protocol AlphabetTableProtocol: Collection, ExpressibleByDictionaryLiteral, Equatable, Hashable where Key == Alphabet.SymbolClass, Element == (key: Key, value: Value) {
 	associatedtype Alphabet: AlphabetProtocol
+	associatedtype Value;
 	associatedtype Values: Collection where Values.Element == Value
 //	typealias Element = (key: Key, value: Value)
-	init(_ elements: Dictionary<Alphabet.SymbolClass, Value>)
-	init<S: Sequence>(uniqueKeysWithValues: S) where S.Element == (Key, Value)
+//	init(_ elements: Dictionary<Alphabet.SymbolClass, Value>)
+	//init<S: Sequence>(uniqueKeysWithValues: S) where S.Element == (Key, Value)
 	var alphabet: Alphabet { get }
 	var values: Values { get }
 
@@ -593,6 +838,21 @@ public protocol AlphabetTableProtocol: Collection, ExpressibleByDictionaryLitera
 
 	// TODO: I can't figure out how you would write this
 	//func mapValues<T: AlphabetTableProtocol>(_: (Value) throws -> T.Value) rethrows -> T where T.Key == Key
+}
+
+public extension AlphabetTableProtocol {
+	init(_ elements: Dictionary<Alphabet.SymbolClass, Value>) {
+		self.init()
+		for (part, value) in elements {
+			self[part] = value;
+		}
+	}
+	init<S: Sequence>(uniqueKeysWithValues: S) where S.Element == (Key, Value) {
+		self.init()
+		for (part, value) in uniqueKeysWithValues {
+			self[part] = value;
+		}
+	}
 }
 
 extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatable & Hashable {
@@ -611,31 +871,41 @@ extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatabl
 /// A variation of a Dictionary that allows setting a range of keys (possibly continuous ranges of values) and looking up values within the range.
 /// There's no grouping of keys other than the values they can point to, so ranges that point to the same value will become "grouped".
 public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equatable>: AlphabetTableProtocol where Alphabet.Symbol: Hashable, Value: Hashable {
-	public typealias Index = Alphabet.Index
+	public typealias Alphabet = Alphabet
+	public typealias SymbolClass = Alphabet.SymbolClass
+	public typealias Symbol = Alphabet.Symbol
+	public typealias Value = Value
 	public typealias Element = Dictionary<Alphabet.SymbolClass, Value>.Element
+	public typealias Values = Array<Value>
+	public typealias Index = Alphabet.PartitionedDictionary.Index
 
-	public var alphabet: Alphabet
-	var dict: Dictionary<Alphabet.Symbol, Value>
+	var storage: Alphabet.PartitionedDictionary;
+
+	public var alphabet: Alphabet {
+		storage.alphabet
+	}
+
+	public var values: Values {
+		storage.values.map { $0 as! Value }
+	}
 
 	public init() {
-		self.alphabet = Alphabet()
-		self.dict = [:]
+		self.storage = Alphabet.PartitionedDictionary()
 	}
 
-	public init<S>(uniqueKeysWithValues: S) where S : Sequence, S.Element == (Alphabet.Element, Value) {
-		var table = Self.init()
-		for (part, index) in uniqueKeysWithValues {
-			table[part] = index
-		}
-		self = table
-	}
-
+	// Implements ExpressibleByDictionaryLiteral
 	public init(_ elements: Dictionary<Alphabet.SymbolClass, Value>) {
-		self.init(uniqueKeysWithValues: elements.map { ($0.key, $0.value) })
+		self.storage = [:]
+		for (part, value) in elements {
+			self.storage[part] = value
+		}
 	}
 
 	public init(dictionaryLiteral elements: (Alphabet.SymbolClass, Value)...) {
-		self.init(uniqueKeysWithValues: elements)
+		self.storage = [:]
+		for (key, value) in elements {
+			self.storage[key] = value
+		}
 	}
 
 	public subscript(position: Dictionary<Alphabet.Symbol, Value>.Index) -> Dictionary<Alphabet.Symbol, Value>.Element {
@@ -647,54 +917,26 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equata
 		}
 	}
 
-	public var keys: Alphabet {
-		alphabet
-	}
-
-	public var values: some Collection<Value> {
-		dict.values
-	}
-
-
 	public subscript(of: Alphabet.SymbolClass) -> Value? {
 		get {
-			dict[Alphabet.label(of: of)]
+			storage[of] as! Value?
 		}
 		set(newValue) {
-			// Subdivide the alphabet
-			alphabet.insert(of)
-			// Assign values for any new partitions that appeared
-			for range in alphabet {
-				dict[Alphabet.label(of: range)] = dict[Alphabet.label(of: range)]
-			}
-			// Assign the value for the partition with the updated value
-			dict[Alphabet.label(of: of)] = newValue
+			storage[of] = newValue
 		}
 	}
-	public subscript(symbol of: Alphabet.Symbol) -> Value? {
-		alphabet.contains(of) ? dict[alphabet.label(of: of)] : nil
+	public subscript(symbol symbol: Alphabet.Symbol) -> Value? {
+		storage[symbol: symbol] as! Value?
 	}
 
 	// MARK: Collection
-	public var startIndex: Index {
-		alphabet.startIndex
-	}
+	public var startIndex: Index { self.storage.startIndex }
+	public var endIndex: Index { self.storage.endIndex }
+	public func index(after i: Index) -> Index { self.storage.index(after: i) }
+	public subscript(position: Index) -> Element { fatalError() }
 
-	public var endIndex: Index {
-		alphabet.endIndex
-	}
-
-	public func index(after i: Index) -> Index {
-		alphabet.index(after: i)
-	}
-
-	public subscript(position: Index) -> Element {
-		let key: Alphabet.Element = alphabet[position]
-		let value: Value = dict[Alphabet.label(of: key)]!
-		return (key: key, value: value)
-	}
-
+	// MARK: Equatable
 	public static func == (lhs: AlphabetTable<Alphabet, Value>, rhs: AlphabetTable<Alphabet, Value>) -> Bool {
-		lhs.alphabet == rhs.alphabet && lhs.dict == rhs.dict
+		lhs.storage == rhs.storage
 	}
 }

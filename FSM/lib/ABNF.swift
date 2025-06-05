@@ -1050,14 +1050,6 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		return repeating.remainingSymbols
 	}
 
-	private func separatorPattern<T: SymbolClassPatternBuilder>() -> T? where T.Symbol: BinaryInteger, T.Symbol.Stride: SignedInteger {
-		switch(self.rangeop) {
-			case 0x2A: nil
-			case 0x23: ABNFBuiltins<T>.CSEP;
-			default: fatalError("Unsupported repetition range operator \(rangeop)")
-		}
-	}
-
 	public var alternation: ABNFAlternation<Symbol> {
 		ABNFAlternation(matches: [self.concatenation])
 	}
@@ -1137,10 +1129,13 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 	}
 
 	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
+		assert(max == nil || max! >= min);
 		let inner = try repeating.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 		let separator: PatternType? = switch(self.rangeop) {
-			case 0x2A: nil; //DFA<Symbol>.epsilon.toPattern();
-			case 0x23: ABNFBuiltins<PatternType>.CSEP;
+			case 0x2A: nil;
+			// TODO: I can't figure out how to use ABNFBuiltins for this, so just hard-code it for now
+			// Note this comes with a pretty bad performance penalty
+			case 0x23: (PatternType.union([PatternType.symbol(0x9), PatternType.symbol(0x20)])).star() ++ PatternType.symbol(0x2C) ++ (PatternType.union([PatternType.symbol(0x9), PatternType.symbol(0x20)])).star()
 			default: fatalError("Unsupported repetition range operator \(rangeop)")
 		}
 		if let max, max == 0 {
@@ -1905,7 +1900,7 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) -> PatternType where PatternType.Symbol == Symbol {
 		switch self.value {
 			case .sequence(let seq): return PatternType.concatenate(seq.map { PatternType.symbol($0) })
-			case .range(let range): return PatternType.symbol(range)
+			case .range(let range): return PatternType.range(range)
 		}
 	}
 
@@ -2081,7 +2076,7 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 
 	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		// 0x20...0x7E - 0x3E
-		let pattern: DFA<UInt8> = (DFA.range(0x20...0x3D) | DFA.range(0x3F...0x7E)).star();
+		let pattern: DFA<UInt8> = (DFA<UInt8>.range(0x20...0x3D) | DFA<UInt8>.range(0x3F...0x7E)).star();
 
 		guard let (_, input_) = Terminals.proseVal_start.match(input) else { return nil; }
 		guard let (match, input__) = pattern.match(input_) else { return nil }
@@ -2093,7 +2088,7 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 }
 
 // A dictionary of all of the rules that ABNF provides by default
-public struct ABNFBuiltins<Dfn: RegularPatternBuilder> where Dfn.Symbol: BinaryInteger, Dfn.Symbol.Stride: SignedInteger {
+public struct ABNFBuiltins<Dfn: ClosedRangePatternBuilder> where Dfn.Symbol: BinaryInteger, Dfn.Symbol.Stride: SignedInteger {
 	typealias Symbol = Dfn.Symbol
 
 	public static var ALPHA : Dfn { Dfn.range(0x41...0x5A) | Dfn.range(0x61...0x7A) }; // %x41-5A / %x61-7A   ; A-Z / a-z

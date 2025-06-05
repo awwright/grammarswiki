@@ -259,7 +259,8 @@ struct DocumentDetail: View {
 						if showAlphabet {
 							DisclosureGroup("Alphabet", isExpanded: $alphabet_expanded, content: {
 								if let rule_alphabet: ClosedRangeAlphabet<UInt32> = rule_alphabet {
-									ForEach(rule_alphabet, id: \.self) {
+									let rule_alphabet_sorted: [ClosedRangeAlphabet<UInt32>.SymbolClass] = Array(rule_alphabet)
+									ForEach(rule_alphabet_sorted, id: \.self) {
 										(part: ClosedRangeAlphabet<UInt32>.SymbolClass) in
 										// TODO: Convert to a String
 										//Text(describeCharacterSet(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)

@@ -309,8 +309,8 @@ import Testing;
 
 		@Test("Concatenation of patterns")
 		func test_UInt8_concatenate() async throws {
-			let a = REPattern.range(1...4);
-			let b = REPattern.range(3...6);
+			let a = REPattern<Int>.range(1...4);
+			let b = REPattern<Int>.range(3...6);
 			let pattern = a.concatenate(b)
 			#expect(Set(1...3) == Set([1,2,3]))
 			#expect(pattern.alphabet == Set(1...6))
@@ -318,9 +318,9 @@ import Testing;
 
 		@Test("Nested concatenation")
 		func test_UInt8_nestedConcatenate() async throws {
-			let a = REPattern.range(1...20);
-			let b = REPattern.range(2...19);
-			let c = REPattern.range(3...18);
+			let a = REPattern<Int>.range(1...20);
+			let b = REPattern<Int>.range(2...19);
+			let c = REPattern<Int>.range(3...18);
 			let concat1 = a.concatenate(b)
 			let pattern = concat1.concatenate(c)
 			#expect(pattern.alphabet == Set(1...20))
@@ -382,7 +382,7 @@ import Testing;
 
 		@Test("Repeating at least")
 		func test_UInt8_repeatingAtLeast() async throws {
-			let a = REPattern.range(1...3);
+			let a = REPattern([1, 2, 3])
 			let pattern = a.repeating(2...)
 			#expect(pattern.alphabet == Set(1...3))
 		}

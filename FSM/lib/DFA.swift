@@ -397,16 +397,13 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		while(newStateId < backward.count){
 			var newStateTransitions = Alphabet.DFATable();
 			let inStates = backward[newStateId];
-			var alphabets = Set<SymbolClass>();
 			// enumerate over inStates and build the alphabet for the new state
-			for (fsm, state) in zip(fsms, inStates) {
-				if let state {
-					alphabets.formUnion(fsm.states[state].alphabet);
-				}
-			}
-			// For each of the symbols in the alphabet, get the next state following the current one
+			let alphabets = Alphabet(partitions: zip(fsms, inStates).flatMap { (fsm, state) in state == nil ? [] : fsm.states[state!].alphabet } )
+			// Compute refined ranges (e.g., split at all endpoints and find intersections)
 			for range in alphabets {
-				let nextStates = zip(fsms, inStates).map { (fsm, state) in state == nil ? nil : fsm.nextState(state: state!, range: range) }
+				let nextStates = zip(fsms, inStates).map { (fsm, state) in
+					state == nil ? nil : fsm.nextState(state: state!, range: range)
+				}
 				newStateTransitions[range] = forwardStateId(inStates: nextStates)
 			}
 
@@ -546,6 +543,24 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 			initial: self.initial,
 			finals: self.finals
 		)
+	}
+
+	/// Checks if the DFA accepts a given sequence (element of the language)
+	// This is a duplicate of the function below, but required in order to override the builtin Collection.contains,
+	// which will try iterating through every element (no good, obviously)
+	public func contains(_ input: Array<Symbol>) -> Bool {
+		var currentState = self.initial;
+
+		for symbol in input {
+			guard currentState < self.states.count,
+					let nextState = self.states[currentState][symbol: symbol]
+			else {
+				return false
+			}
+			currentState = nextState
+		}
+
+		return isFinal(currentState)
 	}
 
 	/// Checks if the DFA accepts a given sequence (element of the language)
@@ -1040,9 +1055,9 @@ extension SymbolClassDFA where Symbol == Character {
 	}
 }
 
-extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol, Symbol: Comparable {
-	public static func symbol(_ symbol: ClosedRange<Alphabet.Symbol>) -> SymbolClassDFA<Alphabet> {
-		fatalError()
+extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol, Symbol: Comparable, Symbol: Strideable, Symbol.Stride: SignedInteger {
+	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> SymbolClassDFA<Alphabet> {
+		Self.union(symbol.map { Self.symbol($0) })
 	}
 	public func toClosedRangePattern<T: ClosedRangePatternBuilder>() -> T {
 		fatalError()

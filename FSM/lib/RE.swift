@@ -1,7 +1,8 @@
 // Structures for parsing and generating most dialects of Regular Expressions
 
 /// A parser for a common form of regular expressions
-public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternBuilder, Hashable where Symbol: BinaryInteger {
+public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilder, Hashable where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
+	// An instance of this enum represents a set of sequences of symbols
 	public typealias Element = Array<Symbol>
 
 	case alternation([Self])
@@ -145,6 +146,16 @@ public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternBuilder, H
 		}
 	}
 
+	/// Convenience function for specifying a range of symbols
+	public static func symbol(_ range: some Sequence<Symbol>) -> REPattern<Symbol> {
+		Self.alternation(range.map { Self.symbol($0) })
+	}
+
+	public static func range(_ range: ClosedRange<Symbol>) -> REPattern<Symbol> {
+		// FIXME: this should just store a ClosedRange
+		Self.alternation(range.map { Self.symbol($0) })
+	}
+
 	public func encode(dialect: REDialect) -> String {
 		func toString(_ other: Self) -> String {
 			if(other.precedence >= self.precedence) {
@@ -170,7 +181,7 @@ public indirect enum REPattern<Symbol>: RegularPattern, RegularPatternBuilder, H
 	}
 }
 
-public struct REString<Symbol> where Symbol: BinaryInteger {
+public struct REString<Symbol> where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	let dialect: REDialect;
 	let pattern: REPattern<Symbol>;
 

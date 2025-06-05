@@ -85,13 +85,13 @@ public struct DFT<Symbol: Comparable & Hashable>: Hashable {
 		self.states = top.states
 		self.output = top.states.map { $0.mapValues { _ in [] } }
 		self.initial = top.initial
-		self.finals = Dictionary(uniqueKeysWithValues: top.finals.map { ($0, []) })
+		self.finals = Dictionary<StateNo, Output>(uniqueKeysWithValues: top.finals.map { ($0, []) })
 	}
 	/// Generate a DFT equivalence with individual partitions per input
 	/// i.e. all values are different, no values are equivalent
 	public init(bottom: DFA<Symbol>) {
 		self.states = bottom.states
-		self.output = bottom.states.map { Dictionary(uniqueKeysWithValues: $0.map { ($0.key, [$0.key]) }) }
+		self.output = bottom.states.map { Dictionary<Symbol, Output>(uniqueKeysWithValues: $0.map { ($0.key, [$0.key]) }) }
 		self.initial = bottom.initial
 		self.finals = Dictionary(uniqueKeysWithValues: bottom.finals.map { ($0, []) })
 	}

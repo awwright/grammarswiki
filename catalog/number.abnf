@@ -1,0 +1,2 @@
+; Just a moderate but small rule for testing purposes
+number = %x31-39 *DIGIT

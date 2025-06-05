@@ -92,6 +92,21 @@ import Testing;
 			#expect(partitions.contains(1))
 			#expect(!partitions.contains(2))
 		}
+		@Test("exercise lower bounds") func test_lower_bounds() async throws {
+			let partitions = ClosedRangeAlphabet<UInt8>([0...0xFF], [0...0], [0...1])
+			#expect(partitions == [ [0...0], [1...1], [2...0xFF] ]);
+			#expect(partitions.contains(0))
+			#expect(partitions.contains(1))
+			#expect(partitions.contains(2))
+			#expect(partitions.contains(0xFF))
+		}
+		@Test("exercise upper bounds") func test_upper_bounds() async throws {
+			let partitions = ClosedRangeAlphabet<UInt8>([0...0xFF], [0xFF...0xFF])
+			#expect(partitions == [ [0...0xFE], [0xFF...0xFF] ]);
+			#expect(partitions.contains(0))
+			#expect(partitions.contains(0xFE))
+			#expect(partitions.contains(0xFF))
+		}
 		@Test("init ranges") func test_partitionReduce_empty() async throws {
 			let partitions: ClosedRangeAlphabet<Int> = []
 			#expect(!partitions.contains(1))
@@ -409,23 +424,44 @@ import Testing;
 		#expect(dict[symbol: 8] == 1)
 		#expect(dict[symbol: 9] == 1)
 	}
-	@Test("ClosedRangeAlphabetalphabet single value") func test_alphabet_merge_0() async throws {
+	@Test("ClosedRangeAlphabet single value") func test_alphabet_merge_0() async throws {
 		var dict = AlphabetTable<ClosedRangeAlphabet<Int>, Int>()
 		dict[ [1...3, 4...6, 7...9] ] = 2;
 		#expect(dict.alphabet == [[1...9]])
 	}
-	@Test("ClosedRangeAlphabetalphabet two values") func test_alphabet_merge_1() async throws {
+	@Test("ClosedRangeAlphabet two values") func test_alphabet_merge_1() async throws {
 		var dict = AlphabetTable<ClosedRangeAlphabet<Int>, Int>()
 		dict[ [1...3, 7...9] ] = 1;
 		dict[ [4...6] ] = 2;
 		#expect(dict.alphabet == [[1...3, 7...9], [4...6]])
 	}
-	@Test("ClosedRangeAlphabet merges partitions with same values", .disabled("pending")) func test_alphabet_merge_2() async throws {
+	@Test("ClosedRangeAlphabet merges partitions with same values") func test_alphabet_merge_2() async throws {
 		var dict = AlphabetTable<ClosedRangeAlphabet<Int>, Int>()
 		dict[ [1...3] ] = 1;
 		dict[ [4...6] ] = 2;
 		dict[ [7...9] ] = 1;
 		// The partition should be merged together because they map to the same values
 		#expect(dict.alphabet == [[1...3, 7...9], [4...6]])
+	}
+	@Test("Combination of two partitioned dictionaries") func test_alphabet_merge_dict() async throws {
+		var dict0 = ClosedRangeAlphabet<Int>.DFATable()
+		dict0[ [1...3, 7...9] ] = 1;
+		dict0[ [4...6] ] = 2;
+		var dict1 = ClosedRangeAlphabet<Int>.DFATable()
+		dict1[ [2...5] ] = 1;
+		dict1[ [6...8] ] = 2;
+		// The partition should be merged together because they map to the same values
+		let set = ClosedRangeAlphabet<Int>(partitions: [dict0.alphabet, dict1.alphabet].flatMap(\.self))
+		#expect(set == [[1...1, 9...9], [2...3], [4...5], [6...6], [7...8]]);
+		#expect(dict0[ [1...1, 9...9] ] == 1);
+		#expect(dict1[ [1...1, 9...9] ] == nil);
+		#expect(dict0[ [2...3] ] == 1);
+		#expect(dict1[ [2...3] ] == 1);
+		#expect(dict0[ [4...5] ] == 2);
+		#expect(dict1[ [4...5] ] == 1);
+		#expect(dict0[ [6...6] ] == 2);
+		#expect(dict1[ [6...6] ] == 2);
+		#expect(dict0[ [7...8] ] == 1);
+		#expect(dict1[ [7...8] ] == 2);
 	}
 }
