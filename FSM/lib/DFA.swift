@@ -1057,7 +1057,13 @@ extension SymbolClassDFA where Symbol == Character {
 
 extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol, Symbol: Comparable, Symbol: Strideable, Symbol.Stride: SignedInteger {
 	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> SymbolClassDFA<Alphabet> {
-		Self.union(symbol.map { Self.symbol($0) })
+		let range: Alphabet = Alphabet.range(symbol);
+		let table = Alphabet.DFATable(uniqueKeysWithValues: range.map { ($0, 1) })
+		return Self(
+			states: [table, [:]],
+			initial: 0,
+			finals: [ 1 ]
+		)
 	}
 	public func toClosedRangePattern<T: ClosedRangePatternBuilder>() -> T {
 		fatalError()
