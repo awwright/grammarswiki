@@ -14,5 +14,6 @@ let package = Package(
 		// Targets can depend on other targets in this package and products from dependencies.
 		.target(name: "FSM", path: "lib/"),
 		.testTarget(name: "FSMTests", dependencies: ["FSM"], path: "test/"),
+		.testTarget(name: "FSMPerformance", dependencies: ["FSM"], path: "perf/"),
 	]
 )
