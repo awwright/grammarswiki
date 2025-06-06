@@ -404,7 +404,8 @@ struct DocumentDetail: View {
 			do {
 				var result_fsm_dict = builtins.mapValues { $0.minimized() }
 				for (rulename, definition) in dependencies {
-					result_fsm_dict[rulename] = try definition.toPattern(rules: result_fsm_dict).minimized()
+					let pat = try definition.toClosedRangePattern(rules: result_fsm_dict);
+					result_fsm_dict[rulename] = pat.minimized()
 				}
 				let result = result_fsm_dict[selectedRule]!
 				let result_alphabet = result.alphabet
