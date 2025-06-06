@@ -398,8 +398,14 @@ struct DocumentDetail: View {
 			let dependencies_list = content_rulelist.dependencies(rulename: selectedRule);
 			let dict = content_rulelist.dictionary;
 			let dependencies = dependencies_list.dependencies.compactMap { if let rule = dict[$0] { ($0, rule) } else { nil } }
-//			if(dependencies.isEmpty){ rule_fsm_error = "dependencies is empty"; return }
-//			if(dependencies_list.recursive.isEmpty == false){ rule_fsm_error = "Rule is recursive"; return }
+			if(dependencies.isEmpty){
+				await MainActor.run { rule_fsm_error = "dependencies is empty"; }
+				return
+			}
+			if(dependencies_list.recursive.isEmpty == false){
+				await MainActor.run { rule_fsm_error = "Rule is recursive"; }
+				return
+			}
 
 			do {
 				var result_fsm_dict = builtins.mapValues { $0.minimized() }
