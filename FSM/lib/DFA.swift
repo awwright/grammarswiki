@@ -1058,6 +1058,8 @@ extension SymbolClassDFA where Symbol == Character {
 extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol, Symbol: Comparable, Symbol: Strideable, Symbol.Stride: SignedInteger {
 	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> SymbolClassDFA<Alphabet> {
 		let range: Alphabet = Alphabet.range(symbol);
+		// Usually the ClosedRange can be mapped to a single partition,
+		// but sometimes (e.g. SymbolAlphabet) each symbol has to go into its own partition.
 		let table = Alphabet.DFATable(uniqueKeysWithValues: range.map { ($0, 1) })
 		return Self(
 			states: [table, [:]],

@@ -9,6 +9,7 @@ public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatab
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype SymbolClass: Equatable & Hashable;
 	associatedtype Symbol: Equatable & Hashable;
+	associatedtype ArrayLiteralElement = SymbolClass;
 	associatedtype PartitionedDictionary: AlphabetTableProtocol where PartitionedDictionary.Alphabet == Self, PartitionedDictionary.Value == AnyHashable, PartitionedDictionary.Element == (key: PartitionedDictionary.Key, value: AnyHashable);
 	associatedtype DFATable: AlphabetTableProtocol where DFATable.Alphabet == Self, DFATable.Value == Int, DFATable.Element == (key: DFATable.Key, value: DFATable.Value)
 	associatedtype NFATable: AlphabetTableProtocol where NFATable.Alphabet == Self, NFATable.Value == Set<Int>, NFATable.Element == (key: NFATable.Key, value: NFATable.Value)
@@ -52,6 +53,9 @@ extension AlphabetProtocol {
 //	public func mapSymbolClass<Target: AlphabetProtocol>(_ transform: (SymbolClass) -> Target.SymbolClass) -> Target where Self.Symbol == Target.Symbol {
 //		Target(partitions: self.map { transform($0) })
 //	}
+	public subscript(_ component: Symbol) -> SymbolClass? {
+		contains(component) ? siblings(of: component) : nil
+	}
 }
 
 public protocol FiniteAlphabetProtocol: AlphabetProtocol {
@@ -70,7 +74,6 @@ extension FiniteAlphabetProtocol {
 public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable {
 	public typealias Symbol = Symbol
 	public typealias SymbolClass = Symbol
-	public typealias ArrayLiteralElement = SymbolClass
 	public typealias Table<T> = Dictionary<Symbol, T>
 	public typealias PartitionedDictionary = Dictionary<Symbol, AnyHashable>
 	public typealias NFATable = Dictionary<Symbol, Set<Int>>
@@ -140,7 +143,6 @@ extension SymbolAlphabet: ClosedRangeAlphabetProtocol where Symbol: Strideable &
 public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol {
 	public typealias Symbol = Symbol
 	public typealias SymbolClass = Set<Symbol>
-	public typealias ArrayLiteralElement = SymbolClass
 	public typealias PartitionedDictionary = Table<AnyHashable>
 	public typealias NFATable = Table<Set<Int>>
 	public typealias DFATable = Table<Int>
@@ -342,8 +344,6 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
 	public typealias SymbolClass = Array<ClosedRange<Symbol>>
-	/// Implements ExpressibleByArrayLiteral
-	public typealias ArrayLiteralElement = SymbolClass
 	public typealias PartitionedDictionary = Table<AnyHashable>
 	public typealias DFATable = Table<Int>
 	public typealias NFATable = Table<Set<Int>>

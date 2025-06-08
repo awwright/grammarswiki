@@ -24,100 +24,192 @@ public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashabl
 	}
 }
 
-/// DFAE (DFA with Equivalence) is a struct that maps elements in the FSM to some target element.
-/// You can also get a FSM denoting the set of elements in the same partition.
-public struct DFAE<Symbol: Comparable & Hashable, Value: Comparable & Hashable> {
-	public typealias Key = Array<Symbol>
-	public typealias Partition = DFA<Symbol>
+public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
+	public typealias SymbolClass = DFA<Component>
+	public typealias Symbol = DFA<Component>.Element
+	public typealias PartitionedDictionary = Table<AnyHashable>
+	public typealias NFATable = Table<Set<Int>>
+	public typealias DFATable = Table<Int>
 
-	public typealias Partitions = Dictionary<Value, DFA<Symbol>>.Values
-	public var partitions: Dictionary<Value, DFA<Symbol>>.Values { partitionsDict.values }
-
-	typealias Inner = SymbolOrTag<Symbol, Value>;
-	typealias SymTag = SymbolOrTag<Symbol, Value>;
-
-	/// Specifies a set of elements and the partition they map to
-	public let partitionsDict: Dictionary<Value, DFA<Symbol>>
-
-	/// The union of all the partitions, tagged with the partition
-	let inner: DFA<SymTag>
-
-	/// Final states and the partition they are members of
-	let stateToTarget: Dictionary<DFA<Symbol>.StateNo, Value>
+	public var partitions: Set<SymbolClass>
 
 	public init() {
-		self.partitionsDict = [:]
-		self.inner = []
-		self.stateToTarget = [:]
+		self.partitions = []
 	}
 
-	init(partitions: Dictionary<Value, DFA<Symbol>>){
-		let innerMap: Array<DFA<SymTag>> = partitions.map {
-			(partNo, fsm) in
-			DFA<SymTag>(
-				// Convert the symbols to SymTag.symbol
-				// If a final state, add a SymTag.tag pointing the state to itself
-				states: fsm.states.enumerated().map {
-					stateNo, table in
-					Dictionary(uniqueKeysWithValues:
-						table.map {	(key, target) in (SymTag.symbol(key), target) }
-						+ (fsm.isFinal(stateNo) ? [(SymTag.tag(partNo), stateNo)] : [])
-					)
-				},
-				initial: fsm.initial,
-				finals: fsm.finals
-			)
+	public init<T: FiniteAlphabetProtocol>(alphabet: T) where Symbol == T.Symbol {
+		fatalError()
+	}
+
+	public init(partitions: some Collection<SymbolClass>) {
+		self.partitions = []
+	}
+
+	public static func range(_ symbol: Symbol) -> SymbolClass {
+		SymbolClass([symbol]);
+	}
+
+	public func contains(_ symbol: Symbol) -> Bool {
+		partitions.contains(where: { $0.contains(symbol) })
+	}
+
+	public func siblings(of: Symbol) -> SymbolClass {
+		partitions.filter { $0.contains(of) }.first ?? []
+	}
+
+	public func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool {
+		siblings(of: lhs).contains(rhs)
+	}
+
+	/// This may be somewhat inefficent! But it's the best one can do as a stable identifier when Symbol is not Comparable.
+	public static func label(of: SymbolClass) -> Symbol {
+		fatalError()
+	}
+	public func label(of: Symbol) -> Symbol {
+		fatalError()
+	}
+
+	// MARK: Collection
+	public typealias Element = SymbolClass
+	public typealias Index = Set<SymbolClass>.Index
+
+	public var startIndex: Index {
+		partitions.startIndex
+	}
+
+	public var endIndex: Index {
+		partitions.endIndex
+	}
+
+	public func index(after i: Index) -> Index {
+		partitions.index(after: i)
+	}
+
+	public subscript(position: Index) -> Element {
+		partitions[position]
+	}
+
+	public static func collection(_ range: SymbolClass) -> SymbolClass {
+		range
+	}
+
+	/// Mutations
+	public mutating func insert(_ newElement: SymbolClass) {
+		var remainingNewElements = newElement;
+		for part in partitions {
+			let common = newElement.intersection(part)
+			if !common.isEmpty {
+				remainingNewElements.subtract(common)
+				partitions.remove(part)
+				partitions.insert(common)
+				partitions.insert(part.subtracting(common))
+			}
 		}
-		let inner = DFA<SymTag>.union(innerMap)
-		let stateToTarget = Dictionary<DFA<Symbol>.StateNo, Value>(uniqueKeysWithValues: inner.finals.compactMap {
-			stateNo in
-			let table = inner.states[stateNo]
-			var value: (DFA<Symbol>.StateNo, Value)? = nil
-			for (key, _) in table {
-				if case .tag(let tag) = key {
-					if value != nil {
-						fatalError("Partitions overlap at \(stateNo): \(value!) and \(tag)")
+		if !remainingNewElements.isEmpty {
+			partitions.insert(remainingNewElements)
+		}
+	}
+
+	public struct Table<Value: Hashable>: AlphabetTableProtocol {
+		public typealias Alphabet = PartitionedDFA
+		public typealias Symbol = PartitionedDFA.Symbol
+		public typealias SymbolClass = PartitionedDFA.SymbolClass
+		public typealias Key = SymbolClass
+		public typealias Value = Value
+		public typealias Element = (key: Key, value: Value)
+		public typealias Index = Dictionary<Value, SymbolClass>.Index
+		public typealias Values = Dictionary<Value, SymbolClass>.Keys
+
+		var partitions: Dictionary<Value, SymbolClass>;
+
+		// /// The union of all the partitions, tagged with the partition
+		// typealias SymTag = SymbolOrTag<Component, Tag>
+		// var tagged: DFA<SymTag>
+
+		public var alphabet: Alphabet { Alphabet(partitions: partitions.values) }
+		public var values: Values { partitions.keys }
+
+		public init() { partitions = [:] }
+		public init(_ elements: Dictionary<SymbolClass, Value>) {
+			self.partitions = [:]
+			for (part, value) in elements {
+				self[part] = value
+			}
+		}
+		public init(dictionaryLiteral elements: (SymbolClass, Value)...) {
+			self.partitions = [:]
+			for (part, value) in elements {
+				self[part] = value
+			}
+		}
+
+		public subscript(symbol symbol: Symbol) -> Value? {
+			get {
+				for (value, part) in self.partitions {
+					if part.contains(symbol) {
+						return value
 					}
-					value = (stateNo, tag)
+				}
+				return nil
+			}
+			set(newValue) {
+				let range = SymbolClass(verbatim: symbol);
+				for (value, range) in self.partitions {
+					self.partitions[value] = range.subtracting([symbol])
+				}
+				if let newValue {
+					self.partitions[newValue] = self.partitions[newValue, default: []].union([symbol])
 				}
 			}
-			return value
-		})
+		}
 
-		self.partitionsDict = partitions
-		self.inner = inner
-		self.stateToTarget = stateToTarget
-	}
+		public subscript(_ symbol: SymbolClass) -> Value? {
+			get {
+				for (value, part) in self.partitions {
+					if part.isSubset(of: symbol) {
+						return value
+					}
+				}
+				return nil
+			}
+			set(newValue) {
+				if let newValue {
+					for (value, range) in self.partitions {
+						if value == newValue {
+							continue;
+						}
+						let newRange = range.intersection(symbol);
+						if range == newRange {
+							self.partitions.removeValue(forKey: value)
+						} else {
+							self.partitions[value] = range.subtracting(newRange);
+						}
+					}
+					self.partitions[newValue] = self.partitions[newValue, default: []].union(symbol)
+				} else {
+					for (value, range) in self.partitions {
+						if value == newValue {
+							continue;
+						}
+						let newRange = range.intersection(symbol);
+						if range == newRange {
+							self.partitions.removeValue(forKey: value)
+						} else {
+							self.partitions[value] = range.subtracting(newRange);
+						}
+					}
+				}
+			}
+		}
 
-	public func contains(_ component: Key) -> Bool {
-		self[component] != nil
-	}
-
-	subscript(_ value: some Sequence<Symbol>) -> Value? {
-		let resultState = self.inner.nextState(state: self.inner.initial, input: value.map { SymbolOrTag<Symbol, Value>.symbol($0) })
-		guard self.inner.isFinal(resultState) else { return nil }
-		guard let resultState else { return nil }
-		assert(resultState < self.inner.states.count)
-		let resultTarget = stateToTarget[resultState]
-		guard let resultTarget else { return nil }
-		assert(self.inner.states[resultState][SymbolOrTag<Symbol, Value>.tag(resultTarget)] != nil)
-		return resultTarget
-	}
-
-
-	func siblings(label: Value) -> DFA<Symbol>? {
-		fatalError("Unimplemented")
-	}
-
-	func label(component: Key) -> Value? {
-		fatalError("Unimplemented")
-	}
-
-	public func siblings(of val: Array<Symbol>) -> DFA<Symbol> {
-		fatalError("Unimplemented")
-	}
-
-	public func isEquivalent(_ lhs: Key, _ rhs: Key) -> Bool {
-		return self[lhs] == self[rhs]
+		// MARK: Collection
+		public var startIndex: Index { self.partitions.startIndex }
+		public var endIndex: Index { self.partitions.endIndex }
+		public func index(after i: Index) -> Index { self.partitions.index(after: i) }
+		public subscript(position: Index) -> Element {
+			let (value, symbolClass) = partitions[position]
+			return (key: symbolClass, value: value)
+		}
 	}
 }
+
