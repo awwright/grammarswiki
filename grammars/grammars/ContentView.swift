@@ -190,7 +190,7 @@ struct DocumentDetail: View {
 					}
 
 					Tab("Graph", systemImage: "pencil") {
-						Text("FSM Diagram").font(.headline)
+						DFAGraphView(rule_fsm: $rule_fsm)
 					}
 
 					Tab("Railroad", systemImage: "pencil") {
@@ -406,7 +406,6 @@ struct DocumentDetail: View {
 				await MainActor.run { rule_fsm_error = "Rule is recursive"; }
 				return
 			}
-
 			do {
 				var result_fsm_dict = builtins.mapValues { $0.minimized() }
 				for (rulename, definition) in dependencies {
