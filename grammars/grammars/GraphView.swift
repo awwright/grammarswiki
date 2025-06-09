@@ -10,6 +10,13 @@ struct DFAGraphView: View {
 		GeometryReader { geometry in
 			ZStack {
 				let dfa: DFA = rule_fsm ?? DFA()
+				// Draw initial
+				EdgeView(
+					source: nodePosition(dfa.initial, in: geometry) - CGPoint(x: 0, y: +40),
+					target: nodePosition(dfa.initial, in: geometry),
+					label: ""
+				);
+
 				// Draw edges
 				ForEach(0..<dfa.states.count, id: \.self) { i in
 					let list = Array(dfa.states[i].alphabet);
@@ -24,7 +31,7 @@ struct DFAGraphView: View {
 				}
 				// Draw nodes on top
 				ForEach(0..<dfa.states.count, id: \.self) { i in
-					NodeView(position: nodePosition(i, in: geometry), index: i)
+					NodeView(position: nodePosition(i, in: geometry), index: i, isFinal: dfa.isFinal(i))
 				}
 			}
 		}
@@ -48,9 +55,15 @@ struct NodeView: View {
 	let position: CGPoint
 	let index: Int
 	let radius: CGFloat = 10
+	let isFinal: Bool
 
 	var body: some View {
 		ZStack {
+			if isFinal {
+				Circle()
+					.stroke(Color.black)
+					.frame(width: 2 * (radius + 3), height: 2 * (radius + 3))
+			}
 			Circle()
 				.fill(Color.white)
 				.stroke(Color.black)

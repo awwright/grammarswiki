@@ -25,17 +25,27 @@ struct GraphVizSourceView: View {
 	}
 
 	private func computeVizSource() {
-		guard let alphabet = rule_alphabet, let fsm = rule_fsm else {
+		guard let dfa = rule_fsm else {
 			vizSource = nil
 			return
 		}
 		Task.detached(priority: .userInitiated) {
-//			let reducedAlphabetLanguage = DFA.union(alphabet.partitionLabels.map { DFA.symbol($0) }).star()
-//			let expanded: DFA<String> = fsm.intersection(reducedAlphabetLanguage).mapSymbols { describeCharacterSet(alphabet.siblings(of: $0)) }
-//			let result = expanded.minimized().toViz()
-//			await MainActor.run {
-//				vizSource = result
+//			var viz = "";
+//			viz += "digraph G {\n";
+//			viz += "\t_initial [shape=point];\n";
+//			viz += "\t_initial -> \(dfa.initial);\n";
+//			for source in dfa.states.indices {
+//				let shape = dfa.finals.contains(source) ? "doublecircle" : "circle";
+//				viz += "\t\(source) [label=\"\(source)\", shape=\"\(shape)\"];\n";
+//				for (target, symbols) in dfa.targets(source: source) {
+//					viz += "\t\(source) -> \(target) [label=\(graphvizLabelEscapedString(symbols.map { String(describing: $0) }.joined(separator: " ")))];\n";
+//				}
 //			}
+//			viz += "}\n";
+			let result = dfa.toViz();
+			await MainActor.run {
+				vizSource = result
+			}
 		}
 	}
 }
