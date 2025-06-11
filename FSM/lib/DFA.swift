@@ -121,7 +121,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// - Parameter nfa: The NFA to convert.
 	/// - Precondition: The NFA must have at most one transition per symbol per state.
 	public init(nfa: SymbolClassNFA<Alphabet>){
-		let translation = SymbolClassNFA<Alphabet>.parallel(fsms: [nfa], merge: { $0[0] });
+		let translation = SymbolClassNFA<Alphabet>.parallel(fsms: [nfa], merge: { $0[0] }).fsm;
 		assert(translation.statesSet.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
 		self.states = translation.statesSet.map { Alphabet.DFATable(uniqueKeysWithValues: $0.map { ($0.0, $0.1.first!) }) }
 		self.initial = translation.initials.first!;
@@ -368,7 +368,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// - Parameter merge: Given an array of the states for the respective FSMs, return if this is a final state.
 	/// 	To find a union, return true if any is true. To find the intersection, return true only when all are true.
 	///
-	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
+	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> (fsm: Self, map: Array<Array<States>>) {
 		var newStates = Array<Alphabet.DFATable>();
 		var newFinals = Set<StateNo>();
 		var forward = Dictionary<Array<States>, StateNo>();
@@ -415,7 +415,10 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 			newStateId += 1;
 		}
 
-		return Self.init(states: newStates, initial: newInitialState, finals: newFinals);
+		return (
+			fsm: Self.init(states: newStates, initial: newInitialState, finals: newFinals),
+			map: backward,
+		);
 	}
 
 	/// Minimizes this DFA by merging equivalent states.
@@ -582,20 +585,20 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// Returns a DFA accepting the union of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
 	public func union(_ other: __owned Self) -> Self {
-		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] });
+		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] }).fsm;
 	}
 
 	/// Returns a DFA accepting the intersection of this DFA’s language and another’s.
 	/// Implements ``SetAlgebra``
 	public func intersection(_ other: Self) -> Self {
-		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] });
+		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] }).fsm;
 	}
 
 	/// Returns a DFA accepting the symmetric difference of this DFA’s language and another’s.
 	/// That is, the set of elements in exactly one set or the other set, and not both.
 	/// To only remove elements, see ``subtracting(_:)`` or the ``-(lhs:rhs:)`` operator
 	public func symmetricDifference(_ other: __owned Self) -> Self {
-		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
+		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] }).fsm;
 	}
 
 	// Also provide a static implementation of union since it applies to any number of inputs
@@ -605,7 +608,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
-		return Self.parallel(fsms: languages, merge: { $0.contains(where: { $0 }) });
+		return Self.parallel(fsms: languages, merge: { $0.contains(where: { $0 }) }).fsm;
 	}
 
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
@@ -1005,7 +1008,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	///
 	/// Note: I think (-) is pretty unambiguous here, but some math notation uses \ for this operation.
 	public static func - (lhs: Self, rhs: Self) -> Self {
-		return Self.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] });
+		return Self.parallel(fsms: [lhs, rhs], merge: { $0[0] && !$0[1] }).fsm;
 	}
 }
 

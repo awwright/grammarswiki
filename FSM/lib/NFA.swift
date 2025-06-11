@@ -267,7 +267,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 		return expanded;
 	}
 
-	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> Self {
+	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> (fsm: Self, map: Array<Array<States>>) {
 		var newStates = Array<Alphabet.NFATable>();
 		var newFinals = Set<Int>();
 		var forward = Dictionary<Array<States>, Int>();
@@ -315,7 +315,10 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 			newStateId += 1;
 		}
 
-		return Self.init(states: newStates, epsilon: Array(repeating: [], count: newStates.count), initial: newInitialState, finals: newFinals);
+		return (
+			fsm: Self.init(states: newStates, epsilon: Array(repeating: [], count: newStates.count), initial: newInitialState, finals: newFinals),
+			map: backward,
+		);
 	}
 
 	public func contains(_ input: some Sequence<Symbol>) -> Bool {
@@ -359,11 +362,11 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 	}
 
 	public func intersection(_ other: Self) -> Self {
-		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] });
+		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] }).fsm;
 	}
 
 	public func symmetricDifference(_ other: __owned Self) -> Self {
-		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] });
+		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] }).fsm;
 	}
 
 
