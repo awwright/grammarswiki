@@ -168,6 +168,19 @@ import Testing
 		#expect(dfa2.minimized().states.count == 3)
 	}
 
+	@Test("minimized(initialPartitions:)")
+	func test_minimized_initialPartitions() {
+		// A DFA with some live states and some dead states
+		let dfa = DFA<UInt8>(
+			states: [[0:0, 1:1, 2:2, 3:3, 4:4], [:], [:], [:], [:]],
+			initial: 0,
+			finals: [1, 2, 3, 4]
+		)
+		let dfa_min = dfa.minimized(initialPartitions: [ [0], [1, 2], [3, 4] ]);
+		#expect(dfa_min.states.count == 3)
+		#expect(dfa_min.finals.count == 2)
+	}
+
 	@Test("parallel")
 	func test_parallel() {
 		// See union, intersection, and symmetricDifference below

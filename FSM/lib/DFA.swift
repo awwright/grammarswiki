@@ -425,8 +425,9 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// A minimized DFA has the fewest number of states possible of any equivalent DFA.
 	/// It does this by merging states with the "same" behavior into the same state.
 	/// Implemented by Hopcroft's Algorithm.
+	/// - Parameter initialPartitions: A set of partitions. Defaults to separating the accepting and non-accepting partitions.
 	/// - Returns: The minimized DFA
-	public func minimized() -> Self {
+	public func minimized(initialPartitions: Array<Set<Int>> = []) -> Self {
 		// Step 1: Remove unreachable states
 		var reachable = Set<Int>([initial])
 		var reachableStates = [initial]
@@ -469,15 +470,20 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		let trimmedInitial = stateMap[initial]!
 
 		// Initialize partition with accepting and non-accepting states
-		var partition = [Set<Int>]()
-		let accepting = Set(0..<trimmedStates.count).intersection(trimmedFinals)
-		let nonAccepting = Set(0..<trimmedStates.count).subtracting(trimmedFinals)
-
-		if !accepting.isEmpty {
-			partition.append(accepting)
-		}
-		if !nonAccepting.isEmpty {
-			partition.append(nonAccepting)
+		var partition: Array<Set<Int>>
+		if initialPartitions.isEmpty {
+			partition = []
+			let accepting: Set<Int> = Set(0..<trimmedStates.count).intersection(trimmedFinals)
+			let nonAccepting: Set<Int> = Set(0..<trimmedStates.count).subtracting(trimmedFinals)
+			if !accepting.isEmpty {
+				partition.append(accepting)
+			}
+			if !nonAccepting.isEmpty {
+				partition.append(nonAccepting)
+			}
+		} else {
+			// Notice: Every state should appear in this set exactly once
+			partition = initialPartitions
 		}
 
 		// Initialize worklist with symbols from alphabet
