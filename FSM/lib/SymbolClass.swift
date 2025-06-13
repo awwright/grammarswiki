@@ -40,8 +40,11 @@ public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatab
 	static func label(of: SymbolClass) -> Symbol
 	func label(of: Symbol) -> Symbol
 
-	/// Inserts the given partition into the Alphabet
-	mutating func insert(_ newElement: SymbolClass)
+	/// Inserts the given partition into the Alphabet, refining partitions when the symbols already exists
+	mutating func insert(_ newPartition: SymbolClass)
+
+	/// Removes the given components from the Alphabet
+	mutating func remove(_ removePartition: SymbolClass)
 }
 
 /// Default implementations of functions for PartitionedSetProtocol
@@ -128,9 +131,13 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 	public subscript(position: Index) -> Element { symbols[position] }
 	public static func collection(_ range: Symbol) -> any Collection<Symbol> { AnyCollection([range]) }
 
-	/// Mutations
+	// MARK: Mutations
 	public mutating func insert(_ newElement: SymbolClass) {
 		symbols.insert(newElement)
+	}
+
+	public mutating func remove(_ newElement: SymbolClass) {
+		symbols.remove(newElement)
 	}
 }
 
@@ -229,6 +236,16 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 		}
 		if !remainingNewElements.isEmpty {
 			partitions.insert(remainingNewElements)
+		}
+	}
+
+	public mutating func remove(_ removeSymbols: SymbolClass) {
+		for part in partitions {
+			let common = removeSymbols.intersection(part)
+			if !common.isEmpty {
+				partitions.remove(part)
+				partitions.insert(part.subtracting(removeSymbols))
+			}
 		}
 	}
 
@@ -643,6 +660,11 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	public mutating func insert(_ newElement: SymbolClass) {
 		// TODO: Optimize this
 		self = Self(partitions: partitions + [newElement])
+	}
+
+	public mutating func remove(_ removeSymbols: SymbolClass) {
+		// TODO: Optimize this
+		self = Self(partitions: partitions.map { Self.difference($0, Self.intersection($0, removeSymbols)) })
 	}
 
 	private mutating func resort() {

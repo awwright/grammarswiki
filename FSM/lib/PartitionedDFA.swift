@@ -110,6 +110,16 @@ public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 		}
 	}
 
+	public mutating func remove(_ removeSymbols: SymbolClass) {
+		for part in partitions {
+			let common = removeSymbols.intersection(part)
+			if !common.isEmpty {
+				partitions.remove(part)
+				partitions.insert(part.subtracting(common))
+			}
+		}
+	}
+
 	public struct Table<Value: Hashable>: AlphabetTableProtocol {
 		public typealias Alphabet = PartitionedDFA
 		public typealias Symbol = PartitionedDFA.Symbol

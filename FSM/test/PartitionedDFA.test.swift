@@ -2,14 +2,14 @@
 import Testing
 
 @Suite("PartitionedDFA Tests") struct PartitionedDFATests {
-	@Test("Empty DFAE")
+	@Test("Empty PartitionedDFA")
 	func testEmptyPartitionedSet() {
 		let dfa = PartitionedDFA<Character>(partitions: [])
 		#expect(dfa[ [] ] == nil)
 		#expect(dfa[ ["0", "1"] ] == nil)
 	}
 
-	@Test("Filled DFAE")
+	@Test("Filled PartitionedDFA")
 	func testEmptyPartitionedMap() {
 		var set = PartitionedDFA<Character>.Table<String>()
 		let dfa0 = DFA<Character>(["0", "1"]).star()
@@ -22,7 +22,7 @@ import Testing
 		#expect(set[ symbol: ["a", "1"] ] == nil)
 	}
 
-	@Test("Filled DFAE")
+	@Test("Filled PartitionedDFA")
 	func testFilledPartitionedSet() {
 		let parts = [
 			DFA<Character>(["0", "1"]).star(),
@@ -37,7 +37,7 @@ import Testing
 		#expect(dfa[ ["a", "b"] ] == nil)
 	}
 
-	@Test("Filled DFAE")
+	@Test("Filled PartitionedDFA")
 	func testFilledPartitionedMap() {
 		let parts = [
 			"binary": DFA<Character>(["0", "1"]).star(),
