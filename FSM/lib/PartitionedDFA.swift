@@ -33,6 +33,7 @@ public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 
 	public var partitions: Set<SymbolClass>
 
+	// MARK: Init
 	public init() {
 		self.partitions = []
 	}
@@ -42,7 +43,12 @@ public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 	}
 
 	public init(partitions: some Collection<SymbolClass>) {
-		self.partitions = []
+		// `partitions` may have overlaps, refine these partitions
+		var refined: Set<SymbolClass> = []
+		for part in partitions {
+			refined.insert(part);
+		}
+		self.partitions = refined
 	}
 
 	public static func range(_ symbol: Symbol) -> SymbolClass {

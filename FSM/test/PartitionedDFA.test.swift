@@ -30,10 +30,10 @@ import Testing
 			DFA<Character>(["b"]).plus(),
 		];
 		let dfa = PartitionedDFA<Character>(partitions: parts)
-		#expect(dfa[ [] ] == nil)
-		#expect(dfa[ ["0", "1"] ] == nil)
-		#expect(dfa[ ["a"] ] == nil)
-		#expect(dfa[ ["b"] ] == nil)
+		#expect(dfa[ [] ] == dfa[ ["0", "1"] ])
+		#expect(dfa[ ["0"] ] == dfa[ ["0", "1"] ])
+		#expect(dfa[ ["a"] ] == dfa[ ["a", "a"] ])
+		#expect(dfa[ ["b"] ] == dfa[ ["b", "b"] ])
 		#expect(dfa[ ["a", "b"] ] == nil)
 	}
 
