@@ -40,6 +40,9 @@ public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatab
 	static func label(of: SymbolClass) -> Symbol
 	func label(of: Symbol) -> Symbol
 
+	/// Compute an alphabet that adds the given partition, refining partitions where it overlaps existing partitions
+	func conjunction(_ newPartitions: Self) -> Self
+
 	/// Inserts the given partition into the Alphabet, refining partitions when the symbols already exists
 	mutating func insert(_ newPartition: SymbolClass)
 
@@ -122,6 +125,13 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 		of
 	}
 
+	/// Find the union of two DFAs, refine any partitions that overlap
+	///
+	/// - Note: SymbolClass always refines partitions to one symbol per partition, so this is the same as the union.
+	public func conjunction(_ other: Self) -> Self {
+		Self(partitions: self.symbols.union(other.symbols));
+	}
+
 	// MARK: Collection
 	public typealias Element = SymbolClass
 	public typealias Index = Set<Symbol>.Index
@@ -196,6 +206,14 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 	}
 	public func label(of: Symbol) -> Symbol {
 		siblings(of: of).sorted().first!
+	}
+
+	public func conjunction(_ newPartitions: Self) -> Self {
+		var result = self;
+		for part in newPartitions {
+			result.insert(part);
+		}
+		return result
 	}
 
 	// MARK: Collection
@@ -588,6 +606,14 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	}
 	public static func label(of: SymbolClass) -> Symbol {
 		of.sorted { $0.lowerBound < $1.lowerBound }.first!.lowerBound
+	}
+
+	public func conjunction(_ newPartitions: Self) -> Self {
+		var result = self;
+		for part in newPartitions {
+			result.insert(part);
+		}
+		return result
 	}
 
 	// TODO: A function that generates a SymbolClassDFA from a DFA and SymbolClass

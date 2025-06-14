@@ -67,12 +67,21 @@ public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 		siblings(of: lhs).contains(rhs)
 	}
 
-	/// This may be somewhat inefficent! But it's the best one can do as a stable identifier when Symbol is not Comparable.
 	public static func label(of: SymbolClass) -> Symbol {
 		fatalError()
 	}
+
 	public func label(of: Symbol) -> Symbol {
 		fatalError()
+	}
+
+	/// Find the union of two DFAs, refine any partitions that overlap
+	public func conjunction(_ other: Self) -> Self {
+		var result = self
+		for part in other {
+			result.insert(part);
+		}
+		return result;
 	}
 
 	// MARK: Collection
