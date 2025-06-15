@@ -606,7 +606,7 @@ import Testing
 		typealias DFA<T: BinaryInteger> = SymbolClassDFA<ClosedRangeAlphabet<T>> where T.Stride: SignedInteger
 		@Test("union") func union() async throws {
 			let dfa1 = DFA<Int>(states: [[[0...4]: 1], [:]], initial: 0, finals: [1])
-			dfa1.contains([0])
+			#expect(dfa1.contains([0]))
 			let dfa2 = DFA<Int>(states: [[[4...9]: 1], [:]], initial: 0, finals: [1])
 			#expect(dfa2.contains([9]))
 			let dfa = dfa1.union(dfa2)
@@ -623,7 +623,6 @@ import Testing
 			#expect(!dfa.contains([0]))
 			#expect(dfa.contains([1]))
 			#expect(dfa.contains([1,0]))
-			print(dfa.toViz())
 		}
 		@Test("intersection") func intersection() async throws {
 			let dfa1 = DFA<Int>(states: [[[0...1]: 1], [:]], initial: 0, finals: [1])
