@@ -51,4 +51,24 @@ import Testing
 		#expect(dfa[symbol: ["b"] ] == "bravo")
 		#expect(dfa[symbol: ["a", "b"] ] == nil)
 	}
+
+	@Test("conjunction")
+	func test_PartitionedDFA_conjunction() {
+		let part_2 = DFA<Character>(["0", "1"]).star();
+		let part_4 = DFA<Character>(["0", "1", "2", "3"]).star();
+		let part_6 = DFA<Character>(["0", "1", "2", "3", "4", "5"]).star();
+		let part_8 = DFA<Character>(["0", "1", "2", "3", "4", "5", "6", "7"]).star();
+		let dfa0: PartitionedDFA<Character> = [ part_2, part_6 ];
+		let dfa1: PartitionedDFA<Character> = [ part_4, part_8 ];
+		// Test that the partitions are mutually exclusive
+		#expect(dfa0.siblings(of: Array("01")) == part_2)
+		#expect(dfa0.siblings(of: Array("012345")) == part_6.subtracting(part_2))
+		#expect(dfa1.siblings(of: Array("01")) == part_4)
+		#expect(dfa1.siblings(of: Array("012345")) == part_8.subtracting(part_4))
+		let pdfa = dfa0.conjunction(dfa1);
+		// Test that the partitions are mutually exclusive
+		#expect(pdfa.siblings(of: Array("01")) == part_2)
+		#expect(pdfa.siblings(of: Array("0123")) == part_4.subtracting(part_2))
+		//for part in pdfa { print(part.minimized().toViz()) }
+	}
 }
