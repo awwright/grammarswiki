@@ -390,6 +390,33 @@ import Testing;
 	}
 }
 
+@Suite("AlphabetProtocol") struct AlphabetProtocolTests {
+	@Suite("SymbolAlphabet") struct SymbolAlphabetTests {
+		@Test("conjunction") func test_SymbolAlphabet_conjunction() {
+			let pet0: SymbolAlphabet<Int> = [0, 1];
+			let pet1: SymbolAlphabet<Int> = [1, 2];
+			let conjunction: SymbolAlphabet<Int> = pet0.conjunction(pet1);
+			#expect(conjunction == [0, 1, 2])
+		}
+	}
+	@Suite("SetAlphabet") struct SetAlphabetTests {
+		@Test("conjunction") func test_SetAlphabet_conjunction() {
+			let pet0: SetAlphabet<Int> = [ [10, 11, 12, 13], [20, 21, 22, 23] ];
+			let pet1: SetAlphabet<Int> = [ [10, 11, 20, 21], [12, 13, 22, 23] ];
+			let conjunction: SetAlphabet<Int> = pet0.conjunction(pet1);
+			#expect(conjunction == [ [10, 11], [12, 13], [20, 21], [22, 23] ])
+		}
+	}
+	@Suite("ClosedRangeAlphabet") struct ClosedRangeAlphabetTests {
+		@Test("conjunction") func test_ClosedRangeAlphabet_conjunction() {
+			let pet0: ClosedRangeAlphabet<Int> = [ [10...13], [20...23] ];
+			let pet1: ClosedRangeAlphabet<Int> = [ [10...21], [12...23] ];
+			let conjunction: ClosedRangeAlphabet<Int> = pet0.conjunction(pet1);
+			#expect(conjunction == [ [10...11], [12...13], [14...19], [20...21], [22...23] ])
+		}
+	}
+}
+
 @Suite("AlphabetTable") struct AlphabetTableTests {
 	@Test("SymbolAlphabet") func test_SymbolAlphabet() async throws {
 		//var dict = AlphabetTable<SymbolAlphabet<Int>, Int>()

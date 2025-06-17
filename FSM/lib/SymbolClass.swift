@@ -40,8 +40,8 @@ public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatab
 	static func label(of: SymbolClass) -> Symbol
 	func label(of: Symbol) -> Symbol
 
-	/// Compute an alphabet that adds the given partition, refining partitions where it overlaps existing partitions
-	func conjunction(_ newPartitions: Self) -> Self
+	/// Compute an alphabet that adds the given partitions, refining partitions where it overlaps existing partitions
+	func conjunction(_ other: Self) -> Self
 
 	/// Inserts the given partition into the Alphabet, refining partitions when the symbols already exists
 	mutating func insert(_ newPartition: SymbolClass)
@@ -247,9 +247,11 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 			let common = newElement.intersection(part)
 			if !common.isEmpty {
 				remainingNewElements.subtract(common)
-				partitions.remove(part)
-				partitions.insert(common)
-				partitions.insert(part.subtracting(common))
+				if part != common {
+					partitions.remove(part)
+					partitions.insert(common)
+					partitions.insert(part.subtracting(common))
+				}
 			}
 		}
 		if !remainingNewElements.isEmpty {
@@ -539,18 +541,6 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		symbols
 	}
 
-	/// Maps partition label to set of values in partition
-	private var partitions: Array<SymbolClass> {
-		return parts;
-		let labels = Set(parents).sorted()
-		var dict: Dictionary<Int, Array<ClosedRange<Symbol>>> = Dictionary(uniqueKeysWithValues: labels.map { ($0, []) })
-		for i in 0..<symbols.count {
-			let label = parents[i]
-			dict[label]!.append(symbols[i])
-		}
-		return labels.map { dict[$0]! }
-	}
-
 	public var partitionCount: Int {
 		Set(parents).count
 	}
@@ -685,12 +675,12 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	/// Mutations
 	public mutating func insert(_ newElement: SymbolClass) {
 		// TODO: Optimize this
-		self = Self(partitions: partitions + [newElement])
+		self = Self(partitions: parts + [newElement])
 	}
 
 	public mutating func remove(_ removeSymbols: SymbolClass) {
 		// TODO: Optimize this
-		self = Self(partitions: partitions.map { Self.difference($0, Self.intersection($0, removeSymbols)) })
+		self = Self(partitions: parts.map { Self.difference($0, Self.intersection($0, removeSymbols)) })
 	}
 
 	private mutating func resort() {

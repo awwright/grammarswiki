@@ -114,9 +114,11 @@ public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 			let common = newElement.intersection(part)
 			if !common.isEmpty {
 				remainingNewElements.subtract(common)
-				partitions.remove(part)
-				partitions.insert(common)
-				partitions.insert(part.subtracting(common))
+				if part != common {
+					partitions.remove(part)
+					partitions.insert(common)
+					partitions.insert(part.subtracting(common))
+				}
 			}
 		}
 		if !remainingNewElements.isEmpty {
