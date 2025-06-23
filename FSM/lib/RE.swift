@@ -35,53 +35,7 @@ public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilde
 	}
 
 	public var description: String {
-		func toString(_ other: Self) -> String {
-			if(other.precedence >= self.precedence) {
-				return "(\(other.description))"
-			}
-			return other.description
-		}
-		switch self {
-			case .alternation(let array):
-				if array.isEmpty { return "[^]" }
-				// If all in array are symbols, then map to an array of symbols
-				if array.allSatisfy({ if case .symbol = $0 { true } else { false }}) {
-					return combineRanges(array.map{ if case .symbol(let c) = $0 { c } else { fatalError() } }).joined(separator: "|")
-				}
-				return array.map(\.description).joined(separator: "|")
-			case .concatenation(let array): return array.isEmpty ? "" : array.map(toString).joined(separator: "")
-			case .star(let regex): return toString(regex) + "*"
-			case .symbol(let c): return getPrintable(c)
-		}
-	}
-
-	func combineRanges(_ rangeSet: Array<Symbol>) -> [String] {
-		// Handle empty set case
-		guard !rangeSet.isEmpty else { return [] }
-
-		// Convert set to array and sort by lower bound
-		let sortedRanges = rangeSet.sorted().map { $0...$0 }
-
-		// Initialize result with the first range
-		var merged: [ClosedRange<Symbol>] = [sortedRanges[0]]
-
-		// Iterate through remaining ranges
-		for current in sortedRanges.dropFirst() {
-			let last = merged.last!
-
-			// Check if current range is adjacent to or overlaps with the last merged range
-			if current.lowerBound <= last.upperBound + 1 {
-				// Merge by creating a new range with the same lower bound and the maximum upper bound
-				let newUpper = max(last.upperBound, current.upperBound)
-				merged[merged.count - 1] = last.lowerBound...newUpper
-			} else {
-				// If not adjacent or overlapping, add the current range as a new segment
-				merged.append(current)
-			}
-		}
-
-		return merged
-			.map { ($0.lowerBound==$0.upperBound) ? getPrintable($0.lowerBound) : ("[" + getPrintable($0.lowerBound) + "-" + getPrintable($0.upperBound) + "]") }
+		REDialectBuiltins.ecmascript.encode(self)
 	}
 
 	func getPrintable(_ char: Symbol) -> String {
@@ -161,19 +115,8 @@ public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilde
 		Self.alternation(range.map { Self.symbol($0) })
 	}
 
-	public func encode(dialect: REDialect) -> String {
-		func toString(_ other: Self) -> String {
-			if(other.precedence >= self.precedence) {
-				return "(\(other.encode(dialect: dialect))"
-			}
-			return other.encode(dialect: dialect)
-		}
-		switch self {
-			case .alternation(let array): return array.isEmpty ? "∅" : array.map(toString).joined(separator: "|")
-			case .concatenation(let array): return array.isEmpty ? "ε" : array.map(toString).joined(separator: ".")
-			case .star(let regex): return toString(regex) + "*"
-			case .symbol(let c): return String(c, radix: 0x10)
-		}
+	public func encode(_ dialect: REDialectProtocol) -> String {
+		return dialect.encode(self)
 	}
 
 	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternBuilder, PatternType.Symbol == Symbol {
@@ -187,18 +130,25 @@ public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilde
 }
 
 public struct REString<Symbol> where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
-	let dialect: REDialect;
+	let dialect: REDialectProtocol;
 	let pattern: REPattern<Symbol>;
 
 	var description: String {
-		return pattern.encode(dialect: dialect)
+		return pattern.encode(dialect)
 	}
 }
 
-public struct REDialect {
+public protocol REDialectProtocol {
+	/// Encodes a given REPattern into a string representation using this dialect.
+	func encode<Symbol>(_ pattern: REPattern<Symbol>) -> String where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger
+}
+
+/// Most regular expression dialects can be described with the appropriate parameters on this structure
+public struct REDialect: REDialectProtocol {
 	let openRegex: String           // Delimiter starting the pattern (e.g., "/" for Perl)
 	let closeRegex: String          // Delimiter ending the pattern (e.g., "/" for Perl)
 	let flags: String               // Flags for the pattern (e.g., "ims" for Perl)
+	let emptyClass: String          // A pattern that matches no characters (not even the empty string)
 	let openGroup: String           // String opening a group (e.g., "(")
 	let closeGroup: String          // String closing a group (e.g., ")")
 	let escapeChar: Character       // Character used for escaping (e.g., "\")
@@ -208,15 +158,60 @@ public struct REDialect {
 	let charClassMetaCharacters: Set<Character> // Special characters inside character classes (e.g., "^", "-")
 	let groupTypeIndicators: Set<String> // Indicators after openGroup for special groups (e.g., "?:", "?=")
 	let charClassEscapes: [String: Set<Character>] // Predefined character class escapes (e.g., "\s", "\w")
+
+	public init(openRegex: String, closeRegex: String, flags: String, openGroup: String, closeGroup: String, emptyClass: String, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>]) {
+		self.openRegex = openRegex
+		self.closeRegex = closeRegex
+		self.flags = flags
+		self.openGroup = openGroup
+		self.closeGroup = closeGroup
+		self.emptyClass = emptyClass
+		self.escapeChar = escapeChar
+		self.metaCharacters = metaCharacters
+		self.openCharClass = openCharClass
+		self.closeCharClass = closeCharClass
+		self.charClassMetaCharacters = charClassMetaCharacters
+		self.groupTypeIndicators = groupTypeIndicators
+		self.charClassEscapes = charClassEscapes
+	}
+	
+	public func encode<Symbol>(_ pattern: REPattern<Symbol>) -> String where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
+		func toString(_ other: REPattern<Symbol>) -> String {
+			if other.precedence >= pattern.precedence {
+				return "\(openGroup)\(other.encode(self))\(closeGroup)"
+			}
+			return other.encode(self)
+		}
+		
+		switch pattern {
+		case .alternation(let array):
+			if array.isEmpty { return emptyClass }
+			return array.map(\.description).joined(separator: "|")
+		case .concatenation(let array):
+			return array.isEmpty ? "\(openGroup)\(closeGroup)" : array.map(toString).joined(separator: "")
+		case .star(let regex):
+			return toString(regex) + "*"
+		case .symbol(let c):
+			// Convert symbol to character if possible, for readability
+			if let s = UnicodeScalar(Int(c)), metaCharacters.contains(Character(s)) {
+				return "\(escapeChar)\(Character(s))"
+			} else if let s = UnicodeScalar(Int(c)) {
+				return String(Character(s))
+			} else {
+				return "\\u{\(String(c, radix: 16, uppercase: true))}"
+			}
+		}
+	}
 }
 
 public struct REDialectBuiltins {
-	static let posixExtended = REDialect(
+	static let posixExtended: REDialectProtocol = REDialect(
 		openRegex: "",
 		closeRegex: "",
 		flags: "",
 		openGroup: "(",
 		closeGroup: ")",
+		emptyClass: "[^]",
 		escapeChar: "\\",
 		metaCharacters: Set([".", "[", "\\", "(", ")", "|", "*", "+", "?", "{"]),
 		openCharClass: "[",
@@ -232,12 +227,13 @@ public struct REDialectBuiltins {
 		]
 	)
 
-	static let perl = REDialect(
+	static let perl: REDialectProtocol = REDialect(
 		openRegex: "/",
 		closeRegex: "/",
 		flags: "imsx", // Example: case-insensitive, multiline, etc.
 		openGroup: "(",
 		closeGroup: ")",
+		emptyClass: "[^]",
 		escapeChar: "\\",
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
 		openCharClass: "[",
@@ -255,12 +251,13 @@ public struct REDialectBuiltins {
 		]
 	)
 
-	let ecmascript = REDialect(
+	static let ecmascript: REDialectProtocol = REDialect(
 		openRegex: "/",
 		closeRegex: "/",
 		flags: "gimsuy", // Example: global, multiline, unicode, etc.
 		openGroup: "(",
 		closeGroup: ")",
+		emptyClass: "[^]",
 		escapeChar: "\\",
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
 		openCharClass: "[",
