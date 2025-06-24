@@ -43,7 +43,7 @@ import Testing;
 
 		@Test("Character range")
 		func test_UInt8_union_range() async throws {
-			let union = REPattern.union([REPattern.symbol(0x41), REPattern.symbol(0x42), REPattern.symbol(0x43)])
+			let union = REPattern.union([REPattern.range(0x41...0x43)])
 			#expect(union.description == "[A-C]")
 		}
 
@@ -62,7 +62,7 @@ import Testing;
 			let c = REPattern.symbol(0x33);
 			let concat1 = a.concatenate(b)
 			let concat2 = concat1.concatenate(c)
-			#expect(concat2.description == "123", "Nested concatenations should flatten with '.'")
+			#expect(concat2.description == "123")
 		}
 
 		@Test("Kleene star")

@@ -1,15 +1,16 @@
 // Structures for parsing and generating most dialects of Regular Expressions
 
 /// A parser for a common form of regular expressions
-public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilder, SymbolClassPatternBuilder, Hashable where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
+public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPatternBuilder, Hashable where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
 	public typealias SymbolClass = ClosedRangeAlphabet<Symbol>.SymbolClass
 	// An instance of this enum represents a set of sequences of symbols
 	public typealias Element = Array<Symbol>
 
+	// MARK: Properties
 	case alternation([Self])
 	case concatenation([Self])
 	case star(Self)
-	case symbol(Symbol)
+	case range(ClosedRange<Symbol>)
 
 	public init() {
 		self = .alternation([])
@@ -23,6 +24,16 @@ public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilde
 		self = .concatenation(sequence.map{ Self.symbol($0) })
 	}
 
+	// MARK: Static functions
+	public static func symbol(_ element: Symbol) -> REPattern<Symbol> {
+		.range(element...element)
+	}
+
+	public static func symbol(range: ClosedRangeAlphabet<Symbol>.SymbolClass) -> REPattern<Symbol> {
+		Self.union(range.map { Self.range($0) })
+	}
+
+	// MARK: Computed properties
 	/// A set of all the symbols in use in this regex.
 	/// Using any symbols outside this set guarantees a transition to the oblivion state (rejection).
 	public var alphabet: Set<Symbol> {
@@ -30,7 +41,7 @@ public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilde
 			case .alternation(let array): return Set(array.flatMap(\.alphabet))
 			case .concatenation(let array): return Set(array.flatMap(\.alphabet))
 			case .star(let regex): return regex.alphabet
-			case .symbol(let c): return [c]
+			case .range(let c): return Set(c) // Cast ClosedRange to a Set
 		}
 	}
 
@@ -38,23 +49,12 @@ public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilde
 		REDialectBuiltins.ecmascript.encode(self)
 	}
 
-	func getPrintable(_ char: Symbol) -> String {
-		if(char < 0x20) {
-			"\\x\(String(char, radix: 16, uppercase: true)))"
-		} else if (char >= 0x20 && char <= 0x7E) {
-//			String(UnicodeScalar(char)!)
-			String(UnicodeScalar(Int(char))!)
-		} else {
-			"\\u{\(String(char, radix: 16, uppercase: true)))}"
-		}
-	}
-
 	var precedence: Int {
 		switch self {
 			case .alternation: return 4
 			case .concatenation: return 3
 			case .star: return 2
-			case .symbol: return 1
+			case .range: return 1
 		}
 	}
 
@@ -97,29 +97,20 @@ public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilde
 			case .alternation(let array): return array.isEmpty ? .concatenation([]) : .star(self)
 			case .concatenation(let array): return array.isEmpty ? self : .star(self)
 			case .star: return self
-			case .symbol: return .star(self)
+			case .range: return .star(self)
 		}
-	}
-
-	public static func symbol(range: SymbolClass) -> Self {
-		Self.alternation(range.flatMap { $0.map { Self.symbol($0) } })
-	}
-
-	public static func range(_ range: ClosedRange<Symbol>) -> REPattern<Symbol> {
-		// FIXME: this should just store a ClosedRange
-		Self.alternation(range.map { Self.symbol($0) })
 	}
 
 	public func encode(_ dialect: REDialectProtocol) -> String {
 		return dialect.encode(self)
 	}
 
-	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RegularPatternBuilder, PatternType.Symbol == Symbol {
+	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: ClosedRangePatternBuilder, PatternType.Symbol == Symbol {
 		switch self {
 			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .star(let regex): return regex.toPattern(as: PatternType.self).star()
-			case .symbol(let c): return PatternType.symbol(c)
+			case .range(let c): return PatternType.range(c)
 		}
 	}
 }
@@ -140,19 +131,19 @@ public protocol REDialectProtocol {
 
 /// Most regular expression dialects can be described with the appropriate parameters on this structure
 public struct REDialect: REDialectProtocol {
-	let openRegex: String           // Delimiter starting the pattern (e.g., "/" for Perl)
-	let closeRegex: String          // Delimiter ending the pattern (e.g., "/" for Perl)
-	let flags: String               // Flags for the pattern (e.g., "ims" for Perl)
-	let emptyClass: String          // A pattern that matches no characters (not even the empty string)
-	let openGroup: String           // String opening a group (e.g., "(")
-	let closeGroup: String          // String closing a group (e.g., ")")
-	let escapeChar: Character       // Character used for escaping (e.g., "\")
-	let metaCharacters: Set<Character> // Special characters outside character classes (e.g., ".", "*")
-	let openCharClass: String       // String opening a character class (e.g., "[")
-	let closeCharClass: String      // String closing a character class (e.g., "]")
-	let charClassMetaCharacters: Set<Character> // Special characters inside character classes (e.g., "^", "-")
-	let groupTypeIndicators: Set<String> // Indicators after openGroup for special groups (e.g., "?:", "?=")
-	let charClassEscapes: [String: Set<Character>] // Predefined character class escapes (e.g., "\s", "\w")
+	public let openRegex: String           // Delimiter starting the pattern (e.g., "/" for Perl)
+	public let closeRegex: String          // Delimiter ending the pattern (e.g., "/" for Perl)
+	public let flags: String               // Flags for the pattern (e.g., "ims" for Perl)
+	public let emptyClass: String          // A pattern that matches no characters (not even the empty string)
+	public let openGroup: String           // String opening a group (e.g., "(")
+	public let closeGroup: String          // String closing a group (e.g., ")")
+	public let escapeChar: Character       // Character used for escaping (e.g., "\")
+	public let metaCharacters: Set<Character> // Special characters outside character classes (e.g., ".", "*")
+	public let openCharClass: String       // String opening a character class (e.g., "[")
+	public let closeCharClass: String      // String closing a character class (e.g., "]")
+	public let charClassMetaCharacters: Set<Character> // Special characters inside character classes (e.g., "^", "-")
+	public let groupTypeIndicators: Set<String> // Indicators after openGroup for special groups (e.g., "?:", "?=")
+	public let charClassEscapes: [String: Set<Character>] // Predefined character class escapes (e.g., "\s", "\w")
 
 	public init(openRegex: String, closeRegex: String, flags: String, openGroup: String, closeGroup: String, emptyClass: String, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>]) {
 		self.openRegex = openRegex
@@ -169,7 +160,7 @@ public struct REDialect: REDialectProtocol {
 		self.groupTypeIndicators = groupTypeIndicators
 		self.charClassEscapes = charClassEscapes
 	}
-	
+
 	public func encode<Symbol>(_ pattern: REPattern<Symbol>) -> String where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
 		func toString(_ other: REPattern<Symbol>) -> String {
 			if other.precedence >= pattern.precedence {
@@ -177,23 +168,33 @@ public struct REDialect: REDialectProtocol {
 			}
 			return other.encode(self)
 		}
-		
+
 		switch pattern {
 		case .alternation(let array):
 			if array.isEmpty { return emptyClass }
 			return array.map(\.description).joined(separator: "|")
 		case .concatenation(let array):
-			return array.isEmpty ? "\(openGroup)\(closeGroup)" : array.map(toString).joined(separator: "")
+			return array.isEmpty ? "" : array.map(toString).joined(separator: "")
 		case .star(let regex):
 			return toString(regex) + "*"
-		case .symbol(let c):
-			// Convert symbol to character if possible, for readability
-			if let s = UnicodeScalar(Int(c)), metaCharacters.contains(Character(s)) {
+		case .range(let r):
+			if r.lowerBound == r.upperBound, let s = UnicodeScalar(Int(r.lowerBound)), metaCharacters.contains(Character(s)) {
 				return "\(escapeChar)\(Character(s))"
-			} else if let s = UnicodeScalar(Int(c)) {
-				return String(Character(s))
+			} else if r.lowerBound == r.upperBound {
+				return getPrintable(r.lowerBound)
 			} else {
-				return "\\u{\(String(c, radix: 16, uppercase: true))}"
+				return "\(openCharClass)\(getPrintable(r.lowerBound))-\(getPrintable(r.upperBound))\(closeCharClass)"
+			}
+		}
+
+		func getPrintable(_ char: Symbol) -> String {
+			if(char < 0x20) {
+				"\\x\(String(char, radix: 16, uppercase: true)))"
+			} else if (char >= 0x20 && char <= 0x7E) {
+				//			String(UnicodeScalar(char)!)
+				String(UnicodeScalar(Int(char))!)
+			} else {
+				"\\u{\(String(char, radix: 16, uppercase: true)))}"
 			}
 		}
 	}
@@ -217,7 +218,6 @@ public struct REDialectBuiltins {
 			"[:alnum:]": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"),
 			"[:alpha:]": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"),
 			"[:digit:]": Set("0123456789"),
-//			"[:space:]": Set(" \t\n\r\f\v"),
 			// Add more POSIX classes like [:lower:], [:upper:], etc.
 		]
 	)
@@ -237,11 +237,7 @@ public struct REDialectBuiltins {
 		groupTypeIndicators: Set(["?:", "?=", "?!", "?<=", "?<!", "?>", "?P<"]),
 		charClassEscapes: [
 			"\\d": Set("0123456789"),                    // Digits
-//			"\\D": Set(Character.min...Character.max).subtracting(Set("0123456789")), // Non-digits
-//			"\\s": Set(" \t\n\r\f\v"),                   // Whitespace
-//			"\\S": Set(Character.min...Character.max).subtracting(Set(" \t\n\r\f\v")), // Non-whitespace
 			"\\w": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"), // Word characters
-//			"\\W": Set(Character.min...Character.max).subtracting(Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")), // Non-word
 			// Note: \p{} for Unicode properties could be added, but requires a more complex representation
 		]
 	)
@@ -261,11 +257,7 @@ public struct REDialectBuiltins {
 		groupTypeIndicators: Set(["?:", "?=", "?!", "?<=", "?<!", "?<"]),
 		charClassEscapes: [
 			"\\d": Set("0123456789"),
-//			"\\D": Set(Character.min...Character.max).subtracting(Set("0123456789")),
-//			"\\s": Set(" \t\n\r\f\v"),
-//			"\\S": Set(Character.min...Character.max).subtracting(Set(" \t\n\r\f\v")),
 			"\\w": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"),
-//			"\\W": Set(Character.min...Character.max).subtracting(Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"))
 		]
 	)
 }
