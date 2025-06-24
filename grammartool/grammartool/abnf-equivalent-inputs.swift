@@ -20,7 +20,7 @@ func abnf_equivalent_inputs(arguments: Array<String>){
 		print(error.localizedDescription);
 		return;
 	}
-	let fsm: DFA<Array<UInt32>> = try! abnfTree.toPattern(rules: ABNFBuiltins<DFA<Array<UInt32>>>.dictionary);
+	let fsm: DFA<UInt32> = try! abnfTree.toPattern(rules: ABNFBuiltins<DFA<UInt32>>.dictionary);
 
 	let equivalent = fsm.equivalentInputs(input: input.flatMap{ $0.unicodeScalars.map(\.value) });
 	guard let equivalent else {
