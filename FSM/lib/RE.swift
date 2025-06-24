@@ -2,6 +2,10 @@
 
 /// A parser for a common form of regular expressions
 public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPatternBuilder, Hashable where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
+	public static func range(_ range: ClosedRange<Symbol>) -> REPattern<Symbol> {
+		.range(range)
+	}
+	
 	public typealias SymbolClass = ClosedRangeAlphabet<Symbol>.SymbolClass
 	// An instance of this enum represents a set of sequences of symbols
 	public typealias Element = Array<Symbol>
@@ -10,7 +14,7 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 	case alternation([Self])
 	case concatenation([Self])
 	case star(Self)
-	case range(ClosedRange<Symbol>)
+	case range(SymbolClass)
 
 	public init() {
 		self = .alternation([])
@@ -26,11 +30,11 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 
 	// MARK: Static functions
 	public static func symbol(_ element: Symbol) -> REPattern<Symbol> {
-		.range(element...element)
+		.range([element...element])
 	}
 
 	public static func symbol(range: ClosedRangeAlphabet<Symbol>.SymbolClass) -> REPattern<Symbol> {
-		Self.union(range.map { Self.range($0) })
+		Self.range(range)
 	}
 
 	// MARK: Computed properties
@@ -41,7 +45,7 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 			case .alternation(let array): return Set(array.flatMap(\.alphabet))
 			case .concatenation(let array): return Set(array.flatMap(\.alphabet))
 			case .star(let regex): return regex.alphabet
-			case .range(let c): return Set(c) // Cast ClosedRange to a Set
+		case .range(let c): return Set(c.flatMap { $0 }) // Cast ClosedRange to a Set
 		}
 	}
 
@@ -110,7 +114,7 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .star(let regex): return regex.toPattern(as: PatternType.self).star()
-			case .range(let c): return PatternType.range(c)
+			case .range(let c): return PatternType.union(c.map { PatternType.range($0) })
 		}
 	}
 }
@@ -177,24 +181,26 @@ public struct REDialect: REDialectProtocol {
 			return array.isEmpty ? "" : array.map(toString).joined(separator: "")
 		case .star(let regex):
 			return toString(regex) + "*"
-		case .range(let r):
-			if r.lowerBound == r.upperBound, let s = UnicodeScalar(Int(r.lowerBound)), metaCharacters.contains(Character(s)) {
-				return "\(escapeChar)\(Character(s))"
-			} else if r.lowerBound == r.upperBound {
-				return getPrintable(r.lowerBound)
-			} else {
-				return "\(openCharClass)\(getPrintable(r.lowerBound))-\(getPrintable(r.upperBound))\(closeCharClass)"
+		case .range(let list):
+			if list.count == 1 && list[0].lowerBound == list[0].upperBound {
+				return getPrintable(list[0].lowerBound)
 			}
+			return openCharClass + list.map { r in
+				r.lowerBound == r.upperBound ? getPrintable(r.lowerBound) : "\(getPrintable(r.lowerBound))-\(getPrintable(r.upperBound))"
+			}.joined(separator: "") + closeCharClass
 		}
 
 		func getPrintable(_ char: Symbol) -> String {
+			//if metaCharacters.contains(Int(char)) {
+			//	"\(escapeChar)\(Character(char))"
+			//} else
 			if(char < 0x20) {
 				"\\x\(String(char, radix: 16, uppercase: true)))"
 			} else if (char >= 0x20 && char <= 0x7E) {
 				//			String(UnicodeScalar(char)!)
 				String(UnicodeScalar(Int(char))!)
 			} else {
-				"\\u{\(String(char, radix: 16, uppercase: true)))}"
+				"\\u{\(String(char, radix: 16, uppercase: true))}"
 			}
 		}
 	}
