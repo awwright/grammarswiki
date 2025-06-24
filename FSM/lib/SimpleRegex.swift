@@ -27,10 +27,6 @@ public indirect enum SimpleRegex<Symbol>: RegularPattern, SymbolClassPatternBuil
 		.symbol(range)
 	}
 
-	public static func symbols(_ range: some Sequence<Symbol>) -> SimpleRegex<Symbol> {
-		Self.alternation(range.map { Self.symbol($0) })
-	}
-
 	/// A set of all the symbols in use in this regex.
 	/// Using any symbols outside this set guarantees a transition to the oblivion state (rejection).
 	public var alphabet: Set<SymbolClass> {

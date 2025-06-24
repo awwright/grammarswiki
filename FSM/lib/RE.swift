@@ -101,11 +101,6 @@ public indirect enum REPattern<Symbol>: RegularPattern, ClosedRangePatternBuilde
 		}
 	}
 
-	/// Convenience function for specifying a range of symbols
-	public static func symbol(_ range: some Sequence<Symbol>) -> REPattern<Symbol> {
-		Self.alternation(range.map { Self.symbol($0) })
-	}
-
 	public static func symbol(range: SymbolClass) -> Self {
 		Self.alternation(range.flatMap { $0.map { Self.symbol($0) } })
 	}
