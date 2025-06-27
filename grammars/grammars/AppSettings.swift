@@ -6,7 +6,7 @@ struct SettingsView: View {
 	@AppStorage("showStateCount") private var showStateCount: Bool = true
 	@AppStorage("showFSM") private var showFSM: Bool = true
 	@AppStorage("showRegex") private var showRegex: Bool = true
-	@AppStorage("showGraphViz") private var showGraphViz: Bool = true
+	@AppStorage("showExport") private var showExport: Bool = true
 	@AppStorage("showInstances") private var showInstances: Bool = true
 	@AppStorage("showTestInput") private var showTestInput: Bool = true
 	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.posix.rawValue
@@ -18,7 +18,7 @@ struct SettingsView: View {
 				Toggle("Show State Count", isOn: $showStateCount)
 				Toggle("Show FSM", isOn: $showFSM)
 				Toggle("Show Regex", isOn: $showRegex)
-				Toggle("Show GraphViz", isOn: $showGraphViz)
+				Toggle("Show GraphViz", isOn: $showExport)
 				Toggle("Show Example Instances", isOn: $showInstances)
 				Toggle("Show Test Input", isOn: $showTestInput)
 				Picker("Regex Dialect", selection: $regexDialect) {

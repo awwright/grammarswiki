@@ -134,7 +134,7 @@ struct DocumentDetail: View {
 	@AppStorage("showStateCount") private var showStateCount: Bool = true
 	@AppStorage("showFSM") private var showFSM: Bool = true
 	@AppStorage("showRegex") private var showRegex: Bool = true
-	@AppStorage("showGraphViz") private var showGraphViz: Bool = true
+	@AppStorage("showExport") private var showExport: Bool = true
 	@AppStorage("showInstances") private var showInstances: Bool = true
 	@AppStorage("showTestInput") private var showTestInput: Bool = true
 	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.posix.rawValue
@@ -179,9 +179,9 @@ struct DocumentDetail: View {
 						}
 					}
 
-					if showGraphViz {
+					if showExport {
 						// TODO: "Copy to clipboard" button
-						Tab("GraphViz", systemImage: "pencil") {
+						Tab("FSM", systemImage: "pencil") {
 							ScrollView {
 								FSMExportView(rule_alphabet: $rule_alphabet, rule_fsm: $rule_fsm)
 								Spacer()

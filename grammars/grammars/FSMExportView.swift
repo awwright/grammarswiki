@@ -20,7 +20,7 @@ struct FSMExportView: View {
 	}
 
 	var body: some View {
-		Group {
+		VStack(spacing: 0) {
 			Form {
 				Section(header: Text("Format Options").font(.headline)) {
 					Picker("Regex Dialect", selection: $exportFormatSelected) {
@@ -34,15 +34,42 @@ struct FSMExportView: View {
 			}
 			.padding()
 
-			if let vizSource {
-				Text(vizSource)
-					.textSelection(.enabled)
-					.border(Color.gray, width: 1)
-			} else {
-				Text("Building...")
-					.foregroundColor(.gray)
+
+
+			Button(action: {
+				if let vizSource = vizSource {
+#if os(macOS)
+					let pasteboard = NSPasteboard.general
+					pasteboard.clearContents()
+					pasteboard.setString(vizSource, forType: .string)
+#elseif os(iOS)
+					UIPasteboard.general.string = vizSource
+#endif
+				}
+			}) {
+				Text("Copy to Clipboard")
+			}
+			.padding()
+			.disabled(vizSource == nil)
+
+			ScrollView {
+				VStack(alignment: .leading, spacing: 10) {
+					if let vizSource {
+						Text(vizSource)
+							.textSelection(.enabled)
+							.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+							.padding()
+							.border(Color.gray, width: 1)
+					} else {
+						Text("Building...")
+							.foregroundColor(.gray)
+							.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+					}
+				}
+				.frame(maxWidth: .infinity, maxHeight: .infinity)
 			}
 		}
+		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.onChange(of: rule_alphabet) { computeVizSource() }
 		.onChange(of: rule_fsm) { computeVizSource() }
 		.onChange(of: exportFormatSelected) { computeVizSource() }
