@@ -6,10 +6,10 @@ func abnf_expression_test_input_help(arguments: Array<String>) {
 	print("\tTests the given input against the given ABNF expression");
 }
 
-func abnf_expression_test_input(arguments: Array<String>){
+func abnf_expression_test_input(arguments: Array<String>) -> Int32 {
 	guard arguments.count == 4  else {
 		abnf_expression_test_input_help(arguments: arguments);
-		return;
+		return 1;
 	}
 	let abnfExpression = arguments[2];
 	let input = arguments[3];
@@ -19,14 +19,14 @@ func abnf_expression_test_input(arguments: Array<String>){
 	do { abnfTree = try ABNFAlternation<UInt32>.parse(abnfExpression.utf8); }
 	catch {
 		print("Could not parse ABNF");
-		return;
+		return 2;
 	}
 
 	let fsm: DFA<UInt32>;
 	do { fsm = try abnfTree.toPattern(rules: builtins); }
 	catch {
 		print("Could not convert ABNF to DFA");
-		return;
+		return 2;
 	}
 
 	if(fsm.contains(input.unicodeScalars.map{ $0.value })){
@@ -34,4 +34,5 @@ func abnf_expression_test_input(arguments: Array<String>){
 	}else{
 		print("Rejected")
 	}
+	return 0
 }

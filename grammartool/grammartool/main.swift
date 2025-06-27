@@ -25,17 +25,24 @@ func bold(_ text: String) -> String {
 }
 
 let programName = arguments.count >= 2 ? arguments[1] : nil;
+let exitCode: Int32;
 
-switch programName {
+exitCode = switch programName {
 	case "abnf-expression-test-input": abnf_expression_test_input(arguments: arguments);
 	case "abnf-to-regex": abnf_to_regex(arguments: arguments);
+	case "abnf-to-regex-tests": abnf_to_regex_tests(arguments: arguments);
 	case "abnf-equivalent-inputs": abnf_equivalent_inputs(arguments: arguments);
+	default: defaultExitCode();
+}
 
-	default:
+func defaultExitCode() -> Int32 {
 	print("Usage: \(arguments[0]) <commands> [commands options...]");
 	print("Tests an input against a grammar description");
 	print("");
 	abnf_expression_test_input_help(arguments: arguments);
 	abnf_to_regex_help(arguments: arguments);
 	abnf_equivalent_inputs_help(arguments: arguments);
+	return 1;
 }
+
+exit(exitCode)
