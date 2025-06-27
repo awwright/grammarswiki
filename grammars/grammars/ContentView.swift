@@ -183,7 +183,7 @@ struct DocumentDetail: View {
 						// TODO: "Copy to clipboard" button
 						Tab("GraphViz", systemImage: "pencil") {
 							ScrollView {
-								GraphVizSourceView(rule_alphabet: $rule_alphabet, rule_fsm: $rule_fsm)
+								FSMExportView(rule_alphabet: $rule_alphabet, rule_fsm: $rule_fsm)
 								Spacer()
 							}
 						}
