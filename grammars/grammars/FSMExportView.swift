@@ -102,9 +102,9 @@ struct FSMExportView: View {
 					result = dfa.toViz();
 				case "Swift FSM object":
 					result = """
-						FSM<>(
+						RangeDFA<UInt32>(
 							states: [
-						\(dfa.states.map { "\t\t[" + $0.map { "\($0.key): \($0.value)" }.joined() + "]," }.joined(separator: "\n"))
+						\(dfa.states.map { $0.isEmpty ? "\t\t[:]," : "\t\t[" + $0.map { "[\($0.key.map { "\($0)" }.joined(separator: ", "))]: \($0.value)" }.joined(separator: ", ") + "]," }.joined(separator: "\n"))
 							],
 							initial: \(dfa.initial),
 							finals: \(dfa.finals)

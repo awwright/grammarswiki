@@ -360,6 +360,7 @@ struct DocumentDetail: View {
 					} else if let s = selectedRule, let content_rulelist, content_rulelist.dictionary[s] == nil, let firstRule = content_rulelist.rules.first {
 						selectedRule = firstRule.rulename.label
 					}
+					messages = [];
 				}
 			} catch let error as ABNFParseError<Array<UInt32>.Index> {
 				await MainActor.run {
@@ -421,7 +422,6 @@ struct DocumentDetail: View {
 					rule_alphabet = result_alphabet
 				}
 			} catch let error as ABNFExportError {
-				print(error)
 				await MainActor.run {
 					rule_fsm = nil
 					rule_fsm_error = "ABNFExportError: " + String(describing: error)
