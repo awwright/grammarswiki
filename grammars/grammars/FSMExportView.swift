@@ -34,8 +34,6 @@ struct FSMExportView: View {
 			}
 			.padding()
 
-
-
 			Button(action: {
 				if let vizSource = vizSource {
 #if os(macOS)

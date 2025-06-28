@@ -36,7 +36,8 @@ struct SettingsView: View {
 
 // Enum to represent regex dialects
 enum RegexDialect: String, CaseIterable, Identifiable {
-	case posix = "POSIX"            // Standard POSIX regular expressions
+	case posix = "POSIX Basic"      // Standard POSIX regular expressions
+	case eposix = "POSIX Extended"  // Extended POSIX regular expressions (egrep)
 	case pcre = "PCRE"              // Perl-Compatible Regular Expressions
 	case ecma = "ECMA"              // ECMAScript (JavaScript-style regex)
 	case java = "Java"              // Java's regex (java.util.regex)
@@ -47,6 +48,7 @@ enum RegexDialect: String, CaseIterable, Identifiable {
 	case rust = "Rust"              // Rust's regex crate
 	case go = "Go"                  // Go's regexp package
 	case pcre2 = "PCRE2"            // Updated PCRE version
+	case IRegexp = "I-Regexp"       // RFC 9485
 
 	var id: String { self.rawValue }
 }

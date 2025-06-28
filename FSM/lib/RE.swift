@@ -3,7 +3,7 @@
 /// A parser for a common form of regular expressions
 public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPatternBuilder, Hashable where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
 	public static func range(_ range: ClosedRange<Symbol>) -> REPattern<Symbol> {
-		.range(range)
+		.range([range])
 	}
 	
 	public typealias SymbolClass = ClosedRangeAlphabet<Symbol>.SymbolClass
@@ -50,7 +50,7 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 	}
 
 	public var description: String {
-		REDialectBuiltins.ecmascript.encode(self)
+		REDialectBuiltins.swift.encode(self)
 	}
 
 	var precedence: Int {
@@ -135,8 +135,10 @@ public protocol REDialectProtocol {
 
 /// Most regular expression dialects can be described with the appropriate parameters on this structure
 public struct REDialect: REDialectProtocol {
-	public let openRegex: String           // Delimiter starting the pattern (e.g., "/" for Perl)
-	public let closeRegex: String          // Delimiter ending the pattern (e.g., "/" for Perl)
+	public let openQuote: String           // Delimiter starting the pattern (e.g., "/" for Perl)
+	public let closeQuote: String          // Delimiter ending the pattern (e.g., "/" for Perl)
+	public let startAnchor: String         // Delimiter for matching the start of the input, if necessary
+	public let endAnchor: String           // Delimiter for matching EOF, if necessary
 	public let flags: String               // Flags for the pattern (e.g., "ims" for Perl)
 	public let emptyClass: String          // A pattern that matches no characters (not even the empty string)
 	public let openGroup: String           // String opening a group (e.g., "(")
@@ -149,9 +151,11 @@ public struct REDialect: REDialectProtocol {
 	public let groupTypeIndicators: Set<String> // Indicators after openGroup for special groups (e.g., "?:", "?=")
 	public let charClassEscapes: [String: Set<Character>] // Predefined character class escapes (e.g., "\s", "\w")
 
-	public init(openRegex: String, closeRegex: String, flags: String, openGroup: String, closeGroup: String, emptyClass: String, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>]) {
-		self.openRegex = openRegex
-		self.closeRegex = closeRegex
+	public init(openQuote: String, closeQuote: String, startAnchor: String, endAnchor: String, flags: String, openGroup: String, closeGroup: String, emptyClass: String, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>]) {
+		self.openQuote = openQuote
+		self.closeQuote = closeQuote
+		self.startAnchor = startAnchor
+		self.endAnchor = endAnchor
 		self.flags = flags
 		self.openGroup = openGroup
 		self.closeGroup = closeGroup
@@ -207,9 +211,32 @@ public struct REDialect: REDialectProtocol {
 }
 
 public struct REDialectBuiltins {
+	static let swift: REDialectProtocol = REDialect(
+		openQuote: "/",
+		closeQuote: "/",
+		startAnchor: "^",
+		endAnchor: "$",
+		flags: "gimsuy", // Example: global, multiline, unicode, etc.
+		openGroup: "(",
+		closeGroup: ")",
+		emptyClass: "[^]",
+		escapeChar: "\\",
+		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
+		openCharClass: "[",
+		closeCharClass: "]",
+		charClassMetaCharacters: Set(["^", "-", "]"]),
+		groupTypeIndicators: Set(["?:", "?=", "?!", "?<=", "?<!", "?<"]),
+		charClassEscapes: [
+			"\\d": Set("0123456789"),
+			"\\w": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"),
+		]
+	)
+
 	static let posixExtended: REDialectProtocol = REDialect(
-		openRegex: "",
-		closeRegex: "",
+		openQuote: "/",
+		closeQuote: "/",
+		startAnchor: "",
+		endAnchor: "",
 		flags: "",
 		openGroup: "(",
 		closeGroup: ")",
@@ -229,8 +256,10 @@ public struct REDialectBuiltins {
 	)
 
 	static let perl: REDialectProtocol = REDialect(
-		openRegex: "/",
-		closeRegex: "/",
+		openQuote: "/",
+		closeQuote: "/",
+		startAnchor: "^",
+		endAnchor: "$",
 		flags: "imsx", // Example: case-insensitive, multiline, etc.
 		openGroup: "(",
 		closeGroup: ")",
@@ -249,8 +278,10 @@ public struct REDialectBuiltins {
 	)
 
 	static let ecmascript: REDialectProtocol = REDialect(
-		openRegex: "/",
-		closeRegex: "/",
+		openQuote: "/",
+		closeQuote: "/",
+		startAnchor: "^",
+		endAnchor: "$",
 		flags: "gimsuy", // Example: global, multiline, unicode, etc.
 		openGroup: "(",
 		closeGroup: ")",
