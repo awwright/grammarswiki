@@ -200,6 +200,8 @@ public struct REDialect: REDialectProtocol {
 			//} else
 			if(char < 0x20) {
 				"\\x\(String(char, radix: 16, uppercase: true)))"
+			} else if metaCharacters.contains(Character((UnicodeScalar(Int(char))!))) {
+				"\\\(Character(UnicodeScalar(Int(char))!))"
 			} else if (char >= 0x20 && char <= 0x7E) {
 				//			String(UnicodeScalar(char)!)
 				String(UnicodeScalar(Int(char))!)
@@ -260,7 +262,7 @@ public struct REDialectBuiltins {
 		closeQuote: "/",
 		startAnchor: "^",
 		endAnchor: "$",
-		flags: "imsx", // Example: case-insensitive, multiline, etc.
+		flags: "imsx",
 		openGroup: "(",
 		closeGroup: ")",
 		emptyClass: "[^]",
@@ -282,7 +284,7 @@ public struct REDialectBuiltins {
 		closeQuote: "/",
 		startAnchor: "^",
 		endAnchor: "$",
-		flags: "gimsuy", // Example: global, multiline, unicode, etc.
+		flags: "gimsuy",
 		openGroup: "(",
 		closeGroup: ")",
 		emptyClass: "[^]",

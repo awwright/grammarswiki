@@ -9,7 +9,7 @@ struct SettingsView: View {
 	@AppStorage("showExport") private var showExport: Bool = true
 	@AppStorage("showInstances") private var showInstances: Bool = true
 	@AppStorage("showTestInput") private var showTestInput: Bool = true
-	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.posix.rawValue
+	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.swift.rawValue
 
 	var body: some View {
 		Form {
@@ -36,6 +36,7 @@ struct SettingsView: View {
 
 // Enum to represent regex dialects
 enum RegexDialect: String, CaseIterable, Identifiable {
+	case swift = "Swift"            // Swift regular expression parser
 	case posix = "POSIX Basic"      // Standard POSIX regular expressions
 	case eposix = "POSIX Extended"  // Extended POSIX regular expressions (egrep)
 	case pcre = "PCRE"              // Perl-Compatible Regular Expressions

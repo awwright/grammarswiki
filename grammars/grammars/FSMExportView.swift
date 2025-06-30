@@ -75,13 +75,14 @@ struct FSMExportView: View {
 	}
 
 	private func computeVizSource() {
-		guard let dfa = rule_fsm else {
+		guard let rule_fsm else {
 			vizSource = nil
 			return
 		}
 		// Take a copy of exportFormatSelected to read in a Task
 		let exportFormatSelected = exportFormatSelected;
 		Task.detached(priority: .userInitiated) {
+			let dfa = rule_fsm.minimized();
 //			var viz = "";
 //			viz += "digraph G {\n";
 //			viz += "\t_initial [shape=point];\n";
