@@ -86,6 +86,7 @@ struct Tests {
 		),
 		// Single characters 0x20...0x2F
 		singleCharacter(" "),
+		singleCharacter("!"),
 		singleCharacter("\""),
 		singleCharacter("#"),
 		singleCharacter("$"),
@@ -100,7 +101,13 @@ struct Tests {
 		singleCharacter("-"),
 		singleCharacter("."),
 		singleCharacter("/"),
-		// Add more test cases
+		rangeCharacters(" ", "/"),
+		rangeCharacters("0", "9"),
+		rangeCharacters("A", "z"),
+		rangeCharacters("-", "."),
+		rangeCharacters("[", "]"),
+		rangeCharacters(" ", "["),
+		rangeCharacters(" ", "]"),
 	]
 
 	static func singleCharacter(_ character: Character) -> PatternTestCase {
@@ -118,12 +125,26 @@ struct Tests {
 			rejectingInputs: (0...0x7F).map { String((UnicodeScalar($0)!)) }.filter { $0 != String(character) }
 		)
 	}
+
+	static func rangeCharacters(_ lower: Character, _ upper: Character) -> PatternTestCase {
+		PatternTestCase(
+			description: "\(lower)-\(upper)",
+			pattern: RangeDFA<UInt32>(
+				states: [
+					[[UInt32(lower.asciiValue!)...UInt32(upper.asciiValue!)]: 1],
+					[:],
+				],
+				initial: 0,
+				finals: [1]
+			),
+			acceptingInputs: ((lower.asciiValue!)...(upper.asciiValue!)).map { String((UnicodeScalar($0))) },
+			rejectingInputs: (0...0x7F).map { String((UnicodeScalar($0)!)) }.filter { !((lower.asciiValue!)...(upper.asciiValue!)).map { String((UnicodeScalar($0))) }.contains($0) }
+		)
+	}
 }
 
 @Suite("REDialect") struct REDialectTests {
 	@Suite("Swift RegExp") struct POSIXGrepTests {
-		//let generator: RegexGenerator = JavaScriptRegexGenerator() // Your generator
-
 		@Test("Swift RegExp pattern", arguments: Tests.standardTestCases)
 		func testPattern(testCase: PatternTestCase) async throws {
 			//try await testRegexPatterns(generator: generator, dialect: .javascript, testCase: testCase)
