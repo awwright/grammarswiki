@@ -187,14 +187,14 @@ public struct REDialect: REDialectProtocol {
 			return toString(regex) + "*"
 		case .range(let list):
 			if list.count == 1 && list[0].lowerBound == list[0].upperBound {
-				return getPrintable(list[0].lowerBound)
+				return charPrintable(list[0].lowerBound)
 			}
 			return openCharClass + list.map { r in
-				r.lowerBound == r.upperBound ? getPrintable(r.lowerBound) : "\(getPrintable(r.lowerBound))-\(getPrintable(r.upperBound))"
+				r.lowerBound == r.upperBound ? charClassPrintable(r.lowerBound) : "\(charClassPrintable(r.lowerBound))-\(charClassPrintable(r.upperBound))"
 			}.joined(separator: "") + closeCharClass
 		}
 
-		func getPrintable(_ char: Symbol) -> String {
+		func charPrintable(_ char: Symbol) -> String {
 			//if metaCharacters.contains(Int(char)) {
 			//	"\(escapeChar)\(Character(char))"
 			//} else
@@ -208,6 +208,23 @@ public struct REDialect: REDialectProtocol {
 			} else {
 				"\\u{\(String(char, radix: 16, uppercase: true))}"
 			}
+		}
+
+		// The characters that may need escaping in a character class may be different than elsewhere
+		// e.g. "-" doesn't need to be escaped outside a character class,
+		// and "[" does't need to be escaped inside one.
+		func charClassPrintable(_ char: Symbol) -> String {
+			if(char < 0x20) {
+				"\\x\(String(char, radix: 16, uppercase: true)))"
+			} else if charClassMetaCharacters.contains(Character((UnicodeScalar(Int(char))!))) {
+				"\\\(Character(UnicodeScalar(Int(char))!))"
+			} else if (char >= 0x20 && char <= 0x7E) {
+				//			String(UnicodeScalar(char)!)
+				String(UnicodeScalar(Int(char))!)
+			} else {
+				"\\u{\(String(char, radix: 16, uppercase: true))}"
+			}
+
 		}
 	}
 }
