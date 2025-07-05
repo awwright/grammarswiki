@@ -445,6 +445,8 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 		func transformElement(_ element: ABNFElement<Symbol>) -> ABNFElement<Symbol> {
 			switch element {
 				case .rulename(let rulename): ABNFElement.rulename(transform(rulename))
+				case .group(let group): ABNFElement.group(ABNFGroup(alternation: group.alternation.mapElements(transformElement)))
+				case .option(let option): ABNFElement.option(ABNFOption(optionalAlternation: option.optionalAlternation.mapElements(transformElement)))
 				default: element
 			}
 		}
@@ -2062,11 +2064,11 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	}
 
 	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.Symbol == Symbol {
-		throw ABNFExportError(message: "Cannot convert prose to FSM")
+		throw ABNFExportError(message: "Cannot convert prose to FSM: <\(self.remark)>")
 	}
 
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
-		throw ABNFExportError(message: "Cannot convert prose to FSM")
+		throw ABNFExportError(message: "Cannot convert prose to FSM: <\(self.remark)>")
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
