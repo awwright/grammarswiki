@@ -128,7 +128,7 @@ Content-Language = #language-tag
 
 ; 8.5.1. Language Tags <https://www.rfc-editor.org/rfc/rfc9110.html#name-language-tags>
 ;language-tag = <Language-Tag, see [RFC5646], Section 2.1>
-language-tag = <import rfc5646.abnf Language-Tag>
+language-tag = <import rfc5646-langtag.abnf Language-Tag>
 
 ; 8.6. Content-Length <https://www.rfc-editor.org/rfc/rfc9110.html#name-content-length>
 Content-Length = 1*DIGIT
@@ -246,7 +246,7 @@ codings          = content-coding / "identity" / "*"
 ;Accept-Language = #( language-range [ weight ] )
 Accept-Language = [language-range [ weight ]] *( "," language-range [ weight ] )
 ;language-range  = <language-range, see [RFC4647], Section 2.1>
-language-range  = <import rfc4647.abnf language-range>
+language-range  = <import rfc4647-langrange.abnf language-range>
 
 ; 12.5.5. Vary <https://www.rfc-editor.org/rfc/rfc9110.html#name-vary>
 Vary = #( "*" / field-name )
