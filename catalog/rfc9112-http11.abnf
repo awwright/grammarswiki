@@ -1,24 +1,5 @@
 ; title: HTTP/1.1
 
-; cut: <https://www.rfc-editor.org/rfc/rfc9112.html#name-syntax-notation>
-BWS           = <import rfc9110-http.abnf BWS>
-OWS           = <import rfc9110-http.abnf OWS>
-RWS           = <import rfc9110-http.abnf RWS>
-absolute-path = <import rfc9110-http.abnf absolute-path>
-field-name    = <import rfc9110-http.abnf field-name>
-field-value   = <import rfc9110-http.abnf field-value>
-obs-text      = <import rfc9110-http.abnf obs-text>
-quoted-string = <import rfc9110-http.abnf quoted-string>
-token         = <import rfc9110-http.abnf token>
-transfer-coding = <import rfc9110-http.abnf transfer-coding>
-
-; cut: <https://www.rfc-editor.org/rfc/rfc9112.html#name-syntax-notation>
-absolute-URI  = <import rfc3986-uri.abnf absolute-URI>
-authority     = <import rfc3986-uri.abnf authority>
-uri-host      = <import rfc3986-uri.abnf host>
-port          = <import rfc3986-uri.abnf port>
-query         = <import rfc3986-uri.abnf query>
-
 ; cut: <https://www.rfc-editor.org/rfc/rfc9112.html#name-message-format>
 HTTP-message   = start-line CRLF
                  *( field-line CRLF )
@@ -88,3 +69,21 @@ chunk-ext-val  = token / quoted-string
 
 ; 7.1.2. Chunked Trailer Section <https://www.rfc-editor.org/rfc/rfc9112.html#name-chunked-trailer-section>
 trailer-section   = *( field-line CRLF )
+
+; 1.2. Syntax Notation <https://www.rfc-editor.org/rfc/rfc9112.html#name-syntax-notation>
+BWS           = <import rfc9110-http.abnf BWS>
+OWS           = <import rfc9110-http.abnf OWS>
+RWS           = <import rfc9110-http.abnf RWS>
+absolute-path = <import rfc9110-http.abnf absolute-path>
+field-name    = <import rfc9110-http.abnf field-name>
+field-value   = <import rfc9110-http.abnf field-value>
+obs-text      = <import rfc9110-http.abnf obs-text>
+quoted-string = <import rfc9110-http.abnf quoted-string>
+token         = <import rfc9110-http.abnf token>
+transfer-coding = <import rfc9110-http.abnf transfer-coding>
+
+absolute-URI  = <import rfc3986-uri.abnf absolute-URI>
+authority     = <import rfc3986-uri.abnf authority>
+uri-host      = <import rfc3986-uri.abnf host>
+port          = <import rfc3986-uri.abnf port>
+query         = <import rfc3986-uri.abnf query>
