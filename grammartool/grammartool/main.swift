@@ -27,6 +27,12 @@ func bold(_ text: String) -> String {
 let programName = arguments.count >= 2 ? arguments[1] : nil;
 let exitCode: Int32;
 
+// If this is a CGI environment, then pass this to the CGI handler
+// See <cgi.swift> for a simple Apache configuration to call this
+if arguments.count == 1 && ProcessInfo.processInfo.environment["REQUEST_URI"] != nil {
+	exit(cgi(arguments: arguments));
+}
+
 exitCode = switch programName {
 	case "abnf-expression-test-input": abnf_expression_test_input(arguments: arguments);
 	case "abnf-list-rules": abnf_list_rules(arguments: arguments);
