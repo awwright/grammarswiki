@@ -67,6 +67,7 @@ exitCode = switch programName {
 	case "abnf-equivalent-inputs": abnf_equivalent_inputs_args(arguments: arguments);
 	case "catalog-list": catalog_list_args(arguments: arguments);
 	case "index-html": index_html_args(arguments: arguments);
+	case "grammar-abnf-html": grammar_abnf_html_args(arguments: arguments);
 	default: defaultExitCode();
 }
 
@@ -80,6 +81,7 @@ func defaultExitCode() -> Int32 {
 	abnf_equivalent_inputs_help(arguments: arguments);
 	catalog_list_help(arguments: arguments);
 	index_html_help(arguments: arguments);
+	grammar_abnf_html_help(arguments: arguments);
 	return 1;
 }
 
