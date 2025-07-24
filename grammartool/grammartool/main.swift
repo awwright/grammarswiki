@@ -66,6 +66,7 @@ exitCode = switch programName {
 	case "abnf-to-regex-tests": abnf_to_regex_tests_args(arguments: arguments);
 	case "abnf-equivalent-inputs": abnf_equivalent_inputs_args(arguments: arguments);
 	case "catalog-list": catalog_list_args(arguments: arguments);
+	case "index-html": index_html_args(arguments: arguments);
 	default: defaultExitCode();
 }
 
@@ -78,6 +79,7 @@ func defaultExitCode() -> Int32 {
 	abnf_to_regex_help(arguments: arguments);
 	abnf_equivalent_inputs_help(arguments: arguments);
 	catalog_list_help(arguments: arguments);
+	index_html_help(arguments: arguments);
 	return 1;
 }
 
