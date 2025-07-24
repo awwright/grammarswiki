@@ -5,7 +5,7 @@ func abnf_equivalent_inputs_help(arguments: Array<String>) {
 	print("\tPrints all the strings that are equivalent to <input> under the ABNF expression <expression>, separated by a newline.");
 }
 
-func abnf_equivalent_inputs(arguments: Array<String>) -> Int32 {
+func abnf_equivalent_inputs_args(arguments: Array<String>) -> Int32 {
 	guard arguments.count == 4 else {
 		abnf_equivalent_inputs_help(arguments: arguments);
 		print(arguments.count);
@@ -13,23 +13,32 @@ func abnf_equivalent_inputs(arguments: Array<String>) -> Int32 {
 	}
 	let abnfExpression = arguments[2];
 	let input = arguments[3];
+	abnf_equivalent_inputs_run(response: &stdout, abnfExpression: abnfExpression, input: input);
+	return stdout.exitCode;
+}
+
+func abnf_equivalent_inputs_run(response r: inout some ResponseProtocol, abnfExpression: String, input: String) {
 	let abnfTree: ABNFAlternation<UInt32>;
 	do { abnfTree = try ABNFAlternation<UInt32>.parse(abnfExpression.utf8); }
 	catch {
-		print("Could not parse ABNF");
-		print(error.localizedDescription);
-		return 2;
+		r.writeLn("Could not parse ABNF");
+		r.writeLn(error.localizedDescription);
+		r.status = .error;
+		return
 	}
 	let fsm: DFA<UInt32> = try! abnfTree.toPattern(rules: ABNFBuiltins<DFA<UInt32>>.dictionary);
 
 	let equivalent = fsm.equivalentInputs(input: input.flatMap{ $0.unicodeScalars.map(\.value) });
 	guard let equivalent else {
-		print("Input is non-live (input rejects, and no additional input will transition to an accepting state)");
-		return 2;
+		r.writeLn("Input is non-live (input rejects, and no additional input will transition to an accepting state)");
+		r.status = .error;
+		return;
 	}
-	print(equivalent.toViz())
+
+	r.status = .ok;
+	r.writeLn(equivalent.toViz())
 	for item in equivalent {
-		print(item)
+		r.writeLn(String(describing: item))
 	}
-	return 0;
+	r.end()
 }

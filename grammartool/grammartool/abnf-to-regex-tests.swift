@@ -6,7 +6,7 @@ func abnf_to_regex_tests_help(arguments: Array<String>) {
 	print("\tConverts <expression> to a regular expression, optionally importing rules from <filepath>");
 }
 
-func abnf_to_regex_tests(arguments: Array<String>) -> Int32 {
+func abnf_to_regex_tests_args(arguments: Array<String>) -> Int32 {
 	guard arguments.count >= 3 && arguments.count <= 4 else {
 		print(arguments.count);
 		abnf_to_regex_tests_help(arguments: arguments);

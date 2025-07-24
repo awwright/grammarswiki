@@ -6,7 +6,7 @@ func catalog_list_help(arguments: Array<String>) {
 	print("\tRead <catalog-path> as a directory with .abnf files");
 }
 
-func catalog_list(arguments: Array<String>) -> Int32 {
+func catalog_list_args(arguments: Array<String>) -> Int32 {
 	guard arguments.count == 3 else {
 		catalog_list_help(arguments: arguments)
 		return 1

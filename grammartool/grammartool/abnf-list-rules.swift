@@ -6,7 +6,7 @@ func abnf_list_rules_help(arguments: Array<String>) {
 	print("\tParses <filepath> as ABNF and lists information");
 }
 
-func abnf_list_rules(arguments: Array<String>) -> Int32 {
+func abnf_list_rules_args(arguments: Array<String>) -> Int32 {
 	guard arguments.count == 3 else {
 		abnf_list_rules_help(arguments: arguments);
 		return 1;

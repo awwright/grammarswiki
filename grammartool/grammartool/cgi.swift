@@ -23,7 +23,7 @@ func cgi(arguments: Array<String>) -> Int32 {
 func cgi_index_txt() {
 	print("Content-Type: text/plain")
 	print("")
-	catalog_list(arguments: [arguments[0], "catalog-list", FileManager.default.currentDirectoryPath])
+	catalog_list_args(arguments: [arguments[0], "catalog-list", FileManager.default.currentDirectoryPath])
 }
 
 func cgi_status_txt() {
