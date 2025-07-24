@@ -100,3 +100,21 @@ Described grammars:
 	- Equivalence scheme for double quoted vs token forms
 - Multipart encoding
 	- Describe how multipart is a class of media type syntaxes all with different boundary markers.
+
+# File Listing
+
+This repository is a somewhat disorganized monorepo, get started with this:
+
+- *README.md* — this file
+- *bin/* — Selection of executable utilities, in addition to the one in grammartool/
+- *catalog/* — Collection of standard ABNF grammars
+- *FSM/* — Library for parsing and manipulating ABNF and other grammars
+- *grammars/* — A macOS app for browsing and manipulating ABNF
+- *Grammars.xcworkspace/* — Xcode workspace that includes much of this repository
+- *grammartool/* — CLI written in Swift
+- *htdocs/* — Website theme and static assets
+- *httpd/* — Node.js server (currently determining if a Swift port is feasible)
+- *lib/* — Node.js libraries
+- *package.json* — List of Node.js dependencies (most Swift code doesn't rely on this though)
+- *test/* — Node.js tests
+ 
