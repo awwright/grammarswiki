@@ -34,12 +34,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	}
 
 	let title = "Contents of \(filePath)"
-	let content =
-		"""
-		<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>\(text_html(title))</title></head><body>
-		<h1>\(text_html(title))</h1>
-		<main><pre><code>\(text_html(importedAbnfString))</code></pre></main>
-		</body></html>
-		"""
-	res.writeLn(content)
+	let main_html = "<pre><code>\(text_html(importedAbnfString))</code></pre>"
+	res.status = .ok
+	respond_themed_html(res: &res, title: title, main_html: main_html);
 }

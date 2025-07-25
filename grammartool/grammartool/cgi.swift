@@ -47,19 +47,18 @@ func text_html(_ text: String) -> String {
 	return text
 		.replacing("&", with: "&amp;")
 		.replacing("\"", with: "&quot;")
-		.replacing("<", with: "&gt;")
+		.replacing("<", with: "&lt;")
 }
 
-func cgi_html(title: String, main_html: String) {
+func respond_themed_html(res: inout some ResponseProtocol, title: String, main_html: String) {
 	let content =
 		"""
 		<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>\(text_html(title))</title></head><body>
 			<h1>\(text_html(title))</h1>
 			<main>\(main_html)</main>
-		</body></html>\("\r\n")
-		""".utf8
-	print("Content-Type: application/xhtml+xml")
-	print("Content-Length: \(content.count)")
-	print("")
-	print(content)
+		</body></html>
+		"""
+	res.contentType = "application/xhtml+xml"
+	res.writeLn(content)
+	res.end()
 }

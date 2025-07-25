@@ -7,7 +7,8 @@ func index_html_help(arguments: Array<String>) {
 }
 
 func index_html_args(arguments: Array<String>) -> Int32 {
-	guard arguments.count == 3 else {
+	guard arguments.count == 3
+	else {
 		catalog_list_help(arguments: arguments)
 		return 1
 	}
@@ -29,12 +30,7 @@ func index_html_run(response res: inout some ResponseProtocol, directoryPath: St
 	}
 
 	let title = "Index"
-	let content =
-		"""
-		<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>\(text_html(title))</title></head><body>
-		<h1>\(text_html(title))</h1>
-		<main><ul>\(contents.map { "<li>\(text_html($0))</li>\n" }.joined())</ul></main>
-		</body></html>\("\r\n")
-		"""
-	res.writeLn(content)
+	let main_html = "<ul>\(contents.map { "<li><a href=\"catalog/\(text_html($0.replacing(".abnf", with: ".xhtml")))\">\(text_html($0))</a></li>\n" }.joined())</ul>"
+	res.status = .ok
+	respond_themed_html(res: &res, title: title, main_html: main_html)
 }
