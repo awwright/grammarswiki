@@ -59,6 +59,8 @@ if arguments.count == 1 && ProcessInfo.processInfo.environment["REQUEST_URI"] !=
 	exit(cgi(arguments: arguments));
 }
 
+//print(arguments);
+//print(ProcessInfo.processInfo.environment);
 exitCode = switch programName {
 	case "abnf-expression-test-input": abnf_expression_test_input_args(arguments: arguments);
 	case "abnf-list-rules": abnf_list_rules_args(arguments: arguments);
@@ -68,6 +70,7 @@ exitCode = switch programName {
 	case "catalog-list": catalog_list_args(arguments: arguments);
 	case "index-html": index_html_args(arguments: arguments);
 	case "grammar-abnf-html": grammar_abnf_html_args(arguments: arguments);
+	case "httpd": httpd_args(arguments: arguments);
 	default: defaultExitCode();
 }
 
@@ -82,6 +85,7 @@ func defaultExitCode() -> Int32 {
 	catalog_list_help(arguments: arguments);
 	index_html_help(arguments: arguments);
 	grammar_abnf_html_help(arguments: arguments);
+	httpd_help(arguments: arguments);
 	return 1;
 }
 

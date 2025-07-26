@@ -23,9 +23,12 @@ func index_html_run(response res: inout some ResponseProtocol, directoryPath: St
 	do {
 		contents = try FileManager.default.contentsOfDirectory(atPath: directoryPath).filter { !$0.hasPrefix(".") && $0.hasSuffix(".abnf") }
 	} catch {
-		res.writeLn(text_html(String(describing: error)))
 		contents = []
 		res.status = .error
+		res.contentType = "text/plain"
+		res.writeLn("Internal Server Error:")
+		res.writeLn(text_html(String(describing: error)))
+		res.end()
 		return
 	}
 
