@@ -1,2 +1,13 @@
 node_modules/
 catalog/rfcs-text-only/
+yarn.lock
+
+# Xcode gitignore defaults
+.DS_Store
+/.build
+/Packages
+xcuserdata/
+DerivedData/
+.swiftpm/configuration/registries.json
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
++.netrc

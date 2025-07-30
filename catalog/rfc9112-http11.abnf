@@ -1,25 +1,5 @@
 ; title: HTTP/1.1
 
-; cut: <https://www.rfc-editor.org/rfc/rfc9112.html#name-syntax-notation>
-BWS           = <import RFC9112.BWS>
-OWS           = <import RFC9112.OWS>
-RWS           = <import RFC9112.RWS>
-absolute-path = <import RFC9112.absolute-path>
-field-name    = <import RFC9112.field-name>
-field-value   = <import RFC9112.field-value>
-obs-text      = <import RFC9112.obs-text>
-quoted-string = <import RFC9112.quoted-string>
-token         = <import RFC9112.token>
-transfer-coding =
-                <import RFC9112.transfer-coding>
-
-; cut: <https://www.rfc-editor.org/rfc/rfc9112.html#name-syntax-notation>
-absolute-URI  = <import RFC3986.absolute-URI>
-authority     = <import RFC3986.authority>
-uri-host      = <import RFC3986.host>
-port          = <import RFC3986.port>
-query         = <import RFC3986.query>
-
 ; cut: <https://www.rfc-editor.org/rfc/rfc9112.html#name-message-format>
 HTTP-message   = start-line CRLF
                  *( field-line CRLF )
@@ -27,3 +7,83 @@ HTTP-message   = start-line CRLF
                  [ message-body ]
 
 start-line     = request-line / status-line
+
+; 2.3. HTTP Version <https://www.rfc-editor.org/rfc/rfc9112.html#name-http-version>
+HTTP-version  = HTTP-name "/" DIGIT "." DIGIT
+HTTP-name     = %s"HTTP"
+
+; 3. Request Line <https://www.rfc-editor.org/rfc/rfc9112.html#name-request-line>
+request-line   = method SP request-target SP HTTP-version
+
+; 3.1. Method <https://www.rfc-editor.org/rfc/rfc9112.html#name-method>
+method         = token
+
+; 3.2. Request Target <https://www.rfc-editor.org/rfc/rfc9112.html#name-request-target>
+request-target = origin-form
+               / absolute-form
+               / authority-form
+               / asterisk-form
+
+; 3.2.1. origin-form <https://www.rfc-editor.org/rfc/rfc9112.html#name-origin-form>
+origin-form    = absolute-path [ "?" query ]
+
+; 3.2.2. absolute-form <https://www.rfc-editor.org/rfc/rfc9112.html#name-absolute-form>
+absolute-form  = absolute-URI
+
+; 3.2.3. authority-form <https://www.rfc-editor.org/rfc/rfc9112.html#name-authority-form>
+authority-form = uri-host ":" port
+
+; 3.2.4. asterisk-form <https://www.rfc-editor.org/rfc/rfc9112.html#name-asterisk-form>
+asterisk-form  = "*"
+
+; 4. Status Line <https://www.rfc-editor.org/rfc/rfc9112.html#name-status-line>
+status-line = HTTP-version SP status-code SP [ reason-phrase ]
+status-code    = 3DIGIT
+reason-phrase  = 1*( HTAB / SP / VCHAR / obs-text )
+
+; 5. Field Syntax <https://www.rfc-editor.org/rfc/rfc9112.html#name-field-syntax>
+field-line   = field-name ":" OWS field-value OWS
+
+; 5.2. Obsolete Line Folding <https://www.rfc-editor.org/rfc/rfc9112.html#name-obsolete-line-folding>
+obs-fold     = OWS CRLF RWS
+             ; obsolete line folding
+
+; 6. Message Body <https://www.rfc-editor.org/rfc/rfc9112.html#name-message-body>
+message-body = *OCTET
+
+; 6.1. Transfer-Encoding <https://www.rfc-editor.org/rfc/rfc9112.html#name-transfer-encoding>
+Transfer-Encoding = #transfer-coding
+                     ; defined in [HTTP], Section 10.1.4
+
+; 7.1. Chunked Transfer Coding <https://www.rfc-editor.org/rfc/rfc9112.html#name-chunked-transfer-coding>
+Transfer-Encoding = #transfer-coding
+                     ; defined in [HTTP], Section 10.1.4
+
+; 7.1.1. Chunk Extensions <https://www.rfc-editor.org/rfc/rfc9112.html#name-chunk-extensions>
+
+chunk-ext      = *( BWS ";" BWS chunk-ext-name
+                    [ BWS "=" BWS chunk-ext-val ] )
+
+chunk-ext-name = token
+chunk-ext-val  = token / quoted-string
+
+; 7.1.2. Chunked Trailer Section <https://www.rfc-editor.org/rfc/rfc9112.html#name-chunked-trailer-section>
+trailer-section   = *( field-line CRLF )
+
+; 1.2. Syntax Notation <https://www.rfc-editor.org/rfc/rfc9112.html#name-syntax-notation>
+BWS           = <import rfc9110-http.abnf BWS>
+OWS           = <import rfc9110-http.abnf OWS>
+RWS           = <import rfc9110-http.abnf RWS>
+absolute-path = <import rfc9110-http.abnf absolute-path>
+field-name    = <import rfc9110-http.abnf field-name>
+field-value   = <import rfc9110-http.abnf field-value>
+obs-text      = <import rfc9110-http.abnf obs-text>
+quoted-string = <import rfc9110-http.abnf quoted-string>
+token         = <import rfc9110-http.abnf token>
+transfer-coding = <import rfc9110-http.abnf transfer-coding>
+
+absolute-URI  = <import rfc3986-uri.abnf absolute-URI>
+authority     = <import rfc3986-uri.abnf authority>
+uri-host      = <import rfc3986-uri.abnf host>
+port          = <import rfc3986-uri.abnf port>
+query         = <import rfc3986-uri.abnf query>

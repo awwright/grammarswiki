@@ -58,6 +58,24 @@ Output targets:
 - Translations to languages, e.g. YACC
 - Normalization function (in a variety of programming languages)
 
+## Usage
+
+A grammar is provided as a file on the filesystem. When identifying a grammar, provide a file path.
+
+Grammars can contain many rules, which are themselves languages. If no rule name is provided, by default the first rule defined in the grammar will be used.
+
+
+## parse-abnf
+
+Parse an abnf file for rules. Extracts a (minimal) syntax tree that can be used to initialize a grammar.
+The parser strictly implements ABNF, which requires CRLF line endings (including on the last line).
+The parser is a bare-bones recursive descent parser so it will fail to parse the entire file if it can't parse any part of it.
+
+```
+$ node bin/parse-abnf.js catalog/abnf-syntax.abnf
+```
+
+
 
 # Catalog
 
@@ -82,3 +100,21 @@ Described grammars:
 	- Equivalence scheme for double quoted vs token forms
 - Multipart encoding
 	- Describe how multipart is a class of media type syntaxes all with different boundary markers.
+
+# File Listing
+
+This repository is a somewhat disorganized monorepo, get started with this:
+
+- *README.md* — this file
+- *bin/* — Selection of executable utilities, in addition to the one in grammartool/
+- *catalog/* — Collection of standard ABNF grammars
+- *FSM/* — Library for parsing and manipulating ABNF and other grammars
+- *grammars/* — A macOS app for browsing and manipulating ABNF
+- *Grammars.xcworkspace/* — Xcode workspace that includes much of this repository
+- *grammartool/* — CLI written in Swift
+- *htdocs/* — Website theme and static assets
+- *httpd/* — Node.js server (currently determining if a Swift port is feasible)
+- *lib/* — Node.js libraries
+- *package.json* — List of Node.js dependencies (most Swift code doesn't rely on this though)
+- *test/* — Node.js tests
+ 

@@ -1,0 +1,157 @@
+
+; Adapted from <https://tc39.es/ecma262/2024/multipage/text-processing.html#sec-regexp-regular-expression-objects>
+
+Pattern = Disjunction
+
+Disjunction = Alternative *( "|" Alternative )
+
+Alternative = *Term
+
+Term = Assertion / Atom [ Quantifier ]
+
+Assertion = "^" / "$" / "\b" / "\B" / "(?=" Disjunction ")" / "(?!" Disjunction ")" / "(?<=" Disjunction ")" / "(?<!" Disjunction ")"
+
+Quantifier = QuantifierPrefix [ "?" ]
+
+QuantifierPrefix = "*" / "+" / "?" / "{" DecimalDigits ["," DecimalDigits] "}"
+
+Atom =
+ PatternCharacter /
+ "." /
+ "\" AtomEscape /
+ CharacterClass /
+ "(" [GroupSpecifier] Disjunction ")"
+ "(?:" Disjunction ")"
+
+SyntaxCharacter = "^" / "$" / "\" / "." / "*" / "+" / "?" / "(" / ")" / "[" / "]" / "{" / "}" / "|"
+
+PatternCharacter = %x0000-0024 / %x0026-002B / %x002D-002E / %x0030-0039 / %x003B-004F /
+                   %x0051-005A / %x005C / %x005E-007A / %x007C / %x007E-10FFFF
+; Any Unicode code point except ^ $ \ . * + ? ( ) [ ] { } |
+
+AtomEscape = DecimalEscape / CharacterClassEscape / CharacterEscape
+
+CharacterEscape = ControlEscape / "c" AsciiLetter / "0" / HexEscapeSequence / RegExpUnicodeEscapeSequence / IdentityEscape
+
+ControlEscape = "f" / "n" / "r" / "t" / "v"
+
+GroupSpecifier = "?" GroupName
+
+GroupName = "<" RegExpIdentifierName ">"
+
+RegExpIdentifierName = RegExpIdentifierStart *RegExpIdentifierPart
+
+RegExpIdentifierStart = IdentifierStartChar
+ / "\" RegExpUnicodeEscapeSequence
+ / UnicodeLeadSurrogate UnicodeTrailSurrogate
+
+RegExpIdentifierPart = IdentifierPartChar
+ / "\" RegExpUnicodeEscapeSequence
+ / UnicodeLeadSurrogate UnicodeTrailSurrogate
+
+RegExpUnicodeEscapeSequence = "u" HexLeadSurrogate "\u" HexTrailSurrogate
+ / "u" HexLeadSurrogate
+ / "u" HexTrailSurrogate
+ / "u" HexNonSurrogate
+ / "u" Hex4Digits
+ / "u{" CodePoint "}" ; TODO: And value is <= 0x10FFFF
+
+UnicodeLeadSurrogate = %xD800-DBFF
+UnicodeTrailSurrogate = %xDC00-DFFF
+HexLeadSurrogate = Hex4Digits ; but only if the MV of Hex4Digits is in the inclusive interval from 0xD800 to 0xDBFF
+HexTrailSurrogate = Hex4Digits ; but only if the MV of Hex4Digits is in the inclusive interval from 0xDC00 to 0xDFFF
+HexNonSurrogate = Hex4Digits ; but only if the MV of Hex4Digits is not in the inclusive interval from 0xD800 to 0xDFFF
+
+IdentityEscape = SyntaxCharacter
+ / "/"
+ / <SourceCharacter but not UnicodeIDContinue>
+
+DecimalEscape = DecimalIntegerLiteral
+
+CharacterClassEscape = "d" / "D" / "s" / "S" / "w" / "W"
+
+UnicodePropertyValueExpression = UnicodePropertyName "=" UnicodePropertyValue
+ / LoneUnicodePropertyNameOrValue
+
+UnicodePropertyName = UnicodePropertyNameCharacters
+
+UnicodePropertyNameCharacters = 1*UnicodePropertyNameCharacter
+
+UnicodePropertyValue = UnicodePropertyValueCharacters
+
+LoneUnicodePropertyNameOrValue = UnicodePropertyValueCharacters
+
+UnicodePropertyValueCharacters = 1*UnicodePropertyValueCharacter
+
+UnicodePropertyValueCharacter = UnicodePropertyNameCharacter / DecimalDigit
+
+UnicodePropertyNameCharacter = AsciiLetter / "-"
+
+CharacterClass = "[" ClassContents "]" ; but not starting with "^"
+
+ClassContents = "" / NonemptyClassRanges / ClassSetExpression
+
+NonemptyClassRanges = ClassAtom [NonemptyClassRangesNoDash] / ClassAtom "-" ClassAtom ClassContents
+
+NonemptyClassRangesNoDash = ClassAtomNoDash [NonemptyClassRangesNoDash] / ClassAtomNoDash "-" ClassAtomNoDash ClassContents
+
+ClassAtom = "-" / ClassAtomNoDash
+
+ClassAtomNoDash = (%x0000-005B / %x005D-10FFFF) / ClassEscape ; SourceCharacter but not one of \ or ] or -
+
+ClassEscape = "b" / "-" / CharacterClassEscape / CharacterEscape
+
+ClassSetExpression = ClassUnion / ClassIntersection / ClassSubtraction
+
+ClassUnion = ClassSetRange [ClassUnion] / ClassSetOperand [ClassUnion]
+
+ClassIntersection = ClassSetOperand "&&" ClassSetOperand
+
+ClassSubtraction = ClassSetOperand "--" ClassSetOperand
+
+ClassSetRange = ClassSetCharacter "-" ClassSetCharacter
+
+ClassSetOperand = ClassSetCharacter "-" ClassSetCharacter
+
+NestedClass = "[" ClassContents "]"
+ / "[^" ClassContents "]"
+ / "\" CharacterClassEscape
+
+ClassStringDisjunction = "\q{" ClassStringDisjunctionContents "}"
+
+ClassStringDisjunctionContents = 1*ClassStringDisjunctionContents
+
+ClassString = *NonEmptyClassString
+
+NonEmptyClassString = ClassSetCharacter NonEMptyClassString
+
+ClassSetCharacter = <SourceCharacter but not ClassSetSyntaxCharacter>
+ / "\" CharacterEscape
+ / "\" ClassSetReservedPunctuator
+ / "\b"
+
+ClassSetReservedDoublePunctuator = "&&" / "!!" / "##" / "$$" / "%%" / "**" / "++" / ",," / ".." / "::" / ";;" / "<<" / "==" / ">>" / "??" / "@@" / "^^" / "``" / "~~"
+
+ClassSetSyntaxCharacter = "(" / ")" / "[" / "]" / "{" / "}" / "/" / "-" / "\" / "|"
+
+ClassSetReservedPunctuator = "&" / "-" / "!" / "#" / "%" / "," / ":" / ";" / "<" / "=" / ">" / "@" / "`" / "~"
+
+; Definition from 12.7 Names and Keywords
+AsciiLetter = ALPHA
+IdentifierStartChar = UnicodeIDStart / "$" / "_"
+IdentifierPartChar = UnicodeIDContinue / "$" / %x200C-200D
+; See <https://www.unicode.org/reports/tr31/>
+UnicodeIDStart = <any Unicode code point with the Unicode property "ID_Start">
+UnicodeIDContinue = <any Unicode code point with the Unicode property "ID_Continue">
+
+; Definition from 12.9.3 Numeric Literals
+DecimalDigit = DIGIT
+DecimalDigits = DecimalDigit 1*(["_"] DecimalDigit)
+DecimalIntegerLiteral = "0" / %x31-39 1*(["_"] DecimalDigit) ; TODO: Also a "NonOctalDecimalIntegerLiteral abomination"
+
+; Definition from 12.9.4 String Literals
+Hex4Digits = 4HEXDIG
+HexEscapeSequence = "x" 2HEXDIG
+
+; Definition from 12.9.6 Template Literal Lexical Components
+CodePoint = 1*6HEXDIG ; Also, the number described by the resulting string must be <= 0x10FFFF

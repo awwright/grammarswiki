@@ -1,5 +1,5 @@
 ;; source: RFC 5234
-
+; <https://www.rfc-editor.org/rfc/rfc5234.txt>
 
 ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
 

@@ -53,5 +53,6 @@ function makeRoute(options) {
 		}
 	}
 	route.uriTemplate = options.uriTemplate;
+	route.enumerate = options.enumerate;
 	return route;
 }

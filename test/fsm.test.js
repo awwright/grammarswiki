@@ -111,6 +111,57 @@ describe('FSM', function(){
 		});
 	});
 
+	describe('FSM#nextState', function() {
+		it('nextState', function() {
+			const a = accept_a();
+			assert.deepEqual(a.nextState(0, 'a'), 1);
+			assert.deepEqual(a.nextState(0, 'b'), 2);
+			assert.deepEqual(a.nextState(0, 'c'), undefined);
+		});
+	});
+
+	describe('FSM#nextStateArray', function() {
+		it('get(Array)', function () {
+			const a = accept_a();
+			assert.deepEqual(a.nextStateArray([0], 'a'), [1]);
+			assert.deepEqual(a.nextStateArray([0], 'b'), [2]);
+			assert.deepEqual(a.nextStateArray([0], 'c'), []);
+			assert.deepEqual(a.nextStateArray([0,1], 'a'), [1,2]);
+			assert.deepEqual(a.nextStateArray([0,1], 'b'), [2]);
+			assert.deepEqual(a.nextStateArray([0,1], 'c'), []);
+		});
+		it('get(Set)', function(){
+			const a = accept_a();
+			assert.deepEqual(a.nextStateArray(new Set([0]), 'a'), [1]);
+			assert.deepEqual(a.nextStateArray(new Set([0]), 'b'), [2]);
+			assert.deepEqual(a.nextStateArray(new Set([0]), 'c'), []);
+			assert.deepEqual(a.nextStateArray(new Set([0, 1]), 'a'), [1, 2]);
+			assert.deepEqual(a.nextStateArray(new Set([0, 1]), 'b'), [2]);
+			assert.deepEqual(a.nextStateArray(new Set([0, 1]), 'c'), []);
+		});
+	});
+
+	describe('FSM#nextStateSet', function() {
+		it('nextStateSet(Array)', function () {
+			const a = accept_a();
+			assert.deepEqual(a.nextStateSet([0], 'a'), new Set([1]));
+			assert.deepEqual(a.nextStateSet([0], 'b'), new Set([2]));
+			assert.deepEqual(a.nextStateSet([0], 'c'), new Set([]));
+			assert.deepEqual(a.nextStateSet([0, 1], 'a'), new Set([1, 2]));
+			assert.deepEqual(a.nextStateSet([0, 1], 'b'), new Set([2]));
+			assert.deepEqual(a.nextStateSet([0, 1], 'c'), new Set([]));
+		});
+		it('nextStateSet(Set)', function(){
+			const a = accept_a();
+			assert.deepEqual(a.nextStateSet(new Set([0]), 'a'), new Set([1]));
+			assert.deepEqual(a.nextStateSet(new Set([0]), 'b'), new Set([2]));
+			assert.deepEqual(a.nextStateSet(new Set([0]), 'c'), new Set([]));
+			assert.deepEqual(a.nextStateSet(new Set([0, 1]), 'a'), new Set([1, 2]));
+			assert.deepEqual(a.nextStateSet(new Set([0, 1]), 'b'), new Set([2]));
+			assert.deepEqual(a.nextStateSet(new Set([0, 1]), 'c'), new Set([]));
+		});
+	});
+
 	it('FSM#toString');
 
 	describe('FSM#union', function(){
@@ -380,7 +431,7 @@ describe('FSM', function(){
 				0, // initial
 				[3], // finals
 			).reduce();
-			assert.equal(merged.map.length, 2);
+			assert.equal(merged.states.length, 2);
 		});
 	});
 

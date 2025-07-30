@@ -1,0 +1,36 @@
+; <https://www.rfc-editor.org/rfc/rfc6570.html>
+
+URI-Template  = *( literals / expression )
+
+literals      =  %x21 / %x23-24 / %x26 / %x28-3B / %x3D / %x3F-5B
+              /  %x5D / %x5F / %x61-7A / %x7E / ucschar / iprivate
+              /  pct-encoded
+                   ; any Unicode character except: CTL, SP,
+                   ;  DQUOTE, "'", "%" (aside from pct-encoded),
+                   ;  "<", ">", "\", "^", "`", "{", "|", "}"
+
+expression    =  "{" [ operator ] variable-list "}"
+operator      =  op-level2 / op-level3 / op-reserve
+op-level2     =  "+" / "#"
+op-level3     =  "." / "/" / ";" / "?" / "&"
+op-reserve    =  "=" / "," / "!" / "@" / "|"
+
+variable-list =  varspec *( "," varspec )
+varspec       =  varname [ modifier-level4 ]
+varname       =  varchar *( ["."] varchar )
+varchar       =  ALPHA / DIGIT / "_" / pct-encoded
+
+modifier-level4 =  prefix / explode
+
+prefix        =  ":" max-length
+max-length    =  %x31-39 0*3DIGIT   ; positive integer < 10000
+
+explode       =  "*"
+
+pct-encoded   = <import rfc3986-uri.abnf pct-encoded>
+unreserved    = <import rfc3986-uri.abnf unreserved>
+reserved      = <import rfc3986-uri.abnf reserved>
+gen-delims    = <import rfc3986-uri.abnf gen-delims>
+sub-delims    = <import rfc3986-uri.abnf sub-delims>
+ucschar       = <import rfc3987-iri.abnf ucschar>
+iprivate      = <import rfc3987-iri.abnf iprivate>

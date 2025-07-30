@@ -1,6 +1,6 @@
+; <https://www.rfc-editor.org/rfc/rfc8259.html>
 
-;
-JSON-text = ws value ws %x0A
+JSON-text = ws value ws
 
 begin-array     = ws %x5B ws  ; [ left square bracket
 
@@ -14,12 +14,11 @@ name-separator  = ws %x3A ws  ; : colon
 
 value-separator = ws %x2C ws  ; , comma
 
-;ws = *(
-;        %x20 /              ; Space
-;        %x09 /              ; Horizontal tab
-;        %x0A /              ; Line feed or New line
-;        %x0D )              ; Carriage return
-ws = " "
+ws = *(
+        %x20 /              ; Space
+        %x09 /              ; Horizontal tab
+        %x0A /              ; Line feed or New line
+        %x0D )              ; Carriage return
 
 value = false / null / true / object / array / number / string
 

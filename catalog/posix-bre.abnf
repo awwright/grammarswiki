@@ -1,0 +1,134 @@
+; POSIX Basic Regular Expression
+; The type called from `grep` (without the `-e` flag)
+; This grammar adapted by hand from <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap09.html>
+
+; --------------------------------------------
+; Basic Regular Expression
+; --------------------------------------------
+
+basic-reg-exp   =                        BRE-branch
+                / basic-reg-exp Back-bar BRE-branch ; if Back-bar
+                                                    ;  is a token
+
+BRE-branch      =            BRE-expression
+                / BRE-branch BRE-expression
+
+BRE-expression  =          simple-BRE
+                / L-ANCHOR
+                /                     R-ANCHOR
+                / L-ANCHOR            R-ANCHOR
+                / L-ANCHOR simple-BRE
+                /          simple-BRE R-ANCHOR
+                / L-ANCHOR simple-BRE R-ANCHOR
+
+simple-BRE      = nondupl-BRE
+                / nondupl-BRE BRE-dupl-symbol
+
+nondupl-BRE     = one-char-or-coll-elem-BRE
+                / Back-open-paren basic-reg-exp Back-close-paren
+                / BACKREF
+
+one-char-or-coll-elem-BRE  = ORD-CHAR
+                / QUOTED-CHAR
+                / "."
+                / bracket-expression
+
+BRE-dupl-symbol = "*"
+                / Back-qm   ; if Back-qm is a token
+                / Back-plus ; if Back-plus is a token
+                / Back-open-brace DUP-COUNT               Back-close-brace
+                / Back-open-brace DUP-COUNT ","           Back-close-brace
+                / Back-open-brace DUP-COUNT "," DUP-COUNT Back-close-brace
+
+; --------------------------------------------
+; Bracket Expression
+; -------------------------------------------
+
+bracket-expression = "[" matching-list "]"
+               / "[" nonmatching-list "]"
+
+matching-list  = bracket-list
+
+nonmatching-list = "^" bracket-list
+
+bracket-list   = follow-list
+               / follow-list "-"
+
+follow-list    =             expression-term
+               / follow-list expression-term
+
+expression-term = single-expression
+               / range-expression
+
+single-expression = end-range
+               / character-class
+               / equivalence-class
+
+range-expression = start-range end-range
+               / start-range "-"
+
+start-range    = end-range "-"
+
+end-range      = COLL-ELEM-SINGLE
+               / collating-symbol
+
+collating-symbol = Open-dot COLL-ELEM-SINGLE Dot-close
+               / Open-dot COLL-ELEM-MULTI Dot-close
+               / Open-dot META-CHAR Dot-close
+
+equivalence-class = Open-equal COLL-ELEM-SINGLE Equal-close
+               / Open-equal COLL-ELEM-MULTI Equal-close
+
+character-class = Open-colon class-name Colon-close
+
+
+
+; Terminals/tokens
+; FIXME: Fill out values for the blank tokens
+
+; Any single-character collating element, unless it is a META_CHAR.
+ORD-CHAR = ""
+
+; In a BRE, one of the character sequences:
+; On implementations where the escape sequences "\?", "\+", and "\|" match the literal characters '?', '+', and '|', respectively, QUOTED_CHAR shall also include:
+; \?    \+    \|
+QUOTED-CHAR = "\^" / "\." / "\*" / "\[" / "\]" / "\$" / "\\"
+DUP-COUNT = ""
+
+BACKREF = "\" DIGIT
+L-ANCHOR = "^"
+R-ANCHOR = "$"
+
+Back-open-paren = "\("
+Back-close-paren = "\)"
+
+Back-open-brace = "\{"
+Back-close-brace = "\}"
+
+; The following shall be tokens on implementations where
+; \?, \+, and \| are not included in QUOTED-CHAR
+
+Back-qm = "\?"
+Back-plus = "\?"
+Back-bar = "\|"
+
+; The following tokens are for the Bracket Expression
+; grammar common to both REs and EREs.
+
+; Any single-character collating element, unless it is a META_CHAR.
+COLL-ELEM-SINGLE = ""
+
+; Any multi-character collating element.
+COLL-ELEM-MULTI = ""
+
+META-CHAR = "^" / "-" / "]"
+
+Open-equal = "[="
+Equal-close = "=]"
+Open-dot = "[."
+Dot-close = ".]"
+Open-colon = "[:"
+Colon-close = ":]"
+
+; See <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap07.html#tag_07_03>
+class-name = "upper" / "lower" / "digit" / "space" / "cntrl" / "punct" / "xdigit" / "blank"

@@ -1,0 +1,7 @@
+; <https://www.rfc-editor.org/rfc/rfc4647.html>
+
+language-range   = (1*8ALPHA *("-" 1*8alphanum)) / "*"
+alphanum         = ALPHA / DIGIT
+
+extended-language-range = (1*8ALPHA / "*")
+                          *("-" (1*8alphanum / "*"))

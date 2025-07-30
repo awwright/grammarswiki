@@ -1,0 +1,100 @@
+; POSIX Extended Regular Expression
+; The type called from `grep -e`
+; This grammar adapted by hand from <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap09.html>
+
+
+; --------------------------------------------
+; Extended Regular Expression
+; --------------------------------------------
+
+extended-reg-exp   =                      ERE-branch
+                   / extended-reg-exp "|" ERE-branch
+
+ERE-branch         =            ERE-expression
+                   / ERE-branch ERE-expression
+
+ERE-expression     = one-char-or-coll-elem-ERE
+                   / "^"
+                   / "$"
+                   / "(" extended-reg-exp ")"
+                   / ERE-expression ERE-dupl-symbol
+
+one-char-or-coll-elem-ERE  = ORD-CHAR
+                   / QUOTED-CHAR
+                   / "."
+                   / bracket-expression
+
+ERE-dupl-symbol    = "*"
+                   / "+"
+                   / "?"
+                   / "{" DUP-COUNT               "}"
+                   / "{" DUP-COUNT ","           "}"
+                   / "{" DUP-COUNT "," DUP-COUNT "}"
+
+ORD-CHAR = ""
+
+; In an ERE, one of the character sequences:
+QUOTED-CHAR = "\^" / "\." / "\[" / "\]" / "\$" / "\(" / "\)" / "\|" / "\*" / "\+" / "\?" / "\{" / "\}" / "\\"
+DUP-COUNT = ""
+
+; --------------------------------------------
+; Bracket Expression
+; -------------------------------------------
+
+bracket-expression = "[" matching-list "]"
+               / "[" nonmatching-list "]"
+
+matching-list  = bracket-list
+
+nonmatching-list = "^" bracket-list
+
+bracket-list   = follow-list
+               / follow-list "-"
+
+follow-list    =             expression-term
+               / follow-list expression-term
+
+expression-term = single-expression
+               / range-expression
+
+single-expression = end-range
+               / character-class
+               / equivalence-class
+
+range-expression = start-range end-range
+               / start-range "-"
+
+start-range    = end-range "-"
+
+end-range      = COLL-ELEM-SINGLE
+               / collating-symbol
+
+collating-symbol = Open-dot COLL-ELEM-SINGLE Dot-close
+               / Open-dot COLL-ELEM-MULTI Dot-close
+               / Open-dot META-CHAR Dot-close
+
+equivalence-class = Open-equal COLL-ELEM-SINGLE Equal-close
+               / Open-equal COLL-ELEM-MULTI Equal-close
+
+character-class = Open-colon class-name Colon-close
+
+; The following tokens are for the Bracket Expression
+; grammar common to both REs and EREs.
+
+; Any single-character collating element, unless it is a META_CHAR.
+COLL-ELEM-SINGLE = ""
+
+; Any multi-character collating element.
+COLL-ELEM-MULTI = ""
+
+META-CHAR = "^" / "-" / "]"
+
+Open-equal = "[="
+Equal-close = "=]"
+Open-dot = "[."
+Dot-close = ".]"
+Open-colon = "[:"
+Colon-close = ":]"
+
+; See <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap07.html#tag_07_03>
+class-name = "upper" / "lower" / "digit" / "space" / "cntrl" / "punct" / "xdigit" / "blank"
