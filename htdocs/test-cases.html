@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Standard Grammar Catalog : Catalog Index</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Ensure correct path resolution for assets and routing -->
+    <base href="/">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/scripts/css/style.css">
+
+    <!-- Vue Dependencies -->
+    <script src="https://unpkg.com/vue@3"></script>
+    <script src="https://unpkg.com/vue-router@4"></script>
+</head>
+<body>
+    <header>
+        <section class="v-align--grid col-2-auto">
+            <a id="logo" href="/index">
+                <div class="large">Standard Grammar Catalog</div> 
+                <div class="small">ABNF Toolchain & Generator</div> 
+            </a>
+
+            <nav> 
+                <input id="toggle--state" type="checkbox"/>
+                <label id="toggle" for="toggle--state">                          
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </label>
+    
+                <ul id="menu">
+                    <li><a href="index">About</a></li>
+                    <li class="category">
+                        <a href="catalog">Catalog</a>
+                        <ul class="dropdown">
+                            <a href="grammars-and-formats"><li>Grammars and Formats</li></a>
+                            <a href="handbook"><li>Handbook</li></a>
+                        </ul>
+                    </li>
+
+                    <li><a href="test-cases">Test Cases</a></li>
+                </ul>
+            </nav>
+        </section>
+    </header>
+
+    <main>    
+        <section>
+            <div id="app">
+                <router-view></router-view>
+            </div>
+            <!-- Vue App Entry -->
+            <script type="module" src="/test-cases-template.js"></script>			
+        </section>            
+    </main>
+
+    <footer>
+        <section class="col-4">
+            <span>&copy; 2025 Standard Grammar Catalog</span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </section>
+    </footer>
+
+    <!-- Developer Tools -->
+    <script src="/scripts/javascript/developer/debug-overflow.js"></script>
+</body>
+</html>

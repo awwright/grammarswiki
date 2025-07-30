@@ -1,0 +1,11 @@
+{
+  "id": "iso1",
+  "title": "ISO 2: ",
+  "date": "January 01, 2002",
+  "description": "",
+  "compliance": {
+    "ISO": ["2"]
+  },
+  "template": "test-cases/ISO_1.html",
+  "image": "content/images/placeholder.png"
+}

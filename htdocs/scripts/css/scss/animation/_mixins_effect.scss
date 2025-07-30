@@ -1,0 +1,65 @@
+// @title: Effect
+// @description: Allows for the transition of 2D effects
+// @author: Grant Kellie (grantkellie.dev)
+// @date: 2024 08 31
+// @parent: transition.scss
+// @Todo: TEST
+
+@charset 'utf-8';
+@use '_mixins_transition' as transition; // Animation transitions
+
+@mixin ease($element: null, $duration: 300ms, $timing-function: ease-out, $delay: 0ms) {
+    // Apply the transition to opacity
+    @include transition.effect($element, $duration, $timing-function, $delay);
+}
+
+// @title: 
+// @description: 
+@mixin fade($element: opacity, $duration: 300ms, $timing-function: ease-out, $delay: 0ms) {
+    // Apply the transition to opacity
+    @include transition.effect($element, $duration, $timing-function, $delay);
+
+    // Initial state
+    #{$element} {
+        opacity: 0;
+    }
+
+    // Transitioned state on modifier
+    &.#{$element}--visible {
+        opacity: 1;
+    }
+}
+
+// @title: 
+// @description: 
+@mixin slide($element: transform, $duration: 300ms, $timing-function: ease-out, $delay: 0ms) {
+    // Apply the transition to transform
+    @include transition.effect($element, $duration, $timing-function, $delay);
+
+    // Initial state
+    #{$element} {
+        transform: translateY(100%);
+    }
+
+    // Transitioned state on modifier
+    &.#{$element}--active {
+        transform: translateY(0);
+    }
+}
+
+// @title: 
+// @description: 
+@mixin scale($element: transform, $duration: 300ms, $timing-function: ease-out, $delay: 0ms) {
+    // Apply the transition to transform
+    @include transition.effect($element, $duration, $timing-function, $delay);
+
+    // Initial state
+    #{$element} {
+        transform: scale(0);
+    }
+
+    // Transitioned state on modifier
+    &.#{$element}--scaled {
+        transform: scale(1);
+    }
+}

@@ -1,0 +1,323 @@
+// @title: Graphics
+// @description: The core styling sheet for graphical elements such as image, video and SVG, with additional overlays elements.
+// @author: Grant Kellie (grantkellie.dev)
+// @contents:
+// - Graphical setup
+//     -- Graphical elements
+//     -- Image
+//     -- Video
+//     -- Scalable Vector Graphics
+// - Image Elements
+//     -- Icon
+//     -- Image Overlay
+//         -- Auto
+//         -- Quarter
+//         -- Half
+//         -- Full
+//         -- Center
+//         -- Top Left
+//         -- Top Right
+//         -- Bottom left
+//         -- Bottom Right
+//         -- Middle Top
+//         -- Middle Bottom
+//         -- Middle Right
+//         -- Middle Left
+//         -- Space Between (untested)
+//         -- Space Around (untested)
+//         -- Space Evenly (untested)
+//     -- Overlay Contents
+//     -- Overlay subtitle
+//     -- Overlay description
+
+@charset 'utf-8';
+@use '../scss/media-queries/mixins_media_queries' as media-queries;
+@use '../scss/color/functions_color' as color;
+@use '../scss/animation/mixins_effect' as effect;
+
+// @collection: Graphical setup
+// @title: Graphical elements
+// @description: Styling image, video, scalable vector graphics
+a img, img, video {
+    border: none;
+    outline: none;
+}
+
+// @title: Image
+// @description: Styling image
+img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+}
+
+* > img {
+    object-fit: cover;
+    display: block;
+    z-index: 1;
+
+    &:hover{
+        @include effect.ease(all, .5s, ease-out);
+    }  
+}
+
+// @title: Video
+// @description: styling for Video
+video {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    background-color: color.set('dark');
+    object-fit: cover;
+}
+
+// @title: Scalable Vector Graphics
+// @description: styling for SVG elements
+svg {
+  shape-rendering: crispEdges;
+}
+
+// @collection: Image Elements
+// @title: Icon
+// @description: standard styling for icons that can be used for interractions, e.g. social media links
+.icon {
+    width: 32px;
+    min-width:32px;
+    height: 32px;  
+
+    @include media-queries.responsive(){
+        width: clamp(42px, 42px, 42px);
+        height: 42px;  
+    }
+
+    margin:0 auto;
+    border:0;    
+    background-color:color.set('medium');
+
+    // Icon will shrink 16px
+    &.icon--shrink:hover {
+        width:24px;
+        height:24px;
+    }    
+
+    // Icon will shrink 16px
+    &.icon--grow:hover {
+        width:48px;
+        height:48px;
+    }    
+
+    &.icon--border-full{
+        border-radius: 100%;
+    }
+
+    &__search{       
+        background:color.set('light-medium') url('../../content/images/icon/magnifying-glass.svg') no-repeat center ;
+        background-size: 24px;
+    }
+
+    &--border--left{
+        border-radius: 0 5% 5% 0;  
+    }
+}
+
+// @title: Image Overlay
+// @description: provides a darkened overlay effect, modifiers are available to change the positioning of internal content
+// @type: Block
+.overlay {
+    width: calc(100% - 32px);
+    height: calc(100% - 32px);    
+    padding: 16px;
+    color: color.set('light');
+    background: color.set('opacity-75');
+    display:flex;
+    flex-direction: column;
+    justify-content:end;
+    position: absolute;
+    z-index:1;
+
+    &:hover{
+        background: color.set('hidden');
+    }
+    
+    // @group: Overlay size & position
+    // @title: Auto
+    // @description: 
+    // @type: Modifier    
+    &--auto { 
+        height: auto;
+    }
+    
+    // @title: Quarter
+    // @description: 
+    // @type: Modifier    
+    &--quart {
+        max-height: 25% !important;
+    }
+    
+    // @title: Half
+    // @description: 
+    // @type: Modifier    
+    &--half {
+        max-height: 50% !important;
+    }
+    
+    // @title: Full
+    // @description: 
+    // @type: Modifier    
+    &--full {
+        max-height: 100% !important;
+    }
+    
+    // @title: Quarter Width
+    // @description: Restricts width to 25% of the parent element
+    // @type: Modifier    
+    &--quart-width {
+        width: 25% !important;
+    }
+    
+    // @title: Half Width
+    // @description: Restricts width to 50% of the parent element
+    // @type: Modifier    
+    &--half-width {
+        width: 50% !important;
+    }
+    
+    // @title: Full Width
+    // @description: Restricts width to 100% of the parent element
+    // @type: Modifier    
+    &--full-width {
+        width: 100% !important;
+    }
+    
+    // @title: Dynamic Width
+    // @description: Allows setting a dynamic width value
+    // @type: Modifier    
+    &--width {
+        width: var(--overlay-width, calc(100% - 32px));
+    }
+    
+    // @group: Overlay Alignment
+    // @title: Center
+    // @description: center to Image Overlay's container
+    // @type: Modifier    
+    &--center {
+        align-items: center;
+        justify-content:center;
+    }
+
+    //@TODO: TEST     
+    // @title: Top Left
+    // @description: Aligns content to the top left of the container
+    // @type: Modifier    
+    &--top-left {
+        align-items: flex-start;
+        justify-content: flex-start;
+    }
+    
+    // @title: Top Right
+    // @description: Aligns content to the Top Right of the container
+    // @type: Modifier    
+    &--top-right {
+        align-items: flex-end;
+        justify-content: flex-start;
+    }
+    
+    // @title: Bottom left
+    // @description: Aligns content to the Bottom left of the container
+    // @type: Modifier        
+    &--bottom-left {
+        align-items: flex-start;
+        justify-content: flex-end;
+    }
+ 
+    
+    // @title: Bottom Right
+    // @description: Aligns content to the bottom right of the container
+    // @type: Modifier    
+    &--bottom-right {
+        align-items: flex-end;
+        justify-content: flex-end;
+    }
+
+    
+    // @title: Middle Top
+    // @description: Centers content to top middle of the containter
+    // @type: Modifier  
+    &--middle-top {
+        align-items: center;
+        justify-content: flex-start;
+    }
+    
+    // @title: Middle Bottom
+    // @description: Centers content to bottom middle of the containter
+    // @type: Modifier    
+    &--middle-bottom {
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    // @title: Middle Right
+    // @description: Aligns the content to the middle of the page and affixs it to the right of the containter
+    // @type: Modifier     
+    &--middle-right {
+        align-items: flex-end;
+        justify-content: center;
+    }
+ 
+    // @title: Middle Left
+    // @description: Aligns the content to the middle of the page and affixs it to the left of the containter
+    // @type: Modifier    
+    &--middle-left {
+        align-items: flex-start;
+        justify-content: center;
+    }
+  
+    // @title: Space Between
+    // @description: Distributes space between child elements evenly
+    // @type: Modifier     
+    &--space-between {
+        align-items: stretch;
+        justify-content: space-between;
+    }
+   
+    // @title: Space Around
+    // @description: Distributes space around child elements evenly
+    // @type: Modifier      
+    &--space-around {
+        align-items: stretch;
+        justify-content: space-around;
+    }
+
+    // @title: Space Evenly
+    // @description: Distributes space evenly between and around child elements
+    // @type: Modifier     
+    &--space-evenly {
+        align-items: stretch;
+        justify-content: space-evenly;
+    }
+
+    // @group: Overlay Contents
+    // @title: Overlay title
+    // @description: 
+    // @type: Element     
+    & .overlay__title {
+        font-size:1.25em;
+        font-weight:bold;
+    }
+     
+    // @title: Overlay subtitle
+    // @description: Smaller subtitle, could be used for Author, timestamp, etc...
+    // @type: Element      
+    & .overlay__subtitle {
+        font-size:0.84em;
+    }
+  
+    // @title: Overlay description
+    // @description: used for paragraphi text in Umage Overlay's
+    // @type: Element       
+    & .overlay__description {
+        
+    }
+}

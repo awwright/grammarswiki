@@ -1,0 +1,28 @@
+// @title: Effect3D
+// @description: Allows for the transition of 3D effects
+// @author: Grant Kellie (grantkellie.dev)
+// @parent: transition.scss
+// @Todo: TEST
+
+@charset 'utf-8';
+@import '_mixins_transition'; // Animation transitions
+
+// @title: 
+// @description: 3D Perspective and Transform Mixin that creates the illusion of depth
+@mixin perspective($perspective: 1000px) {
+    perspective: $perspective;
+    -webkit-perspective: $perspective;
+}
+
+// @title: 
+// @description: 3D Transform Mixin for X, Y, Z axis effects
+@mixin transform3d($rotateX: 0deg, $rotateY: 0deg, $rotateZ: 0deg, $translateX: 0, $translateY: 0, $translateZ: 0) {
+    transform: translate3d($translateX, $translateY, $translateZ) rotateX($rotateX) rotateY($rotateY) rotateZ($rotateZ);
+    -webkit-transform: translate3d($translateX, $translateY, $translateZ) rotateX($rotateX) rotateY($rotateY) rotateZ($rotateZ);
+}
+
+// @title: 
+// @description: Creates 3D Transition Effects 
+@mixin transition3d($properties: transform, $duration: 300ms, $timing-function: ease-out, $delay: 0ms) {
+    @include transition($properties, $duration, $timing-function, $delay);
+}

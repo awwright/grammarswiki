@@ -1,0 +1,11 @@
+{
+  "id": "rfc103",
+  "title": "103",
+  "date": "February 09, 2024",
+  "description": "lorem ipsum",
+  "compliance": {
+    "RFC": [ "103" ]
+  },
+  "template": "",
+  "image": "content/images/placeholder.png"
+}

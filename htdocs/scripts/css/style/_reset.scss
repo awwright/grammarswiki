@@ -1,0 +1,85 @@
+// @title: CSS Reset
+// @description: Basic Reset for common elements
+// @author: Grant Kellie (grantkellie.dev)
+// @contents:
+// - Global Reset
+
+@charset 'utf-8';
+// @title: Global Reset
+// @description: Basic Reset for common elements
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+// HTML5 display-role reset for older browsers
+article, aside, details, figcaption, figure, footer, header, hgroup, main, menu, nav, section {
+  display: block;
+}
+
+body {
+  line-height: 1;
+}
+
+ol, ul {
+  list-style: none;
+}
+
+blockquote, q {
+  quotes: none;
+}
+
+blockquote::before, blockquote::after,
+q::before, q::after {
+  content: '';
+  content: none;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+// Reset margins and paddings for headings and form elements
+h1, h2, h3, h4, h5, h6,
+form, input, label, button,
+p, table {
+  margin: 0;
+  padding: 0;
+}
+
+// Reset for form elements
+input, button, textarea, select {
+  font: inherit;
+  margin: 0;
+}
+
+// Ensure buttons have no default styles
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+// Additional reset for common elements
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+// Add custom spacing if needed (Optional)
+h1, h2, h3, h4, h5, h6,
+form, input, label, button,
+p, table {
+  margin-bottom: 10px; // Example custom margin
+}

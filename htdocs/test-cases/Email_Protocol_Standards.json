@@ -1,0 +1,16 @@
+{
+  "id": "email-standards",
+  "title": "Email Protocol Standards",
+  "date": "March 15, 2024",
+  "description": "Standards governing email transmission protocols such as SMTP, IMAP, and MIME.",
+  "compliance": {
+    "RFC": [
+      "5321",  
+      "5322",  
+      "2045",  
+      "3501"
+    ]
+  },
+  "template": "test-cases/Email_Protocol_Standards.html",
+  "image": "content/images/placeholder.png"
+}

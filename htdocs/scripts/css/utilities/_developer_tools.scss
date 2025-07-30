@@ -1,0 +1,15 @@
+// @title: Developer Tools
+// @description: Assisting with debug and development processes
+// @author: Grant Kellie (grantkellie.dev)
+// @contents:
+// - debug
+
+@charset 'utf-8';
+@use '../scss/color/functions_color' as color;
+
+// @title: debug
+// @description: applies a debug color to the effected elements 
+// @todo: apply to developer tools
+.debug {
+    background: color.set('debug');
+}

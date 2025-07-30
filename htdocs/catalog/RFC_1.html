@@ -1,0 +1,61 @@
+<section>
+    <code>
+        email-message = headers CRLF body
+        <br><br>
+        headers = *(header-field CRLF)
+        header-field = field-name ":" OWS field-value OWS
+        <br><br>
+        field-name = 1*<any CHAR except CTLs or ":">
+        field-value = *(<any CHAR except CTLs or CRLF>)
+        <br><br>
+        body = text-body
+        <br><br>
+        text-body = *(text-char / CRLF)
+        <br><br>
+        text-char = <any CHAR except CR and LF>
+        <br><br>
+        OWS = *(SP / HTAB)  ; optional white space
+        <br><br>
+        CRLF = CR LF<br>
+        CR = %x0D<br>
+        LF = %x0A<br>
+        SP = %x20<br>
+        HTAB = %x09<br>
+        CTL = %x00-1F / %x7F<br>
+    </code>
+</section>
+
+<section>
+    <h2>1. What is the grammar/format for {title}, and why is it used?</h2>
+    <p>
+    The Hypertext Transfer Protocol (HTTP) is an application-level  protocol for distributed, collaborative, hypermedia information systems. 
+    HTTP has been in use by the World-Wide Web global information initiative since 1990. The first version of HTTP, referred to as HTTP/0.9, was a simple protocol for raw data transfer across the Internet.<br><br>  
+
+    HTTP/1.0, as defined by RFC 1945 [6], improved the protocol by allowing messages to be in the format of MIME-like messages, containing meta-information about the data transferred and modifiers on the request/response semantics. However, HTTP/1.0 does not sufficiently take into consideration the effects of hierarchical proxies, caching, the need for persistent connections, or virtual hosts. In addition, the proliferation of incompletely-implemented applications calling themselves "HTTP/1.0" has necessitated a protocol version change in order for two communicating applications to determine each other's true 
+    capabilities. This specification defines the protocol referred to as "HTTP/1.1".<br><br>   
+    </p>
+
+    <h2>2. What is the grammar/format for {title}, and why is it used?</h2>
+    <p>
+    The Hypertext Transfer Protocol (HTTP) is an application-level  protocol for distributed, collaborative, hypermedia information systems.<br>
+    HTTP has been in use by the World-Wide Web global information initiative since 1990. The first version of HTTP, referred to as HTTP/0.9, was a simple protocol.<br><br>
+    </p> 
+
+    <h2>3. What is the grammar/format for {title}, and why is it used?</h2>
+    <p>
+    The Hypertext Transfer Protocol (HTTP) is an application-level  protocol for distributed, collaborative, hypermedia information systems.<br>
+    HTTP has been in use by the World-Wide Web global information initiative since 1990. The first version of HTTP, referred to as HTTP/0.9, was a simple protocol.<br><br>
+    </p> 
+
+
+    <b>Cross References</b>
+    <table>
+        <tr><td>1. <a href="https://example.com/application">https://example.com/application</a></td></tr>
+        <tr><td>2. <a href="https://example.com/application">https://example.com/application</a></td></tr>
+        <tr><td>3. <a href="https://example.com/application">https://example.com/application</a></td></tr>
+        <tr><td>4. <a href="https://example.com/application">https://example.com/application</a></td></tr>
+        <tr><td>5. <a href="https://example.com/application">https://example.com/application</a></td></tr>
+        <tr><td>6. <a href="https://example.com/application">https://example.com/application</a></td></tr>
+        <tr><td>7. <a href="https://example.com/application">https://example.com/application</a></td></tr>
+    </table>
+</section>

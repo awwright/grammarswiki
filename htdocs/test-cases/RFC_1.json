@@ -1,0 +1,11 @@
+{
+  "id": "rfc1",
+  "title": "RFC 1: Host Software",
+  "date": "April 07, 1969",
+  "description": "The first RFC, outlining host software design concepts for the ARPANET.",
+  "compliance": {
+    "RFC": ["1"]
+  },
+  "template": "test-cases/RFC_1.html",
+  "image": "content/images/placeholder.png"
+}

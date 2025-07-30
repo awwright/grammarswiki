@@ -1,0 +1,126 @@
+// @title: Content systems
+// @description: Components for creating a pagination, load more, infinite scroll and filter menu's
+// @author: Grant Kellie (grantkellie.dev)
+// @contents:
+// - Filter
+//  -- Quick search
+// - Pagination
+
+@charset 'utf-8';
+@use '../scss/media-queries/mixins_media_queries' as media-queries;
+@use '../scss/color/functions_color' as color;
+
+// @title: Filter Menu
+// @description: menu system for searching and filterng information.
+form.filter-menu {
+
+    // @title: Filter Search
+    // @description: Small filter menu system
+    &--quick-search {    
+        border:none;
+        border-radius: unset;   
+        display:inline-flex;
+
+        @include media-queries.responsive(){
+           	margin:0 0 20px 0;
+
+            & input {
+                font-size:1em;
+            }    
+        }
+
+        & input {
+            padding:8px;
+            outline: none;
+            border: none;
+            box-shadow: none; 
+
+            &.icon {
+                cursor: pointer;
+            }
+        }    
+    }
+    
+    // @title: Filter Search
+    // @description: Small filter menu system
+    &--detailed-search {
+        border:none;
+        border: 2px solid color.set('light-medium'); 
+        border-radius: 0px; 
+  
+        & * {
+            display: flex;
+        }
+    
+        & > div, span {		
+            flex-wrap: wrap;
+            gap:6px;
+        } 
+        
+        // Filter group container (flex layout)
+        & .filter-group {
+            gap: 10px;
+
+            // Each individual form field
+            & > * {
+                flex: 1 1 calc(33.333% - 16px);
+                justify-content: left;
+                align-items: center;                     
+
+                & > label {
+                    font-weight:420;
+                    margin:0 8px 0 0;      
+                }
+                
+                & input, select {
+                    flex: 1;
+                    // height:clamp(32px, 32px, 32px);
+                }
+
+                & input, select  {
+                    flex: 1;
+                    padding:8px;
+                    outline: none;
+                    box-shadow: none; 
+                }
+            }
+        }
+     
+        & .button {            
+            margin:24px 0px;
+           
+            &:not(:last-child){
+                margin:24px 16px 0px 0px;  
+            }
+        }
+    }
+}
+
+// @title: Pagination
+// @description: 
+.pagination-controls {
+    text-align: center;   
+
+    & button {
+            min-width:100px;
+    height:32px;
+    
+        border-radius:8px;
+    }
+
+    
+    
+    // first
+    // previous
+        // numerics
+    // next
+    // last
+}
+
+// @title: Sort
+// @description:
+.sort-select {
+    min-height:24px;
+}
+
+

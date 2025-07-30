@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Standard Grammar Catalog</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="scripts/css/style.css">
+</head>
+<body>
+    <header>
+        <section class="v-align--grid col-2-auto">
+            <a id="logo" href="/index">
+                <div class="large">Standard Grammar Catalog</div> 
+                <div class="small">ABNF Toolchain & Generator</div> 
+            </a>
+
+            <nav> 
+                <input id="toggle--state" type="checkbox"/>
+                <label id="toggle" for="toggle--state">                          
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </label>
+    
+                <ul id="menu">
+                    <li><a href="index">About</a></li>
+                    <li class="category">
+                        <a href="catalog">Catalog</a>
+                        <ul class="dropdown">
+                            <a href="grammars-and-formats"><li>Grammars and Formats</li></a>
+                            <a href="handbook"><li>Handbook</li></a>
+                        </ul>
+                    </li>
+
+                    <li><a href="test-cases">Test Cases</a></li>
+                </ul>
+            </nav>
+        </section>
+    </header>
+
+    <main>
+        <section>
+            <table class="none">
+                <h2>Style Guide Contents</h2>
+                <tr>        
+                    <th>Component</th>
+                </tr>  
+
+                <tr><td><a href="#layout">Layout</a></td></tr>
+                    <tr><td><a href="#columns">Columns</a></td></tr>
+                        <tr><td><a href="#columns">- 1 Column</a></td></tr>
+                        <tr><td><a href="#columns-2">- 2 Column</a></td></tr>
+                        <tr><td><a href="#columns-3">- 3 Column</a></td></tr>
+                        <tr><td><a href="#columns-4">- 4 Column</a></td></tr>
+                        <tr><td><a href="#columns-5">- 5 Column</a></td></tr>
+                        <tr><td><a href="#columns-6">- 6 Column</a></td></tr>
+                        <tr><td><a href="#columns-7">- 7 Column</a></td></tr>
+                        <tr><td><a href="#columns-8">- 8 Column</a></td></tr>
+                        <tr><td><a href="#columns-9">- 9 Column</a></td></tr>
+                        <tr><td><a href="#columns-10">- 10 Column</a></td></tr>
+                        <tr><td><a href="#columns-11">- 11 Column</a></td></tr>
+                        <tr><td><a href="#columns-12">- 12 Column</a></td></tr>
+                    <tr><td><a href="#aspect-ratios">- Aspect Ratios</a></td></tr>
+                    <tr><td><a href="#tables">- Tables</a></td></tr>
+                
+            </table>
+        </section>
+        
+        <section id="layout" class="container">
+            <h2>Layout</h2>            
+            <h3 id="columns">Columns</h3>
+                <h4  id="column-1">1 Column</h4>
+                <div class="col-1">
+                    <div class="ratio-16-9">
+                        <span class="overlay overlay--space-between overlay--padding">
+                            <h3 class="overlay__title">Title</h3>
+                            <p class="overlay__subtitle">subtitle</p>
+                            <p class="overlay__description">Description</p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+        
+                <h4 id="columns-2">2 Columns</h4>
+                <div class="col-2">
+                    <div class="ratio-1-1">                    
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+
+            <div id="columns-3">
+                <h4>3 Columns</h4>
+                <div class="col-3">
+                    <div class="ratio-1-1">                    
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div> 
+                </div>
+            </div>
+
+            <div id="columns-4">
+                <h4>4 Columns</h4>
+                <div class="col-4">
+                    <div class="ratio-1-1">                  
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+            </div>
+
+            <div id="columns-5">
+                <h4>5 Columns</h4>
+                <div class="col-5">
+                    <div class="ratio-1-1">                 
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+            </div>
+
+            <div id="columns-6">
+                <h4>6 Columns</h4>
+                <div class="col-6">
+                    <div class="ratio-1-1">                   
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+            </div>
+
+            <div id="columns-7">
+                <h4>7 Columns</h4>
+                <div class="col-7">
+                    <div class="ratio-1-1">                                          
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+            </div>
+
+
+            <div id="columns-8">
+                <h4>8 Columns</h4>
+                <div class="col-8">
+                    <div class="ratio-1-1">                
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+            </div>
+
+            <div id="columns-9">
+                <h4>9 Columns</h4>
+                <div class="col-9">
+                    <div class="ratio-1-1">                   
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+            </div>
+
+            <div id="columns-10">
+                <h4>10 Columns</h4>
+                <div class="col-10">
+                    <div class="ratio-1-1">                    
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+            </div>
+
+            <div id="columns-11">
+                <h4>11 Columns</h4>
+                <div class="col-11">
+                    <div class="ratio-1-1">                  
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+            </div>
+
+            <div id="columns-12">
+                <h4>12 Columns</h4>
+                <div class="col-12">
+                    <div class="ratio-1-1">               
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+
+                    <div class="ratio-1-1">
+                        <span class="overlay overlay--center">
+                            <h3 class="overlay__title"></h3>
+                            <p class="overlay__description"></p>
+                        </span>                     
+                        <img src="content/images/placeholder.png" alt="placeholder"/>                        
+                    </div>
+                </div>
+            </div>
+            
+            <h3 id="aspect-ratios">Container Aspect Ratios</h3>
+            <div class="col-4">
+                <div class="ratio-1-1">
+                    <span class="overlay overlay--center">
+                        <h3 class="overlay__title">Ratio 1:1</h3>
+                        <p class="overlay__description"></p>
+                    </span>                     
+                    <img src="content/images/placeholder.png" alt="placeholder"/>  
+                </div>
+
+                <div class="ratio-2-1">
+                    <span class="overlay overlay--center">
+                        <h3 class="overlay__title">Ratio 2:1</h3>
+                        <p class="overlay__description"></p>
+                    </span>                     
+                    <img src="content/images/placeholder.png" alt="placeholder"/>  
+                </div>
+
+                <div class="ratio-4-3">
+                    <span class="overlay overlay--center">
+                        <h3 class="overlay__title">Ratio 4:3</h3>
+                        <p class="overlay__description"></p>
+                    </span>                     
+                    <img src="content/images/placeholder.png" alt="placeholder"/>  
+                </div>
+
+                <div class="ratio-16-9">
+                    <span class="overlay overlay--center">
+                        <h3 class="overlay__title">Ratio 16:9</h3>
+                        <p class="overlay__description"></p>
+                    </span>                     
+                    <img src="content/images/placeholder.png" alt="placeholder"/>  
+                </div>                
+            </div>
+        </section>
+
+        <section>
+            <h2 id="tables">Tables</h2>
+            <div class="col-1 horizontal-overflow--buffer">
+                <!-- <table style="display:none;">       -->
+                <table>
+                    <tr>  
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                    </tr>  
+                    
+                    <tr>
+                        <td>0190a2b1-8ee9-76d0-94d4-574082402801</td>
+                        <td>Admin</td>
+                        <td>$2y$12$8wxtW7B3.wNQHRaUzJl6ou8wA3M1d05OBFQwjuTS/6uwCxkWkyqPK</td>
+                    </tr>
+
+                    <tr>
+                        <td>0190a2b1-b9dd-7e78-8c64-463a9eb09176</td>
+                        <td>Staff</td>
+                        <td>$2y$12$x/78D5uqSqe4gO8Q7GOmyOeww0x1o/Fr4DatLNuSgrWeJ0oowlY9q</td>
+                    </tr>
+
+                    <tr>
+                        <td>0190a2b1-b9dd-766d-b1e7-74b9b2b3ed64</td>
+                        <td>User</td>
+                        <td>$2y$12$B56cPbWovc1tivJXBd32MOXih0XQOl.kKnKhvsLRoHQ0WCnLKuYVi</td>
+                    </tr>
+
+                    <tr>
+                        <td>0190a2b1-de0b-7eeb-9e7f-ef56451ca352</td>
+                        <td>Developer</td>
+                        <td>$2y$12$qEGXlz/3lPpz8jqTUIs/FOpRTEJFvi/Yn14X7ogrSasSZcwRGEG6C</td>
+                    </tr>
+                
+                </table> 
+            </div> 
+            
+        </section>
+        
+    </main>
+    
+    <footer>
+        <section class="col-4">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </section>
+    </footer>
+
+    <!-- JavaScript Utilities -->
+    <script src="scripts/javascript/developer/debug-overflow.js"></script>
+
+</body>
+</html>

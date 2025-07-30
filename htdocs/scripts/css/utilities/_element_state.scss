@@ -1,0 +1,47 @@
+// @title: State Management
+// @description: Universal State management
+// @author: Grant Kellie (grantkellie.dev)
+// @contents:
+// - None
+// - noselect
+// - no-js
+// - Honeypot interaction
+// - debug
+
+@charset 'utf-8';
+// @title: State management
+// @description: modifiers that affect elements for non-standard functionality
+// @todo: move into own scss file
+
+// @title: None
+// @description: sets an element to hidden without being removed
+.none {
+	display:none;
+}
+
+// @title: noselect
+// @description: Prevent highlight of applied elements 
+.noselect { 
+	-webkit-touch-callout: none; // iOS Safari
+	-webkit-user-select: none; // Safari
+	-khtml-user-select: none; // Konqueror HTML
+	-moz-user-select: none; // Firefox
+	-ms-user-select: none; // Internet Explorer/Edge
+	user-select: none; // Non-prefixed version, currently supported by Chrome and Opera
+} 
+
+// @title: no-js
+// @description: JavaScript enabled/disabled state management
+.js-disabled { display: block; }
+.js-enabled { display: none; }
+
+// @title: Honeypot interaction
+// @description: used as a bait trigger
+// @Todo: add javascript class change to give unique ID for each page load 
+.hny {
+	visibility:hidden;
+	position:fixed;
+	top:-99999px;
+	left:-99999px;
+	z-index:-9999999;
+}

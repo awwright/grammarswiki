@@ -1,0 +1,14 @@
+// @title: Transition Effects
+// @description: Reusable compoents for CSS transition effects
+// @author: Grant Kellie (grantkellie.dev)
+// @contents:
+// - Transition
+
+// @title: effect
+// @description: sets the transition properties, duration, timing function & delay of the effect
+@mixin effect($properties: all, $duration: 300ms, $timing-function: ease-out, $delay: 0ms) {
+    -webkit-transition: $properties $duration $timing-function $delay;
+    -moz-transition: $properties $duration $timing-function $delay;
+    -o-transition: $properties $duration $timing-function $delay;
+    transition: $properties $duration $timing-function $delay;
+}

@@ -1,0 +1,33 @@
+RewriteEngine On
+
+# --- Remove /index.html or /index in URL ---
+RewriteCond %{THE_REQUEST} /index(\.html)? [NC]
+RewriteRule ^index(\.html)?$ / [R=301,L]
+
+# Redirect URLs ending with .html to extensionless
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
+RewriteRule ^ %1 [R=301,L]
+
+# --- Internally rewrite clean URLs like /page to /page.html ---
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^([a-zA-Z0-9/_-]+)$ $1.html [L]
+
+# --- Serve existing files and folders directly ---
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# --- Rewrite /catalog and /catalog/* to catalog.html ---
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^catalog(/.*)?$ /catalog.html [L]
+
+# --- Rewrite /test-cases and /test-cases/* to test-cases.html ---
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^test-cases(/.*)?$ /test-cases.html [L]
+
+# --- Fallback: redirect everything else to error.html ---
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^.*$ /error.html [L]

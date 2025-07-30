@@ -1,0 +1,310 @@
+// @title: CSS Only Sidebar Menu
+// @description: a left side bar menu
+// @author: Grant Kellie (grantkellie.dev)
+// @contents:
+// - Panel Layout
+// -- Panel Layout top
+// -- Panel Layout bottom
+// -- Panel Layout left
+// -- Panel Layout right
+// -- Panel Layout left & right 
+// - Scrollbar
+// -- Scrollbar top
+// -- Scrollbar bottom
+// -- Scrollbar left
+// -- Scrollbar right
+// - Panel
+// -- Panel top
+// -- Panel bottom
+// -- Panel left
+// -- Panel right
+// -- Toggle panel contents
+// - Responsive Panels
+// -- Responsive toggle panel contents
+
+@charset 'utf-8';
+@use '../scss/media-queries/mixins_media_queries' as media-queries;
+@use '../scss/color/functions_color' as color;
+@use '../scss/animation/mixins_effect' as effect;
+
+// @variables
+$panel:320px;
+
+// @title: Panel Layout
+// @description: sets spacing for the panel('s) in use so that page content is not overlaped
+body.panel-layout {
+	// @title: Panel Layout top
+	&--top {
+		& header {
+			margin: $panel 0 0 0;
+		}
+	}
+
+	// @title: Panel Layout bottom
+	&--bottom {
+		& footer {
+			padding:0 0 $panel 0;
+		}	
+	}
+
+	// @title: Panel Layout left
+	&--left {
+		main, header, footer {
+			margin: 0 0 0 $panel;
+		}	
+	}
+
+	// @title: Panel Layout right
+	&--right {
+		& main, header, footer{
+			margin: 0 $panel 0 0;
+		}
+	}
+
+	// @title: Panel Layout left & right 
+	&--left--right {
+		main, header, footer {
+			margin: 0 $panel 0 $panel;
+		}	
+	}
+}	
+
+// @title: Scrollbar
+// @description: sets the position for the scroll
+// @note: You should use scrollbar on opposite direction to panel for the best result.
+.scrollbar {
+	overflow-y: auto;
+
+	// @title: Scrollbar top
+	&--top {
+		overflow-y: hidden;
+		overflow-x: auto;
+		transform: rotateX(180deg);
+	}
+
+	// @title: Scrollbar bottom
+	&--bottom {
+		overflow-y: hidden;
+		overflow-x: auto;
+		transform: rotateX(0deg);
+	}
+
+	// @title: Scrollbar left
+	&--left {
+		overflow-y: auto;
+		overflow-x: hidden;
+		direction: rtl;
+	}
+
+	// @title: Scrollbar right
+	&--right {
+		overflow-y: auto;
+		overflow-x: hidden;
+		direction: ltr;
+	}
+}
+
+// @title: Panel
+// @description: The menu that can be positioned on top, right, bottom & left
+.panel {
+	display: flex;
+	flex-direction: column;
+	background: color.set('light');
+	position: fixed;
+	z-index: 9998;
+
+	& input {
+		display: none;
+	}
+
+	// @title: Panel top
+	&--top {
+		width: 100vw;
+		height: $panel;
+		top: 0;
+		left: 0;
+		bottom: unset;
+		transform: rotateX(0deg);
+		border-bottom:solid color.set('dark') 1px;
+
+		// @description: Contents
+		& > * {
+			width: 100%;
+			overflow-y: hidden;
+		}
+
+		& section {
+			width:120%;
+			margin:0 auto;
+		}
+	}
+
+	// @title: Panel bottom
+	&--bottom {
+		width: 100vw;
+		height: $panel;
+		top: unset;
+		left: 0;
+		bottom: 0;
+		border-top:solid color.set('dark') 1px;
+		
+		// @description: Contents
+		& > * {
+			transform: rotateX(180deg);
+			width: 100%;			
+			position: absolute;
+			bottom: 0;
+			margin:0 auto;
+		}
+	}
+
+	// @title: Panel left
+	&--left {
+		width: $panel;
+		height: 100vh;
+		padding: 0 0 25px 0;
+		top: 0;
+		left: 0;
+		right: unset;
+		align-items: center;
+		border-right:solid color.set('dark') 1px;
+
+		& section {
+			width: 96%;
+			margin: 0 2%;
+		}
+		
+	}
+
+	// @title: Panel right
+	&--right {
+		width: $panel;
+		height: 100vh;
+		top: 0;
+		left: unset;
+		right: 0;
+		align-items: center;
+		border-left:solid color.set('dark') 1px;
+
+		& section {
+			width: 96%;
+			margin: 0 2%;
+		}
+	}
+
+	& * {
+		list-style: none;
+	}
+
+	// @title: Toggle panel contents
+	// @description: Shows the ul when the checkbox is checked.
+	& .toggle-content {
+		display: block;
+
+		&:last-child{
+			margin: 0 0 25px 0;
+		}
+	}
+
+	// @description: Hides the ul when the checkbox is checked.
+	& .toggle-input:checked + label + .toggle-content {
+		display: none;
+	}
+
+	// @description: Turns H3 inside panel label into pointer for interaction indicator.
+	& label > h3 {
+		cursor: pointer; 
+	}
+
+	// @description: hides mobile menu
+	& .toggle-master, .main-label {
+		display: none;
+	}
+}
+
+// @title: Responsive Panels
+// @description: Forces all panels to take on the same format for Responsive devices.
+@include media-queries.responsive {
+    body.panel-layout--top,	body.panel-layout--bottom, body.panel-layout--left,	body.panel-layout--right, body.panel-layout--left--right {
+        & main, header, footer {
+			margin: unset;
+			padding: unset;
+        }
+
+		& footer {
+			padding: 32px 0 0 0;
+        }
+    }       
+
+	.panel {
+		width: 100%;
+		height:auto;
+		margin: 100px auto 25px auto;
+		
+		position:relative;
+		top: 0;
+		left: 0;		
+		z-index:0;
+		
+		& section {
+			width:96%;
+			margin:0;
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		& main, header, footer {
+			margin: unset;
+			padding: unset;
+        }
+
+		// @title: Responsive toggle panel contents
+		// @description: Hides the ul when the checkbox is not checked.
+		.toggle-section {
+
+			// @description: Hide all sections by default
+			.toggle-content {
+				display: none; 
+
+				&:last-child{
+					margin: 0;
+				}
+			}
+
+			// @description: Shows the ul when the specific section's checkbox is checked.
+			.toggle-input:checked + label + .toggle-content {
+				display: block;
+			}
+		}
+
+		// @description: shows mobile menu
+		& .main-label {
+			display: block;
+		}
+
+		// @description: Shows all sections when the master toggle is checked.
+		.toggle-master:checked ~ .toggle-section .toggle-content {
+			display: block; // Show all sections
+		}		
+	}	
+}
+
+@include media-queries.mobile {
+	.panel {		
+		& section {
+			width:96%;
+			display: grid;
+			grid-template-columns: repeat(1, 1fr);
+		}
+    }
+}
+
+@include media-queries.small-mobile {
+	.panel {
+		& section {
+			width:96%;
+			display: grid;
+			grid-template-columns: repeat(1, 1fr);
+		}
+    }
+}

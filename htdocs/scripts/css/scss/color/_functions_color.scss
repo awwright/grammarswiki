@@ -1,0 +1,8 @@
+@charset 'utf-8';
+@import 'variables_color';
+
+$theme: $light;
+
+@function set($color-name) {
+    @return map-get($theme, $color-name);
+}

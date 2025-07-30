@@ -1,0 +1,12 @@
+{
+  "id": "code-700",
+  "title": "Code 700",
+  "date": "July 18, 2025",
+  "description": "Just a test",
+  "compliance": {
+    "RFC": [ "700" ],
+    "ISO": ["0700" ]
+  },
+  "template": "test-cases/RFC_3339.html",
+  "image": "content/images/placeholder.png"
+}

@@ -1,0 +1,12 @@
+{
+  "id": "rfc100",
+  "title": "100",
+  "date-added": "July 25, 2025",
+  "date": "July 25, 2025",
+  "description": "lorem ipsum",
+  "compliance": {
+    "RFC": [ "100" ]
+  },
+  "template": "test-cases/Email_Protocol_Standards.html",
+  "image": "content/images/placeholder.png"
+}

@@ -1,0 +1,87 @@
+// @title: SCSS Variables Color
+// @description: lists containing a range of different color styles for light, dark or any other mode of the website.
+// @author: Grant Kellie (grantkellie.dev)
+// @parent: functions_color.scss
+// @example: example theming.md
+
+$light: (
+  // Original
+  primary: hsla(216, 75%, 15%, 1.00),
+  secondary: hsla(216, 100%, 48%, 1.00),
+  tertiary: hsla(216, 90%, 64%, 1.00),
+
+  // Updated
+  // primary: rgba(24, 41, 67, 1),
+  // secondary: hsla(207, 89%, 51%, 1.00),
+  // tertiary: hsla(207, 92%, 65%, 1.00),
+
+  light: hsla(0, 0%, 100%, 1),
+  light-medium: hsla(210, 11%, 95%, 1),
+  medium: hsla(206, 11%, 75%, 1),
+  medium-dark: hsla(219, 37%, 18%, 1.00),  
+  dark: #141E2B,
+
+  opacity-25: hsla(206, 11%, 7%, 0.25),
+  opacity-50: hsla(206, 11%, 7%, 0.50),
+  opacity-75: hsla(206, 11%, 7%, 0.75),
+  hidden: hsla(0, 0%, 0%, 0),
+
+  success: hsla(145, 69%, 47%, 1),
+  error: hsla(350, 68%, 52%, 1),
+  debug: hsla(280, 68%, 52%, 0.25),  
+);
+
+$dark: (
+  primary: hsla(210, 38%, 80%, 1),
+  secondary: hsla(210, 31%, 64%, 1),
+  tertiary: hsla(210, 34%, 69%, 1),
+
+  light: hsla(0, 0%, 10%, 1),
+  light-medium: hsla(210, 11%, 25%, 1),
+  medium: hsla(206, 11%, 50%, 1),
+  medium-dark: hsla(206, 11%, 80%, 1),  
+  dark: hsla(0, 0%, 95%, 1),
+
+  opacity-25: hsla(206, 11%, 87%, 0.25),
+  opacity-50: hsla(206, 11%, 87%, 0.50),
+  opacity-75: hsla(206, 11%, 87%, 0.75),
+  hidden: hsla(0, 0%, 0%, 0),
+
+  success: hsla(146, 69%, 47%, 1),
+  error: hsla(348, 68%, 52%, 1),
+  debug: hsla(258, 52%, 53%, 0.5),  
+);
+
+$light-v2: (
+  primary: hsla(210, 98%, 20%, 1),
+  secondary: hsla(210, 71%, 44%, 1),
+  tertiary: hsla(210, 74%, 69%, 1),
+
+  background-light: hsla(0, 0%, 100%, 1),
+  background-dark: hsla(206, 11%, 40%, 1),
+  background-neutral: hsla(210, 11%, 95%, 1),
+  surface: hsla(206, 11%, 75%, 1),
+
+  text-primary: hsla(0, 0%, 5%, 1),
+  text-secondary: hsla(206, 11%, 40%, 1),
+  text-muted: hsla(206, 11%, 75%, 1),
+  text-inverse: hsla(0, 0%, 100%, 1),
+
+  border-light: hsla(206, 11%, 75%, 1),
+  border-dark: hsla(0, 0%, 5%, 1),
+  border-muted: hsla(210, 11%, 95%, 1),
+
+  accent-primary: hsla(210, 71%, 44%, 1),
+  accent-secondary: hsla(210, 74%, 69%, 1),
+
+  overlay-25: hsla(206, 11%, 7%, 0.25),
+  overlay-50: hsla(206, 11%, 7%, 0.50),
+  overlay-75: hsla(206, 11%, 7%, 0.75),
+
+  success: hsla(146, 69%, 47%, 1),
+  error: hsla(348, 68%, 52%, 1),
+  warning: hsla(45, 100%, 50%, 1),
+  info: hsla(195, 100%, 50%, 1),
+
+  debug: hsla(258, 94%, 62%, 0.5),
+);

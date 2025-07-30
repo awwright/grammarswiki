@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Standard Grammar Catalog</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="scripts/css/style.css">
+
+    <!-- Vue 3 + Vue Router -->
+    <script src="https://unpkg.com/vue@3"></script>
+    <script src="https://unpkg.com/vue-router@4"></script>
+</head>
+<body>
+<header>
+        <section class="v-align--grid col-2-auto">
+            <a id="logo" href="index">
+                <div class="large">Standard Grammar Catalog</div> 
+                <div class="small">ABNF Toolchain & Generator</div> 
+            </a>
+
+            <nav> 
+                <input id="toggle--state" type="checkbox"/>
+                <label id="toggle" for="toggle--state">                          
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </label>
+    
+                <ul id="menu">
+                    <li><a href="index">About</a></li>
+                    <li class="category">
+                        <a href="catalog">Catalog</a>
+                        <ul class="dropdown">
+                            <a href="grammars-and-formats"><li>Grammars and Formats</li></a>
+                            <a href="handbook"><li>Handbook</li></a>
+                        </ul>
+                    </li>
+
+                    <li><a href="test-cases">Test Cases</a></li>
+                </ul>
+            </nav>
+        </section>
+    </header>
+
+    <main>
+        <section>
+            <h2>About the Standard Grammar Catalog</h2>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum, Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</p>
+        </section>
+ 
+        <!-- Vue Mount Point -->
+        <section>
+            <div id="app"></div>          
+        </section> 
+
+
+        <section>
+            <h2>Grammars & Formats</h2>
+
+            <form id="external-filter-form" class="filter-menu--detailed-search" method="get" action="catalog.html">
+                
+                <div class="filter-group">
+                    <div>
+                        <label for="standard">Standard</label>
+                        <select id="standard" name="standard">
+                            <option value="">Any</option>
+                            <option value="RFC">RFC</option>
+                            <option value="ISO">ISO</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="compliant-code">Compliant Code</label>
+                        <input id="compliant-code" type="text" name="compliant-code" placeholder="" />
+                    </div>
+
+                    <div>
+                        <label for="search">Search by Title</label>
+                        <input id="search" type="text" name="search" placeholder="" />
+                    </div>
+                </div>
+
+                <div class="h-align--flex--right">
+                    <button class="button button--solid" type="reset">Reset</button>
+                    <input class="button button--solid" type="submit" value="Search">
+                </div>
+            </form>
+
+            <script>
+            // Sends correctly formatted URL to action/page
+            document.getElementById('external-filter-form').addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const params = new URLSearchParams();
+                const form = e.target;
+
+                const standard = form.standard.value.trim();
+                const code = form['compliant-code'].value.trim();
+                const search = form.search.value.trim();
+
+                if (standard) params.set('standard', standard);
+                if (code) params.set('compliant-code', code);
+                if (search) params.set('search', search);
+                params.set('page', 1); // Always reset to page 1
+
+                // Navigate with hash-based routing
+                window.location.href = `/catalog?${params.toString()}`;
+            });
+            </script>
+        </section>
+
+
+    </main>
+
+    <footer>
+        <section class="col-4">
+            <span>&copy; 2025 Standard Grammar Catalog</span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </section>
+    </footer>
+
+    <!-- App Script -->
+    <script type="module" src="index-template.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+@charset 'utf-8';
+
+// Defaults
+@import 'style/base_html'; // HTML elements
+@import 'style/structure'; // Default page layout
+@import 'style/design'; // Graphics
+@import 'style/graphics'; // graphics elements
+
+// Components should be added as required in independant scss page(s) files
+@import 'component/content_systems'; // Content systems
+@import 'component/panel_fixed'; // Panel menus
+@import 'component/header_static'; // CSS only header
+
+@import 'utilities/element_state'; // State management of elements
+@import 'utilities/developer_tools'; // Developer & debug elements
