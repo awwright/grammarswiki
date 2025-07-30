@@ -40,7 +40,7 @@
 @use '../scss/animation/mixins_transition' as transition;
 
 @font-face {
-  font-family: 'RobotoFlex';
+  font-family: 'Roboto';
   src: url('scss/font/font-face/roboto/Roboto.ttf') format('truetype');
   font-weight: 100 1000;
   font-display: swap;
@@ -62,11 +62,11 @@
 }
 
 body {
-	font-family: "Roboto";
+	font-family: "Roboto", sans-serif;
 	font-optical-sizing: auto;
 	font-weight: 320;
 	font-style: normal;
-	font-variation-settings: "wdth" 300;
+	font-variation-settings: "width" 300;
 
 	line-height: 1.5;
     color:color.set('dark');

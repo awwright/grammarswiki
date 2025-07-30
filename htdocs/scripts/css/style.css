@@ -1,6 +1,6 @@
 @charset "UTF-8";
 @font-face {
-  font-family: "RobotoFlex";
+  font-family: "Roboto";
   src: url("scss/font/font-face/roboto/Roboto.ttf") format("truetype");
   font-weight: 100 1000;
   font-display: swap;
@@ -19,20 +19,27 @@ html, body {
 }
 
 body {
-  font-family: "Roboto";
+  font-family: "Roboto", sans-serif;
   font-optical-sizing: auto;
   font-weight: 320;
   font-style: normal;
-  font-variation-settings: "wdth" 300;
+  font-variation-settings: "width" 300;
   line-height: 1.5;
   color: #141E2B;
   background: hsl(0, 0%, 100%);
   accent-color: hsl(216, 90%, 64%);
-  user-select: text;
+  -webkit-user-select: text;
+     -moz-user-select: text;
+          user-select: text;
   box-sizing: border-box;
   min-height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+::-moz-selection {
+  color: hsl(0, 0%, 100%);
+  background: hsl(216, 75%, 15%);
 }
 
 ::selection {
@@ -804,9 +811,6 @@ table tr:nth-child(odd) {
   border-radius: 8px;
   color: hsl(0, 0%, 100%);
   background: hsl(216, 75%, 15%);
-  -webkit-transition: all 0.25s ease-out 0ms;
-  -moz-transition: all 0.25s ease-out 0ms;
-  -o-transition: all 0.25s ease-out 0ms;
   transition: all 0.25s ease-out 0ms;
 }
 @media screen and (min-width: 1140px) {
@@ -863,14 +867,12 @@ img {
 }
 
 * > img {
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
   display: block;
   z-index: 1;
 }
 * > img:hover {
-  -webkit-transition: all 0.5s ease-out 0ms;
-  -moz-transition: all 0.5s ease-out 0ms;
-  -o-transition: all 0.5s ease-out 0ms;
   transition: all 0.5s ease-out 0ms;
 }
 
@@ -881,7 +883,8 @@ video {
   display: block;
   margin: 0 auto;
   background-color: #141E2B;
-  object-fit: cover;
+  -o-object-fit: cover;
+     object-fit: cover;
 }
 
 svg {
@@ -1289,6 +1292,7 @@ body.panel-layout--left--right main, body.panel-layout--left--right header, body
   }
 }
 header #logo {
+  width: -moz-fit-content;
   width: fit-content;
   color: hsl(0, 0%, 100%);
   text-decoration: none;
@@ -1527,9 +1531,7 @@ nav #menu * {
 .noselect {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
-  -khtml-user-select: none;
   -moz-user-select: none;
-  -ms-user-select: none;
   user-select: none;
 }
 
