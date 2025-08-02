@@ -1,6 +1,7 @@
 node_modules/
 catalog/rfcs-text-only/
 yarn.lock
+.env
 
 # Xcode gitignore defaults
 .DS_Store

@@ -2,7 +2,11 @@
 # Changes to this file in turn regenerates indexes and file listings
 -include .targets.mk
 
+# Read some user configuration
+-include .env
+
 CLI=./grammartool-release
+PUBLISH_TARGET ?= ./publish_target
 
 all: grammartool-release htdocs-all
 
@@ -33,3 +37,9 @@ grammartool-release: grammartool/grammartool/*.swift
 
 clean:
 	rm -f htdocs/index.xhtml $(patsubst catalog/%.abnf,htdocs/catalog/%.xhtml,$(CATALOG_ABNF_SRC))
+
+publish:
+	test -n "$(PUBLISH_TARGET)"
+	rsync -avn --exclude='.*' htdocs/ "$(PUBLISH_TARGET)"
+
+.PHONY: clean publish
