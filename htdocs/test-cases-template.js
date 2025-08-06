@@ -42,7 +42,7 @@ function initVueApp() {
                     <router-link
                         v-for="test in paginatedTests"
                         :key="test.id"
-                        :to="'/test-cases/' + test.id"
+                        :to="'/test-cases/' + test.id + '.html'"
                         class="ratio-1-1"
                     >
                         <span class="overlay">
@@ -118,7 +118,7 @@ function initVueApp() {
                     return parseInt(this.$route.query.page) || 1;
                 },
                 set(value) {
-                    this.$router.push({ path: '/test-cases', query: { ...this.$route.query, page: value } });
+                    this.$router.push({ path: '/test-cases.html', query: { ...this.$route.query, page: value } });
                 }
             },
             filteredTests() {
@@ -191,7 +191,7 @@ function initVueApp() {
                 for (const key in query) {
                     if (query[key] === '') delete query[key];
                 }
-                this.$router.push({ path: '/test-cases', query });
+                this.$router.push({ path: '/test-cases.html', query });
             },
             nextPage() {
                 if (this.page < this.totalPages) this.page += 1;
@@ -217,11 +217,11 @@ function initVueApp() {
                 <h2>Test Case / {{ test.title }}</h2>
                 <p><strong>Date:</strong> {{ test.date }}</p>
                 <div v-html="test.content"></div>
-                <router-link to="/test-cases">← Back</router-link>
+                <router-link to="/test-cases.html">← Back</router-link>
             </main>
             <main v-else-if="loaded">
                 <p>Test case not found.</p>
-                <router-link to="/test-cases">← Back</router-link>
+                <router-link to="/test-cases.html">← Back</router-link>
             </main>
             <main v-else>
                 <p>Loading...</p>
@@ -313,17 +313,17 @@ function initVueApp() {
                 for (const key in query) {
                     if (query[key] === '') delete query[key];
                 }
-                this.$router.push({ path: '/test-cases', query });
+                this.$router.push({ path: '/test-cases.html', query });
             },
             clearFilters() {
-                this.$router.push({ path: '/test-cases', query: {} });
+                this.$router.push({ path: '/test-cases.html', query: {} });
             }
         }
     };
 
     const routes = [
-        { path: '/test-cases', component: TestCasesList },
-        { path: '/test-cases/:id', component: TestCasesTemplateRender }
+        { path: '/test-cases.html', component: TestCasesList },
+        { path: '/test-cases/:id.html', component: TestCasesTemplateRender }
     ];
 
     const router = VueRouter.createRouter({
@@ -334,7 +334,7 @@ function initVueApp() {
     const app = Vue.createApp({
         components: { FilterBar },
         template: `
-            <FilterBar v-if="$route.matched.some(m => m.path === '/test-cases')" />
+            <FilterBar v-if="$route.matched.some(m => m.path === '/test-cases.html')" />
             <router-view></router-view>
         `
     });

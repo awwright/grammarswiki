@@ -46,7 +46,7 @@ function initVueApp() {
                     <router-link
                         v-for="test in paginatedTests"
                         :key="test.id"
-                        :to="'/catalog/' + test.id"
+                        :to="'/catalog/' + test.id + '.html'"
                         class="ratio-1-1"
                     >
                         <span class="overlay">
@@ -207,7 +207,7 @@ function initVueApp() {
                 for (const key in query) {
                     if (query[key] === '') delete query[key];
                 }
-                this.$router.push({ path: '/catalog', query });
+                this.$router.push({ path: '/catalog.html', query });
             },
             nextPage() {
                 if (this.page < this.totalPages) this.page += 1;
@@ -233,11 +233,11 @@ function initVueApp() {
             <h2>Catalog / {{ test.title }}</h2>
             <p><strong>Date:</strong> {{ test.date }}</p>
             <div v-html="test.content"></div>
-            <router-link to="/catalog">← Back</router-link>
+            <router-link to="/catalog.html">← Back</router-link>
             </main>
             <main v-else-if="loaded">
             <p>Grammar Catalog item not found.</p>
-            <router-link to="/catalog">← Back</router-link>
+            <router-link to="/catalog.html">← Back</router-link>
             </main>
             <main v-else>
             <p>Loading...</p>
@@ -337,17 +337,17 @@ function initVueApp() {
                 for (const key in query) {
                     if (query[key] === '') delete query[key];
                 }
-                this.$router.push({ path: '/catalog', query });
+                this.$router.push({ path: '/catalog.html', query });
             },
             clearFilters() {
-                this.$router.push({ path: '/catalog', query: {} });
+                this.$router.push({ path: '/catalog.html', query: {} });
             }
         }
     };
 
     const routes = [
-        { path: '/catalog', component: CatalogList },
-        { path: '/catalog/:id', component: CatalogDetailTemplateRender }
+        { path: '/catalog.html', component: CatalogList },
+        { path: '/catalog/:id.html', component: CatalogDetailTemplateRender }
     ];
 
     const router = VueRouter.createRouter({
@@ -358,7 +358,7 @@ function initVueApp() {
     const app = Vue.createApp({
         components: { FilterBar },
         template: `
-            <FilterBar v-if="$route.matched.some(m => m.path === '/catalog')" />
+            <FilterBar v-if="$route.matched.some(m => m.path === '/catalog.html')" />
             <router-view></router-view>
         `
     });

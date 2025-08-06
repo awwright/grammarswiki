@@ -65,7 +65,7 @@ function initVueApp() {
         },
         methods: {
             openTest(test) {
-                window.location.href = `/catalog/${test.id}`;
+                window.location.href = `/catalog/${test.id}.html`;
             }
         }
     };
@@ -103,7 +103,7 @@ function initVueApp() {
 
     const routes = [
         { path: '/', component: CatalogList },
-        { path: '/:id', component: CatalogDetail }
+        { path: '/:id.html', component: CatalogDetail }
     ];
 
     const router = VueRouter.createRouter({
