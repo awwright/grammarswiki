@@ -78,6 +78,31 @@ asctime-date = day-name SP date3 SP time-of-day SP year
 date3        = month SP ( 2DIGIT / ( SP 1DIGIT ))
 ; e.g., Jun  2
 
+IMF-fixdate  = day-name "," SP date1 SP time-of-day SP GMT
+; fixed length/zone/capitalization subset of the format
+; see Section 3.3 of [RFC5322]
+
+day-name     = %s"Mon" / %s"Tue" / %s"Wed"
+             / %s"Thu" / %s"Fri" / %s"Sat" / %s"Sun"
+
+date1        = day SP month SP year
+             ; e.g., 02 Jun 1982
+
+day          = 2DIGIT
+month        = %s"Jan" / %s"Feb" / %s"Mar" / %s"Apr"
+             / %s"May" / %s"Jun" / %s"Jul" / %s"Aug"
+             / %s"Sep" / %s"Oct" / %s"Nov" / %s"Dec"
+year         = 4DIGIT
+
+GMT          = %s"GMT"
+
+time-of-day  = hour ":" minute ":" second
+             ; 00:00:00 - 23:59:60 (leap second)
+
+hour         = 2DIGIT
+minute       = 2DIGIT
+second       = 2DIGIT
+
 ; 6.6.1. Date <https://www.rfc-editor.org/rfc/rfc9110.html#name-date>
 Date = HTTP-date
 
