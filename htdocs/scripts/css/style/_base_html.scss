@@ -187,7 +187,7 @@ h6 {
 // @title: Ordered List : Numeric
 // @description: styling for Ordered List
 ol {
-	list-style-type: decimal;
+	list-style-type: decimal inside;
 }
 
 // @title: UnOrdered List : Bullet point
@@ -198,7 +198,13 @@ ol {
 // @description: styling for list items
 li {
 	list-style-position: inside;
+	margin-bottom: 0.5rem; /* optional spacing between items */
 }
+
+ol, ul {
+	padding-left: 2rem; 
+}
+
 
 // @title: Description list : Key(Value)
 dl {
