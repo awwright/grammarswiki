@@ -226,10 +226,22 @@ struct DocumentDetail: View {
 
 					if let content_rulelist {
 						// TODO: Order this in the same order as in the grammar
+						let (orphanGroup, subGroup) = computeGroupedRules(for: content_rulelist)
 						Picker("Select Starting Rule", selection: $selectedRule) {
 							Text("Select a rule").tag(String?.none)
-							ForEach(Array(content_rulelist.dictionary.keys.sorted()), id: \.self) { rule in
-								Text(rule).tag(String?.some(rule))
+							if !orphanGroup.isEmpty {
+								Section("Orphan Rules") {
+									ForEach(orphanGroup, id: \.self) { rule in
+										Text(rule).tag(String?.some(rule))
+									}
+								}
+							}
+							if !subGroup.isEmpty {
+								Section("Sub-rules") {
+									ForEach(subGroup, id: \.self) { rule in
+										Text(rule).tag(String?.some(rule))
+									}
+								}
 							}
 						}
 						.pickerStyle(MenuPickerStyle())
@@ -570,6 +582,27 @@ struct DocumentDetail: View {
 			reservedIdentifiers: [],
 			reservedOperators: []
 		)
+	}
+
+	private func computeGroupedRules(for rulelist: ABNFRulelist<UInt32>) -> (orphanGroup: [String], subGroup: [String]) {
+		let orderedRules = rulelist.ruleNames
+		guard !orderedRules.isEmpty else { return ([], []) }
+
+		let allReferenced = rulelist.referencedRules
+		let orphans = orderedRules.filter { !allReferenced.contains($0) }
+
+		let first = orderedRules[0]
+		var orphanGroup: [String] = [first]
+
+		for orphan in orphans {
+			if orphan != first {
+				orphanGroup.append(orphan)
+			}
+		}
+
+		let subGroup = orderedRules.filter { !orphanGroup.contains($0) }
+
+		return (orphanGroup, subGroup)
 	}
 }
 
