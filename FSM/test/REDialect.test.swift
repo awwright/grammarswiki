@@ -101,10 +101,15 @@ struct Tests {
 		singleCharacter("-"),
 		singleCharacter("."),
 		singleCharacter("/"),
+		singleCharacter("["),
+		singleCharacter("]"),
 		rangeCharacters(" ", "/"),
 		rangeCharacters("0", "9"),
 		rangeCharacters("A", "z"),
+		setCharacters("+-."),
+		setCharacters("-."),
 		rangeCharacters("-", "."),
+		rangeCharacters("-", "/"),
 		rangeCharacters("[", "]"),
 		rangeCharacters(" ", "["),
 		rangeCharacters(" ", "]"),
@@ -139,6 +144,22 @@ struct Tests {
 			),
 			acceptingInputs: ((lower.asciiValue!)...(upper.asciiValue!)).map { String((UnicodeScalar($0))) },
 			rejectingInputs: (0...0x7F).map { String((UnicodeScalar($0)!)) }.filter { !((lower.asciiValue!)...(upper.asciiValue!)).map { String((UnicodeScalar($0))) }.contains($0) }
+		)
+	}
+
+	static func setCharacters(_ set: some Collection<Character>) -> PatternTestCase {
+		PatternTestCase(
+			description: "\(set)",
+			pattern: RangeDFA<UInt32>(
+				states: [
+					[set.map { UInt32($0.asciiValue!)...UInt32($0.asciiValue!) }: 1],
+					[:],
+				],
+				initial: 0,
+				finals: [1]
+			),
+			acceptingInputs: (set.map { $0.asciiValue! }).map { String((UnicodeScalar($0))) },
+			rejectingInputs: Set(0...0x7F).subtracting(set.map { $0.asciiValue! }).map { String((UnicodeScalar($0))) }
 		)
 	}
 }
