@@ -230,7 +230,7 @@ public struct REDialect: REDialectProtocol {
 }
 
 public struct REDialectBuiltins {
-	static let swift: REDialectProtocol = REDialect(
+	public static let swift: REDialectProtocol = REDialect(
 		openQuote: "/",
 		closeQuote: "/",
 		startAnchor: "^",
@@ -251,7 +251,7 @@ public struct REDialectBuiltins {
 		]
 	)
 
-	static let posixExtended: REDialectProtocol = REDialect(
+	public static let posixExtended: REDialectProtocol = REDialect(
 		openQuote: "/",
 		closeQuote: "/",
 		startAnchor: "",
@@ -274,7 +274,7 @@ public struct REDialectBuiltins {
 		]
 	)
 
-	static let perl: REDialectProtocol = REDialect(
+	public static let perl: REDialectProtocol = REDialect(
 		openQuote: "/",
 		closeQuote: "/",
 		startAnchor: "^",
@@ -296,7 +296,7 @@ public struct REDialectBuiltins {
 		]
 	)
 
-	static let ecmascript: REDialectProtocol = REDialect(
+	public static let ecmascript: REDialectProtocol = REDialect(
 		openQuote: "/",
 		closeQuote: "/",
 		startAnchor: "^",
