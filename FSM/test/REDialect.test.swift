@@ -144,20 +144,20 @@ struct Tests {
 }
 
 @Suite("REDialect") struct REDialectTests {
-	@Suite("Swift RegExp") struct POSIXGrepTests {
+	@Suite("Swift RegExp") struct SwiftTests {
 		@Test("Swift RegExp pattern", arguments: Tests.standardTestCases)
 		func testPattern(testCase: PatternTestCase) async throws {
 			//try await testRegexPatterns(generator: generator, dialect: .javascript, testCase: testCase)
-			let regex: REPattern<UInt32> = testCase.pattern.toPattern()
+			let pattern: REPattern<UInt32> = testCase.pattern.toPattern()
 
 			//print(regex.description);
 			// TODO: also try generating an anchored regular expression with /^regexp$/
-			let regexString = REDialectBuiltins.swift.encode(regex);
-			guard let regex = try? Regex(regex.description) else { return }
+			let regexString = REDialectBuiltins.swift.encode(pattern);
+			let regexObject = try #require(try? Regex(regexString))
 
 			for acceptingInput in testCase.acceptingInputs {
 				#expect(testCase.pattern.contains(acceptingInput.unicodeScalars.map { UInt32($0) }))
-				#expect(acceptingInput.wholeMatch(of: regex) != nil, "\(regexString) <- \(acceptingInput) failed, should accept")
+				#expect(acceptingInput.wholeMatch(of: regexObject) != nil, "\(regexString) <- \(acceptingInput) failed, should accept")
 			}
 			for rejectingInput in testCase.rejectingInputs {
 				#expect(!testCase.pattern.contains(rejectingInput.unicodeScalars.map { UInt32($0) }))

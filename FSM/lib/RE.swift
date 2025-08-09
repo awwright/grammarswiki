@@ -243,7 +243,7 @@ public struct REDialectBuiltins {
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
 		openCharClass: "[",
 		closeCharClass: "]",
-		charClassMetaCharacters: Set(["^", "-", "]"]),
+		charClassMetaCharacters: Set(["^", "-", "[", "]"]),
 		groupTypeIndicators: Set(["?:", "?=", "?!", "?<=", "?<!", "?<"]),
 		charClassEscapes: [
 			"\\d": Set("0123456789"),
