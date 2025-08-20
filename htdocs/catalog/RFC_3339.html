@@ -59,7 +59,7 @@
 
     <h2>Usage</h2>
     <p>
-        Encodes a particular moment in time (between years 0AD and 9999AD inclusive) with arbritrary sub-second precision.
+        Encodes a particular moment in time (between years 0AD and 9999AD inclusive) with arbitrary sub-second precision.
     </p>
     <p>
         The date is encoded in Gregorian calendar using year, month, day, hour, minute, second, and fractional second fields, and supports leap years and leap seconds.
@@ -120,7 +120,44 @@ full-time       = partial-time time-offset
     <h2>Translations</h2>
     <section>
         <h3>Railroad Diagram</h3>
-        <pre></pre>
+        <pre>
+        Diagram(
+            NonTerminal('DIGIT'),
+            NonTerminal('DIGIT'),
+            NonTerminal('DIGIT'),
+            NonTerminal('DIGIT'),
+            "-",
+            NonTerminal('DIGIT'),
+            NonTerminal('DIGIT'),
+            "-",
+            NonTerminal('DIGIT'),
+            NonTerminal('DIGIT'),
+            Choice(0, "T", "t"),
+            NonTerminal('DIGIT'),
+            NonTerminal('DIGIT'),
+            ":",
+            NonTerminal('DIGIT'),
+            NonTerminal('DIGIT'),
+            ":",
+            NonTerminal('DIGIT'),
+            NonTerminal('DIGIT'),
+            Choice(0,
+                Sequence(".", OneOrMore(NonTerminal("DIGIT"))),
+                Skip()
+            ),
+            Choice(0,
+                "Z",
+                Sequence(
+                    Choice(0, "+", "-"),
+                    NonTerminal('DIGIT'),
+                    NonTerminal('DIGIT'),
+                    ":",
+                    NonTerminal('DIGIT'),
+                    NonTerminal('DIGIT'),
+                )
+            )
+        )
+        </pre>
     </section>
     <section>
         <h3>PCRE Regular Expression</h3>
