@@ -29,7 +29,7 @@ struct HTTPResponse: ResponseProtocol {
 			writeHeaders();
 		}
 		responseData.withUnsafeBytes { ptr in
-			_ = _DarwinFoundation3.write(clientSocket, ptr.baseAddress, responseData.count)
+			_ = Foundation.write(clientSocket, ptr.baseAddress, responseData.count)
 		}
 	}
 
@@ -39,7 +39,7 @@ struct HTTPResponse: ResponseProtocol {
 		}
 		let responseData = (part+"\r\n").data(using: .utf8)!
 		responseData.withUnsafeBytes { ptr in
-			_ = _DarwinFoundation3.write(clientSocket, ptr.baseAddress, responseData.count)
+			_ = Foundation.write(clientSocket, ptr.baseAddress, responseData.count)
 		}
 	}
 

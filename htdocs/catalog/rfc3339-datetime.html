@@ -1,0 +1,161 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Standard Grammar Catalog : Catalog Index</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Ensure correct path resolution for assets and routing -->
+    <base href="/">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/scripts/css/style.css">
+
+    <!-- Vue Dependencies -->
+    <script src="https://unpkg.com/vue@3"></script>
+    <script src="https://unpkg.com/vue-router@4"></script>
+</head>
+<body>
+    <header>
+        <section class="v-align--grid col-2-auto">
+            <a id="logo" href="index.html">
+                <div class="large">Standard Grammar Catalog</div>
+                <div class="small">ABNF Toolchain & Generator</div>
+            </a>
+
+            <nav>
+                <input id="toggle--state" type="checkbox"/>
+                <label id="toggle" for="toggle--state">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </label>
+
+                <ul id="menu">
+                    <li><a href="index.html">About</a></li>
+                    <li class="category">
+                        <a href="catalog.html">Catalog</a>
+                        <ul class="dropdown">
+                            <a href="grammars-and-formats.html"><li>Grammars and Formats</li></a>
+                            <a href="handbook.html"><li>Handbook</li></a>
+                        </ul>
+                    </li>
+
+                    <li><a href="test-cases.html">Test Cases</a></li>
+                </ul>
+            </nav>
+        </section>
+    </header>
+
+    <main>
+
+
+
+<section>
+    <h1>RFC 3339: Date and Time on the Internet: Timestamps</h1>
+    <p>Defined in <a href="https://www.rfc-editor.org/rfc/rfc3339.html">RFC 3339</a> as updated by <a href="https://www.rfc-editor.org/rfc/rfc9557.html">RFC 9557</a></p>
+    <p>Mostly compatible with ISO 8601 Timestamp.</p>
+
+    <h2>Usage</h2>
+    <p>
+        Encodes a particular moment in time (between years 0AD and 9999AD inclusive) with arbitrary sub-second precision.
+    </p>
+    <p>
+        The date is encoded in Gregorian calendar using year, month, day, hour, minute, second, and fractional second fields, and supports leap years and leap seconds.
+    </p>
+
+    <h2>Definition</h2>
+    <pre><code>
+; &lt;https://www.rfc-editor.org/rfc/rfc3339.html&gt;
+
+date-time       = full-date "T" full-time
+
+date-fullyear   = 4DIGIT
+date-month      = 2DIGIT  ; 01-12
+date-mday       = 2DIGIT  ; 01-28, 01-29, 01-30, 01-31 based on
+                          ; month/year
+time-hour       = 2DIGIT  ; 00-23
+time-minute     = 2DIGIT  ; 00-59
+time-second     = 2DIGIT  ; 00-58, 00-59, 00-60 based on leap second
+                          ; rules
+time-secfrac    = "." 1*DIGIT
+time-numoffset  = ("+" / "-") time-hour ":" time-minute
+time-offset     = "Z" / time-numoffset
+
+partial-time    = time-hour ":" time-minute ":" time-second
+                  [time-secfrac]
+full-date       = date-fullyear "-" date-month "-" date-mday
+full-time       = partial-time time-offset
+</code></pre>
+
+    <h2>Info</h2>
+    <dl>
+        <dt>Dependencies</dt>
+        <dd></dd>
+        <dt>Used Builtins</dt>
+        <dd></dd>
+    </dl>
+
+    <h2>Alphabet</h2>
+    <ul>
+        <li>&#43;</li>
+        <li>&#45;</li>
+        <li>&#46;</li>
+        <li>[&#48;-&#57;]</li>
+        <li>&#58;</li>
+        <li>[&#84;&#116;]</li>
+        <li>[&#90;&#122;]</li>
+    </ul>
+
+    <h2>Cited By</h2>
+    <ul>
+    </ul>
+
+    <h2>Implementations</h2>
+    <ul>
+    </ul>
+
+    <h2>Translations</h2>
+    <section>
+        <h3>Railroad Diagram</h3>
+        <pre></pre>
+    </section>
+    <section>
+        <h3>PCRE Regular Expression</h3>
+        <pre></pre>
+    </section>
+    <section>
+        <h3>POSIX Basic Regular Expression</h3>
+        <pre></pre>
+    </section>
+    <section>
+        <h3>POSIX Extended Regular Expression</h3>
+        <pre></pre>
+    </section>
+</section>
+
+        <section>
+            <div id="app">
+                <router-view></router-view>
+            </div>
+            <!-- Vue App Entry -->
+            <script type="module" src="/catalog-template.js"></script>
+        </section>
+    </main>
+
+    <footer>
+        <section class="col-4">
+            <span>&copy; 2025 Standard Grammar Catalog</span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </section>
+    </footer>
+
+    <!-- Developer Tools -->
+    <script src="/scripts/javascript/developer/debug-overflow.js"></script>
+</body>
+</html>
+
