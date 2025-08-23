@@ -33,6 +33,8 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 		return
 	}
 
+	let root_parsed = try! ABNFRulelist<UInt32>.parse(importedAbnfString.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
+
 	let title = "Contents of \(filePath)"
 	let main_html = """
 		<section>
@@ -43,10 +45,12 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 		<section>
 			<h2>Info</h2>
 			<dl>
-			  <dt>Dependencies</dt>
-			  <dd></dd>
-			  <dt>Used Builtins</dt>
-			  <dd></dd>
+				<dt>Rules</dt>
+				<dd>\(root_parsed.ruleNames.joined(separator: ", "))</dd>
+				<dt>Dependencies</dt>
+				<dd></dd>
+				<dt>Used Builtins</dt>
+				<dd></dd>
 			</dl>
 
 			<h2>Alphabet</h2>
@@ -61,20 +65,20 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 			</ul>
 			<h2>Translations</h2>
 			<section>
-			  <h3>Railroad Diagram</h3>
-			  <pre></pre>
+				<h3>Railroad Diagram</h3>
+				<pre></pre>
 			</section>
 			<section>
-			  <h3>PCRE Regular Expression</h3>
-			  <pre></pre>
+				<h3>PCRE Regular Expression</h3>
+				<pre></pre>
 			</section>
 			<section>
-			  <h3>POSIX Basic Regular Expression</h3>
-			  <pre></pre>
+				<h3>POSIX Basic Regular Expression</h3>
+				<pre></pre>
 			</section>
 			<section>
-			  <h3>POSIX Extended Regular Expression</h3>
-			  <pre></pre>
+				<h3>POSIX Extended Regular Expression</h3>
+				<pre></pre>
 			</section>
 		</section>
 		""";
