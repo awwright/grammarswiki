@@ -34,6 +34,18 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	}
 
 	let root_parsed = try! ABNFRulelist<UInt32>.parse(importedAbnfString.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
+	let rulelist = root_parsed.ruleNames;
+	let firstRule = rulelist.first!;
+	// Prepare the list of builtin rules, which the imported dict and expression can refer to
+	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
+
+	// builtins will be copied to the output
+	let importedDict = try! root_parsed.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
+	let expression: ABNFAlternation<UInt32> = try! ABNFAlternation<UInt32>.parse(firstRule.utf8);
+
+	let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>> = try! expression.toPattern(rules: importedDict)
+
+	let regex: REPattern<UInt32> = fsm.toPattern()
 
 	let title = "Contents of \(filePath)"
 	let main_html = """
@@ -69,12 +81,8 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 				<pre></pre>
 			</section>
 			<section>
-				<h3>PCRE Regular Expression</h3>
-				<pre></pre>
-			</section>
-			<section>
-				<h3>POSIX Basic Regular Expression</h3>
-				<pre></pre>
+				<h3>Swift Regular Expression</h3>
+				<pre>\(regex.description)</pre>
 			</section>
 			<section>
 				<h3>POSIX Extended Regular Expression</h3>

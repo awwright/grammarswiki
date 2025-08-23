@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Contents of catalog/rfc5322-email.abnf - Standard Grammar Catalog</title>
+  <meta name="description" content=""/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"> -->
+  <!-- https://fonts.google.com/specimen/Open+Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/scripts/css/style.css"/>
+</head>
+<body>
+  <header>
+	 <section class="v-align--grid col-2-auto">
+	 <a id="logo" href="/">
+		<div class="large">Standard Grammar Catalog</div>
+		<div class="small">ABNF Toolchain &amp; Generator</div>
+	 </a>
+
+	 <nav>
+		<input id="toggle--state" type="checkbox"/>
+		<label id="toggle" for="toggle--state">
+		  <span></span>
+		  <span></span>
+		  <span></span>
+		</label>
+
+		<ul id="menu">
+		  <form class="filter-menu filter-menu--quick-search pointer" method="get">
+		  <label for="search" hidden="">Search</label>
+		  <input type="text" name="search"/>
+		  <input class="icon icon__search icon--border--left" type="submit" name="search" value=""/>
+		  </form>
+
+		  <li><a href="/index.html">About</a></li>
+		  <li class="category">
+		  <a href="catalog.html">Catalog</a>
+		  <ul class="dropdown">
+			 <a href="grammars-and-formats.html"><li>Grammars and Formats</li></a>
+			 <a href="handbook.html"><li>Handbook</li></a>
+		  </ul>
+		  </li>
+
+		  <li><a href="test-cases.html">Test Cases</a></li>
+		</ul>
+	 </nav>
+	 </section>
+  </header>
+
+  <main><section>
+<h1>catalog/rfc5322-email.abnf</h1>
+<h2>Source</h2>
+<pre><code>; @source: RFC 5322
+; @charset=UTF-32
+; &lt;https://www.rfc-editor.org/rfc/rfc5322.html>
+
+addr-spec       =   local-part &quot;@&quot; domain
+
+local-part      =   dot-atom / quoted-string
+
+domain          =   dot-atom / domain-literal
+
+domain-literal  =   &quot;[&quot; *(dtext) &quot;]&quot;
+
+dtext           =   %d33-90 /          ; Printable US-ASCII
+                    %d94-126 ;/         ;  characters not including
+                    ;obs-dtext          ;  &quot;[&quot;, &quot;]&quot;, or &quot;\&quot;
+
+quoted-string   =   DQUOTE *qcontent DQUOTE
+qcontent        =   qtext / quoted-pair
+qtext           =   %d33 / %d35-91 / %d93-126
+quoted-pair     =   &quot;\&quot; (VCHAR / WSP)
+
+dot-atom        =   1*atext *(&quot;.&quot; 1*atext)
+atext           =   ALPHA / DIGIT / &quot;!&quot; / &quot;#&quot; / &quot;$&quot; / &quot;%&quot; / &quot;&amp;&quot; / &quot;'&quot; / &quot;*&quot; / &quot;+&quot; / &quot;-&quot; / &quot;/&quot; /
+                    &quot;=&quot; / &quot;?&quot; / &quot;^&quot; / &quot;_&quot; / &quot;`&quot; / &quot;{&quot; / &quot;|&quot; / &quot;}&quot; / &quot;~&quot;
+
+domain-literal  =   &quot;[&quot; *dtext &quot;]&quot;
+dtext           =   %d33-90 / %d94-126
+</code></pre>
+</section>
+<section>
+	<h2>Info</h2>
+	<dl>
+		<dt>Rules</dt>
+		<dd>addr-spec, local-part, domain, domain-literal, dtext, quoted-string, qcontent, qtext, quoted-pair, dot-atom, atext</dd>
+		<dt>Dependencies</dt>
+		<dd></dd>
+		<dt>Used Builtins</dt>
+		<dd></dd>
+	</dl>
+
+	<h2>Alphabet</h2>
+	<ul>
+	</ul>
+
+	<h2>Cited By</h2>
+	<ul>
+	</ul>
+	<h2>Implementations</h2>
+	<ul>
+	</ul>
+	<h2>Translations</h2>
+	<section>
+		<h3>Railroad Diagram</h3>
+		<pre></pre>
+	</section>
+	<section>
+		<h3>Swift Regular Expression</h3>
+		<pre>("([!#-\[\]-~]|\\[\x9) -~])*"@|[!#-'*-+\-/-9=?A-Z\^-~]((|\.)[!#-'*-+\-/-9=?A-Z\^-~])*@)\[[!-Z\^-~]*\]|("([!#-\[\]-~]|\\[\x9) -~])*"@|[!#-'*-+\-/-9=?A-Z\^-~]((|\.)[!#-'*-+\-/-9=?A-Z\^-~])*@)[!#-'*-+\-/-9=?A-Z\^-~]((|\.)[!#-'*-+\-/-9=?A-Z\^-~])*</pre>
+	</section>
+	<section>
+		<h3>POSIX Extended Regular Expression</h3>
+		<pre></pre>
+	</section>
+</section></main>
+
+  <footer>
+	 <section class="col-4">
+	 <span></span>
+	 <span></span>
+	 <span></span>
+	 <span></span>
+	 </section>
+  </footer>
+</body>
+</html>

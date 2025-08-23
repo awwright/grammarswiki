@@ -1,76 +1,72 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="utf-8">
-    <title>Standard Grammar Catalog : Catalog Index</title>
-    <meta name="description" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- Ensure correct path resolution for assets and routing -->
-    <base href="/">
-
-    <!-- Styles -->
-    <link rel="stylesheet" href="/scripts/css/style.css">
-
-    <!-- Vue Dependencies -->
-    <script src="https://unpkg.com/vue@3"></script>
-    <script src="https://unpkg.com/vue-router@4"></script>
+  <meta charset="utf-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Contents of catalog/rfc3339-datetime.abnf - Standard Grammar Catalog</title>
+  <meta name="description" content=""/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"> -->
+  <!-- https://fonts.google.com/specimen/Open+Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/scripts/css/style.css"/>
 </head>
 <body>
-    <header>
-        <section class="v-align--grid col-2-auto">
-            <a id="logo" href="index.html">
-                <div class="large">Standard Grammar Catalog</div>
-                <div class="small">ABNF Toolchain & Generator</div>
-            </a>
+  <header>
+	 <section class="v-align--grid col-2-auto">
+	 <a id="logo" href="/">
+		<div class="large">Standard Grammar Catalog</div>
+		<div class="small">ABNF Toolchain &amp; Generator</div>
+	 </a>
 
-            <nav>
-                <input id="toggle--state" type="checkbox"/>
-                <label id="toggle" for="toggle--state">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </label>
+	 <nav>
+		<input id="toggle--state" type="checkbox"/>
+		<label id="toggle" for="toggle--state">
+		  <span></span>
+		  <span></span>
+		  <span></span>
+		</label>
 
-                <ul id="menu">
-                    <li><a href="index.html">About</a></li>
-                    <li class="category">
-                        <a href="catalog.html">Catalog</a>
-                        <ul class="dropdown">
-                            <a href="grammars-and-formats.html"><li>Grammars and Formats</li></a>
-                            <a href="handbook.html"><li>Handbook</li></a>
-                        </ul>
-                    </li>
+		<ul id="menu">
+		  <form class="filter-menu filter-menu--quick-search pointer" method="get">
+		  <label for="search" hidden="">Search</label>
+		  <input type="text" name="search"/>
+		  <input class="icon icon__search icon--border--left" type="submit" name="search" value=""/>
+		  </form>
 
-                    <li><a href="test-cases.html">Test Cases</a></li>
-                </ul>
-            </nav>
-        </section>
-    </header>
+		  <li><a href="/index.html">About</a></li>
+		  <li class="category">
+		  <a href="catalog.html">Catalog</a>
+		  <ul class="dropdown">
+			 <a href="grammars-and-formats.html"><li>Grammars and Formats</li></a>
+			 <a href="handbook.html"><li>Handbook</li></a>
+		  </ul>
+		  </li>
 
-    <main>
+		  <li><a href="test-cases.html">Test Cases</a></li>
+		</ul>
+	 </nav>
+	 </section>
+  </header>
 
-
+  <main><section>
+<h1>catalog/rfc3339-datetime.abnf</h1>
 
 <section>
-    <h1>RFC 3339: Date and Time on the Internet: Timestamps</h1>
-    <p>Defined in <a href="https://www.rfc-editor.org/rfc/rfc3339.html">RFC 3339</a> as updated by <a href="https://www.rfc-editor.org/rfc/rfc9557.html">RFC 9557</a></p>
-    <p>Mostly compatible with ISO 8601 Timestamp.</p>
+	<h1>RFC 3339: Date and Time on the Internet: Timestamps</h1>
+	<p>Defined in <a href="https://www.rfc-editor.org/rfc/rfc3339.html">RFC 3339</a> as updated by <a href="https://www.rfc-editor.org/rfc/rfc9557.html">RFC 9557</a></p>
+	<p>Mostly compatible with ISO 8601 Timestamp.</p>
 
-    <h2>Usage</h2>
-    <p>
-        Encodes a particular moment in time (between years 0AD and 9999AD inclusive) with arbitrary sub-second precision.
-    </p>
-    <p>
-        The date is encoded in Gregorian calendar using year, month, day, hour, minute, second, and fractional second fields, and supports leap years and leap seconds.
-    </p>
+	<h2>Usage</h2>
+	<p>Encodes a particular moment in time (between years 0AD and 9999AD inclusive) with arbitrary sub-second precision.</p>
+	<p>The date is encoded in Gregorian calendar using year, month, day, hour, minute, second, and fractional second fields, and supports leap years and leap seconds.</p>
 
-    <h2>Definition</h2>
-    <pre><code>
-; &lt;https://www.rfc-editor.org/rfc/rfc3339.html&gt;
+<h2>Source</h2>
+<pre><code>; &lt;https://www.rfc-editor.org/rfc/rfc3339.html>
 
-date-time       = full-date "T" full-time
+date-time       = full-date &quot;T&quot; full-time
 
 date-fullyear   = 4DIGIT
 date-month      = 2DIGIT  ; 01-12
@@ -80,82 +76,65 @@ time-hour       = 2DIGIT  ; 00-23
 time-minute     = 2DIGIT  ; 00-59
 time-second     = 2DIGIT  ; 00-58, 00-59, 00-60 based on leap second
                           ; rules
-time-secfrac    = "." 1*DIGIT
-time-numoffset  = ("+" / "-") time-hour ":" time-minute
-time-offset     = "Z" / time-numoffset
+time-secfrac    = &quot;.&quot; 1*DIGIT
+time-numoffset  = (&quot;+&quot; / &quot;-&quot;) time-hour &quot;:&quot; time-minute
+time-offset     = &quot;Z&quot; / time-numoffset
 
-partial-time    = time-hour ":" time-minute ":" time-second
+partial-time    = time-hour &quot;:&quot; time-minute &quot;:&quot; time-second
                   [time-secfrac]
-full-date       = date-fullyear "-" date-month "-" date-mday
+full-date       = date-fullyear &quot;-&quot; date-month &quot;-&quot; date-mday
 full-time       = partial-time time-offset
 </code></pre>
-
-    <h2>Info</h2>
-    <dl>
-        <dt>Dependencies</dt>
-        <dd></dd>
-        <dt>Used Builtins</dt>
-        <dd></dd>
-    </dl>
-
-    <h2>Alphabet</h2>
-    <ul>
-        <li>&#43;</li>
-        <li>&#45;</li>
-        <li>&#46;</li>
-        <li>[&#48;-&#57;]</li>
-        <li>&#58;</li>
-        <li>[&#84;&#116;]</li>
-        <li>[&#90;&#122;]</li>
-    </ul>
-
-    <h2>Cited By</h2>
-    <ul>
-    </ul>
-
-    <h2>Implementations</h2>
-    <ul>
-    </ul>
-
-    <h2>Translations</h2>
-    <section>
-        <h3>Railroad Diagram</h3>
-        <pre></pre>
-    </section>
-    <section>
-        <h3>PCRE Regular Expression</h3>
-        <pre></pre>
-    </section>
-    <section>
-        <h3>POSIX Basic Regular Expression</h3>
-        <pre></pre>
-    </section>
-    <section>
-        <h3>POSIX Extended Regular Expression</h3>
-        <pre></pre>
-    </section>
 </section>
+<section>
+	<h2>Info</h2>
+	<dl>
+		<dt>Rules</dt>
+		<dd>date-time, date-fullyear, date-month, date-mday, time-hour, time-minute, time-second, time-secfrac, time-numoffset, time-offset, partial-time, full-date, full-time</dd>
+		<dt>Dependencies</dt>
+		<dd></dd>
+		<dt>Used Builtins</dt>
+		<dd></dd>
+	</dl>
 
-        <section>
-            <div id="app">
-                <router-view></router-view>
-            </div>
-            <!-- Vue App Entry -->
-            <script type="module" src="/catalog-template.js"></script>
-        </section>
-    </main>
+	<h2>Alphabet</h2>
+	<ul>
+	</ul>
 
-    <footer>
-        <section class="col-4">
-            <span>&copy; 2025 Standard Grammar Catalog</span>
-            <span></span>
-            <span></span>
-            <span></span>
-        </section>
-    </footer>
 
-    <!-- Developer Tools -->
-    <script src="/scripts/javascript/developer/debug-overflow.js"></script>
+	<h2>Cited By</h2>
+	<ul>
+		<li><a href="https://en.wikipedia.org/wiki/Extensible_Provisioning_Protocol">Extensible Provisioning Protocol</a>: <a href="https://www.rfc-editor.org/rfc/rfc3730.html">RFC 3730</a>, 3731, 3732, ...</li>
+		<li><a href="https://en.wikipedia.org/wiki/Atom_(web_standard)">Atom Syndication Format</a>: <a href="https://www.rfc-editor.org/rfc/rfc4287.html">RFC 4287</a></li>
+		<li><a href="https://en.wikipedia.org/wiki/IETF_language_tag">BCP 47: Tags for Identifying Languages (for dates in tag registry)</a>: <a href="https://www.rfc-editor.org/rfc/rfc4646.html">RFC 4646</a></li>
+	</ul>
+	<h2>Implementations</h2>
+	<ul>
+		<li><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime.fromisoformat">python 3.7 datetime.fromisoformat</a> (among other formats)</li>
+	</ul>
+
+	<h2>Translations</h2>
+	<section>
+		<h3>Railroad Diagram</h3>
+		<pre></pre>
+	</section>
+	<section>
+		<h3>Swift Regular Expression</h3>
+		<pre>[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][Tt][0-9][0-9]:[0-9]([0-9]:[0-9]([0-9][Zz]|[0-9]\.[0-9][0-9]*[Zz])|[0-9]:[0-9]([0-9][+\-][0-9]|[0-9]\.[0-9][0-9]*[+\-][0-9])[0-9]:[0-9][0-9])</pre>
+	</section>
+	<section>
+		<h3>POSIX Extended Regular Expression</h3>
+		<pre></pre>
+	</section>
+</section></main>
+
+  <footer>
+	 <section class="col-4">
+	 <span></span>
+	 <span></span>
+	 <span></span>
+	 <span></span>
+	 </section>
+  </footer>
 </body>
 </html>
-

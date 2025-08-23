@@ -10,12 +10,12 @@ PUBLISH_TARGET ?= ./publish_target
 
 all: grammartool-release htdocs-all
 
-htdocs-all: htdocs/index.xhtml $(patsubst catalog/%.abnf,htdocs/catalog/%.xhtml,$(CATALOG_ABNF_SRC))
+htdocs-all: htdocs/index.xhtml $(patsubst catalog/%.abnf,htdocs/catalog/%.html,$(CATALOG_ABNF_SRC))
 
 htdocs/index.xhtml: .targets.mk $(CLI)
 	$(CLI) index-html catalog/ > $@
 
-htdocs/catalog/%.xhtml: catalog/%.abnf $(CLI)
+htdocs/catalog/%.html: catalog/%.abnf $(CLI)
 	@mkdir -p htdocs/catalog
 	$(CLI) grammar-abnf-html $< > $@
 
@@ -36,7 +36,7 @@ grammartool-release: grammartool/grammartool/*.swift
 	cp $(PWD)/build/Release/grammartool $@
 
 clean:
-	rm -f htdocs/index.xhtml $(patsubst catalog/%.abnf,htdocs/catalog/%.xhtml,$(CATALOG_ABNF_SRC))
+	rm -f htdocs/index.xhtml $(patsubst catalog/%.abnf,htdocs/catalog/%.html,$(CATALOG_ABNF_SRC))
 
 publish:
 	test -n "$(PUBLISH_TARGET)"
