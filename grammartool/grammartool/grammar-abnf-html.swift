@@ -39,12 +39,19 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
 	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
 
+	// Dereference rules referencing other files
+	let rulelist_all_final = try! dereferenceABNFRulelist(root_parsed, {
+		filename in
+		let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
+		let content = try String(contentsOfFile: filePath, encoding: .utf8)
+		return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
+	});
+
 	// builtins will be copied to the output
-	let importedDict = try! root_parsed.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
+	let importedDict = try! rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
+
 	let expression: ABNFAlternation<UInt32> = try! ABNFAlternation<UInt32>.parse(firstRule.utf8);
-
 	let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>> = try! expression.toPattern(rules: importedDict)
-
 	let regex: REPattern<UInt32> = fsm.toPattern()
 
 	let title = "Contents of \(filePath)"
