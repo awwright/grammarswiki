@@ -2224,3 +2224,123 @@ func repeat_value(_ input: any Sequence<UInt8>) -> UInt {
 func CHAR_string(_ bytes: any Collection<UInt8>) -> String {
 	return String(decoding: bytes, as: UTF8.self)
 }
+
+/// A function that takes an ABNFRulelist and substitutes prose referencing an ABNF rule in another file, with the ABNF itself
+public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ dereference: ((String) throws -> ABNFRulelist<T>)) rethrows -> ABNFRulelist<T> {
+	var importDefinitions: Dictionary<String, ABNFRulelist<T>> = [:];
+	do {
+		// Parse the document
+		//let root_parsed = try ABNFRulelist<UInt32>.parse(input)
+		// Dereference external references, convert proseVal imports to mangled rule names
+		let (root_references, root_dereferenced) = collectImports(from: root_parsed);
+		var rulelist_all = root_dereferenced.rules;
+
+		// Keep track of which rulenames map to which files
+		var filenameDependencies: Dictionary<String, String> = [:];
+
+		// Make a list of rules that are directly depended on by the root document, and iterate through to load them.
+		// All of the imports in the root document are required.
+		var requiredRules = root_references.map { mangleRulename(filename: $0.0, rulename: $0.1) };
+		for referenced in root_references {
+			let referenced_mangled = mangleRulename(filename: referenced.0, rulename: referenced.1);
+			print("define: \(referenced_mangled) is found in \(referenced.0)")
+			filenameDependencies[referenced_mangled] = referenced.0;
+		}
+
+		// Keep track of the rules that have been imported
+		var requiredRulenames: Set<String> = Set(root_dereferenced.ruleNames);
+		var insertedRulenames: Set<String> = Set(root_dereferenced.ruleNames);
+
+		// Load any referenced files off the disk.
+		// Note that you can technically have circular dependencies and that may result in the same document being loaded
+		// up to twice (with unmangled then mangled names), but that's OK.
+		// If those contain any imports, dereference the prose-val, and add those to the importPaths
+		var i = 0;
+		while i < requiredRules.count {
+			let mangled = requiredRules[i]
+			i += 1
+
+			// If the rulename is already in the list, then no need to do anything
+			if insertedRulenames.contains(mangled) { continue }
+			let filename = filenameDependencies[mangled];
+			guard let filename else { continue }
+
+			print("load: file \(filename) rule \(mangled)")
+
+			// Load the file where the rule is defined
+			let rulelist_mangled_preloaded = importDefinitions[filename];
+			let rulelist_mangled: ABNFRulelist<T>;
+			if let rulelist_mangled_preloaded {
+				rulelist_mangled = rulelist_mangled_preloaded;
+			} else {
+				let rulelist_parsed = try dereference(filename)
+				// Dereference external references, convert proseVal imports to mangled rule names
+				let (rulelist_imports, rulelist_dereferenced) = collectImports(from: rulelist_parsed);
+
+				// Keep track of where each mangled rule name is defined
+				for referenced in rulelist_imports {
+					let referenced_mangled = mangleRulename(filename: referenced.0, rulename: referenced.1);
+					print("define: \(referenced_mangled) is found in \(referenced.0)")
+					filenameDependencies[referenced_mangled] = referenced.0;
+				}
+
+				// Also (unlike the root file), mangle any rule names that are defined elsewhere in the file. (Other rules are builtin rules, or external references.)
+				rulelist_mangled = rulelist_dereferenced.mapRulenames { ABNFRulename(label: rulelist_dereferenced.ruleNames.contains($0.label) ? mangleRulename(filename: filename, rulename: $0.label) : $0.label) }
+				importDefinitions[filename] = rulelist_mangled;
+				for referenced in rulelist_mangled.ruleNames {
+					let referenced_mangled = mangleRulename(filename: filename, rulename: referenced);
+					print("define: \(referenced) is found in \(filename)")
+					filenameDependencies[referenced] = filename;
+				}
+			}
+
+			// Add the rule and all its dependencies
+			let rule_definition = rulelist_mangled.dictionary[mangled]
+			guard let rule_definition else {
+				print("Couldn't find rule \(mangled) in \(filename)")
+				continue;
+			}
+
+			rulelist_all += rulelist_mangled.rules.filter { $0.rulename.label == mangled }
+			insertedRulenames.insert(mangled);
+
+			for referenced_mangled in rule_definition.referencedRules {
+				print("reference: \(mangled) references \(referenced_mangled)")
+				// If this rule is in the queue to be added, don't add it again
+				if requiredRulenames.contains(referenced_mangled) { continue }
+				requiredRules.append(referenced_mangled)
+				requiredRulenames.insert(referenced_mangled)
+			}
+		}
+
+		// Mark it read-only so the actor can safely read it
+		return ABNFRulelist(rules: rulelist_all);
+	}
+}
+
+private func collectImports<T>(from: ABNFRulelist<T>) -> (Array<(String, String)>, ABNFRulelist<T>) {
+	var references: Array<(String, String)> = []
+	let mangled: ABNFRulelist<T> = from.mapElements {
+		switch $0 {
+			case .proseVal(let proseVal):
+				let parts = proseVal.remark.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
+				guard parts.count >= 3 else { return $0 }
+				guard parts[0] == "import" else { return $0 }
+				let filename = parts[1];
+				let rulename = parts[2];
+				let tuple = (filename, rulename)
+				// Add tuple to references, if it does not already exist
+				if !references.contains(where: { $0.0 == filename && $0.1 == rulename }) {
+					references.append(tuple)
+				}
+				return ABNFElement.rulename(ABNFRulename(label: mangleRulename(filename: filename, rulename: rulename)))
+			default: return $0
+		}
+	}
+	return (references, mangled)
+}
+
+private func mangleRulename(filename: String, rulename: String) -> String {
+	// "ref-file-\(filename.replacing(/[^\-0-9A-Za-z]+/, with: "-"))-\(rulename)"
+	"File: \(filename) Rule: \(rulename)"
+}
