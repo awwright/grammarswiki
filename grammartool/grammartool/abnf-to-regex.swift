@@ -33,7 +33,13 @@ func abnf_to_regex_args(arguments: Array<String>) -> Int32 {
 	let expression: ABNFAlternation<UInt8>;
 	let fsm: DFA;
 	do {
-		importedDict = try importedRulelist.toPattern(as: DFA.self, rules: builtins).mapValues { $0.minimized() }
+		let dereferencedRulelist = try dereferenceABNFRulelist(importedRulelist, {
+			filename in
+			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
+			let content = try String(contentsOfFile: filePath, encoding: .utf8)
+			return try ABNFRulelist<UInt8>.parse(content.utf8)
+		});
+		importedDict = try dereferencedRulelist.toPattern(as: DFA.self, rules: builtins).mapValues { $0.minimized() }
 		expression = try ABNFAlternation<UInt8>.parse(arguments[expressionIndex].utf8);
 		fsm = try expression.toPattern(rules: importedDict)
 	} catch {
