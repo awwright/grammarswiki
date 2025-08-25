@@ -61,6 +61,7 @@ struct RegexContentView: View {
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.onAppear { computeRegexDescription() }
 		.onChange(of: rule_fsm) { computeRegexDescription() }
+		.onChange(of: regexDialect) { computeRegexDescription() }
 	}
 
 	private func computeRegexDescription() {
@@ -69,9 +70,14 @@ struct RegexContentView: View {
 		guard let fsm = rule_fsm else {
 			return
 		}
+		let regexDialect = regexDialect;
 		Task.detached(priority: .utility) {
 			let regex: REPattern<UInt32> = fsm.toPattern()
-			let description = regex.description
+			let description = switch regexDialect {
+				case "Swift": REDialectBuiltins.swift.encode(regex)
+				case "POSIX Extended": REDialectBuiltins.posixExtended.encode(regex)
+				default: "[:Unknown:]"
+			}
 			await MainActor.run {
 				regexDescription = description
 				error = nil
