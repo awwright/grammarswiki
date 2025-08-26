@@ -33,11 +33,20 @@ func format_html_run(response res: inout some ResponseProtocol, directoryPath: S
 	}
 
 	// Extract title content
-	let title = format_html_read_content(from: html, tag: "title")
-	guard let title else {
+	let title_dirty = format_html_read_content(from: html, tag: "title")
+	guard let title_dirty else {
 		print("<title>: Not found")
 		return;
 	}
+	let title = title_dirty
+		.replacingOccurrences(of: "&lt;", with: "<")
+		.replacingOccurrences(of: "&gt;", with: ">")
+		.replacingOccurrences(of: "&amp;", with: "&")
+		.replacingOccurrences(of: "&quot;", with: "\"")
+		.replacingOccurrences(of: "Standard Grammar Catalogue", with: "")
+		.replacingOccurrences(of: "Standard Grammar Catalog", with: "")
+		.replacingOccurrences(of: " - ", with: "")
+		.replacingOccurrences(of: " : ", with: "")
 
 	// Extract main content
 	let main_html = format_html_read_content(from: html, tag: "main");

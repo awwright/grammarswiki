@@ -5,10 +5,10 @@
 # Read some user configuration
 -include .env
 
-CLI=./grammartool-release
+CLI=./bin/grammartool
 PUBLISH_TARGET ?= ./publish_target
 
-all: grammartool-release htdocs-all
+all: bin/grammartool htdocs-all
 
 htdocs-all: htdocs/index.xhtml $(patsubst catalog/%.abnf,htdocs/catalog/%.html,$(CATALOG_ABNF_SRC))
 
@@ -31,7 +31,7 @@ htdocs/catalog/%.html: catalog/%.abnf $(CLI)
 		mv $$tmp .targets.mk; \
 	fi
 
-grammartool-release: grammartool/grammartool/*.swift
+bin/grammartool: grammartool/grammartool/*.swift
 	xcodebuild -workspace Grammars.xcworkspace -scheme grammartool -configuration Release SYMROOT=$(PWD)/build
 	cp $(PWD)/build/Release/grammartool $@
 

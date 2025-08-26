@@ -141,69 +141,69 @@ func respond_themed_html(res: inout some ResponseProtocol, title: String, main_h
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-  <meta charset="utf-8"/>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-  <title>\(text_html(title)) - Standard Grammar Catalog</title>
-  <meta name="description" content=""/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"> -->
-  <!-- https://fonts.google.com/specimen/Open+Sans -->
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
-  <link href="\(text_html("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))" rel="stylesheet"/>
-  <link rel="stylesheet" href="/scripts/css/style.css"/>
+	<meta charset="utf-8"/>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+	<title>Standard Grammar Catalogue : \(text_html(title))</title>
+	<meta name="description" content=""/>
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
+	<!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"> -->
+	<!-- https://fonts.google.com/specimen/Open+Sans -->
+	<link rel="preconnect" href="https://fonts.googleapis.com"/>
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
+	<link href="\(text_html("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))" rel="stylesheet"/>
+	<link rel="stylesheet" href="/scripts/css/style.css"/>
 </head>
 <body>
-  <header>
-	 <section class="v-align--grid col-2-auto">
-	 <a id="logo" href="/">
-		<div class="large">Standard Grammar Catalog</div>
-		<div class="small">ABNF Toolchain &amp; Generator</div>
-	 </a>
+	<header>
+		<section class="v-align--grid col-2-auto">
+			<a id="logo" href="/">
+				<div class="large">Grammars.wiki</div>
+				<div class="small">ABNF Toolchain &amp; Generator</div>
+			</a>
 
-	 <nav>
-		<input id="toggle--state" type="checkbox"/>
-		<label id="toggle" for="toggle--state">
-		  <span></span>
-		  <span></span>
-		  <span></span>
-		</label>
+			<nav>
+				<input id="toggle--state" type="checkbox"/>
+				<label id="toggle" for="toggle--state">
+					<span></span>
+					<span></span>
+					<span></span>
+				</label>
 
-		<ul id="menu">
-		  <form class="filter-menu filter-menu--quick-search pointer" method="get">
-		  <label for="search" hidden="">Search</label>
-		  <input type="text" name="search"/>
-		  <input class="icon icon__search icon--border--left" type="submit" name="search" value=""/>
-		  </form>
+				<ul id="menu">
+					<form class="filter-menu filter-menu--quick-search pointer" method="get">
+						<label for="search" hidden="">Search</label>
+						<input type="text" name="search"/>
+						<input class="icon icon__search icon--border--left" type="submit" name="search" value=""/>
+					</form>
 
-		  <li><a href="/index.html">About</a></li>
-		  <li class="category">
-		  <a href="catalog.html">Catalog</a>
-		  <ul class="dropdown">
-			 <a href="grammars-and-formats.html"><li>Grammars and Formats</li></a>
-			 <a href="handbook.html"><li>Handbook</li></a>
-		  </ul>
-		  </li>
+					<li><a href="/index.html">About</a></li>
+					<li class="category">
+						<a href="catalog.html">Catalog</a>
+						<ul class="dropdown">
+							<a href="grammars-and-formats.html"><li>Grammars and Formats</li></a>
+							<a href="handbook.html"><li>Handbook</li></a>
+						</ul>
+					</li>
 
-		  <li><a href="test-cases.html">Test Cases</a></li>
-		</ul>
-	 </nav>
-	 </section>
-  </header>
+					<li><a href="test-cases.html">Test Cases</a></li>
+				</ul>
+			</nav>
+		</section>
+	</header>
 
-  <main>\(main_html)</main>
+	<main>\(main_html)</main>
 
-  <footer>
-	 <section class="col-4">
-	 <span></span>
-	 <span></span>
-	 <span></span>
-	 <span></span>
-	 </section>
-  </footer>
+	<footer>
+		<section class="col-4">
+			<span></span>
+			<span></span>
+			<span></span>
+			<span></span>
+		</section>
+	</footer>
 </body>
 </html>
-""";
+""".replacingOccurrences(of: "\t", with: "  ");
 
 	res.contentType = "application/xhtml+xml"
 	res.writeLn(content)
