@@ -54,9 +54,9 @@ function initVueApp() {
                     </router-link>
                 </div>
 
-                <div 
-                    class="pagination-controls container-auto col-5 h-align--flex" 
-                    style="margin-top: 1em;" 
+                <div
+                    class="pagination-controls container-auto col-5 h-align--flex"
+                    style="margin-top: 1em;"
                     v-if="sortedTests.length > 0"
                 >
                     <button v-if="page > 1" class="button-pagination button--solid" @click="goToPage(1)">First</button>

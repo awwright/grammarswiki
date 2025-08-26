@@ -20,15 +20,15 @@
 }
 
 // @title: noselect
-// @description: Prevent highlight of applied elements 
-.noselect { 
+// @description: Prevent highlight of applied elements
+.noselect {
 	-webkit-touch-callout: none; // iOS Safari
 	-webkit-user-select: none; // Safari
 	-khtml-user-select: none; // Konqueror HTML
 	-moz-user-select: none; // Firefox
 	-ms-user-select: none; // Internet Explorer/Edge
 	user-select: none; // Non-prefixed version, currently supported by Chrome and Opera
-} 
+}
 
 // @title: no-js
 // @description: JavaScript enabled/disabled state management
@@ -37,7 +37,7 @@
 
 // @title: Honeypot interaction
 // @description: used as a bait trigger
-// @Todo: add javascript class change to give unique ID for each page load 
+// @Todo: add javascript class change to give unique ID for each page load
 .hny {
 	visibility:hidden;
 	position:fixed;

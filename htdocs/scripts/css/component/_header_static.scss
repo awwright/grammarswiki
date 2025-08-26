@@ -1,4 +1,4 @@
- 
+
 // @title: CSS Only Header Navigation
 // @description: The primary navigation for the header, it provides and handles drop down menu's for both desktop and responsive devices.
 // @author: Grant Kellie (grantkellie.dev)
@@ -39,9 +39,9 @@ header {
     // @title: Header Logo
     // @description: primary logo settings for the Header / Navigation block
     // @parent: Primary Header
-    
+
     #logo {
-        width:fit-content;    
+        width:fit-content;
         color:color.set('light');
         text-decoration: none;
         font-weight:320;
@@ -49,25 +49,25 @@ header {
         & .large {
             font-size:2em;
         }
-    
+
         & .small {
             display:none;
             font-size:1em;
         }
-    
-        @include media-queries.mobile {   
-            & .large {
-                font-size:1.48em;
-            }        
-        }
 
-        @include media-queries.small-mobile {   
+        @include media-queries.mobile {
             & .large {
                 font-size:1.48em;
             }
         }
 
-        @include media-queries.smartwatch {   
+        @include media-queries.small-mobile {
+            & .large {
+                font-size:1.48em;
+            }
+        }
+
+        @include media-queries.smartwatch {
             & .large {
                 font-size:1.48em;
             }
@@ -75,9 +75,9 @@ header {
     }
 }
 
- 
+
 // @title: Primary Header Navigation
-// @description: Provides a standard CSS only drop down for responsive menus  
+// @description: Provides a standard CSS only drop down for responsive menus
 // @parent: Primary Header
 nav {
 
@@ -85,16 +85,16 @@ nav {
         font-weight:360;
         list-style: none;
     }
-     
+
     // @title: Desktop menu
-    // @description: Menu to work on the desktop header.    
+    // @description: Menu to work on the desktop header.
     @include media-queries.desktop() {
         #menu {
             margin:8px 0 0 0;
             align-items:center;
             display:flex;
             justify-content:flex-end;
-            
+
             & a {
                 padding:0 0 10px 0;
                 text-decoration:none;
@@ -117,7 +117,7 @@ nav {
                     content:" ▼";
                     font-size:0.64em;
                 }
-            
+
                 & .dropdown {
                     display:none;
                     position:absolute;
@@ -126,7 +126,7 @@ nav {
                     min-width:160px;
                     z-index:1;
                 }
-            
+
                 & .dropdown a {
                     min-height:100px auto;
                     padding:12px 16px;
@@ -137,9 +137,9 @@ nav {
                     text-decoration:none;
                     box-shadow:0px 8px 16px 0px color.set('opacity-25');
                     background:color.set('light-medium');
-                    
+
                 }
-            
+
                 & .dropdown a:hover {
                     color:color.set('light');
                     background:color.set('primary');
@@ -149,7 +149,7 @@ nav {
 
         // @title: Responsive button state
         // @description: On Desktop, sets the mobile responsive menu state.
-        // @type: modifier        
+        // @type: modifier
         #toggle, #toggle--state {
             display:none;
         }
@@ -166,7 +166,7 @@ nav {
         right:4vw;
         position:absolute;
         z-index:99999;
-         
+
         // @title: Toggle button
         // @description: a hamburger menu menu for responsive design.
         #toggle {
@@ -186,65 +186,65 @@ nav {
                 }
             }
         }
-  
+
         // @title: Toggle button state
         // @parent: Toggle button
         // @description: CSS Only Hidden Checkbox state, Interaction changes visability state of elements.
         & #toggle--state {
-            display:none; 
-     
+            display:none;
+
             // @parent: Toggle Button
-            // @description: When checked, Prevents the Toggle button from moving.       
+            // @description: When checked, Prevents the Toggle button from moving.
             &:checked ~ #toggle {
                 position: fixed;
             }
-          
+
             // @parent: Toggle Button : span
-            // @description: When checked, creates an animation for the Toggle button.            
+            // @description: When checked, creates an animation for the Toggle button.
             &:checked + label span:nth-child(1) {
                 transform:translateY(5px) rotate(45deg);
             }
-            
+
             &:checked + label span:nth-child(2) {
                 transform:translateY(-5px) rotate(-45deg);
             }
-            
+
             &:checked + label span:nth-child(3) {
                 opacity:0;
-            }   
+            }
 
             &:not(:checked) + label span:last-child{
                 opacity:1;
-            }   
-            
+            }
+
             &~ label span {
                 transition:
                     transform 0.3s ease,
                     opacity 0.2s ease
                 ;
             }
-              
+
             // @parent: Responsive menu
-            // @description When checked, makes the Responsive menu visable.     
+            // @description When checked, makes the Responsive menu visable.
             &:checked ~ #menu {
                 display:block;
             }
         }
-                   
+
         // @title: Responsive menu
-        // @description: drop down menu visable when toggle state is checked. 
+        // @description: drop down menu visable when toggle state is checked.
         #menu {
             display:none;
             width:100vw;
             height:100%;
 
             // Spacing from header
-            margin:74px 0 0 0; 
+            margin:74px 0 0 0;
             padding:14px 0 0 0;
 
             font-size: 1.25em;
             text-align:center;
-            border-top:2px solid color.set('opacity-25');  
+            border-top:2px solid color.set('opacity-25');
             background:color.set('primary');
 
             position:fixed;
@@ -252,7 +252,7 @@ nav {
             left:0;
             z-index:0;
             overflow-y:auto;
-           
+
             a {
                 text-decoration:none;
                  color:color.set('light');
@@ -261,12 +261,12 @@ nav {
             & li, .category {
                 margin:0 0 32px 0;
             }
-         
-            // @title: Hover Toggle 
+
+            // @title: Hover Toggle
             // @description: Toggle menu when element is clicked or hovered.
             // @parent: Responsive menu
-            // @note: MUST not be used with [@sibling:Checkbox Toggle]. 
-            
+            // @note: MUST not be used with [@sibling:Checkbox Toggle].
+
             li {
                 &.category > a::after {
                     content:" ▼";
@@ -281,7 +281,7 @@ nav {
             // @title: Checkbox toggle
             // @description: Toggle menu with checkbox.
             // @parent: Responsive menu
-            // @note: MUST not be used with [@sibling:Hover Toggle].            
+            // @note: MUST not be used with [@sibling:Hover Toggle].
             li {
                 &.category > a::after {
                     margin:0 0 0 4px;
@@ -296,7 +296,7 @@ nav {
 
             // @title: Responsive dropdown
             // @description: Elements within the responsive menu.
-            // @parent: Responsive menu            
+            // @parent: Responsive menu
             & ul {
                 min-height:100px;
                 align-items:center;
@@ -315,14 +315,14 @@ nav {
                     background:color.set('opacity-50');
 
                     &.category:hover .dropdown {
-                        display:block;                        
+                        display:block;
                     }
-    
+
                     &.category > a::after {
                         content:" ▼";
                         font-size:0.64em;
                     }
-                
+
                     & .dropdown {
                         display:none;
                         position:absolute;
@@ -341,17 +341,17 @@ nav {
                         text-decoration:none;
                         display:block;
                     }
-                
+
                     & .dropdown a:hover {
                         background:color.set('medium');
-                    }    
+                    }
                 }
             }
         }
     }
-     
+
     // @title:Navigation visability
-    // @description:set state of primary desktop or responsive navigation menus    
+    // @description:set state of primary desktop or responsive navigation menus
     @include media-queries.desktop(){
         &#desktop {
             display:block;

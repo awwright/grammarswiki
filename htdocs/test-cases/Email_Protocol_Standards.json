@@ -5,9 +5,9 @@
   "description": "Standards governing email transmission protocols such as SMTP, IMAP, and MIME.",
   "compliance": {
     "RFC": [
-      "5321",  
-      "5322",  
-      "2045",  
+      "5321",
+      "5322",
+      "2045",
       "3501"
     ]
   },

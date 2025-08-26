@@ -16,9 +16,9 @@ form.filter-menu {
 
     // @title: Filter Search
     // @description: Small filter menu system
-    &--quick-search {    
+    &--quick-search {
         border:none;
-        border-radius: unset;   
+        border-radius: unset;
         display:inline-flex;
 
         @include media-queries.responsive(){
@@ -26,37 +26,37 @@ form.filter-menu {
 
             & input {
                 font-size:1em;
-            }    
+            }
         }
 
         & input {
             padding:8px;
             outline: none;
             border: none;
-            box-shadow: none; 
+            box-shadow: none;
 
             &.icon {
                 cursor: pointer;
             }
-        }    
+        }
     }
-    
+
     // @title: Filter Search
     // @description: Small filter menu system
     &--detailed-search {
         border:none;
-        border: 2px solid color.set('light-medium'); 
-        border-radius: 0px; 
-  
+        border: 2px solid color.set('light-medium');
+        border-radius: 0px;
+
         & * {
             display: flex;
         }
-    
-        & > div, span {		
+
+        & > div, span {
             flex-wrap: wrap;
             gap:6px;
-        } 
-        
+        }
+
         // Filter group container (flex layout)
         & .filter-group {
             gap: 10px;
@@ -65,13 +65,13 @@ form.filter-menu {
             & > * {
                 flex: 1 1 calc(33.333% - 16px);
                 justify-content: left;
-                align-items: center;                     
+                align-items: center;
 
                 & > label {
                     font-weight:420;
-                    margin:0 8px 0 0;      
+                    margin:0 8px 0 0;
                 }
-                
+
                 & input, select {
                     flex: 1;
                     // height:clamp(32px, 32px, 32px);
@@ -81,35 +81,35 @@ form.filter-menu {
                     flex: 1;
                     padding:8px;
                     outline: none;
-                    box-shadow: none; 
+                    box-shadow: none;
                 }
             }
         }
-     
-        & .button {            
+
+        & .button {
             margin:24px 0px;
-           
+
             &:not(:last-child){
-                margin:24px 16px 0px 0px;  
+                margin:24px 16px 0px 0px;
             }
         }
     }
 }
 
 // @title: Pagination
-// @description: 
+// @description:
 .pagination-controls {
-    text-align: center;   
+    text-align: center;
 
     & button {
             min-width:100px;
     height:32px;
-    
+
         border-radius:8px;
     }
 
-    
-    
+
+
     // first
     // previous
         // numerics

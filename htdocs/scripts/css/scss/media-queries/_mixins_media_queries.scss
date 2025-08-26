@@ -21,7 +21,7 @@
         @content;
     }
 }
-  
+
 @mixin mobile(){
     @media screen and (min-width: '480px') and (max-width: '767px'){
         @content;

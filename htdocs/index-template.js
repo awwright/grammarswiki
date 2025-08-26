@@ -40,7 +40,7 @@ function initVueApp() {
                         @click="openTest(test)"
                         style="cursor: pointer;"
                     >
-                        <span class="overlay">                            
+                        <span class="overlay">
                             <b>{{ test.title }}</b>
                             <p>{{ test.date }}</p>
                         </span>

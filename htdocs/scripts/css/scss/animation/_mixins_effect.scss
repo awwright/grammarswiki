@@ -13,8 +13,8 @@
     @include transition.effect($element, $duration, $timing-function, $delay);
 }
 
-// @title: 
-// @description: 
+// @title:
+// @description:
 @mixin fade($element: opacity, $duration: 300ms, $timing-function: ease-out, $delay: 0ms) {
     // Apply the transition to opacity
     @include transition.effect($element, $duration, $timing-function, $delay);
@@ -30,8 +30,8 @@
     }
 }
 
-// @title: 
-// @description: 
+// @title:
+// @description:
 @mixin slide($element: transform, $duration: 300ms, $timing-function: ease-out, $delay: 0ms) {
     // Apply the transition to transform
     @include transition.effect($element, $duration, $timing-function, $delay);
@@ -47,8 +47,8 @@
     }
 }
 
-// @title: 
-// @description: 
+// @title:
+// @description:
 @mixin scale($element: transform, $duration: 300ms, $timing-function: ease-out, $delay: 0ms) {
     // Apply the transition to transform
     @include transition.effect($element, $duration, $timing-function, $delay);

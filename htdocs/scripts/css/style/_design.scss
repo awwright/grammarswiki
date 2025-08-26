@@ -1,5 +1,5 @@
 // @title: Stylesheet Design
-// @description: 
+// @description:
 // @author: Grant Kellie (grantkellie.dev)
 // @contents:
 // - Color Palette
@@ -99,22 +99,22 @@
 		min-width:160px;
 		height:42px;
 	}
-	
+
 	@include media-queries.responsive(){
 		min-width:128px;
-		height:38px;		
+		height:38px;
 	}
-	
+
 	display:flex;
 	justify-content: center;
-	align-items: center;	
+	align-items: center;
 
 	// Default Style
-	font-size:inherit; 
-	font-family: sans-serif; 	
+	font-size:inherit;
+	font-family: sans-serif;
 	cursor: pointer;
 	border:none;
-	border-radius:8px;	
+	border-radius:8px;
 	color:color.set('light');
 	background:color.set('primary');
 
@@ -125,13 +125,13 @@
 	// Pagination
 	&-pagination {
 		min-width:80px;
-		height:32px;	
+		height:32px;
 	}
-	
+
 	// ease out effect
 	@include effect.ease(all, .25s, ease-out);
-	 
-	// @title: Solid Button	
+
+	// @title: Solid Button
 	&--solid {
 		border: none;
 		color:color.set('light');
@@ -139,10 +139,10 @@
 
 		&:hover {
 			background:color.set('secondary');
-		}	
+		}
 	}
-	
-	// @title: Solid Button	
+
+	// @title: Solid Button
 	&--hollow {
 		color:color.set('primary');
 		border: 4px solid color.set('primary');
@@ -156,7 +156,7 @@
 	}
 
 	// @title: Button focus
-	// @description focus causes button click to stay on after click	
+	// @description focus causes button click to stay on after click
 	&:focus {
 		outline:0;
 		background:color.set('tertiary');

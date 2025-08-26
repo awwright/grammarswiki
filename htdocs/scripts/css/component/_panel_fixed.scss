@@ -7,7 +7,7 @@
 // -- Panel Layout bottom
 // -- Panel Layout left
 // -- Panel Layout right
-// -- Panel Layout left & right 
+// -- Panel Layout left & right
 // - Scrollbar
 // -- Scrollbar top
 // -- Scrollbar bottom
@@ -44,14 +44,14 @@ body.panel-layout {
 	&--bottom {
 		& footer {
 			padding:0 0 $panel 0;
-		}	
+		}
 	}
 
 	// @title: Panel Layout left
 	&--left {
 		main, header, footer {
 			margin: 0 0 0 $panel;
-		}	
+		}
 	}
 
 	// @title: Panel Layout right
@@ -61,13 +61,13 @@ body.panel-layout {
 		}
 	}
 
-	// @title: Panel Layout left & right 
+	// @title: Panel Layout left & right
 	&--left--right {
 		main, header, footer {
 			margin: 0 $panel 0 $panel;
-		}	
+		}
 	}
-}	
+}
 
 // @title: Scrollbar
 // @description: sets the position for the scroll
@@ -147,11 +147,11 @@ body.panel-layout {
 		left: 0;
 		bottom: 0;
 		border-top:solid color.set('dark') 1px;
-		
+
 		// @description: Contents
 		& > * {
 			transform: rotateX(180deg);
-			width: 100%;			
+			width: 100%;
 			position: absolute;
 			bottom: 0;
 			margin:0 auto;
@@ -173,7 +173,7 @@ body.panel-layout {
 			width: 96%;
 			margin: 0 2%;
 		}
-		
+
 	}
 
 	// @title: Panel right
@@ -213,7 +213,7 @@ body.panel-layout {
 
 	// @description: Turns H3 inside panel label into pointer for interaction indicator.
 	& label > h3 {
-		cursor: pointer; 
+		cursor: pointer;
 	}
 
 	// @description: hides mobile menu
@@ -234,18 +234,18 @@ body.panel-layout {
 		& footer {
 			padding: 32px 0 0 0;
         }
-    }       
+    }
 
 	.panel {
 		width: 100%;
 		height:auto;
 		margin: 100px auto 25px auto;
-		
+
 		position:relative;
 		top: 0;
-		left: 0;		
+		left: 0;
 		z-index:0;
-		
+
 		& section {
 			width:96%;
 			margin:0;
@@ -264,7 +264,7 @@ body.panel-layout {
 
 			// @description: Hide all sections by default
 			.toggle-content {
-				display: none; 
+				display: none;
 
 				&:last-child{
 					margin: 0;
@@ -285,12 +285,12 @@ body.panel-layout {
 		// @description: Shows all sections when the master toggle is checked.
 		.toggle-master:checked ~ .toggle-section .toggle-content {
 			display: block; // Show all sections
-		}		
-	}	
+		}
+	}
 }
 
 @include media-queries.mobile {
-	.panel {		
+	.panel {
 		& section {
 			width:96%;
 			display: grid;
