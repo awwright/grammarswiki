@@ -180,8 +180,8 @@ func respond_themed_html(res: inout some ResponseProtocol, title: String, main_h
 					<li class="category">
 						<a href="catalog.html">Catalog</a>
 						<ul class="dropdown">
-							<a href="grammars-and-formats.html"><li>Grammars and Formats</li></a>
-							<a href="handbook.html"><li>Handbook</li></a>
+							<li><a href="grammars-and-formats.html">Grammars and Formats</a></li>
+							<li><a href="handbook.html">Handbook</a></li>
 						</ul>
 					</li>
 
