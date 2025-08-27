@@ -47,52 +47,52 @@
   </header>
 
   <main><section>
-<h1>catalog/rfc4647-langrange.abnf</h1>
-<h2>Source</h2>
-<pre><code>; &lt;https://www.rfc-editor.org/rfc/rfc4647.html>
+    <h1>catalog/RFC 4647: Matching of Language Tags</h1>
+    <h2>Source</h2>
+    <pre id="source"><code>; &lt;https://www.rfc-editor.org/rfc/rfc4647.html>
 
 language-range   = (1*8ALPHA *(&quot;-&quot; 1*8alphanum)) / &quot;*&quot;
 alphanum         = ALPHA / DIGIT
 
 extended-language-range = (1*8ALPHA / &quot;*&quot;)
-                          *(&quot;-&quot; (1*8alphanum / &quot;*&quot;))
+*(&quot;-&quot; (1*8alphanum / &quot;*&quot;))
 </code></pre>
-</section>
-<section>
-  <h2>Info</h2>
-  <dl>
-    <dt>Rules</dt>
-    <dd>language-range, alphanum, extended-language-range</dd>
-    <dt>Dependencies</dt>
-    <dd></dd>
-    <dt>Used Builtins</dt>
-    <dd></dd>
-  </dl>
+  </section>
+  <section>
+    <h2>Info</h2>
+    <dl>
+      <dt>Rules</dt>
+      <dd>language-range, alphanum, extended-language-range</dd>
+      <dt>Dependencies</dt>
+      <dd></dd>
+      <dt>Used Builtins</dt>
+      <dd></dd>
+    </dl>
 
-  <h2>Alphabet</h2>
-  <ul>
-  </ul>
+    <h2>Alphabet</h2>
+    <ul>
+    </ul>
 
-  <h2>Cited By</h2>
-  <ul>
-  </ul>
-  <h2>Implementations</h2>
-  <ul>
-  </ul>
-  <h2>Translations</h2>
-  <section>
-    <h3>Railroad Diagram</h3>
-    <pre></pre>
-  </section>
-  <section>
-    <h3>Swift Regular Expression</h3>
-    <pre>\*|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z])))))))|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](|[A-Za-z])-[0-9A-Za-z]))))))(-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](|[0-9A-Za-z])-[0-9A-Za-z]))))))*(|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z])))))))</pre>
-  </section>
-  <section>
-    <h3>POSIX Extended Regular Expression</h3>
-    <pre></pre>
-  </section>
-</section></main>
+    <h2>Cited By</h2>
+    <ul>
+    </ul>
+    <h2>Implementations</h2>
+    <ul>
+    </ul>
+    <h2>Translations</h2>
+    <section>
+      <h3>Railroad Diagram</h3>
+      <pre></pre>
+    </section>
+    <section>
+      <h3>Swift Regular Expression</h3>
+      <pre>\*|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z](|[A-Za-z])))))))|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](-[0-9A-Za-z]|[A-Za-z](|[A-Za-z])-[0-9A-Za-z]))))))(-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](-[0-9A-Za-z]|[0-9A-Za-z](|[0-9A-Za-z])-[0-9A-Za-z]))))))*(|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z](|[0-9A-Za-z])))))))</pre>
+    </section>
+    <section>
+      <h3>POSIX Extended Regular Expression</h3>
+      <pre></pre>
+    </section>
+  </section></main>
 
   <footer>
     <section class="col-4">

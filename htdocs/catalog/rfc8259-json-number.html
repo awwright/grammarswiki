@@ -46,10 +46,11 @@
     </section>
   </header>
 
-  <main><section>
-<h1>catalog/rfc8259-json-number.abnf</h1>
-<h2>Source</h2>
-<pre><code>; &lt;https://www.rfc-editor.org/rfc/rfc8259.html>
+  <main>
+    <section>
+      <h1>RFC 8259 - JSON: Number</h1>
+      <h2>Source</h2>
+      <pre id="source"><code>; &lt;https://www.rfc-editor.org/rfc/rfc8259.html>
 
 number = [ minus ] int [ frac ] [ exp ]
 
@@ -71,42 +72,43 @@ plus = %x2B                ; +
 
 zero = %x30                ; 0
 </code></pre>
-</section>
-<section>
-  <h2>Info</h2>
-  <dl>
-    <dt>Rules</dt>
-    <dd>number, decimal-point, digit1-9, e, exp, frac, int, minus, plus, zero</dd>
-    <dt>Dependencies</dt>
-    <dd></dd>
-    <dt>Used Builtins</dt>
-    <dd></dd>
-  </dl>
+    </section>
+    <section>
+      <h2>Info</h2>
+      <dl>
+        <dt>Rules</dt>
+        <dd>number, decimal-point, digit1-9, e, exp, frac, int, minus, plus, zero</dd>
+        <dt>Dependencies</dt>
+        <dd></dd>
+        <dt>Used Builtins</dt>
+        <dd></dd>
+      </dl>
 
-  <h2>Alphabet</h2>
-  <ul>
-  </ul>
+      <h2>Alphabet</h2>
+      <ul>
+      </ul>
 
-  <h2>Cited By</h2>
-  <ul>
-  </ul>
-  <h2>Implementations</h2>
-  <ul>
-  </ul>
-  <h2>Translations</h2>
-  <section>
-    <h3>Railroad Diagram</h3>
-    <pre></pre>
-  </section>
-  <section>
-    <h3>Swift Regular Expression</h3>
-    <pre>(|-)[1-9][0-9]*(|[Ee](|[+\-])[0-9][0-9]*)|(|-)[1-9][0-9]*\.[0-9][0-9]*(|[Ee](|[+\-])[0-9][0-9]*)|(|-)0(|[Ee](|[+\-])[0-9][0-9]*|\.[0-9][0-9]*(|[Ee](|[+\-])[0-9][0-9]*))</pre>
-  </section>
-  <section>
-    <h3>POSIX Extended Regular Expression</h3>
-    <pre></pre>
-  </section>
-</section></main>
+      <h2>Cited By</h2>
+      <ul>
+      </ul>
+      <h2>Implementations</h2>
+      <ul>
+      </ul>
+      <h2>Translations</h2>
+      <section>
+        <h3>Railroad Diagram</h3>
+        <pre></pre>
+      </section>
+      <section>
+        <h3>Swift Regular Expression</h3>
+        <pre>(|-)[1-9][0-9]*(|[Ee](|[+\-])[0-9][0-9]*)|(|-)[1-9][0-9]*\.[0-9][0-9]*(|[Ee](|[+\-])[0-9][0-9]*)|(|-)0(|[Ee](|[+\-])[0-9][0-9]*|\.[0-9][0-9]*(|[Ee](|[+\-])[0-9][0-9]*))</pre>
+      </section>
+      <section>
+        <h3>POSIX Extended Regular Expression</h3>
+        <pre></pre>
+      </section>
+    </section>
+  </main>
 
   <footer>
     <section class="col-4">
