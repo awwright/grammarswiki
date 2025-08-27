@@ -2280,7 +2280,6 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 				// Keep track of where each mangled rule name is defined
 				for referenced in rulelist_imports {
 					let referenced_mangled = mangleRulename(filename: referenced.0, rulename: referenced.1);
-					print("define: \(referenced_mangled) is found in \(referenced.0)")
 					filenameDependencies[referenced_mangled] = referenced.0;
 				}
 
@@ -2289,7 +2288,6 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 				importDefinitions[filename] = rulelist_mangled;
 				for referenced in rulelist_mangled.ruleNames {
 					let referenced_mangled = mangleRulename(filename: filename, rulename: referenced);
-					print("define: \(referenced) is found in \(filename)")
 					filenameDependencies[referenced] = filename;
 				}
 			}
@@ -2297,7 +2295,7 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 			// Add the rule and all its dependencies
 			let rule_definition = rulelist_mangled.dictionary[mangled]
 			guard let rule_definition else {
-				print("Couldn't find rule \(mangled) in \(filename)")
+				//print("Couldn't find rule \(mangled) in \(filename)")
 				continue;
 			}
 
@@ -2305,7 +2303,6 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 			insertedRulenames.insert(mangled);
 
 			for referenced_mangled in rule_definition.referencedRules {
-				print("reference: \(mangled) references \(referenced_mangled)")
 				// If this rule is in the queue to be added, don't add it again
 				if requiredRulenames.contains(referenced_mangled) { continue }
 				requiredRules.append(referenced_mangled)

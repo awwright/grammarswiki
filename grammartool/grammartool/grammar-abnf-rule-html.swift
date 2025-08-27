@@ -57,7 +57,11 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	});
 	let rulelist_all_dict = rulelist_all_final.dictionary
 
+	// TODO: Add railroad diagram
+	// TODO: Add GraphViz diagram
+
 	// builtins will be copied to the output
+	// TODO: Add Swift NSRegularExpression
 	let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>;
 	let regex_swift_str: String;
 	let regex_egrep_str: String;
@@ -84,14 +88,15 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 
 	// Build definition
 	let definition_dependencies = rulelist_all_final.dependencies(rulename: rulename)
-	let definition_list = definition_dependencies.dependencies.reversed().map {
-		rulelist_all_dict[$0]?.description ?? ""
-	}
-	let definition_list_html = definition_list.map { "\t\t\t<li><code>" + text_html($0.replacingOccurrences(of: "\r\n", with: "")) + "</code></li>\n" }.joined()
-
-	// TODO: Add railroad diagram
-	// TODO: Add GraphViz diagram
-	// TODO: Add Swift NSRegularExpression
+	let definition_list_html = definition_dependencies.dependencies.reversed().map {
+		let rule = rulelist_all_dict[$0]!
+		// TODO: If the rule is imported from a different grammar, link to that one directly
+		if $0 == rulename {
+			return "\t\t\t<li><code>" + text_html(rule.description.replacingOccurrences(of: "\r\n", with: "")) + "</code></li>\n"
+		} else {
+			return "\t\t\t<li><code><a href=\"\(text_html(rule.rulename.label)).html\">\(text_html(rule.rulename.description))</a> = " + text_html(rule.alternation.description) + "</code></li>\n"
+		}
+	}.joined()
 
 	let title = "Rule \(rulename) in \(filePath)"
 	let main_html = """
