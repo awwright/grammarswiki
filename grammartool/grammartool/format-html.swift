@@ -33,11 +33,7 @@ func format_html_run(response res: inout some ResponseProtocol, directoryPath: S
 	}
 
 	// Extract title content
-	let title_dirty = format_html_read_content(from: html, tag: "title")
-	guard let title_dirty else {
-		print("<title>: Not found")
-		return;
-	}
+	let title_dirty = format_html_read_content(from: html, tag: "title") ?? ""
 	let title = title_dirty
 		.replacingOccurrences(of: "&lt;", with: "<")
 		.replacingOccurrences(of: "&gt;", with: ">")
@@ -48,11 +44,7 @@ func format_html_run(response res: inout some ResponseProtocol, directoryPath: S
 		.replacingOccurrences(of: " : ", with: "")
 
 	// Extract main content
-	let main_html = format_html_read_content(from: html, tag: "main");
-	guard let main_html else {
-		print("<main>: Not found")
-		return;
-	}
+	let main_html = format_html_read_content(from: html, tag: "main") ?? ""
 
 	res.status = .ok
 	respond_themed_html(res: &res, title: title, main_html: main_html)

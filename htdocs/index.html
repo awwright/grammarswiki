@@ -16,7 +16,7 @@
         <div class="large">Grammars.wiki</div>
         <div class="small">ABNF Toolchain &amp; Generator</div>
       </a>
-
+      
       <nav>
         <input id="toggle--state" type="checkbox"/>
         <label id="toggle" for="toggle--state">
@@ -24,7 +24,7 @@
           <span></span>
           <span></span>
         </label>
-
+        
         <ul id="menu">
           <li><a href="/index.html">About</a></li>
           <li class="category">
@@ -34,7 +34,7 @@
               <li><a href="handbook.html">Handbook</a></li>
             </ul>
           </li>
-
+          
           <li><a href="test-cases.html">Test Cases</a></li>
           <li><form class="filter-menu filter-menu--quick-search pointer" method="get" action="/search.html">
             <label for="search" hidden="">Search</label>
@@ -45,12 +45,9 @@
       </nav>
     </section>
   </header>
-
+  
   <main>
     <section>
-      <h2>Concepts</h2>
-      <p></p>
-
       <h2>Concepts</h2>
       <ul>
         <li><a href="concept/dates.html">Dates and Times</a></li>
@@ -58,111 +55,52 @@
         <li><a href="concept/json.html">JSON</a></li>
         <li><a href="concept/uri.html">URIs and Web Identifiers</a></li>
         <li><a href="concept/web.html">World Wide Web</a></li>
-            </ul>
-        </section>
-
-        <!-- Vue Mount Point -->
-        <section>
-            <div id="app"></div>
-        </section>
-
-        <section>
-            <h2>Grammars & Formats</h2>
-
-            <form id="external-filter-form" class="filter-menu--detailed-search" method="get" action="catalog.html">
-
-                <div class="filter-group">
-                    <div>
-                        <label for="standard">Standard</label>
-                        <select id="standard" name="standard">
-                            <option value="">Any</option>
-                            <option value="RFC">RFC</option>
-                            <option value="ISO">ISO</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="compliant-code">Compliant Code</label>
-                        <input id="compliant-code" type="text" name="compliant-code" placeholder="" />
-                    </div>
-
-                    <div>
-                        <label for="search">Search by Title</label>
-                        <input id="search" type="text" name="search" placeholder="" />
-                    </div>
-                </div>
-
-                <div class="h-align--flex--right">
-                    <button class="button button--solid" type="reset">Reset</button>
-                    <input class="button button--solid" type="submit" value="Search">
-                </div>
-            </form>
-
-            <script>
-            // Sends correctly formatted URL to action/page
-            document.getElementById('external-filter-form').addEventListener('submit', function (e) {
-                e.preventDefault();
-
-                const params = new URLSearchParams();
-                const form = e.target;
-
-                const standard = form.standard.value.trim();
-                const code = form['compliant-code'].value.trim();
-                const search = form.search.value.trim();
-
-                if (standard) params.set('standard', standard);
-                if (code) params.set('compliant-code', code);
-                if (search) params.set('search', search);
-                params.set('page', 1); // Always reset to page 1
-
-                // Navigate with hash-based routing
-                window.location.href = `/catalog.html?${params.toString()}`;
-            });
-            </script>
-        </section>
-
-        <!-- Mostly for testing, this doesn't have to stick around end users -->
-        <!-- This can be generated using ../bin/build-sitemap.js -->
-        <section>
-            <h2>Sitemap</h2>
-            <ul>
-                <li><a href="_dev-body.html">_dev-body.html</a></li>
-                <li><a href="_dev-dynamic-container.html">_dev-dynamic-container.html</a></li>
-                <li><a href="_dev-elements.html">_dev-elements.html</a></li>
-                <li><a href="_dev-no-js.html">_dev-no-js.html</a></li>
-                <li><a href="_dev-pages.html">_dev-pages.html</a></li>
-                <li><a href="_dev-style.html">_dev-style.html</a></li>
-                <li>catalog/<ul>
-                    <li><a href="catalog/abnf-core.html">abnf-core.html</a></li>
-                    <li><a href="catalog/number.html">number.html</a></li>
-                    <li><a href="catalog/rfc3339-datetime.html">rfc3339-datetime.html</a></li>
-                    <li><a href="catalog/rfc4647-langrange.html">rfc4647-langrange.html</a></li>
-                    <li><a href="catalog/rfc5322-email.html">rfc5322-email.html</a></li>
-                    <li><a href="catalog/rfc5646-langtag.html">rfc5646-langtag.html</a></li>
-                    <li><a href="catalog/rfc8259-json-number.html">rfc8259-json-number.html</a></li></ul></li>
-                <li><a href="catalog.html">catalog.html</a></li>
-                <li><a href="error.html">error.html</a></li>
-                <li><a href="generator.html">generator.html</a></li>
-                <li><a href="grammars-and-formats.html">grammars-and-formats.html</a></li>
-                <li><a href="handbook.html">handbook.html</a></li>
-                <li><a href="index.html">index.html</a></li>
-                <li><a href="test-case.html">test-case.html</a></li>
-                <li>test-cases/<ul>
-                    <li><a href="test-cases/Email_Protocol_Standards.html">Email_Protocol_Standards.html</a></li>
-                    <li><a href="test-cases/ISO_1.html">ISO_1.html</a></li>
-                    <li><a href="test-cases/RFC_1.html">RFC_1.html</a></li>
-                    <li><a href="test-cases/RFC_3339.html">RFC_3339.html</a></li></ul></li>
-                <li><a href="test-cases.html">test-cases.html</a></li></ul>
-        </section>
-    </main>
-
-  <footer>
-    <section class="col-4">
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
+      </ul>
     </section>
-  </footer>
-</body>
-</html>
+    
+    <!-- Mostly for testing, this doesn't have to stick around end users -->
+    <!-- This can be generated using ../bin/build-sitemap.js -->
+    <section>
+      <h2>Sitemap</h2>
+      <ul>
+        <li><a href="_dev-body.html">_dev-body.html</a></li>
+        <li><a href="_dev-dynamic-container.html">_dev-dynamic-container.html</a></li>
+        <li><a href="_dev-elements.html">_dev-elements.html</a></li>
+        <li><a href="_dev-no-js.html">_dev-no-js.html</a></li>
+        <li><a href="_dev-pages.html">_dev-pages.html</a></li>
+        <li><a href="_dev-style.html">_dev-style.html</a></li>
+        <li>catalog/<ul>
+          <li><a href="catalog/abnf-core.html">abnf-core.html</a></li>
+          <li><a href="catalog/number.html">number.html</a></li>
+          <li><a href="catalog/rfc3339-datetime.html">rfc3339-datetime.html</a></li>
+          <li><a href="catalog/rfc4647-langrange.html">rfc4647-langrange.html</a></li>
+          <li><a href="catalog/rfc5322-email.html">rfc5322-email.html</a></li>
+          <li><a href="catalog/rfc5646-langtag.html">rfc5646-langtag.html</a></li>
+          <li><a href="catalog/rfc8259-json-number.html">rfc8259-json-number.html</a></li></ul></li>
+          <li><a href="catalog.html">catalog.html</a></li>
+          <li><a href="error.html">error.html</a></li>
+          <li><a href="generator.html">generator.html</a></li>
+          <li><a href="grammars-and-formats.html">grammars-and-formats.html</a></li>
+          <li><a href="handbook.html">handbook.html</a></li>
+          <li><a href="index.html">index.html</a></li>
+          <li><a href="test-case.html">test-case.html</a></li>
+          <li>test-cases/<ul>
+            <li><a href="test-cases/Email_Protocol_Standards.html">Email_Protocol_Standards.html</a></li>
+            <li><a href="test-cases/ISO_1.html">ISO_1.html</a></li>
+            <li><a href="test-cases/RFC_1.html">RFC_1.html</a></li>
+            <li><a href="test-cases/RFC_3339.html">RFC_3339.html</a></li></ul></li>
+            <li><a href="test-cases.html">test-cases.html</a></li></ul>
+          </section>
+        </main>
+        
+        <footer>
+          <section class="col-4">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </section>
+        </footer>
+      </body>
+      </html>
+      

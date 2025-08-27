@@ -17,7 +17,6 @@ func grammar_abnf_html_args(arguments: Array<String>) -> Int32 {
 }
 
 func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: String) {
-	let contents: [String];
 	res.contentType = "application/xhtml+xml"
 
 	let importedAbnf: Data? = getInput(filename: filePath);
@@ -56,6 +55,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 
 	let title = "Contents of \(filePath)"
 	let main_html = """
+
 		<section>
 		<h1>\(text_html(filePath))</h1>
 		<h2>Source</h2>
@@ -96,7 +96,8 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 				<pre></pre>
 			</section>
 		</section>
-		""";
+
+	""";
 	res.status = .ok
 	respond_themed_html(res: &res, title: title, main_html: main_html);
 }
