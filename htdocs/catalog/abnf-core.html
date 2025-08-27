@@ -55,37 +55,37 @@
       <pre id="source"><code>;; source: RFC 5234
 ; &lt;https://www.rfc-editor.org/rfc/rfc5234.txt>
 
-ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
+<a href="abnf-core/ALPHA.html">ALPHA</a>          =  %x41-5A / %x61-7A   ; A-Z / a-z
 
-BIT            =  &quot;0&quot; / &quot;1&quot;
+<a href="abnf-core/BIT.html">BIT</a>            =  &quot;0&quot; / &quot;1&quot;
 
-CHAR           =  %x01-7F
+<a href="abnf-core/CHAR.html">CHAR</a>           =  %x01-7F
 ; any 7-bit US-ASCII character,
 ;  excluding NUL
-CR             =  %x0D
+<a href="abnf-core/CR.html">CR</a>             =  %x0D
 ; carriage return
 
-CRLF           =  CR LF
+<a href="abnf-core/CRLF.html">CRLF</a>           =  CR LF
 ; Internet standard newline
 
-CTL            =  %x00-1F / %x7F
+<a href="abnf-core/CTL.html">CTL</a>            =  %x00-1F / %x7F
 ; controls
 
-DIGIT          =  %x30-39
+<a href="abnf-core/DIGIT.html">DIGIT</a>          =  %x30-39
 ; 0-9
 
-DQUOTE         =  %x22
+<a href="abnf-core/DQUOTE.html">DQUOTE</a>         =  %x22
 ; &quot; (Double Quote)
 
-HEXDIG         =  DIGIT / &quot;A&quot; / &quot;B&quot; / &quot;C&quot; / &quot;D&quot; / &quot;E&quot; / &quot;F&quot;
+<a href="abnf-core/HEXDIG.html">HEXDIG</a>         =  DIGIT / &quot;A&quot; / &quot;B&quot; / &quot;C&quot; / &quot;D&quot; / &quot;E&quot; / &quot;F&quot;
 
-HTAB           =  %x09
+<a href="abnf-core/HTAB.html">HTAB</a>           =  %x09
 ; horizontal tab
 
-LF             =  %x0A
+<a href="abnf-core/LF.html">LF</a>             =  %x0A
 ; linefeed
 
-LWSP           =  *(WSP / CRLF WSP)
+<a href="abnf-core/LWSP.html">LWSP</a>           =  *(WSP / CRLF WSP)
 ; Use of this linear-white-space rule
 ;  permits lines containing only white
 ;  space that are no longer legal in
@@ -96,15 +96,15 @@ LWSP           =  *(WSP / CRLF WSP)
 ;  headers and use with caution in
 ;  other contexts.
 
-OCTET          =  %x00-FF
+<a href="abnf-core/OCTET.html">OCTET</a>          =  %x00-FF
 ; 8 bits of data
 
-SP             =  %x20
+<a href="abnf-core/SP.html">SP</a>             =  %x20
 
-VCHAR          =  %x21-7E
+<a href="abnf-core/VCHAR.html">VCHAR</a>          =  %x21-7E
 ; visible (printing) characters
 
-WSP            =  SP / HTAB
+<a href="abnf-core/WSP.html">WSP</a>            =  SP / HTAB
 ; white space
 </code></pre>
     </section>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Rule LWSP in catalog/abnf-core.abnf - Grammars.wiki</title>
+  <meta name="description" content=""/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/scripts/css/style.css"/>
+</head>
+<body>
+  <header>
+    <section class="v-align--grid col-2-auto">
+      <a id="logo" href="/">
+        <div class="large">Grammars.wiki</div>
+        <div class="small">ABNF Toolchain &amp; Generator</div>
+      </a>
+
+      <nav>
+        <input id="toggle--state" type="checkbox"/>
+        <label id="toggle" for="toggle--state">
+          <span></span>
+          <span></span>
+          <span></span>
+        </label>
+
+        <ul id="menu">
+          <li><a href="/index.html">About</a></li>
+          <li class="category">
+            <a href="catalog.html">Catalog</a>
+            <ul class="dropdown">
+              <li><a href="grammars-and-formats.html">Grammars and Formats</a></li>
+              <li><a href="handbook.html">Handbook</a></li>
+            </ul>
+          </li>
+
+          <li><a href="test-cases.html">Test Cases</a></li>
+          <li><form class="filter-menu filter-menu--quick-search pointer" method="get" action="/search.html">
+            <label for="search" hidden="">Search</label>
+            <input type="text" name="q"/>
+            <input class="icon icon__search icon--border--left" type="submit" value="&#x1F50D;"/>
+          </form></li>
+        </ul>
+      </nav>
+    </section>
+  </header>
+
+  <main>
+  <section>
+  <h1>From catalog/abnf-core.abnf rule: LWSP</h1>
+
+  <h2>Definition</h2>
+  <ul>        <li><code>LWSP = *(WSP / CRLF WSP)</code></li>
+        <li><code>WSP = SP / HTAB</code></li>
+        <li><code>SP = %x20</code></li>
+        <li><code>HTAB = %x9</code></li>
+        <li><code>CRLF = CR LF</code></li>
+        <li><code>LF = %xa</code></li>
+        <li><code>CR = %xd</code></li>
+
+  </ul>
+
+  </section>
+  <section>
+    <h2>Info</h2>
+    <dl>
+      <dt>Rulename</dt>
+      <dd>LWSP</dd>
+      <dt>Dependencies</dt>
+      <dd>CR, LF, CRLF, HTAB, SP, WSP, LWSP</dd>
+      <dt>Used Builtins</dt>
+      <dd></dd>
+    </dl>
+
+
+    <h2>Alphabet</h2>
+    <ul>
+    </ul>
+
+    <h2>Translations</h2>
+    <section>
+      <h3>Railroad Diagram</h3>
+      <pre></pre>
+    </section>
+    <section>
+      <h3>Swift Regular Expression</h3>
+      <pre></pre>
+    </section>
+    <section>
+      <h3>POSIX Extended Regular Expression</h3>
+      <pre></pre>
+    </section>
+  </section>
+</main>
+
+  <footer>
+    <section class="col-4">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </section>
+  </footer>
+</body>
+</html>

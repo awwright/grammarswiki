@@ -63,6 +63,7 @@ if arguments.count == 1 && ProcessInfo.processInfo.environment["REQUEST_URI"] !=
 //print(ProcessInfo.processInfo.environment);
 exitCode = switch programName {
 	case "abnf-expression-test-input": abnf_expression_test_input_args(arguments: arguments);
+	case "abnf-list-rulenames": abnf_list_rulenames_args(arguments: arguments);
 	case "abnf-list-rules": abnf_list_rules_args(arguments: arguments);
 	case "abnf-to-regex": abnf_to_regex_args(arguments: arguments);
 	case "abnf-to-regex-tests": abnf_to_regex_tests_args(arguments: arguments);
@@ -81,6 +82,7 @@ func defaultExitCode() -> Int32 {
 	print("Tests an input against a grammar description");
 	print("");
 	abnf_expression_test_input_help(arguments: arguments);
+	abnf_list_rulenames_help(arguments: arguments);
 	abnf_list_rules_help(arguments: arguments);
 	abnf_to_regex_help(arguments: arguments);
 	abnf_equivalent_inputs_help(arguments: arguments);
