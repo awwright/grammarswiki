@@ -170,12 +170,6 @@ func respond_themed_html(res: inout some ResponseProtocol, title: String, main_h
 				</label>
 
 				<ul id="menu">
-					<form class="filter-menu filter-menu--quick-search pointer" method="get">
-						<label for="search" hidden="">Search</label>
-						<input type="text" name="search"/>
-						<input class="icon icon__search icon--border--left" type="submit" name="search" value=""/>
-					</form>
-
 					<li><a href="/index.html">About</a></li>
 					<li class="category">
 						<a href="catalog.html">Catalog</a>
@@ -186,6 +180,11 @@ func respond_themed_html(res: inout some ResponseProtocol, title: String, main_h
 					</li>
 
 					<li><a href="test-cases.html">Test Cases</a></li>
+					<li><form class="filter-menu filter-menu--quick-search pointer" method="get" action="/search.html">
+						<label for="search" hidden="">Search</label>
+						<input type="text" name="q"/>
+						<input class="icon icon__search icon--border--left" type="submit" value="&#x1F50D;"/>
+					</form></li>
 				</ul>
 			</nav>
 		</section>
