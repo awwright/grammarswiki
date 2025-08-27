@@ -49,10 +49,6 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	// builtins will be copied to the output
 	let importedDict = try! rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
 
-	let expression: ABNFAlternation<UInt32> = try! ABNFAlternation<UInt32>.parse(firstRule.utf8);
-	let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>> = try! expression.toPattern(rules: importedDict)
-	let regex: REPattern<UInt32> = fsm.toPattern()
-
 	let title = "Contents of \(filePath)"
 	let main_html = """
 
@@ -83,19 +79,6 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 			<h2>Implementations</h2>
 			<ul>
 			</ul>
-			<h2>Translations</h2>
-			<section>
-				<h3>Railroad Diagram</h3>
-				<pre></pre>
-			</section>
-			<section>
-				<h3>Swift Regular Expression</h3>
-				<pre>\(regex.description)</pre>
-			</section>
-			<section>
-				<h3>POSIX Extended Regular Expression</h3>
-				<pre></pre>
-			</section>
 		</section>
 
 	""".replacingOccurrences(of: "\t", with: "  ");

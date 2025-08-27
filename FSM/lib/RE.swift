@@ -141,6 +141,7 @@ public struct REDialect: REDialectProtocol {
 	public let endAnchor: String           // Delimiter for matching EOF, if necessary
 	public let flags: String               // Flags for the pattern (e.g., "ims" for Perl)
 	public let emptyClass: String          // A pattern that matches no characters (not even the empty string)
+	public let xEscape: Bool             // Use \x to escape characters < 0x20
 	public let openGroup: String           // String opening a group (e.g., "(")
 	public let closeGroup: String          // String closing a group (e.g., ")")
 	public let escapeChar: Character       // Character used for escaping (e.g., "\")
@@ -151,7 +152,7 @@ public struct REDialect: REDialectProtocol {
 	public let groupTypeIndicators: Set<String> // Indicators after openGroup for special groups (e.g., "?:", "?=")
 	public let charClassEscapes: [String: Set<Character>] // Predefined character class escapes (e.g., "\s", "\w")
 
-	public init(openQuote: String, closeQuote: String, startAnchor: String, endAnchor: String, flags: String, openGroup: String, closeGroup: String, emptyClass: String, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>]) {
+	public init(openQuote: String, closeQuote: String, startAnchor: String, endAnchor: String, flags: String, openGroup: String, closeGroup: String, emptyClass: String, xEscape: Bool, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>]) {
 		self.openQuote = openQuote
 		self.closeQuote = closeQuote
 		self.startAnchor = startAnchor
@@ -160,6 +161,7 @@ public struct REDialect: REDialectProtocol {
 		self.openGroup = openGroup
 		self.closeGroup = closeGroup
 		self.emptyClass = emptyClass
+		self.xEscape = xEscape;
 		self.escapeChar = escapeChar
 		self.metaCharacters = metaCharacters
 		self.openCharClass = openCharClass
@@ -198,8 +200,10 @@ public struct REDialect: REDialectProtocol {
 			//if metaCharacters.contains(Int(char)) {
 			//	"\(escapeChar)\(Character(char))"
 			//} else
-			if(char < 0x20) {
-				"\\x\(String(char, radix: 16, uppercase: true)))"
+			if(xEscape && char < 0x210) {
+				"\\x0\(String(char, radix: 16, uppercase: true))"
+			} else if(xEscape && char < 0x20) {
+				"\\x\(String(char, radix: 16, uppercase: true))"
 			} else if metaCharacters.contains(Character((UnicodeScalar(Int(char))!))) {
 				"\\\(Character(UnicodeScalar(Int(char))!))"
 			} else if (char >= 0x20 && char <= 0x7E) {
@@ -214,8 +218,10 @@ public struct REDialect: REDialectProtocol {
 		// e.g. "-" doesn't need to be escaped outside a character class,
 		// and "[" does't need to be escaped inside one.
 		func charClassPrintable(_ char: Symbol) -> String {
-			if(char < 0x20) {
-				"\\x\(String(char, radix: 16, uppercase: true)))"
+			if(xEscape && char < 0x10) {
+				"\\x0\(String(char, radix: 16, uppercase: true))"
+			} else if(xEscape && char < 0x20) {
+				"\\x\(String(char, radix: 16, uppercase: true))"
 			} else if charClassMetaCharacters.contains(Character((UnicodeScalar(Int(char))!))) {
 				"\\\(Character(UnicodeScalar(Int(char))!))"
 			} else if (char >= 0x20 && char <= 0x7E) {
@@ -239,6 +245,7 @@ public struct REDialectBuiltins {
 		openGroup: "(",
 		closeGroup: ")",
 		emptyClass: "[^]",
+		xEscape: false,
 		escapeChar: "\\",
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
 		openCharClass: "[",
@@ -260,8 +267,9 @@ public struct REDialectBuiltins {
 		openGroup: "(",
 		closeGroup: ")",
 		emptyClass: "[^]",
+		xEscape: true,
 		escapeChar: "\\",
-		metaCharacters: Set([".", "[", "\\", "(", ")", "|", "*", "+", "?", "{"]),
+		metaCharacters: Set([".", "[", "\\", "(", ")", "|", "*", "+", "?", "{", "}", "^", "$"]),
 		openCharClass: "[",
 		closeCharClass: "]",
 		charClassMetaCharacters: Set(["^", "-", "]"]),
@@ -283,6 +291,7 @@ public struct REDialectBuiltins {
 		openGroup: "(",
 		closeGroup: ")",
 		emptyClass: "[^]",
+		xEscape: true,
 		escapeChar: "\\",
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
 		openCharClass: "[",
@@ -305,6 +314,7 @@ public struct REDialectBuiltins {
 		openGroup: "(",
 		closeGroup: ")",
 		emptyClass: "[^]",
+		xEscape: true,
 		escapeChar: "\\",
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
 		openCharClass: "[",

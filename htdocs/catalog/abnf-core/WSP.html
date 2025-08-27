@@ -48,15 +48,14 @@
 
   <main>
   <section>
-  <h1>From catalog/abnf-core.abnf rule: WSP</h1>
+    <h1>From catalog/abnf-core.abnf rule: WSP</h1>
 
-  <h2>Definition</h2>
-  <ul>        <li><code>WSP = SP / HTAB</code></li>
-        <li><code>SP = %x20</code></li>
-        <li><code>HTAB = %x9</code></li>
-
-  </ul>
-
+    <h2>Definition</h2>
+    <ul>
+      <li><code>WSP = SP / HTAB</code></li>
+      <li><code>SP = %x20</code></li>
+      <li><code>HTAB = %x9</code></li>
+    </ul>
   </section>
   <section>
     <h2>Info</h2>
@@ -69,23 +68,19 @@
       <dd></dd>
     </dl>
 
-
     <h2>Alphabet</h2>
     <ul>
+      <li><code>[ClosedRange(9...9), ClosedRange(32...32)]</code></li>
     </ul>
 
     <h2>Translations</h2>
     <section>
-      <h3>Railroad Diagram</h3>
-      <pre></pre>
-    </section>
-    <section>
       <h3>Swift Regular Expression</h3>
-      <pre></pre>
+      <pre>[\u{9} ]</pre>
     </section>
     <section>
       <h3>POSIX Extended Regular Expression</h3>
-      <pre></pre>
+      <pre>[\x09 ]</pre>
     </section>
   </section>
 </main>

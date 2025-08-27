@@ -2,7 +2,7 @@ import FSM;
 import Foundation
 
 func abnf_list_rules_help(arguments: Array<String>) {
-	print("\(arguments[0]) \(bold("parse-abnf")) [<filepath>]");
+	print("\(arguments[0]) \(bold("abnf-list-rules")) [<filepath>]");
 	print("\tParses <filepath> as ABNF and lists information");
 }
 

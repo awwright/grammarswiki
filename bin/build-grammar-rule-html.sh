@@ -1,8 +1,8 @@
 #!/bin/zsh
-set -x
+set -ex
 for grammar_path in catalog/*.abnf; do
 	grammar=${grammar_path%%.abnf}
-	mkdir htdocs/$grammar
+	test -d htdocs/$grammar || mkdir htdocs/$grammar
 	for rulename in $(bin/grammartool abnf-list-rulenames $grammar_path); do
 		bin/grammartool grammar-abnf-rule-html $grammar_path $rulename > htdocs/$grammar/$rulename.html
 	done

@@ -48,13 +48,12 @@
 
   <main>
   <section>
-  <h1>From catalog/abnf-core.abnf rule: CHAR</h1>
+    <h1>From catalog/abnf-core.abnf rule: CHAR</h1>
 
-  <h2>Definition</h2>
-  <ul>        <li><code>CHAR = %x1-7f</code></li>
-
-  </ul>
-
+    <h2>Definition</h2>
+    <ul>
+      <li><code>CHAR = %x1-7f</code></li>
+    </ul>
   </section>
   <section>
     <h2>Info</h2>
@@ -67,23 +66,19 @@
       <dd></dd>
     </dl>
 
-
     <h2>Alphabet</h2>
     <ul>
+      <li><code>[ClosedRange(1...127)]</code></li>
     </ul>
 
     <h2>Translations</h2>
     <section>
-      <h3>Railroad Diagram</h3>
-      <pre></pre>
-    </section>
-    <section>
       <h3>Swift Regular Expression</h3>
-      <pre></pre>
+      <pre>[\u{1}-\u{7F}]</pre>
     </section>
     <section>
       <h3>POSIX Extended Regular Expression</h3>
-      <pre></pre>
+      <pre>[\x01-\u{7F}]</pre>
     </section>
   </section>
 </main>

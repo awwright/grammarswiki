@@ -48,15 +48,14 @@
 
   <main>
   <section>
-  <h1>From catalog/abnf-core.abnf rule: CRLF</h1>
+    <h1>From catalog/abnf-core.abnf rule: CRLF</h1>
 
-  <h2>Definition</h2>
-  <ul>        <li><code>CRLF = CR LF</code></li>
-        <li><code>LF = %xa</code></li>
-        <li><code>CR = %xd</code></li>
-
-  </ul>
-
+    <h2>Definition</h2>
+    <ul>
+      <li><code>CRLF = CR LF</code></li>
+      <li><code>LF = %xa</code></li>
+      <li><code>CR = %xd</code></li>
+    </ul>
   </section>
   <section>
     <h2>Info</h2>
@@ -69,23 +68,20 @@
       <dd></dd>
     </dl>
 
-
     <h2>Alphabet</h2>
     <ul>
+      <li><code>[ClosedRange(10...10)]</code></li>
+      <li><code>[ClosedRange(13...13)]</code></li>
     </ul>
 
     <h2>Translations</h2>
     <section>
-      <h3>Railroad Diagram</h3>
-      <pre></pre>
-    </section>
-    <section>
       <h3>Swift Regular Expression</h3>
-      <pre></pre>
+      <pre>\u{D}\u{A}</pre>
     </section>
     <section>
       <h3>POSIX Extended Regular Expression</h3>
-      <pre></pre>
+      <pre>\x0D\x0A</pre>
     </section>
   </section>
 </main>

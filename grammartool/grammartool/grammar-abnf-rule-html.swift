@@ -58,28 +58,50 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	let rulelist_all_dict = rulelist_all_final.dictionary
 
 	// builtins will be copied to the output
-	//let importedDict = try! rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
-	//let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>> = try! expression.toPattern(rules: importedDict)
-	//let regex: REPattern<UInt32> = fsm.toPattern()
-	let regex_str = ""
+	let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>;
+	let regex_swift_str: String;
+	let regex_egrep_str: String;
+	do {
+		let importedDict = try rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
+		fsm = try expression.toPattern(rules: importedDict).minimized()
+		let regex: REPattern<UInt32> = fsm.toPattern()
+		regex_swift_str = REDialectBuiltins.swift.encode(regex);
+		regex_egrep_str = REDialectBuiltins.posixExtended.encode(regex);
+	} catch {
+		print(error)
+		fsm = .empty
+		regex_swift_str = "<recursive>"
+		regex_egrep_str = "<recursive>"
+	}
+
+	// The "Alphabet" lists the partitions of characters that can be found in valid strings, and where characters in a partition are all interchangable with respect to the validity of the string
+	let alphabet_parts: Array<String> = fsm.alphabet.map {
+		"\($0)"
+	}
+	let alphabet_parts_html: String = alphabet_parts.map {
+		"\t\t\t<li><code>" + text_html($0) + "</code></li>\n"
+	}.joined(separator: "")
 
 	// Build definition
 	let definition_dependencies = rulelist_all_final.dependencies(rulename: rulename)
 	let definition_list = definition_dependencies.dependencies.reversed().map {
 		rulelist_all_dict[$0]?.description ?? ""
 	}
-	let definition_list_html = definition_list.map { "\t\t\t\t<li><code>" + text_html($0.replacingOccurrences(of: "\r\n", with: "")) + "</code></li>\n" }.joined()
+	let definition_list_html = definition_list.map { "\t\t\t<li><code>" + text_html($0.replacingOccurrences(of: "\r\n", with: "")) + "</code></li>\n" }.joined()
+
+	// TODO: Add railroad diagram
+	// TODO: Add GraphViz diagram
+	// TODO: Add Swift NSRegularExpression
 
 	let title = "Rule \(rulename) in \(filePath)"
 	let main_html = """
 
 		<section>
-		<h1>From \(text_html(filePath)) rule: \(text_html(rulename))</h1>
+			<h1>From \(text_html(filePath)) rule: \(text_html(rulename))</h1>
 
-		<h2>Definition</h2>
-		<ul>\(definition_list_html)
-		</ul>
-
+			<h2>Definition</h2>
+			<ul>
+	\(definition_list_html)\t\t</ul>
 		</section>
 		<section>
 			<h2>Info</h2>
@@ -92,23 +114,18 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 				<dd>\(text_html(definition_dependencies.builtins.joined(separator: ", ")))</dd>
 			</dl>
 
-
 			<h2>Alphabet</h2>
 			<ul>
-			</ul>
+	\(alphabet_parts_html)\t\t</ul>
 
 			<h2>Translations</h2>
 			<section>
-				<h3>Railroad Diagram</h3>
-				<pre></pre>
-			</section>
-			<section>
 				<h3>Swift Regular Expression</h3>
-				<pre>\(regex_str)</pre>
+				<pre>\(regex_swift_str)</pre>
 			</section>
 			<section>
 				<h3>POSIX Extended Regular Expression</h3>
-				<pre></pre>
+				<pre>\(regex_egrep_str)</pre>
 			</section>
 		</section>
 
