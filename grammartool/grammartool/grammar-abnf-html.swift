@@ -58,6 +58,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 
 		<section>
 		<h1>\(text_html(filePath))</h1>
+
 		<h2>Source</h2>
 		<pre><code>\(text_html(importedAbnfString))</code></pre>
 		</section>
@@ -97,7 +98,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 			</section>
 		</section>
 
-	""";
+	""".replacingOccurrences(of: "\t", with: "  ");
 	res.status = .ok
 	respond_themed_html(res: &res, title: title, main_html: main_html);
 }
