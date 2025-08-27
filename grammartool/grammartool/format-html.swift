@@ -43,8 +43,7 @@ func format_html_run(response res: inout some ResponseProtocol, directoryPath: S
 		.replacingOccurrences(of: "&gt;", with: ">")
 		.replacingOccurrences(of: "&amp;", with: "&")
 		.replacingOccurrences(of: "&quot;", with: "\"")
-		.replacingOccurrences(of: "Standard Grammar Catalogue", with: "")
-		.replacingOccurrences(of: "Standard Grammar Catalog", with: "")
+		.replacingOccurrences(of: "Grammars.wiki", with: "")
 		.replacingOccurrences(of: " - ", with: "")
 		.replacingOccurrences(of: " : ", with: "")
 

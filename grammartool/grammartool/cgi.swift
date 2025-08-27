@@ -143,7 +143,7 @@ func respond_themed_html(res: inout some ResponseProtocol, title: String, main_h
 <head>
 	<meta charset="utf-8"/>
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-	<title>Standard Grammar Catalogue : \(text_html(title))</title>
+	<title>\(text_html(title)) - Grammars.wiki</title>
 	<meta name="description" content=""/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"> -->
