@@ -1,72 +1,76 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="utf-8">
-    <title>Grammars.wiki</title>
-    <meta name="description" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/scripts/css/style.css">
+  <meta charset="utf-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Dates and Times - Grammars.wiki</title>
+  <meta name="description" content=""/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/scripts/css/style.css"/>
 </head>
 <body>
-    <header>
-        <section class="v-align--grid col-2-auto">
-            <a id="logo" href="/index.html">
-                <div class="large">Grammars.wiki</div>
-                <div class="small">ABNF Toolchain & Generator</div>
-            </a>
+  <header>
+    <section class="v-align--grid col-2-auto">
+      <a id="logo" href="/">
+        <div class="large">Grammars.wiki</div>
+        <div class="small">ABNF Toolchain &amp; Generator</div>
+      </a>
 
-            <nav>
-                <input id="toggle--state" type="checkbox"/>
-                <label id="toggle" for="toggle--state">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </label>
+      <nav>
+        <input id="toggle--state" type="checkbox"/>
+        <label id="toggle" for="toggle--state">
+          <span></span>
+          <span></span>
+          <span></span>
+        </label>
 
-                <ul id="menu">
-                    <li><a href="/index.html">About</a></li>
-                    <li class="category">
-                        <a href="/catalog.html">Catalog</a>
-                        <ul class="dropdown">
-                            <li><a href="grammars-and-formats.html">Grammars and Formats</a></li>
-                            <a href="/handbook.html"><li>Handbook</li></a>
-                        </ul>
-                    </li>
-
-                    <li><a href="/test-cases.html">Test Cases</a></li>
-                </ul>
-            </nav>
-        </section>
-    </header>
-
-    <main>
-        <h1>Date and Time</h1>
-        <p></p>
-
-        <section>
-            <h2>Grammars</h2>
-            <ul>
-                <li><a href="/catalog/rfc3339-datetime.html">RFC 3339: Date and Time on the Internet</a></li>
-                <li><a href="/spec/iso8601.html">ISO 8601</a>: A more comprehensive standard for describing dates and times</li>
+        <ul id="menu">
+          <li><a href="/index.html">About</a></li>
+          <li class="category">
+            <a href="catalog.html">Catalog</a>
+            <ul class="dropdown">
+              <li><a href="grammars-and-formats.html">Grammars and Formats</a></li>
+              <li><a href="handbook.html">Handbook</a></li>
             </ul>
-            <h2>See Also</h2>
-            <ul>
-                <li><a href="http.html">HTTP</a></li>
-                <li><a href="https://ijmacd.github.io/rfc3339-iso8601/">A venn diagram of RFC 3339 vs. ISO 8601</a></li>
-            </ul>
-        </section>
-    </main>
+          </li>
 
-    <footer>
-        <section class="col-4">
-            <span>&copy; 2025 Grammars.wiki</span>
-            <span></span>
-            <span></span>
-            <span></span>
-        </section>
-    </footer>
+          <li><a href="test-cases.html">Test Cases</a></li>
+          <li><form class="filter-menu filter-menu--quick-search pointer" method="get" action="/search.html">
+            <label for="search" hidden="">Search</label>
+            <input type="text" name="q"/>
+            <input class="icon icon__search icon--border--left" type="submit" value="&#x1F50D;"/>
+          </form></li>
+        </ul>
+      </nav>
+    </section>
+  </header>
 
-    <!-- App Script -->
-    <script type="module" src="index-template.js"></script>
+  <main>
+    <h1>Date and Time</h1>
+    <p></p>
+
+    <section>
+      <h2>Grammars</h2>
+      <ul>
+        <li><a href="/catalog/rfc3339-datetime.html">RFC 3339: Date and Time on the Internet</a></li>
+        <li><a href="/spec/iso8601.html">ISO 8601</a>: A more comprehensive standard for describing dates and times</li>
+      </ul>
+      <h2>See Also</h2>
+      <ul>
+        <li><a href="http.html">HTTP</a></li>
+        <li><a href="https://ijmacd.github.io/rfc3339-iso8601/">A venn diagram of RFC 3339 vs. ISO 8601</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <section class="col-4">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </section>
+  </footer>
 </body>
 </html>

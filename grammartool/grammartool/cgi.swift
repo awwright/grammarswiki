@@ -146,10 +146,6 @@ func respond_themed_html(res: inout some ResponseProtocol, title: String, main_h
 	<title>\(text_html(title)) - Grammars.wiki</title>
 	<meta name="description" content=""/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
-	<!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"> -->
-	<!-- https://fonts.google.com/specimen/Open+Sans -->
-	<link rel="preconnect" href="https://fonts.googleapis.com"/>
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
 	<link href="\(text_html("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))" rel="stylesheet"/>
 	<link rel="stylesheet" href="/scripts/css/style.css"/>
 </head>

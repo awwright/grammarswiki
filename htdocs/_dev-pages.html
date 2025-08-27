@@ -1,146 +1,149 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="utf-8">
-    <title>Pages - Grammars.wiki</title>
-    <meta name="description" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="scripts/css/style.css">
+  <meta charset="utf-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Pages - Grammars.wiki</title>
+  <meta name="description" content=""/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/scripts/css/style.css"/>
 </head>
 <body>
-    <header>
-        <section class="v-align--grid col-2-auto">
-            <a id="logo" href="index.html">
-                <div class="large">Grammars.wiki</div>
-                <div class="small">ABNF Toolchain & Generator</div>
-            </a>
+  <header>
+    <section class="v-align--grid col-2-auto">
+      <a id="logo" href="/">
+        <div class="large">Grammars.wiki</div>
+        <div class="small">ABNF Toolchain &amp; Generator</div>
+      </a>
 
-            <nav>
-                <input id="toggle--state" type="checkbox"/>
-                <label id="toggle" for="toggle--state">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </label>
+      <nav>
+        <input id="toggle--state" type="checkbox"/>
+        <label id="toggle" for="toggle--state">
+          <span></span>
+          <span></span>
+          <span></span>
+        </label>
 
-                <ul id="menu">
-                    <li><a href="index.html">About</a></li>
-                    <li class="category">
-                        <a href="catalog.html">Catalog</a>
-                        <ul class="dropdown">
-                            <li><a href="grammars-and-formats.html">Grammars and Formats</a></li>
-                            <li><a href="handbook.html">Handbook</a></li>
-                        </ul>
-                    </li>
+        <ul id="menu">
+          <li><a href="/index.html">About</a></li>
+          <li class="category">
+            <a href="catalog.html">Catalog</a>
+            <ul class="dropdown">
+              <li><a href="grammars-and-formats.html">Grammars and Formats</a></li>
+              <li><a href="handbook.html">Handbook</a></li>
+            </ul>
+          </li>
 
-                    <li><a href="test-cases.html">Test Cases</a></li>
-                </ul>
-            </nav>
+          <li><a href="test-cases.html">Test Cases</a></li>
+          <li><form class="filter-menu filter-menu--quick-search pointer" method="get" action="/search.html">
+            <label for="search" hidden="">Search</label>
+            <input type="text" name="q"/>
+            <input class="icon icon__search icon--border--left" type="submit" value="&#x1F50D;"/>
+          </form></li>
+        </ul>
+      </nav>
+    </section>
+  </header>
+
+  <main>
+    <section class="overflow--buffer">
+      <h2>Website Pages</h2>
+      <table class="layout--fixed-off">
+        <tr>
+          <th>Page</th>
+          <th>Description</th>
+          <th>URL</th>
+        </tr>
+
+        <tr>
+          <td>Index</td>
+          <td>The landing page showcasing information about the SGC for what it is, how it works and showcase recently added information.</td>
+          <td><a href="index.html">index.html</a></td>
+        </tr>
+
+        <tr>
+          <td>Catalog</td>
+          <td>Recently Added Grammars & Formats with filter search.</td>
+          <td><a href="catalog.html">catalog.html</a></td>
+        </tr>
+
+        <tr>
+          <td>Grammars & Formats</td>
+          <td>A singular page that offsets from "Catalog", its an Information page with a Sidebar and Fullwidth layout.</td>
+          <td><a href="grammars-and-formats.html">grammars-and-formats.html</a></td>
+        </tr>
+
+        <tr>
+          <td>Handbook</td>
+          <td>A page that allows you to have a quick reference and explanation to ABNF format / protocol
+            translations, to assist with taking the input and processing through the toolchain / generator, and
+            how to break down and understand the processes involved.</td>
+            <td><a href="handbook.html">handbook.html</a></td>
+          </tr>
+
+          <!-- <tr>
+            <td>Toolchain / Generator</td>
+            <td></td>
+            <td><a href="generator.html">generator.html</a></td>
+          </tr> -->
+
+          <tr>
+            <td>Test Cases</td>
+            <td>Lists test cases that reference to a singular test case</td>
+            <td><a href="test-cases.html">test-cases.html</a></td>
+          </tr>
+
+          <tr>
+            <td>Test Case</td>
+            <td>Showcases a single test case generated from grammars/formats and cross-reference other relevant
+              specifications.</td>
+              <td><a href="test-case.html">test-case.html</a></td>
+            </tr>
+
+            <tr>
+              <td>Error</td>
+              <td>Throws a relative server error message.</td>
+              <td><a href="error.html">error.html</a></td>
+            </tr>
+          </table>
+
+          <h2>SCSS Framework</h2>
+          <table class="layout--fixed-off">
+            <tr>
+              <th>Page</th>
+              <th>Description</th>
+              <th>URL</th>
+            </tr>
+
+            <tr>
+              <td>Style Guide</td>
+              <td>General Styling: colour, typography, links, buttons</td>
+              <td><a href="_dev-style.html">dev-style.html</a></td>
+            </tr>
+
+            <tr>
+              <td>Body</td>
+              <td>Structural Layout: parent and child containers, header, footer, tables</td>
+              <td><a href="_dev-body.html">dev-body.html</a></td>
+            </tr>
+
+            <tr>
+              <td>Elements</td>
+              <td>Content Layout: images, icons, forms, </td>
+              <td><a href="_dev-elements.html">dev-elements.html</a></td>
+            </tr>
+          </table>
         </section>
-    </header>
+      </main>
 
-    <main>
-        <section class="overflow--buffer">
-            <h2>Website Pages</h2>
-            <table class="layout--fixed-off">
-                <tr>
-                    <th>Page</th>
-                    <th>Description</th>
-                    <th>URL</th>
-                </tr>
-
-                <tr>
-                    <td>Index</td>
-                    <td>The landing page showcasing information about the SGC for what it is, how it works and showcase recently added information.</td>
-                    <td><a href="index.html">index.html</a></td>
-                </tr>
-
-                <tr>
-                    <td>Catalog</td>
-                    <td>Recently Added Grammars & Formats with filter search.</td>
-                    <td><a href="catalog.html">catalog.html</a></td>
-                </tr>
-
-                <tr>
-                    <td>Grammars & Formats</td>
-                    <td>A singular page that offsets from "Catalog", its an Information page with a Sidebar and Fullwidth layout.</td>
-                    <td><a href="grammars-and-formats.html">grammars-and-formats.html</a></td>
-                </tr>
-
-                <tr>
-                    <td>Handbook</td>
-                    <td>A page that allows you to have a quick reference and explanation to ABNF format / protocol
-                        translations, to assist with taking the input and processing through the toolchain / generator, and
-                        how to break down and understand the processes involved.</td>
-                    <td><a href="handbook.html">handbook.html</a></td>
-                </tr>
-
-                <!-- <tr>
-                    <td>Toolchain / Generator</td>
-                    <td></td>
-                    <td><a href="generator.html">generator.html</a></td>
-                </tr> -->
-
-                <tr>
-                    <td>Test Cases</td>
-                    <td>Lists test cases that reference to a singular test case</td>
-                    <td><a href="test-cases.html">test-cases.html</a></td>
-                </tr>
-
-                <tr>
-                    <td>Test Case</td>
-                    <td>Showcases a single test case generated from grammars/formats and cross-reference other relevant
-                        specifications.</td>
-                    <td><a href="test-case.html">test-case.html</a></td>
-                </tr>
-
-                <tr>
-                    <td>Error</td>
-                    <td>Throws a relative server error message.</td>
-                    <td><a href="error.html">error.html</a></td>
-                </tr>
-            </table>
-
-            <h2>SCSS Framework</h2>
-            <table class="layout--fixed-off">
-                <tr>
-                    <th>Page</th>
-                    <th>Description</th>
-                    <th>URL</th>
-                </tr>
-
-                <tr>
-                    <td>Style Guide</td>
-                    <td>General Styling: colour, typography, links, buttons</td>
-                    <td><a href="_dev-style.html">dev-style.html</a></td>
-                </tr>
-
-                <tr>
-                    <td>Body</td>
-                    <td>Structural Layout: parent and child containers, header, footer, tables</td>
-                    <td><a href="_dev-body.html">dev-body.html</a></td>
-                </tr>
-
-                <tr>
-                    <td>Elements</td>
-                    <td>Content Layout: images, icons, forms, </td>
-                    <td><a href="_dev-elements.html">dev-elements.html</a></td>
-                </tr>
-            </table>
-        </section>
-    </main>
-
-    <footer>
-        <section class="col-4">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-        </section>
-    </footer>
-
-    <!-- JavaScript Utilities -->
-    <script src="scripts/javascript/developer/debug-overflow.js"></script>
-
+  <footer>
+    <section class="col-4">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </section>
+  </footer>
 </body>
 </html>
