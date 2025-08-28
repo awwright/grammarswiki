@@ -65,7 +65,6 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 		<link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/xcode.min.css"/>
 		<script type="module">
 			import hljs from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/highlight.min.js';
-			//  and it's easy to individually load & register additional languages
 			import abnf from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/languages/abnf.min.js';
 			hljs.registerLanguage('abnf', abnf);
 			document.querySelectorAll('#source').forEach(el => {
