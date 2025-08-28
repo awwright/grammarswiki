@@ -52,6 +52,11 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 		"<a href=\"\(text_attr("\(rulename)/\($0).html"))\">\(text_html($0))</a>"
 	}.joined(separator: ", ")
 
+	// Used Builtins
+	let used_builtins_html = root_parsed.referencedRules.intersection(builtins.keys).map {
+		"<a href=\"\(text_attr("abnf-core/\($0).html"))\">" + text_html($0) + "</a>"
+	}.joined(separator: ", ")
+
 	// builtins will be copied to the output
 	//let importedDict = try! rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
 
@@ -86,7 +91,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 					<dt>Dependencies</dt>
 					<dd></dd>
 					<dt>Used Builtins</dt>
-					<dd></dd>
+					<dd>\(used_builtins_html)</dd>
 				</dl>
 			</section>
 			<section id="alphabet">
