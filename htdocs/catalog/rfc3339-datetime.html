@@ -48,19 +48,18 @@
 
   <main>
     <section>
-      <section>
-        <h1>RFC 3339: Date and Time on the Internet: Timestamps</h1>
-        <p>Defined in <a href="https://www.rfc-editor.org/rfc/rfc3339.html">RFC 3339</a> as updated by <a href="https://www.rfc-editor.org/rfc/rfc9557.html">RFC 9557</a></p>
-        <p>Mostly compatible with ISO 8601 Timestamp.</p>
+      <h1>RFC 3339: Date and Time on the Internet: Timestamps</h1>
+      <p>Defined in <a href="https://www.rfc-editor.org/rfc/rfc3339.html">RFC 3339</a> as updated by <a href="https://www.rfc-editor.org/rfc/rfc9557.html">RFC 9557</a></p>
+      <p>Mostly compatible with ISO 8601 Timestamp.</p>
 
-        <h2>Usage</h2>
-        <p>Encodes a particular moment in time (between years 0AD and 9999AD inclusive) with arbitrary sub-second precision.</p>
-        <p>The date is encoded in Gregorian calendar using year, month, day, hour, minute, second, and fractional second fields, and supports leap years and leap seconds.</p>
+      <h2>Usage</h2>
+      <p>Encodes a particular moment in time (between years 0AD and 9999AD inclusive) with arbitrary sub-second precision.</p>
+      <p>The date is encoded in Gregorian calendar using year, month, day, hour, minute, second, and fractional second fields, and supports leap years and leap seconds.</p>
 
-    <h2>Source</h2>
-    <pre id="source"><code>; &lt;https://www.rfc-editor.org/rfc/rfc3339.html>
+      <h2>Source</h2>
+      <pre id="source"><code>; &lt;https://www.rfc-editor.org/rfc/rfc3339.html>
 
-date-time       = full-date &quot;T&quot; full-time
+date-time       = full-date "T" full-time
 
 date-fullyear   = 4DIGIT
 date-month      = 2DIGIT  ; 01-12
@@ -70,17 +69,17 @@ time-hour       = 2DIGIT  ; 00-23
 time-minute     = 2DIGIT  ; 00-59
 time-second     = 2DIGIT  ; 00-58, 00-59, 00-60 based on leap second
                           ; rules
-time-secfrac    = &quot;.&quot; 1*DIGIT
-time-numoffset  = (&quot;+&quot; / &quot;-&quot;) time-hour &quot;:&quot; time-minute
-time-offset     = &quot;Z&quot; / time-numoffset
+time-secfrac    = "." 1*DIGIT
+time-numoffset  = ("+" / "-") time-hour ":" time-minute
+time-offset     = "Z" / time-numoffset
 
-partial-time    = time-hour &quot;:&quot; time-minute &quot;:&quot; time-second
+partial-time    = time-hour ":" time-minute ":" time-second
                   [time-secfrac]
-full-date       = date-fullyear &quot;-&quot; date-month &quot;-&quot; date-mday
+full-date       = date-fullyear "-" date-month "-" date-mday
 full-time       = partial-time time-offset
 </code></pre>
     </section>
-    <section>
+    <section id="info">
       <h2>Info</h2>
       <dl>
         <dt>Rules</dt>
@@ -90,11 +89,13 @@ full-time       = partial-time time-offset
         <dt>Used Builtins</dt>
         <dd></dd>
       </dl>
-
+    </section>
+    <section id="alphabet">
       <h2>Alphabet</h2>
-      <ul>
+      <ul id="alphabet-list">
       </ul>
-
+    </section>
+    <section id="cited-by">
       <h2>Cited By</h2>
       <ul>
         <li><a href="https://en.wikipedia.org/wiki/Extensible_Provisioning_Protocol">Extensible Provisioning Protocol</a>: <a href="https://www.rfc-editor.org/rfc/rfc3730.html">RFC 3730</a>, 3731, 3732, ...</li>
@@ -105,20 +106,6 @@ full-time       = partial-time time-offset
       <ul>
         <li><a href="https://docs.python.org/3/library/datetime.html#datetime.datetime.fromisoformat">python 3.7 datetime.fromisoformat</a> (among other formats)</li>
       </ul>
-
-      <h2>Translations</h2>
-      <section>
-        <h3>Railroad Diagram</h3>
-        <pre></pre>
-      </section>
-      <section>
-        <h3>Swift Regular Expression</h3>
-        <pre>[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][Tt][0-9][0-9]:[0-9]([0-9]:[0-9]([0-9][Zz]|[0-9]\.[0-9][0-9]*[Zz])|[0-9]:[0-9]([0-9][+\-][0-9]|[0-9]\.[0-9][0-9]*[+\-][0-9])[0-9]:[0-9][0-9])</pre>
-      </section>
-      <section>
-        <h3>POSIX Extended Regular Expression</h3>
-        <pre></pre>
-      </section>
     </section>
   </main>
 

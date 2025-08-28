@@ -8,7 +8,7 @@ func grammar_abnf_html_help(arguments: Array<String>) {
 
 func grammar_abnf_html_args(arguments: Array<String>) -> Int32 {
 	guard arguments.count == 3 else {
-		catalog_list_help(arguments: arguments)
+		grammar_abnf_html_help(arguments: arguments)
 		return 1
 	}
 	let catalogPath = arguments[2];
@@ -47,40 +47,42 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	});
 
 	// builtins will be copied to the output
-	let importedDict = try! rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
+	//let importedDict = try! rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
 
 	let title = "Contents of \(filePath)"
 	let main_html = """
 
-		<section>
-		<h1>\(text_html(filePath))</h1>
-
-		<h2>Source</h2>
-		<pre><code>\(text_html(importedAbnfString))</code></pre>
-		</section>
-		<section>
-			<h2>Info</h2>
-			<dl>
-				<dt>Rules</dt>
-				<dd>\(root_parsed.ruleNames.joined(separator: ", "))</dd>
-				<dt>Dependencies</dt>
-				<dd></dd>
-				<dt>Used Builtins</dt>
-				<dd></dd>
-			</dl>
-
-			<h2>Alphabet</h2>
-			<ul>
-			</ul>
-
-			<h2>Cited By</h2>
-			<ul>
-			</ul>
-			<h2>Implementations</h2>
-			<ul>
-			</ul>
-		</section>
-
+			<section>
+				<h1>\(text_html(filePath))</h1>
+				<div id="introduction-body"></div>
+				<h2>Source</h2>
+				<pre id="source"><code>\(text_html(importedAbnfString))</code></pre>
+			</section>
+			<section id="info">
+				<h2>Info</h2>
+				<dl>
+					<dt>Rules</dt>
+					<dd>\(root_parsed.ruleNames.joined(separator: ", "))</dd>
+					<dt>Dependencies</dt>
+					<dd></dd>
+					<dt>Used Builtins</dt>
+					<dd></dd>
+				</dl>
+			</section>
+			<section id="alphabet">
+				<h2>Alphabet</h2>
+				<ul id="alphabet-list">
+				</ul>
+			</section>
+			<section id="cited-by">
+				<h2>Cited By</h2>
+				<ul>
+				</ul>
+				<h2>Implementations</h2>
+				<ul>
+				</ul>
+			</section>
+	\t
 	""".replacingOccurrences(of: "\t", with: "  ");
 	res.status = .ok
 	respond_themed_html(res: &res, title: title, main_html: main_html);

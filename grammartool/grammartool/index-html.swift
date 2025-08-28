@@ -33,7 +33,7 @@ func index_html_run(response res: inout some ResponseProtocol, directoryPath: St
 	}
 
 	let title = "Index"
-	let main_html = "<ul>\(contents.map { "<li><a href=\"catalog/\(text_html($0.replacingOccurrences(of: ".abnf", with: ".html")))\">\(text_html($0))</a></li>\n" }.joined())</ul>"
+	let main_html = "<ul>\(contents.map { "<li><a href=\"catalog/\(text_attr($0.replacingOccurrences(of: ".abnf", with: ".html")))\">\(text_html($0))</a></li>\n" }.joined())</ul>"
 	res.status = .ok
 	respond_themed_html(res: &res, title: title, main_html: main_html)
 }

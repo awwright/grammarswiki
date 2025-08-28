@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-  <title>Contents of catalog/number.abnf - Grammars.wiki</title>
+  <title>Contents of catalog/abnf-syntax.abnf - Grammars.wiki</title>
   <meta name="description" content=""/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
@@ -48,18 +48,41 @@
 
   <main>
     <section>
-      <h1>catalog/number.abnf</h1>
+      <h1>catalog/abnf-syntax.abnf</h1>
       <div id="introduction-body"></div>
       <h2>Source</h2>
-      <pre id="source"><code>; Just a moderate but small rule for testing purposes
-number = %x31-39 *DIGIT
+      <pre id="source"><code>; &lt;https://www.rfc-editor.org/rfc/rfc5234.txt>
+; This version of the document includes two errata:
+; 1. &lt;https://www.rfc-editor.org/errata/eid2968>
+; 2. &lt;https://www.rfc-editor.org/errata/eid3076>
+rulelist       =  1*( rule / (*WSP c-nl) )
+rule           =  rulename defined-as elements c-nl
+rulename       =  ALPHA *(ALPHA / DIGIT / "-")
+defined-as     =  *c-wsp ("=" / "=/") *c-wsp
+elements       =  alternation *WSP
+c-wsp          =  WSP / (c-nl WSP)
+c-nl           =  comment / CRLF ; comment or newline
+comment        =  ";" *(WSP / VCHAR) CRLF
+alternation    =  concatenation *(*c-wsp "/" *c-wsp concatenation)
+concatenation  =  repetition *(1*c-wsp repetition)
+repetition     =  [repeat] element
+repeat         =  1*DIGIT / (*DIGIT "*" *DIGIT)
+element        =  rulename / group / option / char-val / num-val / prose-val
+group          =  "(" *c-wsp alternation *c-wsp ")"
+option         =  "[" *c-wsp alternation *c-wsp "]"
+char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
+num-val        =  "%" (bin-val / dec-val / hex-val)
+bin-val        =  "b" 1*BIT [ 1*("." 1*BIT) / ("-" 1*BIT) ]
+dec-val        =  "d" 1*DIGIT [ 1*("." 1*DIGIT) / ("-" 1*DIGIT) ]
+hex-val        =  "x" 1*HEXDIG [ 1*("." 1*HEXDIG) / ("-" 1*HEXDIG) ]
+prose-val      =  "&lt;" *(%x20-3D / %x3F-7E) ">"
 </code></pre>
     </section>
     <section id="info">
       <h2>Info</h2>
       <dl>
         <dt>Rules</dt>
-        <dd>number</dd>
+        <dd>rulelist, rule, rulename, defined-as, elements, c-wsp, c-nl, comment, alternation, concatenation, repetition, repeat, element, group, option, char-val, num-val, bin-val, dec-val, hex-val, prose-val</dd>
         <dt>Dependencies</dt>
         <dd></dd>
         <dt>Used Builtins</dt>

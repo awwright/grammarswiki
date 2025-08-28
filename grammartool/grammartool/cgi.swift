@@ -131,6 +131,12 @@ func cgi_not_found_txt() {
 func text_html(_ text: String) -> String {
 	return text
 		.replacingOccurrences(of: "&", with: "&amp;")
+		.replacingOccurrences(of: "<", with: "&lt;")
+}
+
+func text_attr(_ text: String) -> String {
+	return text
+		.replacingOccurrences(of: "&", with: "&amp;")
 		.replacingOccurrences(of: "\"", with: "&quot;")
 		.replacingOccurrences(of: "<", with: "&lt;")
 }
@@ -146,7 +152,7 @@ func respond_themed_html(res: inout some ResponseProtocol, title: String, main_h
 	<title>\(text_html(title)) - Grammars.wiki</title>
 	<meta name="description" content=""/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
-	<link href="\(text_html("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))" rel="stylesheet"/>
+	<link href="\(text_attr("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))" rel="stylesheet"/>
 	<link rel="stylesheet" href="/scripts/css/style.css"/>
 </head>
 <body>

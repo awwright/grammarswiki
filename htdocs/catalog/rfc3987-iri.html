@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Contents of catalog/rfc3987-iri.abnf - Grammars.wiki</title>
+  <meta name="description" content=""/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/scripts/css/style.css"/>
+</head>
+<body>
+  <header>
+    <section class="v-align--grid col-2-auto">
+      <a id="logo" href="/">
+        <div class="large">Grammars.wiki</div>
+        <div class="small">ABNF Toolchain &amp; Generator</div>
+      </a>
+
+      <nav>
+        <input id="toggle--state" type="checkbox"/>
+        <label id="toggle" for="toggle--state">
+          <span></span>
+          <span></span>
+          <span></span>
+        </label>
+
+        <ul id="menu">
+          <li><a href="/index.html">About</a></li>
+          <li class="category">
+            <a href="catalog.html">Catalog</a>
+            <ul class="dropdown">
+              <li><a href="grammars-and-formats.html">Grammars and Formats</a></li>
+              <li><a href="handbook.html">Handbook</a></li>
+            </ul>
+          </li>
+
+          <li><a href="test-cases.html">Test Cases</a></li>
+          <li><form class="filter-menu filter-menu--quick-search pointer" method="get" action="/search.html">
+            <label for="search" hidden="">Search</label>
+            <input type="text" name="q"/>
+            <input class="icon icon__search icon--border--left" type="submit" value="&#x1F50D;"/>
+          </form></li>
+        </ul>
+      </nav>
+    </section>
+  </header>
+
+  <main>
+    <section>
+      <h1>catalog/rfc3987-iri.abnf</h1>
+      <div id="introduction-body"></div>
+      <h2>Source</h2>
+      <pre id="source"><code>
+IRI            = scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]
+
+ihier-part     = "//" iauthority ipath-abempty
+               / ipath-absolute
+               / ipath-rootless
+               / ipath-empty
+
+IRI-reference  = IRI / irelative-ref
+
+absolute-IRI   = scheme ":" ihier-part [ "?" iquery ]
+
+irelative-ref  = irelative-part [ "?" iquery ] [ "#" ifragment ]
+
+irelative-part = "//" iauthority ipath-abempty
+               / ipath-absolute
+               / ipath-noscheme
+               / ipath-empty
+
+scheme        = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
+
+iauthority     = [ iuserinfo "@" ] ihost [ ":" port ]
+iuserinfo      = *( iunreserved / pct-encoded / sub-delims / ":" )
+ihost          = IP-literal / IPv4address / ireg-name
+port          = *DIGIT
+
+IP-literal    = "[" ( IPv6address / IPvFuture  ) "]"
+
+IPvFuture     = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
+
+IPv6address   =                            6( h16 ":" ) ls32
+              /                       "::" 5( h16 ":" ) ls32
+              / [               h16 ] "::" 4( h16 ":" ) ls32
+              / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
+              / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
+              / [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
+              / [ *4( h16 ":" ) h16 ] "::"              ls32
+              / [ *5( h16 ":" ) h16 ] "::"              h16
+              / [ *6( h16 ":" ) h16 ] "::"
+
+h16           = 1*4HEXDIG
+ls32          = ( h16 ":" h16 ) / IPv4address
+IPv4address   = dec-octet "." dec-octet "." dec-octet "." dec-octet
+
+dec-octet     = DIGIT                 ; 0-9
+              / %x31-39 DIGIT         ; 10-99
+              / "1" 2DIGIT            ; 100-199
+              / "2" %x30-34 DIGIT     ; 200-249
+              / "25" %x30-35          ; 250-255
+
+ireg-name      = *( iunreserved / pct-encoded / sub-delims )
+
+ipath          = ipath-abempty   ; begins with "/" or is empty
+               / ipath-absolute  ; begins with "/" but not "//"
+               / ipath-noscheme  ; begins with a non-colon segment
+               / ipath-rootless  ; begins with a segment
+               / ipath-empty     ; zero characters
+
+ipath-abempty  = *( "/" isegment )
+ipath-absolute = "/" [ isegment-nz *( "/" isegment ) ]
+ipath-noscheme = isegment-nz-nc *( "/" isegment )
+ipath-rootless = isegment-nz *( "/" isegment )
+ipath-empty    = ""
+; ipath-empty    = 0&lt;ipchar>
+
+isegment       = *ipchar
+isegment-nz    = 1*ipchar
+isegment-nz-nc = 1*( iunreserved / pct-encoded / sub-delims / "@" )
+               ; non-zero-length segment without any colon ":"
+
+ipchar         = iunreserved / pct-encoded / sub-delims / ":" / "@"
+
+iquery         = *( ipchar / iprivate / "/" / "?" )
+
+ifragment      = *( ipchar / "/" / "?" )
+
+iunreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~" / ucschar
+
+ucschar        = %xA0-D7FF / %xF900-FDCF / %xFDF0-FFEF
+               / %x10000-1FFFD / %x20000-2FFFD / %x30000-3FFFD
+               / %x40000-4FFFD / %x50000-5FFFD / %x60000-6FFFD
+               / %x70000-7FFFD / %x80000-8FFFD / %x90000-9FFFD
+               / %xA0000-AFFFD / %xB0000-BFFFD / %xC0000-CFFFD
+               / %xD0000-DFFFD / %xE1000-EFFFD
+
+iprivate       = %xE000-F8FF / %xF0000-FFFFD / %x100000-10FFFD
+
+
+
+pct-encoded   = "%" HEXDIG HEXDIG
+
+unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
+reserved      = gen-delims / sub-delims
+gen-delims    = ":" / "/" / "?" / "#" / "[" / "]" / "@"
+sub-delims    = "!" / "$" / "&amp;" / "'" / "(" / ")"
+              / "*" / "+" / "," / ";" / "="
+</code></pre>
+    </section>
+    <section id="info">
+      <h2>Info</h2>
+      <dl>
+        <dt>Rules</dt>
+        <dd>IRI, ihier-part, IRI-reference, absolute-IRI, irelative-ref, irelative-part, scheme, iauthority, iuserinfo, ihost, port, IP-literal, IPvFuture, IPv6address, h16, ls32, IPv4address, dec-octet, ireg-name, ipath, ipath-abempty, ipath-absolute, ipath-noscheme, ipath-rootless, ipath-empty, isegment, isegment-nz, isegment-nz-nc, ipchar, iquery, ifragment, iunreserved, ucschar, iprivate, pct-encoded, unreserved, reserved, gen-delims, sub-delims</dd>
+        <dt>Dependencies</dt>
+        <dd></dd>
+        <dt>Used Builtins</dt>
+        <dd></dd>
+      </dl>
+    </section>
+    <section id="alphabet">
+      <h2>Alphabet</h2>
+      <ul id="alphabet-list">
+      </ul>
+    </section>
+    <section id="cited-by">
+      <h2>Cited By</h2>
+      <ul>
+      </ul>
+      <h2>Implementations</h2>
+      <ul>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <section class="col-4">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </section>
+  </footer>
+</body>
+</html>

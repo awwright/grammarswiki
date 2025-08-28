@@ -94,7 +94,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		if $0 == rulename {
 			return "\t\t\t<li><code>" + text_html(rule.description.replacingOccurrences(of: "\r\n", with: "")) + "</code></li>\n"
 		} else {
-			return "\t\t\t<li><code><a href=\"\(text_html(rule.rulename.label)).html\">\(text_html(rule.rulename.description))</a> = " + text_html(rule.alternation.description) + "</code></li>\n"
+			return "\t\t\t<li><code><a href=\"\(text_attr(rule.rulename.label)).html\">\(text_html(rule.rulename.description))</a> = " + text_html(rule.alternation.description) + "</code></li>\n"
 		}
 	}.joined()
 

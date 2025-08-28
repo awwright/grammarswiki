@@ -48,38 +48,39 @@
 
   <main>
     <section>
-      <h1>RFC 5322 - Internet Message Format: Email Addresses</h1>
+      <h1>catalog/rfc5322-email.abnf</h1>
+      <div id="introduction-body"></div>
       <h2>Source</h2>
       <pre id="source"><code>; @source: RFC 5322
 ; @charset=UTF-32
 ; &lt;https://www.rfc-editor.org/rfc/rfc5322.html>
 
-addr-spec       =   local-part &quot;@&quot; domain
+addr-spec       =   local-part "@" domain
 
 local-part      =   dot-atom / quoted-string
 
 domain          =   dot-atom / domain-literal
 
-domain-literal  =   &quot;[&quot; *(dtext) &quot;]&quot;
+domain-literal  =   "[" *(dtext) "]"
 
 dtext           =   %d33-90 /          ; Printable US-ASCII
-%d94-126 ;/         ;  characters not including
-;obs-dtext          ;  &quot;[&quot;, &quot;]&quot;, or &quot;\&quot;
+                    %d94-126 ;/         ;  characters not including
+                    ;obs-dtext          ;  "[", "]", or "\"
 
 quoted-string   =   DQUOTE *qcontent DQUOTE
 qcontent        =   qtext / quoted-pair
 qtext           =   %d33 / %d35-91 / %d93-126
-quoted-pair     =   &quot;\&quot; (VCHAR / WSP)
+quoted-pair     =   "\" (VCHAR / WSP)
 
-dot-atom        =   1*atext *(&quot;.&quot; 1*atext)
-atext           =   ALPHA / DIGIT / &quot;!&quot; / &quot;#&quot; / &quot;$&quot; / &quot;%&quot; / &quot;&amp;&quot; / &quot;'&quot; / &quot;*&quot; / &quot;+&quot; / &quot;-&quot; / &quot;/&quot; /
-&quot;=&quot; / &quot;?&quot; / &quot;^&quot; / &quot;_&quot; / &quot;`&quot; / &quot;{&quot; / &quot;|&quot; / &quot;}&quot; / &quot;~&quot;
+dot-atom        =   1*atext *("." 1*atext)
+atext           =   ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&amp;" / "'" / "*" / "+" / "-" / "/" /
+                    "=" / "?" / "^" / "_" / "`" / "{" / "|" / "}" / "~"
 
-domain-literal  =   &quot;[&quot; *dtext &quot;]&quot;
+domain-literal  =   "[" *dtext "]"
 dtext           =   %d33-90 / %d94-126
 </code></pre>
     </section>
-    <section>
+    <section id="info">
       <h2>Info</h2>
       <dl>
         <dt>Rules</dt>
@@ -89,30 +90,19 @@ dtext           =   %d33-90 / %d94-126
         <dt>Used Builtins</dt>
         <dd></dd>
       </dl>
-
+    </section>
+    <section id="alphabet">
       <h2>Alphabet</h2>
-      <ul>
+      <ul id="alphabet-list">
       </ul>
-
+    </section>
+    <section id="cited-by">
       <h2>Cited By</h2>
       <ul>
       </ul>
       <h2>Implementations</h2>
       <ul>
       </ul>
-      <h2>Translations</h2>
-      <section>
-        <h3>Railroad Diagram</h3>
-        <pre></pre>
-      </section>
-      <section>
-        <h3>Swift Regular Expression</h3>
-        <pre>("([!#-\[\]-~]|\\[\x9) -~])*"@|[!#-'*-+\-/-9=?A-Z\^-~]((|\.)[!#-'*-+\-/-9=?A-Z\^-~])*@)\[[!-Z\^-~]*\]|("([!#-\[\]-~]|\\[\x9) -~])*"@|[!#-'*-+\-/-9=?A-Z\^-~]((|\.)[!#-'*-+\-/-9=?A-Z\^-~])*@)[!#-'*-+\-/-9=?A-Z\^-~]((|\.)[!#-'*-+\-/-9=?A-Z\^-~])*</pre>
-      </section>
-      <section>
-        <h3>POSIX Extended Regular Expression</h3>
-        <pre></pre>
-      </section>
     </section>
   </main>
 
