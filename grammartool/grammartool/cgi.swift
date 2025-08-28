@@ -141,7 +141,8 @@ func text_attr(_ text: String) -> String {
 		.replacingOccurrences(of: "<", with: "&lt;")
 }
 
-func respond_themed_html(res: inout some ResponseProtocol, title: String, main_html: String) {
+func respond_themed_html(res: inout some ResponseProtocol, title: String, head_html: String = "", main_html: String) {
+	let dash = title.isEmpty ? "" : " - "
 	let content =
 """
 <!DOCTYPE html>
@@ -149,12 +150,12 @@ func respond_themed_html(res: inout some ResponseProtocol, title: String, main_h
 <head>
 	<meta charset="utf-8"/>
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-	<title>\(text_html(title)) - Grammars.wiki</title>
+	<title>\(text_html(title))\(dash)Grammars.wiki</title>
 	<meta name="description" content=""/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<link href="\(text_attr("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"))" rel="stylesheet"/>
 	<link rel="stylesheet" href="/scripts/css/style.css"/>
-</head>
+\(head_html)</head>
 <body>
 	<header>
 		<section class="v-align--grid col-2-auto">

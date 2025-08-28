@@ -56,6 +56,21 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	//let importedDict = try! rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
 
 	let title = "Contents of \(filePath)"
+	let head_html = """
+		<link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/xcode.min.css"/>
+		<script type="module">
+			import hljs from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/highlight.min.js';
+			//  and it's easy to individually load & register additional languages
+			import abnf from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/languages/abnf.min.js';
+			hljs.registerLanguage('abnf', abnf);
+			document.querySelectorAll('#source').forEach(el => {
+			// then highlight each
+			hljs.highlightElement(el);
+			});
+		</script>
+
+	""";
+
 	let main_html = """
 
 			<section>
