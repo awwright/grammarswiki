@@ -56,6 +56,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 	});
 	let rulelist_all_dict = rulelist_all_final.dictionary
+	let definition_dependencies = rulelist_all_final.dependencies(rulename: rulename)
 
 	// TODO: Add railroad diagram
 	// TODO: Add GraphViz diagram
@@ -65,17 +66,23 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>;
 	let regex_swift_str: String;
 	let regex_egrep_str: String;
-	do {
-		let importedDict = try rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
-		fsm = try expression.toPattern(rules: importedDict).minimized()
-		let regex: REPattern<UInt32> = fsm.toPattern()
-		regex_swift_str = REDialectBuiltins.swift.encode(regex);
-		regex_egrep_str = REDialectBuiltins.posixExtended.encode(regex);
-	} catch {
-		print(error)
+
+	if definition_dependencies.recursive.isEmpty {
+		do {
+			let importedDict = try rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
+			fsm = try expression.toPattern(rules: importedDict).minimized()
+			let regex: REPattern<UInt32> = fsm.toPattern()
+			regex_swift_str = REDialectBuiltins.swift.encode(regex);
+			regex_egrep_str = REDialectBuiltins.posixExtended.encode(regex);
+		} catch {
+			fsm = .empty
+			regex_swift_str = "[error]"
+			regex_egrep_str = "[error]"
+		}
+	} else {
 		fsm = .empty
-		regex_swift_str = "<recursive>"
-		regex_egrep_str = "<recursive>"
+		regex_swift_str = "[recursive]"
+		regex_egrep_str = "[recursive]"
 	}
 
 	// The "Alphabet" lists the partitions of characters that can be found in valid strings, and where characters in a partition are all interchangable with respect to the validity of the string
@@ -86,10 +93,14 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		"\t\t\t<li><code>" + text_html($0) + "</code></li>\n"
 	}.joined(separator: "")
 
-	// Build definition
-	let definition_dependencies = rulelist_all_final.dependencies(rulename: rulename)
 	let definition_list_html = definition_dependencies.dependencies.reversed().map {
-		let rule = rulelist_all_dict[$0]!
+		let rule = rulelist_all_dict[$0]
+		guard let rule else {
+			// TODO: Detect if this is a builtin rule or just an unknown rule
+			// And display the builtin rules, maybe
+			//return "\t\t\t<li><code>; Unknown rule: " + text_html($0) + "</code></li>\n"
+			return ""
+		}
 		// TODO: If the rule is imported from a different grammar, link to that one directly
 		if $0 == rulename {
 			return "\t\t\t<li><code>" + text_html(rule.description.replacingOccurrences(of: "\r\n", with: "")) + "</code></li>\n"
