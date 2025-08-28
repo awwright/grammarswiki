@@ -53,7 +53,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	}.joined(separator: ", ")
 
 	// Used Builtins
-	let used_builtins_html = root_parsed.referencedRules.intersection(builtins.keys).map {
+	let used_builtins_html = root_parsed.referencedRules.intersection(builtins.keys).sorted().map {
 		"<a href=\"\(text_attr("abnf-core/\($0).html"))\">" + text_html($0) + "</a>"
 	}.joined(separator: ", ")
 
