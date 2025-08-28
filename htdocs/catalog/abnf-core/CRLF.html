@@ -8,6 +8,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/scripts/css/style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/xcode.min.css"/>
+  <script type="module">
+    import hljs from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/highlight.min.js';
+    //  and it's easy to individually load & register additional languages
+    import abnf from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/languages/abnf.min.js';
+    hljs.registerLanguage('abnf', abnf);
+    document.querySelectorAll('#source').forEach(el => {
+    hljs.highlightElement(el, { language: 'abnf' });
+    });
+  </script>
 </head>
 <body>
   <header>
@@ -51,11 +61,14 @@
     <h1>From catalog/abnf-core.abnf rule: CRLF</h1>
 
     <h2>Definition</h2>
-    <ul>
-      <li><code>CRLF = CR LF</code></li>
-      <li><code><a href="LF.html">LF</a> = %xa</code></li>
-      <li><code><a href="CR.html">CR</a> = %xd</code></li>
-    </ul>
+    <pre id="source">
+CRLF = CR LF
+
+LF = %xa
+
+CR = %xd
+
+    </pre>
   </section>
   <section>
     <h2>Info</h2>

@@ -64,8 +64,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 			import abnf from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/languages/abnf.min.js';
 			hljs.registerLanguage('abnf', abnf);
 			document.querySelectorAll('#source').forEach(el => {
-			// then highlight each
-			hljs.highlightElement(el);
+			hljs.highlightElement(el, { language: 'abnf' });
 			});
 		</script>
 
@@ -106,5 +105,5 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	\t
 	""".replacingOccurrences(of: "\t", with: "  ");
 	res.status = .ok
-	respond_themed_html(res: &res, title: title, main_html: main_html);
+	respond_themed_html(res: &res, title: title, head_html: head_html, main_html: main_html);
 }

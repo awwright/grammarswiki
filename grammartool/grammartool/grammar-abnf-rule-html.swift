@@ -115,11 +115,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 			return ""
 		}
 		// TODO: If the rule is imported from a different grammar, link to that one directly
-		if $0 == rulename {
-			return "\t\t\t<li><code>" + text_html(rule.description.replacingOccurrences(of: "\r\n", with: "")) + "</code></li>\n"
-		} else {
-			return "\t\t\t<li><code><a href=\"\(text_attr(rule.rulename.label)).html\">\(text_html(rule.rulename.description))</a> = " + text_html(rule.alternation.description) + "</code></li>\n"
-		}
+		return "" + text_html(rule.description.replacingOccurrences(of: "\r\n", with: "")) + "\n\n"
 	}.joined()
 
 	// Used Builtins
@@ -128,14 +124,29 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	}.joined(separator: ", ")
 
 	let title = "Rule \(rulename) in \(filePath)"
+
+	// TODO: Render this ahead-of-time and link rule names and prose to their targets
+	let head_html = """
+		<link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/xcode.min.css"/>
+		<script type="module">
+			import hljs from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/highlight.min.js';
+			//  and it's easy to individually load & register additional languages
+			import abnf from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/languages/abnf.min.js';
+			hljs.registerLanguage('abnf', abnf);
+			document.querySelectorAll('#source').forEach(el => {
+			hljs.highlightElement(el, { language: 'abnf' });
+			});
+		</script>
+
+	""";
 	let main_html = """
 
 		<section>
 			<h1>From \(text_html(filePath)) rule: \(text_html(rulename))</h1>
 
 			<h2>Definition</h2>
-			<ul>
-	\(definition_list_html)\t\t</ul>
+			<pre id="source">
+	\(definition_list_html)\t\t</pre>
 		</section>
 		<section>
 			<h2>Info</h2>
@@ -165,5 +176,5 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 
 	""".replacingOccurrences(of: "\t", with: "  ");
 	res.status = .ok
-	respond_themed_html(res: &res, title: title, main_html: main_html);
+	respond_themed_html(res: &res, title: title, head_html: head_html, main_html: main_html);
 }
