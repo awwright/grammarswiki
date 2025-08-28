@@ -1,6 +1,9 @@
 import FSM;
 import Foundation
 
+private typealias Symbol = UInt32;
+private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<Symbol>>;
+
 func abnf_list_rulenames_help(arguments: Array<String>) {
 	print("\(arguments[0]) \(bold("abnf-list-rulenames")) [<filepath>]");
 	print("\tParses <filepath> as ABNF and lists names of rules defined in the file, newline-delimited");
@@ -19,7 +22,12 @@ func abnf_list_rulenames_args(arguments: Array<String>) -> Int32 {
 	}
 
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
-	let importedRulelist = try! ABNFRulelist<UInt8>.parse(imported);
+	let importedRulelist: ABNFRulelist<Symbol>
+	do {
+		importedRulelist = try ABNFRulelist<Symbol>.parse(imported);
+	} catch {
+		fatalError("Failed to parse imported ABNF: \(error)")
+	}
 
 	for rulename in importedRulelist.ruleNames {
 		print(rulename);

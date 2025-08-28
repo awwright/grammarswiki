@@ -55,7 +55,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		let content = try String(contentsOfFile: filePath, encoding: .utf8)
 		return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 	});
-	let rulelist_all_dict = rulelist_all_final.dictionary
+	var rulelist_all_dict = rulelist_all_final.dictionary
 	let definition_dependencies = rulelist_all_final.dependencies(rulename: rulename)
 
 	// TODO: Add railroad diagram
@@ -64,16 +64,29 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	// builtins will be copied to the output
 	// TODO: Add Swift NSRegularExpression
 	let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>;
+	var result_fsm_dict: Dictionary<String, SymbolClassDFA<ClosedRangeAlphabet<UInt32>>> = builtins;
 	let regex_swift_str: String;
 	let regex_egrep_str: String;
 
 	if definition_dependencies.recursive.isEmpty {
 		do {
-			let importedDict = try rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
-			fsm = try expression.toPattern(rules: importedDict).minimized()
-			let regex: REPattern<UInt32> = fsm.toPattern()
-			regex_swift_str = REDialectBuiltins.swift.encode(regex);
-			regex_egrep_str = REDialectBuiltins.posixExtended.encode(regex);
+			// FIXME: toClosedRangePattern should just be toPattern otherwise I'm going to keep shooting myself in the foot with the much slower toPattern
+			for rulename in definition_dependencies.dependencies {
+				let definition = rulelist_all_dict[rulename]
+				guard let definition else { continue }
+				let pat = try definition.toClosedRangePattern(rules: result_fsm_dict);
+				result_fsm_dict[rulename] = pat.minimized()
+			}
+			if let rule_fsm = result_fsm_dict[rulename] {
+				fsm = rule_fsm
+				let regex: REPattern<UInt32> = fsm.toPattern()
+				regex_swift_str = REDialectBuiltins.swift.encode(regex);
+				regex_egrep_str = REDialectBuiltins.posixExtended.encode(regex);
+			} else {
+				fsm = .empty
+				regex_swift_str = "[recursive]"
+				regex_egrep_str = "[recursive]"
+			}
 		} catch {
 			fsm = .empty
 			regex_swift_str = "[error]"
@@ -109,6 +122,11 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		}
 	}.joined()
 
+	// Used Builtins
+	let used_builtins_html = definition_dependencies.builtins.map {
+		"<a href=\"\(text_attr("../abnf-core/\($0).html"))\">" + text_html($0) + "</a>"
+	}.joined(separator: ", ")
+
 	let title = "Rule \(rulename) in \(filePath)"
 	let main_html = """
 
@@ -127,7 +145,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 				<dt>Dependencies</dt>
 				<dd>\(text_html(definition_dependencies.dependencies.joined(separator: ", ")))</dd>
 				<dt>Used Builtins</dt>
-				<dd>\(text_html(definition_dependencies.builtins.joined(separator: ", ")))</dd>
+				<dd>\(used_builtins_html)</dd>
 			</dl>
 
 			<h2>Alphabet</h2>
@@ -137,11 +155,11 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 			<h2>Translations</h2>
 			<section>
 				<h3>Swift Regular Expression</h3>
-				<pre>\(regex_swift_str)</pre>
+				<pre>\(text_html(regex_swift_str))</pre>
 			</section>
 			<section>
 				<h3>POSIX Extended Regular Expression</h3>
-				<pre>\(regex_egrep_str)</pre>
+				<pre>\(text_html(regex_egrep_str))</pre>
 			</section>
 		</section>
 

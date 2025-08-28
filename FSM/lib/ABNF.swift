@@ -2336,5 +2336,5 @@ private func collectImports<T>(from: ABNFRulelist<T>) -> (Array<(String, String)
 
 private func mangleRulename(filename: String, rulename: String) -> String {
 	// "ref-file-\(filename.replacing(/[^\-0-9A-Za-z]+/, with: "-"))-\(rulename)"
-	"File: \(filename) Rule: \(rulename)"
+	"{File: \(filename) Rule: \(rulename)}"
 }
