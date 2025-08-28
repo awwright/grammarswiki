@@ -350,8 +350,6 @@ struct DocumentDetail: View {
 		}
 	}
 
-	static let importPattern = /import ([^ ]+) ([^ ]+)/;
-
 	/// Parses the grammar text into a rulelist
 	private func updatedDocument() {
 		let text = document.content;
@@ -403,32 +401,6 @@ struct DocumentDetail: View {
 				}
 			}
 		}
-	}
-
-	/// Helper function to collect imports from ABNF rulelist and return them as an array
-	private static func collectImports(from: ABNFRulelist<UInt32>) -> (Array<(String, String)>, ABNFRulelist<UInt32>) {
-		var references: Array<(String, String)> = []
-		let mangled = from.mapElements {
-			switch $0 {
-			case .proseVal(let proseVal):
-				let match = proseVal.remark.wholeMatch(of: Self.importPattern)
-				guard let match else { print("Could not match prose for import: \(proseVal.remark)"); return $0 }
-				let filename = String(match.output.1);
-				let rulename = String(match.output.2);
-				let tuple = (filename, rulename)
-				// Add tuple to references, if it does not already exist
-				if !references.contains(where: { $0.0 == filename && $0.1 == rulename }) {
-					references.append(tuple)
-				}
-				return ABNFElement.rulename(ABNFRulename(label: Self.mangleRulename(filename: filename, rulename: rulename)))
-			default: return $0
-			}
-		}
-		return (references, mangled)
-	}
-
-	private static func mangleRulename(filename: String, rulename: String) -> String {
-		"ref-file-\(filename.replacing(/[^\-0-9A-Za-z]+/, with: "-"))-\(rulename)"
 	}
 
 	/// Render the FSM
