@@ -2243,7 +2243,6 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 		var requiredRules = root_references.map { mangleRulename(filename: $0.0, rulename: $0.1) };
 		for referenced in root_references {
 			let referenced_mangled = mangleRulename(filename: referenced.0, rulename: referenced.1);
-			print("define: \(referenced_mangled) is found in \(referenced.0)")
 			filenameDependencies[referenced_mangled] = referenced.0;
 		}
 
@@ -2264,8 +2263,6 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 			if insertedRulenames.contains(mangled) { continue }
 			let filename = filenameDependencies[mangled];
 			guard let filename else { continue }
-
-			print("load: file \(filename) rule \(mangled)")
 
 			// Load the file where the rule is defined
 			let rulelist_mangled_preloaded = importDefinitions[filename];

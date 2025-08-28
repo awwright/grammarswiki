@@ -46,6 +46,12 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 		return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 	});
 
+	// FIXME: This is a super hack
+	let rulename = filePath.split(separator: "/").last!.replacingOccurrences(of: ".abnf", with: "")
+	let rulenames_list_html = root_parsed.ruleNames.map {
+		"<a href=\"\(text_attr("\(rulename)/\($0).html"))\">\(text_html($0))</a>"
+	}.joined(separator: ", ")
+
 	// builtins will be copied to the output
 	//let importedDict = try! rulelist_all_final.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.self, rules: builtins).mapValues { $0.minimized() }
 
@@ -62,7 +68,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 				<h2>Info</h2>
 				<dl>
 					<dt>Rules</dt>
-					<dd>\(root_parsed.ruleNames.joined(separator: ", "))</dd>
+					<dd>\(rulenames_list_html)</dd>
 					<dt>Dependencies</dt>
 					<dd></dd>
 					<dt>Used Builtins</dt>
