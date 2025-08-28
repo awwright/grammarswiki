@@ -128,13 +128,10 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	// TODO: Render this ahead-of-time and link rule names and prose to their targets
 	let head_html = """
 		<link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/xcode.min.css"/>
-		<script type="module">
-			import hljs from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/highlight.min.js';
-			import abnf from 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/es/languages/abnf.min.js';
-			hljs.registerLanguage('abnf', abnf);
-			document.querySelectorAll('#source').forEach(el => {
-			hljs.highlightElement(el, { language: 'abnf' });
-			});
+		<script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
+		<script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/languages/abnf.min.js"></script>
+		<script type="application/ecmascript">
+		document.addEventListener('DOMContentLoaded', function() { hljs.highlightElement(document.getElementById('source')); });
 		</script>
 
 	""";
