@@ -1,6 +1,7 @@
 import FSM;
 import Foundation;
-private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<UInt8>>;
+private typealias Symbol = UInt32;
+private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<Symbol>>;
 
 func abnf_to_regex_help(arguments: Array<String>) {
 	print("\(arguments[0]) \(bold("abnf-to-regex")) [<filepath>] <expression>");
@@ -26,29 +27,28 @@ func abnf_to_regex_args(arguments: Array<String>) -> Int32 {
 
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
 	let builtins = ABNFBuiltins<DFA>.dictionary;
-	let importedRulelist = try! ABNFRulelist<UInt8>.parse(imported!);
 
 	// builtins will be copied to the output
 	let importedDict: [String : DFA];
-	let expression: ABNFAlternation<UInt8>;
+	let expression: ABNFAlternation<Symbol>;
 	let fsm: DFA;
 	do {
+		let importedRulelist = try ABNFRulelist<Symbol>.parse(imported!);
 		let dereferencedRulelist = try dereferenceABNFRulelist(importedRulelist, {
 			filename in
 			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
 			let content = try String(contentsOfFile: filePath, encoding: .utf8)
-			return try ABNFRulelist<UInt8>.parse(content.utf8)
+			return try ABNFRulelist<Symbol>.parse(content.utf8)
 		});
 		importedDict = try dereferencedRulelist.toPattern(as: DFA.self, rules: builtins).mapValues { $0.minimized() }
-		expression = try ABNFAlternation<UInt8>.parse(arguments[expressionIndex].utf8);
+		expression = try ABNFAlternation<Symbol>.parse(arguments[expressionIndex].utf8);
 		fsm = try expression.toPattern(rules: importedDict)
 	} catch {
 		print("Could not parse input")
 		print(error)
 		return 2;
 	}
-
-	let regex: REPattern<UInt8> = fsm.toPattern()
-	print(regex.description)
+	let regex: REPattern<Symbol> = fsm.toPattern()
+	print(REDialectBuiltins.swift.encode(regex))
 	return 0
 }
