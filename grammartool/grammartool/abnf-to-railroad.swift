@@ -122,6 +122,7 @@ func abnf_to_railroad_args(arguments: Array<String>) -> Int32 {
 				if c.sequence.isEmpty {
 					return "Skip()"
 				}
+				// FIXME: This is supposed to be case-insensitive
 				return "Terminal(\(text_json(String(decoding: c.sequence, as: UTF32.self))))";
 			case .numVal(let n):
 				return "NonTerminal(\(text_json(n.description)))";
