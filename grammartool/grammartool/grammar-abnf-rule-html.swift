@@ -99,8 +99,24 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	}
 
 	// The "Alphabet" lists the partitions of characters that can be found in valid strings, and where characters in a partition are all interchangable with respect to the validity of the string
+	// TODO: Show hex codes in addition to printable
+	func printable(_ chr: UInt32) -> String {
+		if chr <= 0x20 {
+			return String(UnicodeScalar(0x2400 + chr)!)
+		} else {
+			return String(UnicodeScalar(chr)!)
+		}
+	}
 	let alphabet_parts: Array<String> = fsm.alphabet.map {
-		"\($0)"
+		// An alphabet partition has one or more closed ranges
+		$0.map {
+			r in
+			if r.lowerBound == r.upperBound {
+				printable(r.lowerBound)
+			} else {
+				"\(printable(r.lowerBound))...\(printable(r.upperBound))"
+			}
+		}.joined(separator: " ")
 	}
 	let alphabet_parts_html: String = alphabet_parts.map {
 		"\t\t\t<li><code>" + text_html($0) + "</code></li>\n"
