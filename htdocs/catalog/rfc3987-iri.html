@@ -8,6 +8,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/scripts/css/style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/xcode.min.css"/>
+  <script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
+  <script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/languages/abnf.min.js"></script>
+  <script type="application/ecmascript">
+  document.addEventListener('DOMContentLoaded', function() { hljs.highlightElement(document.getElementById('source')); });
+  </script>
 </head>
 <body>
   <header>
@@ -157,7 +163,7 @@ sub-delims    = "!" / "$" / "&amp;" / "'" / "(" / ")"
         <dt>Dependencies</dt>
         <dd></dd>
         <dt>Used Builtins</dt>
-        <dd></dd>
+        <dd><a href="abnf-core/ALPHA.html">ALPHA</a>, <a href="abnf-core/DIGIT.html">DIGIT</a>, <a href="abnf-core/HEXDIG.html">HEXDIG</a></dd>
       </dl>
     </section>
     <section id="alphabet">
