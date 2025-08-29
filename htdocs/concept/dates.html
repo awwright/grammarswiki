@@ -49,13 +49,17 @@
   <main>
     <section>
       <h1>Date and Time</h1>
-      <p></p>
+      <p>This page describes various URI formats known to appear in Internet standards.</p>
 
       <h2>Grammars</h2>
       <ul>
-        <li><a href="/catalog/rfc3339-datetime.html">RFC 3339: Date and Time on the Internet</a></li>
-        <li><a href="/spec/iso8601.html">ISO 8601</a>: A more comprehensive standard for describing dates and times</li>
+        <li><a href="/catalog/rfc3339-datetime.html">RFC 3339: Date and Time on the Internet</a> — the most common standard, use this one</li>
+        <li><a href="/catalog/rfc9110-http/IMF-fixdate.html">RFC 9110: rule "IMF-fixdate"</a>: the date typically used in most HTTP headers</li>
+        <li><a href="/catalog/rfc9110-http/obs-date.html">RFC 9110: rule "obs-date"</a>: an obsolete format of date that only supports 2-year dates</li>
+        <li><a href="/catalog/rfc9110-http/rfc850-date.html">RFC 9110: rule "rfc850-date"</a>: another obsolete format that only supports 2-year dates</li>
+        <li><a href="/spec/iso8601.html">ISO 8601</a>: A more comprehensive standard for describing dates and times from which RFC 3339 derives</li>
       </ul>
+
       <h2>See Also</h2>
       <ul>
         <li><a href="http.html">HTTP</a></li>
