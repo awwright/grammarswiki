@@ -100,13 +100,17 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 
 	// The "Alphabet" lists the partitions of characters that can be found in valid strings, and where characters in a partition are all interchangable with respect to the validity of the string
 	// TODO: Show hex codes in addition to printable
+	// TODO: Name the corresponding Unicode character ranges, if any
 	func printable(_ chr: UInt32) -> String {
 		if chr <= 0x20 {
 			return String(UnicodeScalar(0x2400 + chr)!)
-		} else if chr >= 0x80 {
-			return String("U+" + String(chr, radix: 16).uppercased())
-		} else {
+		} else if chr < 0x7F {
 			return String(UnicodeScalar(chr)!)
+		} else if chr == 0x7F {
+			return "\u{2421}"
+		} else {
+			// chr >= 0x80
+			return String("U+" + String(chr, radix: 16).uppercased())
 		}
 	}
 	let alphabet_parts: Array<String> = fsm.alphabet.map {
@@ -116,7 +120,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 			if r.lowerBound == r.upperBound {
 				printable(r.lowerBound)
 			} else {
-				"\(printable(r.lowerBound))...\(printable(r.upperBound))"
+				"\(printable(r.lowerBound))\u{2026}\(printable(r.upperBound))"
 			}
 		}.joined(separator: " ")
 	}
