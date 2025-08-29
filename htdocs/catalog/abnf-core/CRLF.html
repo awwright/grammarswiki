@@ -85,6 +85,90 @@ CR = %xd
 
     <h2>Translations</h2>
     <section>
+      <h3>Railroad Diagram</h3>
+      <div><svg class="railroad-diagram" width="218" height="62" viewBox="0 0 218 62" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g transform="translate(.5 .5)">
+<g>
+<path d="M20 21v20m10 -20v20m-10 -10h44"></path>
+<text x="20" y="16" style="text-anchor:start">CRLF</text>
+</g>
+<path d="M64 31h10"></path>
+<g>
+<path d="M74 31h0"></path>
+<path d="M168 31h0"></path>
+<g class="non-terminal ">
+<path d="M74 31h0"></path>
+<path d="M111 31h0"></path>
+<rect x="74" y="20" width="37" height="22"></rect>
+<a xlink:href="CR.html"><text x="92.5" y="35">CR</text>
+</a>
+</g>
+<path d="M111 31h10"></path>
+<path d="M121 31h10"></path>
+<g class="non-terminal ">
+<path d="M131 31h0"></path>
+<path d="M168 31h0"></path>
+<rect x="131" y="20" width="37" height="22"></rect>
+<a xlink:href="LF.html"><text x="149.5" y="35">LF</text>
+</a>
+</g>
+</g>
+<path d="M168 31h10"></path>
+<path d="M 178 31 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+</g>
+<style>
+  svg {
+    background-color: hsl(30,20%,95%);
+  }
+  path {
+    stroke-width: 3;
+    stroke: black;
+    fill: rgba(0,0,0,0);
+  }
+  text {
+    font: bold 14px monospace;
+    text-anchor: middle;
+    white-space: pre;
+  }
+  text.diagram-text {
+    font-size: 12px;
+  }
+  text.diagram-arrow {
+    font-size: 16px;
+  }
+  text.label {
+    text-anchor: start;
+  }
+  text.comment {
+    font: italic 12px monospace;
+  }
+  g.non-terminal text {
+    /&#42;font-style: italic;&#42;/
+  }
+  rect {
+    stroke-width: 3;
+    stroke: black;
+    fill: hsl(120,100%,90%);
+  }
+  rect.group-box {
+    stroke: gray;
+    stroke-dasharray: 10 5;
+    fill: none;
+  }
+  path.diagram-text {
+    stroke-width: 3;
+    stroke: black;
+    fill: white;
+    cursor: help;
+  }
+  g.diagram-text:hover path.diagram-text {
+    fill: #eee;
+  }</style>
+</svg>
+
+</div>
+    </section>
+    <section>
       <h3>Swift Regular Expression</h3>
       <pre>\u{D}\u{A}</pre>
     </section>

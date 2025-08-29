@@ -9,7 +9,7 @@ func abnf_to_railroad_help(arguments: Array<String>) {
 }
 
 func abnf_to_railroad_args(arguments: Array<String>) -> Int32 {
-	guard arguments.count >= 3 && arguments.count <= 4 else {
+	guard arguments.count == 4 else {
 		print(arguments.count);
 		abnf_to_railroad_help(arguments: arguments);
 		return 1;
@@ -86,25 +86,66 @@ func abnf_to_railroad_args(arguments: Array<String>) -> Int32 {
 
 	func processRepetition(_ repetition: ABNFRepetition<Symbol>) -> String {
 		if repetition.min == 0 && repetition.max == 1 {
-			return "Optional(\(processElement(repetition.element)))"
+			return "Optional(\(processElement(repetition.repeating)))"
 		} else if repetition.min == 1 && repetition.max == 1 {
-			return processElement(repetition.element)
+			return processElement(repetition.repeating)
 		} else if repetition.min == 0 && repetition.max == nil {
-			return "ZeroOrMore(\(processElement(repetition.element)))"
+			return "ZeroOrMore(\(processElement(repetition.repeating)))"
 		} else if repetition.min == 1 && repetition.max == nil {
-			return "OneOrMore(\(processElement(repetition.element)))"
+			return "OneOrMore(\(processElement(repetition.repeating)))"
 		} else {
-			return "NonTerminal('Repeat')"
+			var sequence: Array<String> = [];
+			let element = processElement(repetition.repeating);
+			for _ in 0..<repetition.min {
+				sequence.append(element)
+			}
+			if repetition.max == nil {
+				return "Sequence(\(sequence.joined(separator: ", ")), ZeroOrMore(\(element)))"
+			}
+			if repetition.max! > repetition.min {
+				for _ in repetition.min..<repetition.max! {
+					sequence.append("Optional(\(element))")
+				}
+			}
+			return "Sequence(\(sequence.joined(separator: ", ")))"
 		}
 	}
 
 	func processElement(_ element: ABNFElement<Symbol>) -> String {
-		"\"\(element.description)\""
+		switch element {
+			case .rulename(let r):
+				return "NonTerminal(\(text_json(r.label)), {href: \(text_json(r.label+".html"))})";
+			case .group(let g):
+				return "Group(\(processAlternation(g.alternation)))";
+			case .option(let o):
+				return "Optional(\(processAlternation(o.alternation)))";
+			case .charVal(let c):
+				return "Terminal(\(text_json(String(decoding: c.sequence, as: UTF32.self))))";
+			case .numVal(let n):
+				return "NonTerminal(\(text_json(n.description)))";
+			case .proseVal(let p):
+				return "Comment(\(text_json(p.description)))";
+		}
 	}
 
+	let rule = dereferencedRulelist.dictionary[arguments[3]];
+	guard let rule else {
+		print(stderr, "Error: No such rule: \(arguments[3])");
+		exit(1);
+	}
 	print("Diagram(");
-	print(processAlternation(dereferencedRulelist.dictionary[arguments[3]]!.alternation));
+	print("Start({label: \(text_json(rule.rulename.label))}),");
+	print(processAlternation(rule.alternation));
 	print(");");
 
 	return 0
+}
+
+func text_json(_ input: String) -> String {
+	return "\"" + input
+		.replacingOccurrences(of: "\r", with: "\\r")
+		.replacingOccurrences(of: "\n", with: "\\n")
+		.replacingOccurrences(of: "\\", with: "\\\\")
+		.replacingOccurrences(of: "\"", with: "\\\"")
+	+ "\"";
 }

@@ -106,6 +106,8 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		"\t\t\t<li><code>" + text_html($0) + "</code></li>\n"
 	}.joined(separator: "")
 
+	let railroad_svg_html: String = (try? grammar_abnf_rule_html_railroad_svg_pipeline(filePath, rulename)) ?? "Error"
+
 	let definition_list_html = definition_dependencies.dependencies.reversed().map {
 		let rule = rulelist_all_dict[$0]
 		guard let rule else {
@@ -135,6 +137,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		</script>
 
 	""";
+
 	let main_html = """
 
 		<section>
@@ -161,6 +164,10 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 
 			<h2>Translations</h2>
 			<section>
+				<h3>Railroad Diagram</h3>
+				<div>\(railroad_svg_html)</div>
+			</section>
+			<section>
 				<h3>Swift Regular Expression</h3>
 				<pre>\(text_html(regex_swift_str))</pre>
 			</section>
@@ -173,4 +180,42 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	""".replacingOccurrences(of: "\t", with: "  ");
 	res.status = .ok
 	respond_themed_html(res: &res, title: title, head_html: head_html, main_html: main_html);
+}
+
+func grammar_abnf_rule_html_railroad_svg_pipeline(_ arg1: String, _ arg2: String) throws -> String {
+	// Create the first process: bin/grammartool abnf-to-railroad arg1 arg2
+	let grammartool = Process()
+	grammartool.executableURL = URL(fileURLWithPath: "bin/grammartool")
+	grammartool.arguments = ["abnf-to-railroad", arg1, arg2]
+
+	// Create the second process: node bin/railroad.js
+	let node = Process()
+	node.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+	node.arguments = ["node", "bin/railroad.js"]
+
+	// Create a pipe to connect the processes
+	let pipe = Pipe()
+	grammartool.standardOutput = pipe
+	node.standardInput = pipe
+
+	// Create a pipe to capture the final output
+	let outputPipe = Pipe()
+	node.standardOutput = outputPipe
+
+	// Run the processes
+	try grammartool.run()
+	try node.run()
+
+	// Wait for both processes to complete
+	grammartool.waitUntilExit()
+	node.waitUntilExit()
+
+	// Read the output
+	let outputData = try outputPipe.fileHandleForReading.readToEnd()
+	guard let output = outputData,
+			let outputString = String(data: output, encoding: .utf8) else {
+		throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to read pipeline output"])
+	}
+
+	return outputString
 }
