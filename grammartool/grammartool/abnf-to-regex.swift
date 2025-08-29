@@ -40,7 +40,7 @@ func abnf_to_regex_args(arguments: Array<String>) -> Int32 {
 			let content = try String(contentsOfFile: filePath, encoding: .utf8)
 			return try ABNFRulelist<Symbol>.parse(content.utf8)
 		});
-		importedDict = try dereferencedRulelist.toPattern(as: DFA.self, rules: builtins).mapValues { $0.minimized() }
+		importedDict = try dereferencedRulelist.toClosedRangePattern(as: DFA.self, rules: builtins).mapValues { $0.minimized() }
 		expression = try ABNFAlternation<Symbol>.parse(arguments[expressionIndex].utf8);
 		fsm = try expression.toPattern(rules: importedDict)
 	} catch {
