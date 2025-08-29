@@ -101,8 +101,7 @@ func abnf_to_railroad_args(arguments: Array<String>) -> Int32 {
 			}
 			if repetition.max == nil {
 				return "Sequence(\(sequence.joined(separator: ", ")), ZeroOrMore(\(element)))"
-			}
-			if repetition.max! > repetition.min {
+			} else if repetition.max! > repetition.min {
 				for _ in repetition.min..<repetition.max! {
 					sequence.append("Optional(\(element))")
 				}
@@ -118,8 +117,11 @@ func abnf_to_railroad_args(arguments: Array<String>) -> Int32 {
 			case .group(let g):
 				return "Group(\(processAlternation(g.alternation)))";
 			case .option(let o):
-				return "Optional(\(processAlternation(o.alternation)))";
+				return "Optional(\(processAlternation(o.optionalAlternation)))";
 			case .charVal(let c):
+				if c.sequence.isEmpty {
+					return "Skip()"
+				}
 				return "Terminal(\(text_json(String(decoding: c.sequence, as: UTF32.self))))";
 			case .numVal(let n):
 				return "NonTerminal(\(text_json(n.description)))";
