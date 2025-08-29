@@ -103,6 +103,8 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	func printable(_ chr: UInt32) -> String {
 		if chr <= 0x20 {
 			return String(UnicodeScalar(0x2400 + chr)!)
+		} else if chr >= 0x80 {
+			return String("U+" + String(chr, radix: 16).uppercased())
 		} else {
 			return String(UnicodeScalar(chr)!)
 		}
