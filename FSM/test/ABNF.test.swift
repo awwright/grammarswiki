@@ -1117,6 +1117,20 @@ import Testing;
 			let fsm: RangeDFA<UInt8> = expression.toClosedRangePattern();
 			#expect(fsm.contains([0x30]))
 		}
+
+		@Test("LWSP")
+		func test_LWSP_toPattern() async throws {
+			let expression = try ABNFAlternation<UInt8>.parse("*((%x20 / %x09) / %x0D %x0A (%x20 / %x09))".utf8)
+			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			#expect(fsm.initial == 0)
+			// This can legitimately vary, but it should be consistent
+			#expect(fsm.states.count == 7)
+			let min = fsm.minimized();
+			#expect(min.initial == 0)
+			// This must be 3, the minimum FSM for this ABNF has three states, period.
+			#expect(min.states.count == 3)
+			// TODO: Add tests for the ranges and stuff, make sure it's consistent
+		}
 	}
 	@Suite("union") struct ABNFTest_union {
 		@Test("rulename / rulename")
