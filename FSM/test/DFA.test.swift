@@ -181,6 +181,36 @@ import Testing
 		#expect(dfa_min.finals.count == 2)
 	}
 
+	@Test("normalized 0")
+	func test_normalized_0() {
+		// A DFA with some live states and some dead states
+		let dfa0 = DFA<UInt8>(
+			states: [[0:2], [0:2], [1:3], [0:4], [:]],
+			initial: 0,
+			finals: [2]
+		)
+		let dfa0min = dfa0.normalized()
+		print(dfa0min)
+		#expect(dfa0min.initial == 0)
+		#expect(dfa0min.states.count == 4)
+		#expect(dfa0min.finals == [1])
+	}
+
+	@Test("normalized 1")
+	func test_normalized_1() {
+		// A DFA with some live states and some dead states
+		let dfa1 = DFA<UInt8>(
+			states: [[0:4], [0:0], [1:1], [0:2], [:]],
+			initial: 3,
+			finals: [4]
+		)
+		let dfa1min = dfa1.normalized()
+		print(dfa1min)
+		#expect(dfa1min.initial == 0)
+		#expect(dfa1min.states.count == 5)
+		#expect(dfa1min.finals == [4])
+	}
+
 	@Test("parallel")
 	func test_parallel() {
 		// See union, intersection, and symmetricDifference below
@@ -238,10 +268,15 @@ import Testing
 	func test_concatenate() {
 		let epsilon = DFA<Character>.concatenate([])
 		#expect(epsilon.contains(""))
+		#expect(epsilon.states == [ [:] ]);
+		#expect(epsilon.finals == [ 0 ]);
 
 		let dfa1 = DFA<Character>(["a", "b"])
 		let single = DFA.concatenate([dfa1]);
 		#expect(single.contains("a"))
+		// This is inconsistent for some reaason
+		// #expect(single.states == [ ["a": 1, "b": 2], [:], [:] ]);
+		// #expect(single.finals == [ 1, 2 ]);
 
 		let dfa2 = DFA<Character>(["x", "y"])
 		let concatenation = dfa1.concatenate(dfa2);

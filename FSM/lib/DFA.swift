@@ -535,6 +535,41 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		return Self(states: newStates, initial: newInitial, finals: newFinals)
 	}
 
+	/// Returns a version of this FSM with states re-ordered into a normal form.
+	/// The initial state is 0, then proceeds by a breadth-first, symbol-order enumeration.
+	/// As a result, unreachable states are filtered out.
+	///
+	/// Any equivalent FSMs should always return the same normalized FSM.
+	/// Later, I may need to create a variation that omits the `oldState.sorted` call,
+	/// to support a weaker form where symbols are unordered,
+	/// or optimize when DFATable already iterates in a consistent order (e.g. ClosedRangeAlphabet)
+	/// - Returns: The normalized finite state machine.
+	func normalized() -> Self where Self: Comparable {
+		if self.finals.isEmpty {
+			return Self.empty
+		}
+		var backwards: Array<StateNo> = [initial]
+		var forwards: Dictionary<StateNo, StateNo> = [initial: 0]
+		var newStates: Array<Self.Alphabet.DFATable> = []
+		var newId = 0
+		while newStates.count < backwards.count {
+			let oldId = backwards[newId]
+			let oldState = states[oldId]
+			var table: Self.Alphabet.DFATable = [:]
+			// Add .sorted, since some tables (e.g. Dictionary) don't iterate sorted by default
+			for (symbol, target) in oldState.sorted(by: { $0.key < $1.key }) {
+				if forwards[target] == nil {
+					forwards[target] = backwards.count
+					backwards.append(target)
+				}
+				table[symbol] = forwards[target]
+			}
+			newStates.append(table);
+			newId += 1
+		}
+		return Self(states: newStates, initial: 0, finals: Set(self.finals.compactMap { forwards[$0] }))
+	}
+
 	/// Maps the DFA’s symbols to a new type.
 	///
 	/// - Parameter transform: A function mapping each symbol to a new symbol type.
