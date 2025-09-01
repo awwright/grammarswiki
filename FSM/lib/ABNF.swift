@@ -630,7 +630,7 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 /// ```
 ///
 /// - Example: `"0" / "1" / "2"` is an alternation of three concatenations.
-public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder, ClosedRangePatternBuilder where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
 	public typealias Element = Array<Symbol>;
 
 	public let matches: [ABNFConcatenation<Symbol>]
@@ -751,6 +751,10 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder whe
 
 	public static func symbol(_ element: Symbol) -> ABNFAlternation<Symbol> {
 		return ABNFNumVal<Symbol>(base: .hex, value: .sequence([element])).alternation
+	}
+
+	public static func range(_ range: ClosedRange<Symbol>) -> ABNFAlternation<Symbol> {
+		return ABNFNumVal<Symbol>(base: .hex, value: .range(range)).alternation
 	}
 
 	public func union(_ other: Self) -> Self {
