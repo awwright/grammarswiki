@@ -544,7 +544,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// to support a weaker form where symbols are unordered,
 	/// or optimize when DFATable already iterates in a consistent order (e.g. ClosedRangeAlphabet)
 	/// - Returns: The normalized finite state machine.
-	func normalized() -> Self where Self: Comparable {
+	public func normalized() -> Self where Self: Comparable {
 		if self.finals.isEmpty {
 			return Self.empty
 		}
@@ -946,6 +946,8 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		// Make a new initial state at 0, epsilon transition to old initial state
 		// Create an empty new-final state at 1
 		// And add epsilon transitions for all old-final states to new-final state at 1
+		// TODO: Remove states from the lowest number of (inward transitions * outgoing transitions)
+		// Apparently this stragegy is not guaranteed to be the most efficent, but it will probably avoid the worst cases
 		let empty = PatternType.empty;
 		let epsilon = PatternType.epsilon;
 		let newInitial: Dictionary<Int, PatternType> = [self.initial + 2: epsilon];
@@ -975,9 +977,9 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		var eliminating = states.count;
 		while eliminating > 2 {
 			eliminating -= 1;
-			// Rewrite all two-segment paths def (d->e->f) to the form:
-			// df' = df | de *ee ef
-			// Precompute (*ee ef)
+			// Rewrite all two-segment paths def (d->e->f) to a one-segment path df' by:
+			// df' = df | de ee* ef
+			// Precompute (ee* ef)
 			var fe: Dictionary<Int, PatternType> = [:]
 			for (f, segment) in states[eliminating] {
 				fe[f] = segment

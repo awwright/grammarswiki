@@ -57,6 +57,40 @@ import Testing
 		#expect(!dfa.contains("0"))
 	}
 
+	@Test("From list SymbolAlphabet")
+	func testDFAFromList() {
+		let dfa2: DFA<UInt8> = [ [0x30],  [0x31],  [0x32, 0x32],  [0x32, 0x33],  [0x33, 0x32],  [0x33, 0x33] ];
+		#expect(dfa2.states.count == 9)
+		#expect(dfa2.contains([0x30]))
+		#expect(dfa2.contains([0x31]))
+		#expect(dfa2.contains([0x32, 0x32]))
+		#expect(dfa2.contains([0x32, 0x33]))
+		#expect(dfa2.contains([0x33, 0x33]))
+		// FIXME: Should this be constructed consistently?
+		let dfa2min = dfa2.minimized().normalized()
+		#expect(dfa2.symmetricDifference(dfa2min).finals.isEmpty)
+		#expect(dfa2min.states == [
+			[48: 1, 49: 1, 50: 2, 51: 2], [:], [50: 1, 51: 1],
+		])
+	}
+
+	@Test("From list ClosedRangeAlphabet")
+	func testDFAFromList_ClosedRangeAlphabet() {
+		let dfa2: DFA<UInt8> = [ [0x30],  [0x31],  [0x32, 0x32],  [0x32, 0x33],  [0x33, 0x32],  [0x33, 0x33] ];
+		#expect(dfa2.states.count == 9)
+		#expect(dfa2.contains([0x30]))
+		#expect(dfa2.contains([0x31]))
+		#expect(dfa2.contains([0x32, 0x32]))
+		#expect(dfa2.contains([0x32, 0x33]))
+		#expect(dfa2.contains([0x33, 0x33]))
+		// FIXME: Should this be constructed consistently?
+		let dfa2min = dfa2.minimized().normalized()
+		#expect(dfa2.symmetricDifference(dfa2min).finals.isEmpty)
+		#expect(dfa2min.states == [
+			[48: 1, 49: 1, 50: 2, 51: 2], [:], [50: 1, 51: 1],
+		])
+	}
+
 	@Test("== operator")
 	func testEqualsOperator() {
 		let a = DFA(["abc", "def"]);
