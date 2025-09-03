@@ -6,9 +6,18 @@
 /// Equatable for comparison
 public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatable, Hashable where Element == SymbolClass {
 	// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
+
+	/// A partition in the alphabet, which is a set of symbols (or can be converted to a set, or operated on as a set)
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype SymbolClass: Equatable & Hashable;
+
+	/// The type of the elements of the partitions.
+	/// However, SymbolClass doesn't necessarialy need to be enumerable, uncountably infinite sets are allowed.
+	/// Likewise, SymbolAlphabet
 	associatedtype Symbol: Equatable & Hashable;
+
+	/// Implement `ExpressibleByArrayLiteral`
+	/// This means if you assign an array to an instance of this type, the array elements will be the partitions of the alphabet
 	associatedtype ArrayLiteralElement = SymbolClass;
 	associatedtype PartitionedDictionary: AlphabetTableProtocol where PartitionedDictionary.Alphabet == Self, PartitionedDictionary.Value == AnyHashable, PartitionedDictionary.Element == (key: PartitionedDictionary.Key, value: AnyHashable);
 	associatedtype DFATable: AlphabetTableProtocol where DFATable.Alphabet == Self, DFATable.Value == Int, DFATable.Element == (key: DFATable.Key, value: DFATable.Value)

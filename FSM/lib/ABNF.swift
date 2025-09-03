@@ -853,6 +853,15 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder, Cl
 	}
 }
 
+extension ABNFAlternation: SymbolClassPatternBuilder {
+	public typealias SymbolClass = ClosedRangeAlphabet<Symbol>.SymbolClass
+	public static func symbol(range: SymbolClass) -> Self {
+		.init(matches: range.map {
+			ABNFNumVal(base: .hex, value: ABNFNumVal.Value.range($0)).concatenation
+		})
+	}
+}
+
 /// Represents a concatenation of repetitions in an ABNF grammar (e.g., `1*a *b 2c`).
 ///
 /// A concatenation specifies a sequence where all repetitions must match in order.
