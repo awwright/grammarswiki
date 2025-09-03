@@ -171,6 +171,74 @@ import Testing
 		#expect(Set(equivalent.map { String($0) }) == Set(["ab", "aab", "aaab", "aaaab"]))
 	}
 
+	@Test("reachable, coreachable, useful")
+	func test_useful() {
+		// Empty with extra states
+		let fsm0 = DFA<UInt8>(
+			states: [ [0: 1], [0: 0] ],
+			initial: 0,
+			finals: [],
+		);
+		// You can flip between both of these states with input, but neither are final
+		#expect(fsm0.reachable() == [0, 1])
+		#expect(fsm0.coreachable() == [])
+		#expect(fsm0.useful() == [])
+
+		// Empty string [] with extra states
+		let fsm1 = DFA<UInt8>(
+			states: [ [0: 1], [:] ],
+			initial: 0,
+			finals: [0],
+		);
+		#expect(fsm1.reachable() == [0, 1])
+		#expect(fsm1.coreachable() == [0])
+		#expect(fsm1.useful() == [0])
+
+		// Single character [0]
+		let fsm2 = DFA<UInt8>(
+			states: [ [0: 1], [0: 2], [:] ],
+			initial: 1,
+			finals: [1],
+		);
+		#expect(fsm2.reachable() == [1, 2])
+		#expect(fsm2.coreachable() == [0, 1])
+		#expect(fsm2.useful() == [1])
+
+		// Any number of zeros
+		let fsm3 = DFA<UInt8>(
+			states: [ [0: 0], [1: 0] ],
+			initial: 0,
+			finals: [0],
+		);
+		#expect(fsm3.reachable() == [0])
+		#expect(fsm3.coreachable() == [0, 1])
+		#expect(fsm3.useful() == [0])
+
+		// At least one zero
+		let fsm4 = DFA<UInt8>(
+			states: [ [0: 1], [0: 2], [0: 2], [0: 3] ],
+			initial: 1,
+			finals: [2],
+		);
+		#expect(fsm4.reachable() == [1, 2])
+		#expect(fsm4.coreachable() == [0, 1, 2])
+		#expect(fsm4.useful() == [1, 2])
+
+		// LWSP (match any amount of space or tab, and CR.LF but when followed by at least one space or tab)
+		let fsm5 = DFA<UInt8>(
+			states: [
+				[0x9: 0, 0x20: 0, 0xD: 1],
+				[0xA: 2],
+				[0x9: 0, 0x20: 0],
+			],
+			initial: 0,
+			finals: [0]
+		)
+		#expect(fsm5.reachable() == [0, 1, 2])
+		#expect(fsm5.coreachable() == [0, 1, 2])
+		#expect(fsm5.useful() == [0, 1, 2])
+	}
+
 	@Test("minimized")
 	func test_minimized() {
 		// A DFA with only dead states

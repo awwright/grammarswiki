@@ -421,16 +421,11 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		);
 	}
 
-	/// Minimizes this DFA by merging equivalent states.
-	/// A minimized DFA has the fewest number of states possible of any equivalent DFA.
-	/// It does this by merging states with the "same" behavior into the same state.
-	/// Implemented by Hopcroft's Algorithm.
-	/// - Parameter initialPartitions: A set of partitions. Defaults to separating the accepting and non-accepting partitions.
-	/// - Returns: The minimized DFA
-	public func minimized(initialPartitions: Array<Set<Int>> = []) -> Self {
-		// Step 1: Remove unreachable states
-		var reachable = Set<Int>([initial])
-		var reachableStates = [initial]
+	/// Get a Set of states that are reachable from the initial state (or given states, if given)
+	public func reachable() -> Set<StateNo> {
+		// TODO: Add "initialStates" as a function argument
+		var reachable: Set<StateNo> = [self.initial]
+		var reachableStates = Array(reachable)
 		var index = 0
 		while index < reachableStates.count {
 			let current = reachableStates[index]
@@ -441,11 +436,15 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 				}
 			}
 		}
+		return reachable
+	}
 
-		// Step 2. Remove dead states
-		var coReachable = Set<Int>(finals).intersection(reachable)
+	/// Get a Set of "live" (not dead) states that can reach a final state (or given states, if given)
+	public func coreachable() -> Set<StateNo> {
+		// TODO: Add "finalStates" as a function argument
+		var coReachable: Set<StateNo> = self.finals
 		var coReachableList = Array(coReachable)
-		index = 0
+		var index = 0
 		while index < coReachableList.count {
 			let current = coReachableList[index]
 			index += 1
@@ -457,7 +456,25 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 				}
 			}
 		}
-		reachableStates = reachableStates.filter { coReachable.contains($0) }
+		return coReachable;
+	}
+
+	/// Get the set of states reachable from an initial state, and that can reach a final state
+	public func useful() -> Set<StateNo> {
+		// TODO: Add "initialStates" and "finalStates" as function arguments
+		// TODO: Optimize this to exclude any finals that are not reachable
+		reachable().intersection(coreachable())
+	}
+
+	/// Minimizes this DFA by merging equivalent states.
+	/// A minimized DFA has the fewest number of states possible of any equivalent DFA.
+	/// It does this by merging states with the "same" behavior into the same state.
+	/// Implemented by Hopcroft's Algorithm.
+	/// - Parameter initialPartitions: A set of partitions. Defaults to separating the accepting and non-accepting partitions.
+	/// - Returns: The minimized DFA
+	public func minimized(initialPartitions: Array<Set<Int>> = []) -> Self {
+		let reachableStates = useful().sorted()
+		// Since `reachableStates` is essentially backwards mapping of states, compute the forwards mapping
 		let stateMap = Dictionary(uniqueKeysWithValues: reachableStates.enumerated().map { ($1, $0) })
 		if(stateMap.isEmpty) {
 			return Self.empty
