@@ -182,7 +182,7 @@ struct Tests {
 			}
 			for rejectingInput in testCase.rejectingInputs {
 				#expect(!testCase.pattern.contains(rejectingInput.unicodeScalars.map { UInt32($0) }))
-				#expect(rejectingInput.wholeMatch(of: regex) == nil, "\(regexString) <- \(rejectingInput) accepted, should fail")
+				#expect(rejectingInput.wholeMatch(of: regexObject) == nil, "\(regexString) <- \(rejectingInput) accepted, should fail")
 			}
 		}
 	}
