@@ -695,6 +695,14 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		)
 	}
 
+	public static func symbol(range: Alphabet.SymbolClass) -> Self {
+		return Self(
+			states: [[range: 1], [:]],
+			initial: 0,
+			finals: [ 1 ]
+		)
+	}
+
 	/// Return a DFA that also accepts the empty sequence
 	/// i.e. adds the initial state to the set of final states
 	public func optional() -> Self {
@@ -1135,6 +1143,9 @@ extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeA
 	public func toClosedRangePattern<T: ClosedRangePatternBuilder>() -> T {
 		fatalError()
 	}
+}
+
+extension SymbolClassDFA: SymbolClassPatternBuilder where Symbol: Comparable {
 }
 
 public typealias DFA<Symbol: Hashable> = SymbolClassDFA<SymbolAlphabet<Symbol>>
