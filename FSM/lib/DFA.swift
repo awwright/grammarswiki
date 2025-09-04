@@ -973,15 +973,47 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		// Make a new initial state at 0, epsilon transition to old initial state
 		// Create an empty new-final state at 1
 		// And add epsilon transitions for all old-final states to new-final state at 1
-		// TODO: Remove states from the lowest number of (inward transitions * outgoing transitions)
-		// Apparently this stragegy is not guaranteed to be the most efficent, but it will probably avoid the worst cases
 		let empty = PatternType.empty;
 		let epsilon = PatternType.epsilon;
-		let newInitial: Dictionary<Int, PatternType> = [self.initial + 2: epsilon];
-		let newFinal: Dictionary<Int, PatternType> = [:];
+
+		// Collapse a state f where for all e, g in e->f->g there is no transition e->g
+		// This prevents duplication of expressions on two sides of an alternation
+		var incoming = Array.init(repeating: 0, count: states.count)
+		for (stateNo, table) in self.states.enumerated() {
+			for (_, target) in table {
+				// Don't count transitions to itself, these are trivially encoded as (a *b c)
+				incoming[stateNo] += (target == stateNo) ? 0 : 1;
+			}
+		}
+		let backwards = incoming.enumerated()
+			// Don't count transitions to itself
+			.map { (offset, _) in (offset, self.states[offset].enumerated().filter { offset != $0.element.value }.count ) }
+			// For some lulz, try flipping the > to a <
+			.sorted(by: { $0.1 > $1.1 })
+			.map(\.0);
+		var forwards = Array.init(repeating: 0, count: states.count)
+		for (newState, oldState) in backwards.enumerated() {
+			forwards[oldState] = newState;
+		}
+
+		let sorted = Self(
+			states: backwards.map {
+				var table: Self.Alphabet.DFATable = [:]
+				for (symbol, target) in self.states[$0] {
+					table[symbol] = forwards[target]
+				}
+				return table;
+			},
+			initial: forwards[self.initial],
+			finals: Set(self.finals.map { forwards[$0] })
+		)
+		assert(sorted.symmetricDifference(self).finals.isEmpty)
 
 		// Convert the FSM to a FSM with regular expressions as the transitions
-		var states: Array<Dictionary<Int, PatternType>> = [newInitial, newFinal] + self.states.enumerated().map {
+		// Dictionary<Int, PatternType> maps a node to transition to, to all of the patterns that transition to that state
+		let newInitial: Dictionary<Int, PatternType> = [sorted.initial + 2: epsilon];
+		let newFinal: Dictionary<Int, PatternType> = [:];
+		var states: Array<Dictionary<Int, PatternType>> = [newInitial, newFinal] + sorted.states.enumerated().map {
 			(oldNo, oldTable) in
 			var newTable: Dictionary<Int, PatternType> = [:]
 
@@ -993,7 +1025,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 			}
 
 			// If the state was a final state, add an epsilon transition to state 1
-			if(isFinal(oldNo)){
+			if(sorted.isFinal(oldNo)){
 				newTable[1] = epsilon
 			}
 			return newTable;
