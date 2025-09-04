@@ -1131,7 +1131,23 @@ import Testing;
 			#expect(min.states.count == 3)
 			// TODO: Add tests for the ranges and stuff, make sure it's consistent
 		}
+
+		@Test("clover-leaf")
+		func test_cloverleaf_toPattern() async throws {
+			let expression = try ABNFAlternation<UInt8>.parse(#"*(%x0 / %x1 *%x3 %x2) %x1 *%x3"#.utf8)
+			let expression_fsm: DFA<UInt8> = try expression.toPattern()
+			let fsm = DFA<UInt8>(
+				states: [
+					[0x0: 0, 0x1: 1],
+					[0x2: 0, 0x3: 1],
+				],
+				initial: 0,
+				finals: [1]
+			);
+			#expect(expression_fsm == fsm)
+		}
 	}
+
 	@Suite("union") struct ABNFTest_union {
 		@Test("rulename / rulename")
 		func test_union_rulename() async throws {
