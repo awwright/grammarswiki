@@ -481,10 +481,12 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		}
 		let trimmedStates = reachableStates.map { state in
 			// Remove transitions to dead states, remap remaining transitions
-			Dictionary(uniqueKeysWithValues: states[state].compactMap { if let target = stateMap[$0.value] { ($0.key, target) } else { nil } })
+			Alphabet.DFATable(states[state].compactMap { if let target = stateMap[$0.value] { ($0.key, target) } else { nil } })
 		}
 		let trimmedFinals = Set(finals.intersection(reachableStates).map { stateMap[$0]! })
 		let trimmedInitial = stateMap[initial]!
+		let trimmed = Self(states: trimmedStates, initial: trimmedInitial, finals: trimmedFinals)
+		assert(trimmed == self)
 
 		// Initialize partition with accepting and non-accepting states
 		var partition: Array<Set<Int>>
@@ -504,7 +506,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		}
 
 		// Initialize worklist with symbols from alphabet
-		let alphabet = Set(trimmedStates.flatMap { $0.keys })
+		let alphabet = Set(trimmedStates.flatMap { $0.alphabet })
 		var worklist = alphabet.map { ($0, partition) }
 
 		// Refine partitions
@@ -544,7 +546,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 		let stateToPartition = Dictionary(uniqueKeysWithValues: partition.enumerated().flatMap { (index, set) in set.map { ($0, index) } })
 		let newStates: [Alphabet.DFATable] = partition.map {
-			return Alphabet.DFATable(uniqueKeysWithValues: trimmedStates[$0.first!].map { ($0.key, stateToPartition[$0.value]!) })
+			return Alphabet.DFATable(trimmedStates[$0.first!].map { ($0.key, stateToPartition[$0.value]!) })
 		}
 		let newInitial = stateToPartition[trimmedInitial]!
 		let newFinals = Set(partition.enumerated().filter { trimmedFinals.contains($1.first!) }.map { $0.offset })

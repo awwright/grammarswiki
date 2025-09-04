@@ -294,7 +294,7 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 		public var values: Values { partitions.keys }
 
 		public init() { partitions = [:] }
-		public init(_ elements: Dictionary<Set<Symbol>, Value>) {
+		public init(_ elements: some Collection<(SetAlphabet.SymbolClass, Value)>) {
 			self.partitions = [:]
 			for (part, value) in elements {
 				self[part] = value
@@ -721,7 +721,7 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 			partitions = [:]
 		}
 
-		public init(_ elements: Dictionary<Array<ClosedRange<Symbol>>, Value>) {
+		public init(_ elements: some Collection<(ClosedRangeAlphabet.SymbolClass, Value)>) {
 			self.partitions = [:]
 			for (part, value) in elements {
 				self[part] = value
@@ -874,8 +874,15 @@ public protocol AlphabetTableProtocol: Collection, ExpressibleByDictionaryLitera
 //	typealias Element = (key: Key, value: Value)
 //	init(_ elements: Dictionary<Alphabet.SymbolClass, Value>)
 	//init<S: Sequence>(uniqueKeysWithValues: S) where S.Element == (Key, Value)
+
+	/// Get the keys of this table (equivalent to Dictionary.keys)
 	var alphabet: Alphabet { get }
+
+	// Get the values of this table
 	var values: Values { get }
+
+	/// Create the table from partition-value tuples
+	init(_ elements: some Collection<(Alphabet.SymbolClass, Value)>)
 
 //	func get(element: Alphabet.Symbol) -> Value?
 //	func get(forKey: Alphabet.SymbolClass) -> Value?
@@ -904,6 +911,9 @@ public extension AlphabetTableProtocol {
 
 extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatable & Hashable {
 	public typealias Alphabet = SymbolAlphabet<Key>
+	public init(_ elements: some Collection<(Alphabet.SymbolClass, Value)>) {
+		self = Dictionary(uniqueKeysWithValues: elements)
+	}
 	public init(_ elements: Dictionary<Alphabet.SymbolClass, Value>) {
 		self = elements
 	}
@@ -938,6 +948,13 @@ public struct AlphabetTable<Alphabet: AlphabetProtocol & Hashable, Value: Equata
 
 	public init() {
 		self.storage = Alphabet.PartitionedDictionary()
+	}
+
+	public init(_ elements: some Collection<(Alphabet.SymbolClass, Value)>) {
+		self.storage = [:]
+		for (part, value) in elements {
+			self.storage[part] = value
+		}
 	}
 
 	// Implements ExpressibleByDictionaryLiteral

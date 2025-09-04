@@ -24,6 +24,11 @@ public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashabl
 	}
 }
 
+/// Represents a partitioned set of regular languages.
+///
+/// This makes it a type of Alphabet! And therefore, it implements AlphabetProtocol.
+///
+/// This also provides a PartitionedDictionary object so that you can associate values with each partition.
 public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 	public typealias SymbolClass = DFA<Component>
 	public typealias Symbol = DFA<Component>.Element
@@ -156,7 +161,7 @@ public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 		public var values: Values { partitions.keys }
 
 		public init() { partitions = [:] }
-		public init(_ elements: Dictionary<SymbolClass, Value>) {
+		public init(_ elements: some Collection<(SymbolClass, Value)>) {
 			self.partitions = [:]
 			for (part, value) in elements {
 				self[part] = value
