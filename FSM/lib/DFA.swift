@@ -549,7 +549,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 			return Alphabet.DFATable(trimmedStates[$0.first!].map { ($0.key, stateToPartition[$0.value]!) })
 		}
 		let newInitial = stateToPartition[trimmedInitial]!
-		let newFinals = Set(partition.enumerated().filter { trimmedFinals.contains($1.first!) }.map { $0.offset })
+		let newFinals = Set(partition.enumerated().filter { !trimmedFinals.isDisjoint(with: $1) }.map { $0.offset })
 
 		return Self(states: newStates, initial: newInitial, finals: newFinals)
 	}
