@@ -1146,6 +1146,43 @@ import Testing;
 			);
 			#expect(expression_fsm == fsm)
 		}
+
+		@Test("clover-leaf 2")
+		func test_cloverleaf_2_toPattern() async throws {
+			// Another way of expressing the same language
+			// This expression is technically longer, but a bit more intuitive (no backtracking or alternations)
+			// Note how there's no way to avoid writing %x1 and %x3 twice each
+			let expression = try ABNFAlternation<UInt8>.parse(#"*%x0 %x1 *%x3 *(%x2 *%x0 %x1 *%x3)"#.utf8)
+			let expression_fsm: DFA<UInt8> = try expression.toPattern()
+			let fsm = DFA<UInt8>(
+				states: [
+					[0x0: 0, 0x1: 1],
+					[0x2: 0, 0x3: 1],
+				],
+				initial: 0,
+				finals: [1]
+			);
+			#expect(expression_fsm == fsm)
+		}
+
+		@Test("clover-leaf by pattern builder")
+		func test_cloverleaf_build_toPattern() async throws {
+			let R = ABNFAlternation<UInt8>.symbol(0x0);
+			let S = ABNFAlternation<UInt8>.symbol(0x1);
+			let T = ABNFAlternation<UInt8>.symbol(0x2);
+			let U = ABNFAlternation<UInt8>.symbol(0x3);
+			let expression: ABNFAlternation<UInt8> = ( (R).union( (S).concatenate(U.star()).concatenate(T) ) ).star().concatenate(S).concatenate(U.star())
+			let expression_fsm: DFA<UInt8> = try expression.toPattern()
+			let fsm = DFA<UInt8>(
+				states: [
+					[0x0: 0, 0x1: 1],
+					[0x2: 0, 0x3: 1],
+				],
+				initial: 0,
+				finals: [1]
+			);
+			#expect(expression_fsm == fsm)
+		}
 	}
 
 	@Suite("union") struct ABNFTest_union {

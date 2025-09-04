@@ -969,10 +969,12 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 	}
 
 	public func concatenate(_ other: ABNFConcatenation) -> ABNFConcatenation {
-		// See if self last element and other first element have a natural concatenation, and use that if so
-		if self.repetitions.isEmpty == false && other.repetitions.isEmpty == false, let merged = self.repetitions.last!.hasConcatenation(other.repetitions.first!) {
-			return ABNFConcatenation(repetitions: Array(self.repetitions[0..<self.repetitions.count-1]) + [merged] + other.repetitions[1...])
-		}
+		// TODO: See if self last element and other first element have a natural concatenation
+		// e.g. if it's a NumVal sequence, and we're concatenating a NumVal sequence.
+		// However this code is horribly broken.
+		//if self.repetitions.isEmpty == false && other.repetitions.isEmpty == false, let merged = self.repetitions.last!.hasConcatenation(other.repetitions.first!) {
+		//	return ABNFConcatenation(repetitions: Array(self.repetitions[0..<self.repetitions.count-1]) + [merged] + other.repetitions[1...])
+		//}
 		return ABNFConcatenation(repetitions: Array(self.repetitions + other.repetitions))
 	}
 
