@@ -1185,6 +1185,23 @@ import Testing;
 		}
 	}
 
+	// Test converting from ABNF to an FSM and back and forth
+	@Test("FSM<->ABNF", arguments: [
+		"*(%x0 / %x1 *%x3 %x2) %x1 *%x3",
+		"*%x0 %x1 *%x3 *(%x2 *%x0 %x1 *%x3)",
+		"*((%x20 / %x09) / %x0D %x0A (%x20 / %x09))",
+	])
+	func test_fsm_abnf(_ abnf_lf: String) throws {
+		let abnf0 = abnf_lf.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r")
+		let rulelist = try ABNFAlternation<UInt8>.parse(abnf0.utf8)
+		let fsm0: SymbolClassDFA<ClosedRangeAlphabet<UInt8>> = try rulelist.toSymbolClassPattern()
+		let abnf1: ABNFAlternation<UInt8> = fsm0.toPattern()
+		let fsm1: SymbolClassDFA<ClosedRangeAlphabet<UInt8>> = try abnf1.toSymbolClassPattern()
+		#expect(fsm0 == fsm1);
+		// In theory, this is the same as testing equivalence of the FSMs
+		#expect(fsm0.symmetricDifference(fsm1).finals.isEmpty)
+	}
+
 	@Suite("union") struct ABNFTest_union {
 		@Test("rulename / rulename")
 		func test_union_rulename() async throws {
