@@ -1192,7 +1192,7 @@ import Testing;
 		"*((%x20 / %x09) / %x0D %x0A (%x20 / %x09))",
 	])
 	func test_fsm_abnf(_ abnf_lf: String) throws {
-		let abnf0 = abnf_lf.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r")
+		let abnf0 = abnf_lf.replacing("\n", with: "\r\n").replacing("\r\r", with: "\r")
 		let rulelist = try ABNFAlternation<UInt8>.parse(abnf0.utf8)
 		let fsm0: SymbolClassDFA<ClosedRangeAlphabet<UInt8>> = try rulelist.toSymbolClassPattern()
 		let abnf1: ABNFAlternation<UInt8> = fsm0.toPattern()
