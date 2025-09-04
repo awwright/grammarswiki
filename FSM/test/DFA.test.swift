@@ -473,6 +473,26 @@ import Testing
 		#expect(repeated.contains("aaaaaa"))
 	}
 
+	@Test("clover-leaf")
+	func test_cloverleaf() async throws {
+		let R = DFA<UInt8>.symbol(0x0);
+		let S = DFA<UInt8>.symbol(0x1);
+		let T = DFA<UInt8>.symbol(0x2);
+		let U = DFA<UInt8>.symbol(0x3);
+		let expression: DFA<UInt8> = ( (R).union( (S).concatenate(U.star()).concatenate(T) ) ).star().concatenate(S).concatenate(U.star())
+		let expression_fsm: DFA<UInt8> = expression.toPattern()
+		let fsm = DFA<UInt8>(
+			states: [
+				[0x0: 0, 0x1: 1],
+				[0x2: 0, 0x3: 1],
+			],
+			initial: 0,
+			finals: [1]
+		);
+		#expect(expression_fsm == fsm)
+		#expect(expression_fsm.symmetricDifference(fsm).finals.isEmpty)
+	}
+
 	@Test("Insert and remove operations")
 	func testInsertRemove() {
 		var dfa = DFA<Character>()
