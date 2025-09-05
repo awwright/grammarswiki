@@ -354,8 +354,6 @@ struct DocumentDetail: View {
 	private func updatedDocument() {
 		let text = document.content;
 		content_rulelist = nil
-		content_rulelist_sorted_orphan = []
-		content_rulelist_sorted_all = []
 		content_rulelist_error = nil
 		// invalidate updatedRule
 		rule_alphabet = nil
