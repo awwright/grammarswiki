@@ -515,7 +515,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 			// Map each state to its block index in the current partition
 			let stateToPartition = Dictionary(uniqueKeysWithValues: currentPartition.enumerated().flatMap { (index, set) in set.map { ($0, index) } })
-			var newPartition = [Set<Int>]()
+			var newPartition = Array<Set<Int>>()
 			var changed = false
 
 			for block in currentPartition {
@@ -545,7 +545,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		}
 
 		let stateToPartition = Dictionary(uniqueKeysWithValues: partition.enumerated().flatMap { (index, set) in set.map { ($0, index) } })
-		let newStates: [Alphabet.DFATable] = partition.map {
+		let newStates: Array<Alphabet.DFATable> = partition.map {
 			return Alphabet.DFATable(trimmedStates[$0.first!].map { ($0.key, stateToPartition[$0.value]!) })
 		}
 		let newInitial = stateToPartition[trimmedInitial]!
@@ -1180,4 +1180,4 @@ extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeA
 extension SymbolClassDFA: SymbolClassPatternBuilder where Symbol: Comparable {
 }
 
-public typealias DFA<Symbol: Hashable> = SymbolClassDFA<SymbolAlphabet<Symbol>>
+public typealias SymbolDFA<Symbol: Hashable> = SymbolClassDFA<SymbolAlphabet<Symbol>>

@@ -81,7 +81,7 @@ public struct DFT<Symbol: Comparable & Hashable>: Hashable {
 
 	/// Generate a DFT equivalence with a single partition
 	/// i.e. all values are equivalent
-	public init(top: DFA<Symbol>) {
+	public init(top: SymbolDFA<Symbol>) {
 		self.states = top.states
 		self.output = top.states.map { $0.mapValues { _ in [] } }
 		self.initial = top.initial
@@ -89,7 +89,7 @@ public struct DFT<Symbol: Comparable & Hashable>: Hashable {
 	}
 	/// Generate a DFT equivalence with individual partitions per input
 	/// i.e. all values are different, no values are equivalent
-	public init(bottom: DFA<Symbol>) {
+	public init(bottom: SymbolDFA<Symbol>) {
 		self.states = bottom.states
 		self.output = bottom.states.map { Dictionary<Symbol, Output>(uniqueKeysWithValues: $0.map { ($0.key, [$0.key]) }) }
 		self.initial = bottom.initial

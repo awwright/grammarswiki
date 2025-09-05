@@ -18,7 +18,7 @@ func abnf_expression_test_input_args(arguments: Array<String>) -> Int32 {
 }
 
 func abnf_expression_test_input_run(res: inout some ResponseProtocol, abnfExpression: String, input: String) -> Int32 {
-	let builtins = ABNFBuiltins<DFA<UInt32>>.dictionary;
+	let builtins = ABNFBuiltins<SymbolDFA<UInt32>>.dictionary;
 	let abnfTree: ABNFAlternation<UInt32>
 	do { abnfTree = try ABNFAlternation<UInt32>.parse(abnfExpression.utf8); }
 	catch {
@@ -26,7 +26,7 @@ func abnf_expression_test_input_run(res: inout some ResponseProtocol, abnfExpres
 		return 2;
 	}
 
-	let fsm: DFA<UInt32>;
+	let fsm: SymbolDFA<UInt32>;
 	do { fsm = try abnfTree.toPattern(rules: builtins); }
 	catch {
 		res.writeLn("Could not convert ABNF to DFA");

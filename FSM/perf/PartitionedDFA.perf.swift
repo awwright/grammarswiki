@@ -3,7 +3,7 @@ import XCTest
 
 class PartitionedDFAPerf: XCTestCase {
 	func testRead() {
-		let parts = (0...0x20).map { (DFA<Int>([ [$0] ]).star(), String($0)) };
+		let parts = (0...0x20).map { (SymbolDFA<Int>([ [$0] ]).star(), String($0)) };
 		let dfa = PartitionedDFA<Int>.Table<String>(uniqueKeysWithValues: parts)
 		measure {
 			_ = dfa[symbol: [] ] == "255"

@@ -109,7 +109,7 @@ import Testing;
 
 		@Test("builtins: SymbolAlphabet")
 		func test_builtins_SymbolAlphabet() async throws {
-			let builtins = ABNFBuiltins<DFA<UInt8>>.dictionary.mapValues { $0.minimized().alphabet };
+			let builtins = ABNFBuiltins<SymbolDFA<UInt8>>.dictionary.mapValues { $0.minimized().alphabet };
 			#expect(builtins["DIGIT"] == [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39])
 		}
 
@@ -817,7 +817,7 @@ import Testing;
 			"Foo"
 			""";
 			let expression = try! ABNFCharVal<UInt8>.parse(abnf.utf8)
-			let fsm: DFA<UInt8> = expression.toPattern();
+			let fsm: SymbolDFA<UInt8> = expression.toPattern();
 			#expect(fsm.contains("Foo".utf8))
 			#expect(fsm.contains("foo".utf8))
 			#expect(fsm.contains("FOO".utf8))
@@ -827,7 +827,7 @@ import Testing;
 		func test_numVal_range() async throws {
 			let input = "%x30-39";
 			let expression = try! ABNFAlternation<UInt8>.parse(input.utf8)
-			let fsm: DFA<UInt8> = try expression.toClosedRangePattern();
+			let fsm: SymbolDFA<UInt8> = try expression.toClosedRangePattern();
 			#expect(fsm.contains([0x30]))
 		}
 
@@ -916,7 +916,7 @@ import Testing;
 		func test_repetition_plus_toPattern() async throws {
 			// 1*"C"
 			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: DFA<UInt8> = try expression.toPattern(rules: [:]);
+			let fsm: SymbolDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
@@ -1135,8 +1135,8 @@ import Testing;
 		@Test("clover-leaf")
 		func test_cloverleaf_toPattern() async throws {
 			let expression = try ABNFAlternation<UInt8>.parse(#"*(%x0 / %x1 *%x3 %x2) %x1 *%x3"#.utf8)
-			let expression_fsm: DFA<UInt8> = try expression.toPattern()
-			let fsm = DFA<UInt8>(
+			let expression_fsm: SymbolDFA<UInt8> = try expression.toPattern()
+			let fsm = SymbolDFA<UInt8>(
 				states: [
 					[0x0: 0, 0x1: 1],
 					[0x2: 0, 0x3: 1],
@@ -1153,8 +1153,8 @@ import Testing;
 			// This expression is technically longer, but a bit more intuitive (no backtracking or alternations)
 			// Note how there's no way to avoid writing %x1 and %x3 twice each
 			let expression = try ABNFAlternation<UInt8>.parse(#"*%x0 %x1 *%x3 *(%x2 *%x0 %x1 *%x3)"#.utf8)
-			let expression_fsm: DFA<UInt8> = try expression.toPattern()
-			let fsm = DFA<UInt8>(
+			let expression_fsm: SymbolDFA<UInt8> = try expression.toPattern()
+			let fsm = SymbolDFA<UInt8>(
 				states: [
 					[0x0: 0, 0x1: 1],
 					[0x2: 0, 0x3: 1],
@@ -1172,8 +1172,8 @@ import Testing;
 			let T = ABNFAlternation<UInt8>.symbol(0x2);
 			let U = ABNFAlternation<UInt8>.symbol(0x3);
 			let expression: ABNFAlternation<UInt8> = ( (R).union( (S).concatenate(U.star()).concatenate(T) ) ).star().concatenate(S).concatenate(U.star())
-			let expression_fsm: DFA<UInt8> = try expression.toPattern()
-			let fsm = DFA<UInt8>(
+			let expression_fsm: SymbolDFA<UInt8> = try expression.toPattern()
+			let fsm = SymbolDFA<UInt8>(
 				states: [
 					[0x0: 0, 0x1: 1],
 					[0x2: 0, 0x3: 1],
@@ -1501,16 +1501,16 @@ import Testing;
 		@Test("HEXDIG")
 		func test_HEXDIG() async throws {
 			// Test across types
-			#expect(ABNFBuiltins<DFA<UInt>>.HEXDIG.contains([0x30]))
-			#expect(ABNFBuiltins<DFA<UInt8>>.HEXDIG.contains([0x30]))
-			#expect(ABNFBuiltins<DFA<UInt16>>.HEXDIG.contains([0x30]))
-			#expect(ABNFBuiltins<DFA<UInt32>>.HEXDIG.contains([0x30]))
+			#expect(ABNFBuiltins<SymbolDFA<UInt>>.HEXDIG.contains([0x30]))
+			#expect(ABNFBuiltins<SymbolDFA<UInt8>>.HEXDIG.contains([0x30]))
+			#expect(ABNFBuiltins<SymbolDFA<UInt16>>.HEXDIG.contains([0x30]))
+			#expect(ABNFBuiltins<SymbolDFA<UInt32>>.HEXDIG.contains([0x30]))
 			// FIXME: this should support Character...
 			//#expect(ABNFBuiltins<Character>.HEXDIG.contains("0"))
 
 			// Test case-insensitive
-			#expect(ABNFBuiltins<DFA<UInt>>.HEXDIG.contains([0x41]))
-			#expect(ABNFBuiltins<DFA<UInt8>>.HEXDIG.contains([0x61]))
+			#expect(ABNFBuiltins<SymbolDFA<UInt>>.HEXDIG.contains([0x41]))
+			#expect(ABNFBuiltins<SymbolDFA<UInt8>>.HEXDIG.contains([0x61]))
 		}
 	}
 

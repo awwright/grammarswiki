@@ -26,7 +26,7 @@ func abnf_equivalent_inputs_run(response r: inout some ResponseProtocol, abnfExp
 		r.status = .error;
 		return
 	}
-	let fsm: DFA<UInt32> = try! abnfTree.toPattern(rules: ABNFBuiltins<DFA<UInt32>>.dictionary);
+	let fsm: SymbolDFA<UInt32> = try! abnfTree.toPattern(rules: ABNFBuiltins<SymbolDFA<UInt32>>.dictionary);
 
 	let equivalent = fsm.equivalentInputs(input: input.flatMap{ $0.unicodeScalars.map(\.value) });
 	guard let equivalent else {

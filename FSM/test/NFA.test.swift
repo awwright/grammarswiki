@@ -125,7 +125,7 @@ import Testing
 
 		let dfa2 = NFA<Character>(["x", "y"])
 		let concatenation = dfa1.concatenate(dfa2);
-		let language = Array(DFA(nfa: concatenation).map { String($0) });
+		let language = Array(SymbolDFA(nfa: concatenation).map { String($0) });
 		#expect(language.count == 4)
 		#expect(language.contains("ax"))
 		#expect(language.contains("ay"))

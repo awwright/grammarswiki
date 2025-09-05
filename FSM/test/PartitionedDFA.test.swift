@@ -12,8 +12,8 @@ import Testing
 	@Test("Filled PartitionedDFA")
 	func testEmptyPartitionedMap() {
 		var set = PartitionedDFA<Character>.Table<String>()
-		let dfa0 = DFA<Character>(["0", "1"]).star()
-		let dfa1 = DFA<Character>(["a", "b"]).star()
+		let dfa0 = SymbolDFA<Character>(["0", "1"]).star()
+		let dfa1 = SymbolDFA<Character>(["a", "b"]).star()
 		set[ dfa0 ] = "digits"
 		set[ dfa1 ] = "alphabet"
 		#expect(set[ symbol: [] ] == "alphabet") // later assignment overrides earlier
@@ -25,9 +25,9 @@ import Testing
 	@Test("Filled PartitionedDFA")
 	func testFilledPartitionedSet() {
 		let parts = [
-			DFA<Character>(["0", "1"]).star(),
-			DFA<Character>(["a"]).plus(),
-			DFA<Character>(["b"]).plus(),
+			SymbolDFA<Character>(["0", "1"]).star(),
+			SymbolDFA<Character>(["a"]).plus(),
+			SymbolDFA<Character>(["b"]).plus(),
 		];
 		let dfa = PartitionedDFA<Character>(partitions: parts)
 		#expect(dfa[ [] ] == dfa[ ["0", "1"] ])
@@ -40,9 +40,9 @@ import Testing
 	@Test("Filled PartitionedDFA")
 	func testFilledPartitionedMap() {
 		let parts = [
-			"binary": DFA<Character>(["0", "1"]).star(),
-			"alpha": DFA<Character>(["a"]).plus(),
-			"bravo": DFA<Character>(["b"]).plus(),
+			"binary": SymbolDFA<Character>(["0", "1"]).star(),
+			"alpha": SymbolDFA<Character>(["a"]).plus(),
+			"bravo": SymbolDFA<Character>(["b"]).plus(),
 		];
 		let dfa = PartitionedDFA<Character>.Table<String>(uniqueKeysWithValues: parts.map { ($0.1, $0.0) })
 		#expect(dfa[symbol: [] ] == "binary")
@@ -54,10 +54,10 @@ import Testing
 
 	@Test("conjunction")
 	func test_PartitionedDFA_conjunction() {
-		let part_2 = DFA<Character>(["0", "1"]).star();
-		let part_4 = DFA<Character>(["0", "1", "2", "3"]).star();
-		let part_6 = DFA<Character>(["0", "1", "2", "3", "4", "5"]).star();
-		let part_8 = DFA<Character>(["0", "1", "2", "3", "4", "5", "6", "7"]).star();
+		let part_2 = SymbolDFA<Character>(["0", "1"]).star();
+		let part_4 = SymbolDFA<Character>(["0", "1", "2", "3"]).star();
+		let part_6 = SymbolDFA<Character>(["0", "1", "2", "3", "4", "5"]).star();
+		let part_8 = SymbolDFA<Character>(["0", "1", "2", "3", "4", "5", "6", "7"]).star();
 		let dfa0: PartitionedDFA<Character> = [ part_2, part_6 ];
 		let dfa1: PartitionedDFA<Character> = [ part_4, part_8 ];
 		// Test that the partitions are mutually exclusive

@@ -30,8 +30,8 @@ public enum SymbolOrTag<Symbol: Comparable & Hashable, Tag: Comparable & Hashabl
 ///
 /// This also provides a PartitionedDictionary object so that you can associate values with each partition.
 public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
-	public typealias SymbolClass = DFA<Component>
-	public typealias Symbol = DFA<Component>.Element
+	public typealias SymbolClass = SymbolDFA<Component>
+	public typealias Symbol = SymbolDFA<Component>.Element
 	public typealias PartitionedDictionary = Table<AnyHashable>
 	public typealias NFATable = Table<Set<Int>>
 	public typealias DFATable = Table<Int>
