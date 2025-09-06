@@ -147,7 +147,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// Generates a Graphviz DOT representation of the DFA for visualization.
 	///
 	/// - Returns: A string in DOT format, viewable with tools like Graphviz.
-	public func toViz() -> String {
+	public func toViz(stringify: (Alphabet.Element) -> String = { String(describing: $0) }) -> String {
 		var viz = "";
 		viz += "digraph G {\n";
 		viz += "\t_initial [shape=point];\n";
@@ -156,7 +156,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 			let shape = finals.contains(source) ? "doublecircle" : "circle";
 			viz += "\t\(source) [label=\"\(source)\", shape=\"\(shape)\"];\n";
 			for (target, symbols) in targets(source: source) {
-				viz += "\t\(source) -> \(target) [label=\(graphvizLabelEscapedString(symbols.map { String(describing: $0) }.joined(separator: " ")))];\n";
+				viz += "\t\(source) -> \(target) [label=\(graphvizLabelEscapedString(symbols.map(stringify).joined(separator: " ")))];\n";
 			}
 		}
 		viz += "}\n";
@@ -1008,6 +1008,30 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 			finals: Set(self.finals.map { forwards[$0] })
 		)
 		assert(sorted.symmetricDifference(self).finals.isEmpty)
+
+		//print(sorted.toViz(stringify: {
+		//	print(type(of: $0))
+		//	let ranges = $0 as! Array<ClosedRange<UInt32>>
+		//	return ranges.map {
+		//		r in
+		//		if r.lowerBound == r.upperBound {
+		//			printable(r.lowerBound)
+		//		} else {
+		//			"\(printable(r.lowerBound))\u{2026}\(printable(r.upperBound))"
+		//		}
+		//	}.joined(separator: " ")
+		//	func printable(_ chr: UInt32) -> String {
+		//		if chr <= 0x20 {
+		//			return String(UnicodeScalar(0x2400 + chr)!)
+		//		} else if chr < 0x7F {
+		//			return String(UnicodeScalar(chr)!)
+		//		} else if chr == 0x7F {
+		//			return "\u{2421}"
+		//		} else {
+		//			return String("U+" + String(chr, radix: 16).uppercased())
+		//		}
+		//	}
+		//}))
 
 		// Convert the FSM to a FSM with regular expressions as the transitions
 		// Dictionary<Int, PatternType> maps a node to transition to, to all of the patterns that transition to that state
