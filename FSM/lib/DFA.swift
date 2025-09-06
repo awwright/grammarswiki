@@ -643,20 +643,20 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	}
 
 	/// Returns a DFA accepting the union of this DFA’s language and another’s.
-	/// Implements ``SetAlgebra``
+	/// Implements `SetAlgebra`
 	public func union(_ other: __owned Self) -> Self {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] || $0[1] }).fsm;
 	}
 
 	/// Returns a DFA accepting the intersection of this DFA’s language and another’s.
-	/// Implements ``SetAlgebra``
+	/// Implements `SetAlgebra`
 	public func intersection(_ other: Self) -> Self {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] && $0[1] }).fsm;
 	}
 
 	/// Returns a DFA accepting the symmetric difference of this DFA’s language and another’s.
 	/// That is, the set of elements in exactly one set or the other set, and not both.
-	/// To only remove elements, see ``subtracting(_:)`` or the ``-(lhs:rhs:)`` operator
+	/// To only remove elements, see ``subtracting(_:)`` or the ``-(_:_:)`` operator
 	public func symmetricDifference(_ other: __owned Self) -> Self {
 		return Self.parallel(fsms: [self, other], merge: { $0[0] != $0[1] }).fsm;
 	}
@@ -763,7 +763,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	//	return Self.init(states: self.states, initial: currentState, finals: self.finals);
 	//}
 
-	/// An iterator over all accepted sequences. Implements ``Sequence``.
+	/// An iterator over all accepted sequences. Implements `Sequence`.
 	///
 	/// Example:
 	///

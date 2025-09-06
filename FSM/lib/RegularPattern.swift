@@ -1,6 +1,6 @@
 /// Declares a type of sequence that can be consumed or produced by a finite state automata
 /// It defines the empty sequence, and can be built from the empty sequence by appending elements.
-/// An elements of this sequence is a Symbol. They must be usable as keys for a ``Dictionary``, so Symbol depends on ``Hashable``.
+/// An elements of this sequence is a Symbol. They must be usable as keys for a `Dictionary`, so Symbol depends on `Hashable`.
 public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
 	typealias Symbol = Element;
 
@@ -44,7 +44,7 @@ public protocol RegularPatternBuilder: Equatable {
 
 	/// Creates an automaton that matches exactly the given strings
 	init(arrayLiteral: Array<Symbol>...)
-
+	
 	/// Creates a pattern accepting the union of the languages defined by the given patterns.
 	/// - Parameter elements: An array of patterns to union with this one.
 	/// - Returns: A pattern accepting any sequence accepted by at least one of the input patterns.
@@ -137,7 +137,7 @@ extension RegularPatternBuilder {
 		Self.concatenate([self, other])
 	}
 
-	/// A default implementation of ``RegularPatternProtocol.optional()``
+	/// A default implementation of ``RegularPatternBuilder.optional()``
 	/// - Returns: A pattern that unions this pattern with epsilon.
 	public func optional() -> Self {
 		return Self.epsilon.union(self)
@@ -185,7 +185,7 @@ extension RegularPatternBuilder {
 	}
 
 	/// Creates a concatenation from the symbols in the given sequence
-	/// - Parameter range: The range of symbols (e.g., `0..<10`).
+	/// - Parameter sequence: The range of symbols (e.g., `0..<10`).
 	public static func sequence<T: Sequence>(_ sequence: T) -> Self where T.Element == Symbol {
 		return Self.concatenate(sequence.map{ Self.symbol($0) });
 	}

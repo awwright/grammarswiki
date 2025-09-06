@@ -52,7 +52,8 @@ public struct DFT<Symbol: Comparable & Hashable>: Hashable {
 	///
 	/// - Parameters:
 	///   - states: The transition table; defaults to an empty state if not provided.
-	///   - initial: The starting state; must be within `states` bounds.
+	///   - output: The output to associate with each transition
+	///  - initial: The starting state; must be within `states` bounds.
 	///   - finals: The set of accepting states; all must be within `states` bounds.
 	public init(
 		states: Array<Dictionary<Symbol, StateNo>> = [[:]],

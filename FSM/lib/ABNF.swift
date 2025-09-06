@@ -14,7 +14,7 @@
 public protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringConvertible {
 	// `Element.Element.Stride: SignedInteger` is for iterating over a range of symbols, e.g. (0x20...0x7F)
 	/// The type of value that this ABNF is describing
-	/// This will typically be ``Array<UInt8>`` or ``Array<Uint32>``
+	/// This will typically be `Array<UInt8>` or `Array<Uint32>`
 	associatedtype Element: SymbolSequenceProtocol where Element.Element: BinaryInteger & Comparable, Element.Element.Stride: SignedInteger;
 
 	/// A single character of a document that will be matched by the ABNF.
@@ -108,17 +108,19 @@ public protocol ABNFExpression: ABNFProduction {
 	var remainingSymbols: ClosedRangeAlphabet<Symbol> {get}
 
 	/// Gets a list of the rules referenced by leaf ``ABNFRulename`` productions.
-	/// All of the rules given must be provided to ``toPattern``.
+	/// All of the rules given must be provided to ``toPattern(as:rules:alphabet:)``.
 	var referencedRules: Set<String> {get}
 
-	/// Converts the rule to a regular expression capable pattern such as ``DFA`` or ``SimpleRegex``.
+	/// Converts the rule to a regular expression capable pattern such as ``SymbolClassDFA`` or ``SimpleRegex``.
 	///
 	/// For example, `alternation.toPattern(DFA<UInt8>.self, [:])`
-	///
+	/// 
 	/// - Note: If the rule contains a rulename, the definition must be provided in the parameters, otherwise the function will fail.
 	/// 	This list can be acquired from ``referencedRules``
-	///
+	/// 
+	/// - Parameter as: The RegularPatternBuilder type to generate, if it cannot be inferred
 	/// - Parameter rules: A dictionary of resolved rulenames to their DFAs.
+	/// - Parameter alphabetFilter: Limits the pattern to the given symbols; by intersecting the generated pattern with the language alphabetFilter*
 	/// - Returns: The DFA equivalent to the definition of this rule.
 	func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>?) throws -> PatternType where PatternType.Symbol == Symbol
 }
@@ -290,13 +292,19 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 		return ABNFRulelist<Target>(rules: newRules)
 	}
 
+	/// Produce a version of this ABNFRulelist transformed by its rule names.
+	/// This calls the same function once per rulename production, including in the key position of an ABNFRule.
+	/// - Parameter transform: Function to produce the transformed rule name.
+	/// - Returns: The transformed ABNFRulelist
 	public func mapRulenames(_ transform: (ABNFRulename<Symbol>) -> ABNFRulename<Symbol>) -> ABNFRulelist<Symbol> {
 		return ABNFRulelist<Symbol>(rules: rules.map{ $0.mapRulenames(transform) })
 	}
 
 	/// Generates a dictionary of deterministic finite automata (DFAs) for each rule in the list.
 	///
+	/// - Parameter as: The RegularPatternBuilder type to generate, if it cannot be inferred
 	/// - Parameter ruleMap: An optional map of pre-resolved rules to their DFAs, used for external references.
+	/// - Parameter alphabetFilter: Limits the pattern to the given symbols; by intersecting the generated pattern with the language alphabetFilter*
 	/// - Returns: A dictionary mapping lowercase rulenames to their corresponding DFAs.
 	///
 	/// - Note: Rules with circular dependencies that cannot be converted to a DFA will be excluded from the return value without any other warning.
@@ -1521,10 +1529,15 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 	}
 }
 
-// group          =  "(" *c-wsp alternation *c-wsp ")"
-// c-wsp          =  WSP / (c-nl WSP)
-// c-nl           =  comment / CRLF ; comment or newline
-// comment        =  ";" *(WSP / VCHAR) CRLF
+/// Represents an ABNF `group` production
+///
+/// Defined as:
+/// ```
+/// group          =  "(" *c-wsp alternation *c-wsp ")"
+/// c-wsp          =  WSP / (c-nl WSP)
+/// c-nl           =  comment / CRLF ; comment or newline
+/// comment        =  ";" *(WSP / VCHAR) CRLF
+/// ```
 public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
 	public typealias Element = Array<Symbol>;
 
@@ -1616,9 +1629,14 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 	}
 }
 
-// option         =  "[" *c-wsp alternation *c-wsp "]"
-// c-wsp          =  WSP / (c-nl WSP)
-// c-nl           =  comment / CRLF ; comment or newline
+/// Represents an ABNF `option` production
+///
+/// Defined as:
+/// ```
+/// option         =  "[" *c-wsp alternation *c-wsp "]"
+/// c-wsp          =  WSP / (c-nl WSP)
+/// c-nl           =  comment / CRLF ; comment or newline
+/// ```
 public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
 	public typealias Element = Array<Symbol>;
 
@@ -1701,7 +1719,13 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 	}
 }
 
-// char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
+/// Represents an ABNF `char-val` production
+///
+/// Defined as:
+///
+/// ```
+/// char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
+/// ```
 public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
 	public typealias Element = Array<Symbol>;
 
@@ -1848,7 +1872,12 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 	}
 }
 
-// num-val        =  "%" (bin-val / dec-val / hex-val)
+/// Represents an ABNF `num-val` production, either a series of code points, or a single code point from a range of values.
+///
+/// Defintion:
+/// ```
+/// num-val        =  "%" (bin-val / dec-val / hex-val)
+/// ```
 public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
 	public typealias Element = Array<Symbol>;
 
@@ -2109,7 +2138,15 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 	}
 }
 
-// prose-val      =  "<" *(%x20-3D / %x3F-7E) ">"
+/// Represents an ABNF `prose-val` production
+///
+/// Defined as:
+/// ```
+/// prose-val      =  "<" *(%x20-3D / %x3F-7E) ">"
+/// ```
+///
+/// A prose-val production defitionally has no regular language form, it's up to the implementor to figure out how to consume it.
+/// In most cases, we can treat it similar to an unbound (free) rule name.
 public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
 	public typealias Element = Array<Symbol>;
 
@@ -2200,7 +2237,7 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	}
 }
 
-// A dictionary of all of the rules that ABNF provides by default
+/// The definitions of all of the rules that ABNF provides by default
 public struct ABNFBuiltins<Dfn: ClosedRangePatternBuilder> where Dfn.Symbol: BinaryInteger, Dfn.Symbol.Stride: SignedInteger {
 	typealias Symbol = Dfn.Symbol
 

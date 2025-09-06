@@ -10,16 +10,16 @@ public protocol RegularLanguageProtocol: ExpressibleByArrayLiteral, RegularPatte
 /// A regular language structure that provides set algebra operations
 public protocol RegularLanguageSetAlgebra: SetAlgebra, ExpressibleByArrayLiteral, RegularPatternBuilder {
 	/// Returns a DFA accepting the union of this DFA’s language and another’s.
-	/// Implements ``SetAlgebra``
+	/// Implements `SetAlgebra`
 	func union(_ other: __owned Self) -> Self
 
 	/// Returns a DFA accepting the intersection of this DFA’s language and another’s.
-	/// Implements ``SetAlgebra``
+	/// Implements `SetAlgebra`
 	func intersection(_ other: Self) -> Self
 
 	/// Returns a DFA accepting the symmetric difference of this DFA’s language and another’s.
 	/// That is, the set of elements in exactly one set or the other set, and not both.
-	/// To only remove elements, see ``subtracting(_:)`` or the ``-(lhs:rhs:)`` operator
+	/// To only remove elements, see ``subtracting(_:)`` or the ``-(_:_:)`` operator
 	func symmetricDifference(_ other: __owned Self) -> Self
 
 	// Also provide a static implementation of union since it applies to any number of inputs
@@ -49,24 +49,24 @@ public protocol RegularLanguageSetAlgebra: SetAlgebra, ExpressibleByArrayLiteral
 	/// Returns a DFA accepting `range.lowerBound` or more repetitions.
 	func repeating(_ range: PartialRangeFrom<Int>) -> Self
 
-	/// Required by ``SetAlgebra``
+	/// Required by `SetAlgebra`
 	///
-	/// If you are inserting multiple elements, ``formUnion`` will be significantly more performant.
+	/// If you are inserting multiple elements, ``formUnion(_:)`` will be significantly more performant.
 	mutating func insert(_ newMember: __owned Element) -> (inserted: Bool, memberAfterInsert: Element)
 
-	/// Required by ``SetAlgebra``
+	/// Required by `SetAlgebra`
 	mutating func remove(_ member: Element) -> (Element)?
 
-	/// Required by ``SetAlgebra``
+	/// Required by `SetAlgebra`
 	mutating func update(with newMember: __owned Element) -> (Element)?
 
-	/// Required by ``SetAlgebra``
+	/// Required by `SetAlgebra`
 	mutating func formUnion(_ other: __owned Self)
 
-	/// Required by ``SetAlgebra``
+	/// Required by `SetAlgebra`
 	mutating func formIntersection(_ other: Self)
 
-	/// Required by ``SetAlgebra``
+	/// Required by `SetAlgebra`
 	mutating func formSymmetricDifference(_ other: __owned Self)
 
 	/// Subtract/difference
