@@ -27,6 +27,11 @@ public indirect enum SimpleRegex<Symbol>: RegularPattern, SymbolClassPatternBuil
 		.symbol(range)
 	}
 
+	/// Shorthand to create an alternation over a range of values
+	public static func range(_ range: ClosedRange<Symbol>) -> SimpleRegex<Symbol> where Symbol: Strideable, Symbol.Stride: SignedInteger {
+		.alternation(range.map { .symbol($0) })
+	}
+
 	/// A set of all the symbols in use in this regex.
 	/// Using any symbols outside this set guarantees a transition to the oblivion state (rejection).
 	public var alphabet: Set<SymbolClass> {
