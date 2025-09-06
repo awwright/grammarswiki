@@ -43,6 +43,6 @@ clean:
 
 publish:
 	test -n "$(PUBLISH_TARGET)"
-	rsync -avn --exclude='.*' htdocs/ "$(PUBLISH_TARGET)"
+	rsync -av --exclude='.*' htdocs/ "$(PUBLISH_TARGET)"
 
 .PHONY: all all-htdocs clean publish
