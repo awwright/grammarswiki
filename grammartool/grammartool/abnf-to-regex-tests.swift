@@ -9,6 +9,7 @@ func abnf_to_regex_tests_help(arguments: Array<String>) {
 	print("\tConverts <expression> to a regular expression, optionally importing rules from <filepath>");
 }
 
+// TODO: An argument to specify a custom delimiter, e.g. CRLF, RS, NUL
 func abnf_to_regex_tests_args(arguments: Array<String>) -> Int32 {
 	guard arguments.count >= 3 && arguments.count <= 4 else {
 		print(arguments.count);

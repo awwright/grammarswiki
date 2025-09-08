@@ -128,6 +128,8 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		self.finals = translation.finals;
 	}
 
+	// TODO: Maybe call this "equivalent" and not "equals"
+	// Since the meaning of the state IDs may be meaningful to some applications.
 	public static func == (lhs: Self, rhs: Self) -> Bool {
 		if(
 			lhs.states == rhs.states &&
@@ -367,7 +369,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// - Parameter fsms: The DFAs to merge together.
 	/// - Parameter merge: Given an array of the states for the respective FSMs, return if this is a final state.
 	/// 	To find a union, return true if any is true. To find the intersection, return true only when all are true.
-	///
+	/// - Returns: A tuple containing the new DFA and a mapping of old states to new states by `map[new_state_id][original_fsm_id] = old_state_id_or_nil`
 	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> (fsm: Self, map: Array<Array<States>>) {
 		var newStates = Array<Alphabet.DFATable>();
 		var newFinals = Set<StateNo>();

@@ -292,7 +292,6 @@ import Testing
 			finals: [2]
 		)
 		let dfa0min = dfa0.normalized()
-		print(dfa0min)
 		#expect(dfa0min.initial == 0)
 		#expect(dfa0min.states.count == 4)
 		#expect(dfa0min.finals == [1])
@@ -307,7 +306,6 @@ import Testing
 			finals: [4]
 		)
 		let dfa1min = dfa1.normalized()
-		print(dfa1min)
 		#expect(dfa1min.initial == 0)
 		#expect(dfa1min.states.count == 5)
 		#expect(dfa1min.finals == [4])

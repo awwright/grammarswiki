@@ -61,6 +61,7 @@ if arguments.count == 1 && ProcessInfo.processInfo.environment["REQUEST_URI"] !=
 
 //print(arguments);
 //print(ProcessInfo.processInfo.environment);
+// TODO: Maybe use <https://github.com/apple/swift-argument-parser?tab=readme-ov-file>
 exitCode = switch programName {
 	case "abnf-expression-test-input": abnf_expression_test_input_args(arguments: arguments);
 	case "abnf-list-rulenames": abnf_list_rulenames_args(arguments: arguments);

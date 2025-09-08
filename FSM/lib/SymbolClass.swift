@@ -372,6 +372,8 @@ extension SetAlphabet: ClosedRangeAlphabetProtocol where Symbol: Strideable & Bi
 	}
 }
 
+// TODO: I'm not sure this should be necessary... just specify a SymbolClassLanguage where Alphabet==ClosedRangeAlphabet
+/// An AlphabetProtocol that supports generating a set from a ClosedRange of symbols
 public protocol ClosedRangeAlphabetProtocol: AlphabetProtocol where Symbol: Comparable {
 	static func range(_: ClosedRange<Symbol>) -> Self
 }
@@ -867,6 +869,8 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 
 public typealias RangeDFA<Symbol: BinaryInteger> = SymbolClassDFA<ClosedRangeAlphabet<Symbol>> where Symbol.Stride: SignedInteger;
 
+/// A Dictionary-like structure that maps a collection of symbols to a value
+/// Unlike a Dictionary, multiple symbols can be set at the same time, while one symbol can be looked up at a time.
 public protocol AlphabetTableProtocol: Collection, ExpressibleByDictionaryLiteral, Equatable, Hashable where Key == Alphabet.SymbolClass, Element == (key: Key, value: Value) {
 	associatedtype Alphabet: AlphabetProtocol
 	associatedtype Value;
@@ -909,6 +913,9 @@ public extension AlphabetTableProtocol {
 	}
 }
 
+/// Default implementation to use Dictionary as a AlphabetTableProtocol
+///
+// TODO: Figure out to what extent SetAlphabet is different from Dictionary and document that or deduplicate it
 extension Dictionary: AlphabetTableProtocol where Key: Hashable, Value: Equatable & Hashable {
 	public typealias Alphabet = SymbolAlphabet<Key>
 	public init(_ elements: some Collection<(Alphabet.SymbolClass, Value)>) {
