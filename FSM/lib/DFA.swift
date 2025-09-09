@@ -369,8 +369,10 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// - Parameter fsms: The DFAs to merge together.
 	/// - Parameter merge: Given an array of the states for the respective FSMs, return if this is a final state.
 	/// 	To find a union, return true if any is true. To find the intersection, return true only when all are true.
-	/// - Returns: A tuple containing the new DFA and a mapping of old states to new states by `map[new_state_id][original_fsm_id] = old_state_id_or_nil`
-	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> (fsm: Self, map: Array<Array<States>>) {
+	/// - Returns: A tuple containing the new DFA,
+	///    a "backwards" mapping of old states to new states by `backwards[new_state_id][original_fsm_id] = old_state_id_or_nil`,
+	///    and a "forwards" mapping of new states to old states by `forwards[old_state_id][original_fsm_id] = new_state_id` .
+	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> (fsm: Self, forward: Dictionary<Array<States>, StateNo>, backward: Array<Array<States>>) {
 		var newStates = Array<Alphabet.DFATable>();
 		var newFinals = Set<StateNo>();
 		var forward = Dictionary<Array<States>, StateNo>();
@@ -419,7 +421,8 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 		return (
 			fsm: Self.init(states: newStates, initial: newInitialState, finals: newFinals),
-			map: backward,
+			forward: forward,
+			backward: backward,
 		);
 	}
 
