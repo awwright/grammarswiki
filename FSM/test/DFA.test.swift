@@ -504,6 +504,72 @@ import Testing
 		#expect(reversed.contains("bcd"))
 	}
 
+	@Test("derive(DFA)")
+	func test_derive_dfa() {
+		do {
+			let digits = SymbolDFA<Character>(["0"]).star().minimized().normalized();
+			let test = digits.derive(SymbolDFA<Character>.empty)
+			#expect(test == SymbolDFA<Character>.empty)
+		}
+		do {
+			let digits = SymbolDFA<Character>(["0"]).star().minimized().normalized();
+			let test = digits.derive(SymbolDFA<Character>.epsilon)
+			#expect(test == digits)
+		}
+		do {
+			let original = SymbolDFA<Character>(["a", "ab", "abc", "abcd"])
+			let prefixDFA = SymbolDFA<Character>(["a", "ab"])
+			let derived = original.derive(prefixDFA)
+			#expect(derived.contains(""))
+			#expect(derived.contains("b"))
+			#expect(derived.contains("bc"))
+			#expect(derived.contains("bcd"))
+			#expect(derived.contains("c"))
+			#expect(derived.contains("cd"))
+			#expect(!derived.contains("a"))
+			#expect(!derived.contains("ab"))
+			#expect(!derived.contains("abc"))
+			#expect(!derived.contains("abcd"))
+		}
+	}
+
+	@Test("dock(DFA)")
+	func test_dock_dfa() {
+		// Basic test: self accepts "abc" and "abd", input accepts "c"
+		// dock should accept "ab" because "ab" + "c" = "abc" in self
+		let selfDFA = SymbolDFA<Character>(["abc", "abd"])
+		let inputDFA = SymbolDFA<Character>(["c"])
+		let docked = selfDFA.dock(inputDFA)
+		#expect(docked.contains("ab"))
+		#expect(!docked.contains("a"))
+		#expect(!docked.contains("abc"))
+		#expect(!docked.contains("abd"))
+
+		// Test with empty input: should accept strings where "" + x in self, i.e., self itself
+		let emptyInput = SymbolDFA<Character>([""])
+		let dockedEmpty = selfDFA.dock(emptyInput)
+		#expect(dockedEmpty == selfDFA)
+
+		// Test with self accepting only "a", input accepting "b"
+		// dock should be empty because "a" + "b" = "ab" not in self
+		let selfA = SymbolDFA<Character>(["a"])
+		let inputB = SymbolDFA<Character>(["b"])
+		let dockedAB = selfA.dock(inputB)
+		#expect(dockedAB.finals.isEmpty)
+
+		// Test with self accepting "ab", input accepting "b"
+		// dock should accept "a" because "a" + "b" = "ab"
+		let selfAB = SymbolDFA<Character>(["ab"])
+		let dockedA = selfAB.dock(inputB)
+		#expect(dockedA.contains("a"))
+		#expect(!dockedA.contains("ab"))
+
+		// Edge case: empty self
+		let emptySelf = SymbolDFA<Character>()
+		let dockedEmptySelf = emptySelf.dock(inputB)
+		#expect(dockedEmptySelf.finals.isEmpty)
+	}
+
 	@Test("clover-leaf")
 	func test_cloverleaf() async throws {
 		let R = SymbolDFA<UInt8>.symbol(0x0);

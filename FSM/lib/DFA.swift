@@ -371,7 +371,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// 	To find a union, return true if any is true. To find the intersection, return true only when all are true.
 	/// - Returns: A tuple containing the new DFA,
 	///    a "backwards" mapping of old states to new states by `backwards[new_state_id][original_fsm_id] = old_state_id_or_nil`,
-	///    and a "forwards" mapping of new states to old states by `forwards[old_state_id][original_fsm_id] = new_state_id` .
+	///    and a "forwards" mapping of new states to old states by `forwards[old_state_ids[original_fsm_id]] = new_state_id` .
 	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> (fsm: Self, forward: Dictionary<Array<States>, StateNo>, backward: Array<Array<States>>) {
 		var newStates = Array<Alphabet.DFATable>();
 		var newFinals = Set<StateNo>();
@@ -784,6 +784,42 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		let newInitial = self.nextState(state: self.initial, input: input)
 		guard let newInitial else { return Self.empty }
 		return Self.init(states: self.states, initial: newInitial, finals: self.finals);
+	}
+
+	/// The left quotient; return a FSM of all strings removing `input` from the start
+	///
+	/// Sometimes this is described as the left quotient, or `input\self`,
+	/// that is, the set of all strings `y` where `x` is a string in `input` and `x++y` is a string in `self`
+	/// - Parameter input: Set of strings to remove from the start of this language
+	/// - Returns: The DFA representing the left quotient.
+	public func derive(_ input: Self) -> Self {
+		let (derived, _, backward) = Self.parallel(fsms: [input, self], merge: { $0[1] })
+		var newInitials: Set<StateNo> = []
+		for (newState, oldStates) in backward.enumerated() {
+			if let inputState = oldStates[0], input.finals.contains(inputState) {
+				newInitials.insert(newState)
+			}
+		}
+		if newInitials.isEmpty {
+			return Self()
+		}
+		let nfa = SymbolClassNFA<Alphabet>(
+			states: derived.statesSet,
+			epsilon: derived.epsilon,
+			initials: newInitials,
+			finals: derived.finals
+		)
+		return Self(nfa: nfa)
+	}
+
+	/// The right quotient; return a FSM of all strings after removing `input` from the end
+	///
+	/// That is, the set of all strings `x` where `x++y` is a string in `self` and `y` is a string in `input`
+	/// - Parameter input: Set of strings to remove from the end of this language
+	/// - Returns: The DFA representing the right quotient.
+	public func dock(_ input: Self) -> Self {
+		// There's, apparently, no way to implement this without reversing the language
+		return self.reversed().derive(input.reversed()).reversed()
 	}
 
 	/// An iterator over all accepted sequences. Implements `Sequence`.
