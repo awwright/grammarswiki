@@ -11,17 +11,17 @@ func abnf_ambiguous_concat_args(arguments: Array<String>) -> Int32 {
 		print(arguments.count);
 		return 1;
 	}
-	let abnfExpression = arguments[2];
-	let input = arguments[3];
-	abnf_ambiguous_concat_run(response: &stdout, abnfExpression: abnfExpression, input: input);
+	let abnf_lhs = arguments[2];
+	let abnf_rhs = arguments[3];
+	abnf_ambiguous_concat_run(response: &stdout, lhs: abnf_lhs, rhs: abnf_rhs);
 	return stdout.exitCode;
 }
 
-func abnf_ambiguous_concat_run(response r: inout some ResponseProtocol, abnfExpression: String, input: String) {
+func abnf_ambiguous_concat_run(response r: inout some ResponseProtocol, lhs: String, rhs: String) {
 	// Parse the first two arguments as ABNF
 	// Don't forget to quote the ABNF in your shell so it appears as a single argument.
 	let abnfTree1: ABNFAlternation<UInt32>;
-	do { abnfTree1 = try ABNFAlternation<UInt32>.parse(abnfExpression.utf8); }
+	do { abnfTree1 = try ABNFAlternation<UInt32>.parse(lhs.utf8); }
 	catch {
 		r.writeLn("Could not parse ABNF");
 		r.writeLn(error.localizedDescription);
@@ -31,7 +31,7 @@ func abnf_ambiguous_concat_run(response r: inout some ResponseProtocol, abnfExpr
 	let fsm1: SymbolDFA<UInt32> = try! abnfTree1.toPattern(rules: ABNFBuiltins<SymbolDFA<UInt32>>.dictionary);
 
 	let abnfTree2: ABNFAlternation<UInt32>;
-	do { abnfTree2 = try ABNFAlternation<UInt32>.parse(abnfExpression.utf8); }
+	do { abnfTree2 = try ABNFAlternation<UInt32>.parse(rhs.utf8); }
 	catch {
 		r.writeLn("Could not parse ABNF");
 		r.writeLn(error.localizedDescription);
@@ -40,17 +40,16 @@ func abnf_ambiguous_concat_run(response r: inout some ResponseProtocol, abnfExpr
 	}
 	let fsm2: SymbolDFA<UInt32> = try! abnfTree2.toPattern(rules: ABNFBuiltins<SymbolDFA<UInt32>>.dictionary);
 
-	// The theory behind this is that for all strings in A++B,
-	// there is some end state in A that matches a start state in B.
-	// However if the string is ambiguous, there
-	let repeat1 = SymbolDFA<UInt32>.union(fsm1.finals.sorted().map {
-		fsm1.subpaths(source: $0, target: fsm1.finals);
-	});
-	let repeat2 = fsm2.subpaths(source: fsm2.initial, target: [fsm2.initial]).intersection(fsm2);
-	let overlap = repeat1.minimized().subtracting(SymbolDFA.epsilon).minimized();
+	let nonprefix1 = fsm1.derive(fsm1).minimized();
+	let nonprefix2 = fsm2.dock(fsm2).minimized();
+	let overlap = nonprefix1.intersection(nonprefix2).subtracting(SymbolDFA<UInt32>.epsilon).minimized().normalized()
+	let prefix1 = fsm1.dock(overlap);
+	let prefix2 = fsm2.dock(overlap);
 
 	r.status = .ok;
 	// TODO: Show a tuple of (prefix, overlap, sufix)
+	r.writeLn(prefix1.minimized().normalized().toViz())
 	r.writeLn(overlap.toViz())
+	r.writeLn(prefix2.minimized().normalized().toViz())
 	r.end()
 }
