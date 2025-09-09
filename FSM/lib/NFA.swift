@@ -468,6 +468,39 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 		precondition(range.lowerBound >= 0)
 		return Self.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
+	
+	/// Finds the language with the symbols reversed in each string.
+	///
+	/// Reverses the direction of all transitions, and swaps initials and finals.
+	/// - Returns: The reversed NFA
+	public func reversed() -> Self {
+		// For each old transition A -> B on symbol S, add B -> A on S
+		var newStates = Array<Alphabet.NFATable>(repeating: [:], count: self.statesSet.count)
+		for (source, table) in self.statesSet.enumerated() {
+			for (symbol, targets) in table {
+				for target in targets {
+					if newStates[target][symbol] == nil {
+						newStates[target][symbol] = Set<Int>()
+					}
+					newStates[target][symbol]!.insert(source)
+				}
+			}
+		}
+		var newEpsilon = Array(repeating: Set<Int>([]), count: self.statesSet.count);
+		for (source, targets) in self.epsilon.enumerated() {
+			for target in targets {
+				newEpsilon[target].insert(source);
+			}
+		}
+		// Create an NFA with the reversed transitions and swapped initial/finals
+		return SymbolClassNFA<Alphabet>(
+			states: newStates,
+			epsilon: newEpsilon,
+			// Swap initials and finals too
+			initials: self.finals,
+			finals: self.initials,
+		)
+	}
 
 	public func homomorphism<Target: AlphabetProtocol>(mapping: [(some Collection<SymbolClass>, some Collection<Target.SymbolClass>)]) -> SymbolClassNFA<Target> where Target: Hashable {
 		var newStates: [Target.NFATable] = self.statesSet.map { _ in [:] }

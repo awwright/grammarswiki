@@ -471,6 +471,28 @@ import Testing
 		#expect(repeated.contains("aaaaaa"))
 	}
 
+	@Test("reversed()")
+	func test_reverse() {
+		let original = SymbolDFA<Character>(["a", "ab", "abc", "abcd"])
+		let reversed = original.reversed()
+		#expect(!reversed.contains(""))
+		#expect(reversed.contains("a"))
+		#expect(reversed.contains("ba"))
+		#expect(!reversed.contains("ab"))
+		#expect(reversed.contains("cba"))
+		#expect(!reversed.contains("abc"))
+	}
+
+	@Test("reversed() 1")
+	func test_reverse_1() {
+		let original = SymbolDFA<Character>(["ab"]).star().concatenate(.symbol("b"))
+		let reversed = original.reversed()
+		#expect(!reversed.contains(""))
+		#expect(reversed.contains("b"))
+		#expect(reversed.contains("bba"))
+		#expect(reversed.contains("bbaba"))
+	}
+
 	@Test("clover-leaf")
 	func test_cloverleaf() async throws {
 		let R = SymbolDFA<UInt8>.symbol(0x0);

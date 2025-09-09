@@ -762,11 +762,17 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		return Self.concatenate(Array(repeating: self, count: range.lowerBound) + [self.star()])
 	}
 
-	//func derive(_ input: Element) -> Self
-	//{
-	//	let nextStates = self.next(initial: self.initial, )
-	//	return Self.init(states: self.states, initial: currentState, finals: self.finals);
-	//}
+	/// Find the language of all strings with symbols in reverse order
+	/// - Returns: The reversed FSM
+	public func reversed() -> Self {
+		let nfa = SymbolClassNFA<Alphabet>(
+			states: self.statesSet,
+			epsilon: Array(repeating: [], count: self.states.count),
+			initials: self.initials,
+			finals: self.finals,
+		).reversed()
+		return Self(nfa: nfa)
+	}
 
 	/// An iterator over all accepted sequences. Implements `Sequence`.
 	///
