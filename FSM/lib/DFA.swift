@@ -774,6 +774,18 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		return Self(nfa: nfa)
 	}
 
+	/// Return a FSM representing all strings removing `input` from the start
+	///
+	/// This essentially reads "input" starting from the initial state, then advances the initial state to that state.
+	/// No other modifications are made.
+	/// - Parameter input: The string to remove from the start
+	/// - Returns: A FSM with the given string removed
+	public func derive(_ input: Element) -> Self {
+		let newInitial = self.nextState(state: self.initial, input: input)
+		guard let newInitial else { return Self.empty }
+		return Self.init(states: self.states, initial: newInitial, finals: self.finals);
+	}
+
 	/// An iterator over all accepted sequences. Implements `Sequence`.
 	///
 	/// Example:

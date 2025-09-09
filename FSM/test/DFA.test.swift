@@ -493,6 +493,17 @@ import Testing
 		#expect(reversed.contains("bbaba"))
 	}
 
+	@Test("derive(String)")
+	func test_derive_string_0() {
+		let original = SymbolDFA<Character>(["a", "ab", "abc", "abcd"])
+		let reversed = original.derive(["a"])
+		#expect(reversed.contains(""))
+		#expect(!reversed.contains("a"))
+		#expect(reversed.contains("b"))
+		#expect(reversed.contains("bc"))
+		#expect(reversed.contains("bcd"))
+	}
+
 	@Test("clover-leaf")
 	func test_cloverleaf() async throws {
 		let R = SymbolDFA<UInt8>.symbol(0x0);
