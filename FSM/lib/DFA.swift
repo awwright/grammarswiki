@@ -822,6 +822,21 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		return self.reversed().derive(input.reversed()).reversed()
 	}
 
+	/// Finds the prefix-free subset
+	///
+	/// That is, the shortest strings that are not found as a prefix of any other string in the language.
+	///
+	/// This is done very simply, by removing the transitions from final states, ensuring that the first final state you visit is the last.
+	/// - Parameter input: Set of strings to remove from the end of this language
+	/// - Returns: The DFA representing the right quotient.
+	public func prefixes() -> Self {
+		Self(
+			states: self.states.enumerated().map { (id, table) in finals.contains(id) ? [:] : table },
+			initial: initial,
+			finals: finals,
+		);
+	}
+
 	/// An iterator over all accepted sequences. Implements `Sequence`.
 	///
 	/// Example:

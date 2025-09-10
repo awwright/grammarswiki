@@ -570,6 +570,48 @@ import Testing
 		#expect(dockedEmptySelf.finals.isEmpty)
 	}
 
+	@Test("prefixes()")
+	func test_prefixes() async throws {
+		// DFA with strings where some are prefixes of others
+		let dfa0 = SymbolDFA<Character>(["a", "ab", "abc", "x", "xxxy"])
+		let pfx0 = dfa0.prefixes()
+		#expect(pfx0.contains("a"))
+		#expect(!pfx0.contains("ab"))
+		#expect(!pfx0.contains("abc"))
+		#expect(pfx0.contains("x"))
+		#expect(!pfx0.contains("xxxy"))
+		#expect(!pfx0.contains(""))
+
+		// DFA with strings where some are prefixes of others
+		let dfa1 = SymbolDFA<Character>(["a", "ab", "abc", "x", "xxxy"]).repeating(1...4)
+		let pfx1 = dfa1.prefixes()
+		#expect(pfx1.contains("a"))
+		#expect(!pfx1.contains("ab"))
+		#expect(!pfx1.contains("abc"))
+		#expect(pfx1.contains("x"))
+		#expect(!pfx1.contains("xxxy"))
+		#expect(!pfx1.contains(""))
+
+		// DFA with only prefixes
+		let dfa2 = SymbolDFA<Character>(["a", "b", "c"])
+		let pfx2 = dfa2.prefixes()
+		#expect(pfx2.contains("a"))
+		#expect(pfx2.contains("b"))
+		#expect(pfx2.contains("c"))
+		#expect(!pfx2.contains("ab"))
+
+		// Language with epsilon
+		let dfa3 = SymbolDFA<Character>(["", "a", "b", "c"])
+		let pfx3 = dfa3.prefixes()
+		#expect(!pfx3.contains("a"))
+		#expect(pfx3.contains(""))
+
+		// Epsilon
+		let dfa4 = SymbolDFA<Character>([""])
+		let pfx4 = dfa4.prefixes()
+		#expect(pfx4.contains(""))
+	}
+
 	@Test("clover-leaf")
 	func test_cloverleaf() async throws {
 		let R = SymbolDFA<UInt8>.symbol(0x0);
