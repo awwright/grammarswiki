@@ -1,12 +1,16 @@
-/// A Finite Partitioned Language: A language with finite, partitioned elements
+/// A Finite Partitioned Language: A language with finite number of partitions of a finite number of strings
 struct FPL<Symbol: Hashable & Comparable>: Hashable, Equatable, ExpressibleByArrayLiteral {
 	typealias Symbol = Symbol
-	typealias Alphabet = SymbolAlphabet<Symbol>
 	typealias Element = Array<Symbol>
+	typealias Alphabet = SetAlphabet<Element>
+	typealias Partition = Alphabet.ArrayLiteralElement
+	public typealias ArrayLiteralElement = Partition
 
 	/// The complete set of strings in the language
 	var elements: Set<Element>
-	var partitions: SetAlphabet<Element>
+
+	/// The partitioned set of strings in the language
+	var partitions: Alphabet
 
 	static var empty: Self { Self() }
 	static var epsilon: Self { Self(elements: Set([[]])) }
@@ -22,10 +26,9 @@ struct FPL<Symbol: Hashable & Comparable>: Hashable, Equatable, ExpressibleByArr
 		self.partitions = []
 	}
 
-	public typealias ArrayLiteralElement = Element
-	init (arrayLiteral elements: Element...) {
-		self.elements = Set(elements)
-		self.partitions = SetAlphabet(partitions: elements.map { Set([$0]) })
+	init (arrayLiteral elements: Partition...) {
+		self.elements = Set(elements.flatMap { Array($0) })
+		self.partitions = SetAlphabet(partitions: elements	)
 	}
 
 	init (elements: Set<Element>) {
@@ -33,44 +36,17 @@ struct FPL<Symbol: Hashable & Comparable>: Hashable, Equatable, ExpressibleByArr
 		self.partitions = [elements]
 	}
 
+	init (partitions: some Collection<Partition>) {
+		self.elements = Set(partitions.flatMap { $0 })
+		self.partitions = Alphabet(partitions: partitions)
+	}
+
 	static func == (lhs: Self, rhs: Self) -> Bool {
-		return lhs.elements == rhs.elements
+		(lhs.elements == rhs.elements) && (lhs.partitions == rhs.partitions)
 	}
 
-	var alphabet: Alphabet {
-		Alphabet(alphabet: dfa.alphabet)
-	}
-
-	func toViz(stringify: (Alphabet.Element) -> String = { String(describing: $0) }) -> String {
+	func toViz(stringify: (Symbol) -> String = { String(describing: $0) }) -> String {
 		self.dfa.toViz(stringify: stringify)
-	}
-
-	func targets(source state: Int) -> Dictionary<Int, Set<Symbol>> {
-		dfa.targets(source: state)
-	}
-
-	func targets(source state: Int, target: Int) -> Set<Symbol> {
-		dfa.targets(source: state, target: target)
-	}
-
-	func nextState(state: Int, symbol: Symbol) -> Int? {
-		dfa.nextState(state: state, symbol: symbol)
-	}
-
-	func nextState(state: Int, range: Symbol) -> Int? {
-		dfa.nextState(state: state, symbol: range)
-	}
-
-	func nextState(state: Int, input: any Sequence<Symbol>) -> Int? {
-		dfa.nextState(state: state, input: input)
-	}
-
-	func isFinal(_ state: Int?) -> Bool {
-		dfa.isFinal(state)
-	}
-
-	func isFinal(_ state: Set<Int>) -> Bool {
-		dfa.isFinal(state)
 	}
 
 	func contains(_ input: Array<Symbol>) -> Bool {
@@ -105,13 +81,17 @@ struct FPL<Symbol: Hashable & Comparable>: Hashable, Equatable, ExpressibleByArr
 	}
 
 	func concatenate(_ other: Self) -> Self {
-		var newElements = Set<Element>()
-		for a in self.elements {
-			for b in other.elements {
-				newElements.insert(a + b)
+		var newParts: Array<Partition> = []
+		var newStrings = Set<Element>()
+		for a in self.partitions {
+			for b in other.partitions {
+				let newpart: Partition = Set(a.flatMap { a_ in b.map { b_ in a_ + b_ } })
+				newParts.append(newpart)
+				precondition(newStrings.intersection(newpart).isEmpty, "concatenation must be unambiguous");
+				newStrings.formUnion(newpart)
 			}
 		}
-		return Self(elements: newElements)
+		return Self(partitions: newParts)
 	}
 
 	static func symbol(_ element: Symbol) -> Self {

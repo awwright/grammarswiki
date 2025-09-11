@@ -4,6 +4,11 @@
 import Testing
 
 private typealias StringFPL = FPL<Character>
+private typealias StringAlphabet = StringFPL.Alphabet
+
+private func set(_ strs: String...) -> Set<Array<Character>>{
+	Set(strs.map { Array($0) });
+}
 
 @Suite() struct FPLTests {
 	@Test()
@@ -18,9 +23,9 @@ private typealias StringFPL = FPL<Character>
 
 	@Test
 	func test_init_arrayLiteral() {
-		let lang: StringFPL = [Array("ab"), Array("c")]
+		let lang: StringFPL = [ set("ab", "c") ]
 		#expect(lang.elements == Set([Array("ab"), Array("c")]))
-		#expect(lang.partitions == SetAlphabet(partitions: [Array("ab"), Array("c")].map { Set([$0]) }))
+		#expect(lang.partitions == SetAlphabet(partitions: [ set("ab", "c") ]))
 	}
 
 	@Test
@@ -32,8 +37,8 @@ private typealias StringFPL = FPL<Character>
 
 	@Test
 	func test_eq() {
-		let a = StringFPL(elements: Set([Array("a")]))
-		let b = StringFPL(elements: Set([Array("a")]))
+		let a: StringFPL = [ set("a") ]
+		let b: StringFPL = [ set("a") ]
 		#expect(a == b)
 
 		let c = StringFPL(elements: Set([Array("b")]))
@@ -41,15 +46,6 @@ private typealias StringFPL = FPL<Character>
 
 		let empty = StringFPL.empty
 		#expect(empty == StringFPL())
-	}
-
-	@Test
-	func test_alphabet() {
-		let lang = StringFPL(elements: [Array("ab"), Array("c")])
-		#expect(lang.alphabet.symbols == Set(["a", "b", "c"].map(Character.init)))
-
-		let empty = StringFPL.empty
-		#expect(empty.alphabet.symbols.isEmpty)
 	}
 
 	@Test
@@ -99,7 +95,7 @@ private typealias StringFPL = FPL<Character>
 	}
 
 	@Test
-	static func union() {
+	func test_static_union() {
 		let a = StringFPL(elements: Set([Array("a")]))
 		let b = StringFPL(elements: Set([Array("b")]))
 		let union = StringFPL.union([a, b])
@@ -107,7 +103,7 @@ private typealias StringFPL = FPL<Character>
 	}
 
 	@Test
-	static func concatenate() {
+	func test_static_concatenate() {
 		let a = StringFPL(elements: Set([Array("a"), Array("b")]))
 		let b = StringFPL(elements: Set([Array("c"), Array("d")]))
 		let concat = StringFPL.concatenate([a, b])
@@ -115,11 +111,37 @@ private typealias StringFPL = FPL<Character>
 	}
 
 	@Test
-	func test_concatenate() {
-		let a = StringFPL(elements: Set([Array("a"), Array("b")]))
-		let b = StringFPL(elements: Set([Array("c"), Array("d")]))
+	func test_concatenate_1() {
+		let a: StringFPL = [ set("A", "a") ]
+		let b: StringFPL = [ set("B", "b") ]
 		let concat = a.concatenate(b)
-		#expect(concat.elements == Set([Array("ac"), Array("ad"), Array("bc"), Array("bd")]))
+		#expect(concat.partitions == StringAlphabet(partitions: [
+			set("AB", "Ab", "aB", "ab"),
+		]));
+	}
+
+	@Test
+	func test_concatenate_2() {
+		let a: StringFPL = [ set("A", "a"), set("B", "b") ]
+		let b: StringFPL = [ set("C", "c") ]
+		let concat = a.concatenate(b)
+		#expect(concat.partitions == StringAlphabet(partitions: [
+			set("AC", "Ac", "aC", "ac"),
+			set("BC", "Bc", "bC", "bc"),
+		]))
+	}
+
+	@Test
+	func test_concatenate_4() {
+		let a: StringFPL = [ set("A", "a"), set("B", "b") ]
+		let b: StringFPL = [ set("C", "c"), set("D", "d") ]
+		let concat = a.concatenate(b)
+		#expect(concat.partitions == StringAlphabet(partitions: [
+			set("AC", "Ac", "aC", "ac"),
+			set("AD", "Ad", "aD", "ad"),
+			set("BC", "Bc", "bC", "bc"),
+			set("BD", "Bd", "bD", "bd"),
+		]))
 	}
 
 	@Test
