@@ -58,7 +58,9 @@ struct FPL<Symbol: Hashable & Comparable>: Hashable, Equatable, ExpressibleByArr
 	}
 
 	func union(_ other: __owned Self) -> Self {
-		Self(elements: self.elements.union(other.elements))
+		precondition(self.elements.isDisjoint(with: other.elements) == true)
+		let parts = self.partitions.partitions.union(other.partitions.partitions)
+		return Self(partitions: parts)
 	}
 
 	func intersection(_ other: Self) -> Self {

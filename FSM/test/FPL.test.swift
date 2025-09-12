@@ -159,9 +159,13 @@ private func set(_ strs: String...) -> Set<Array<Character>>{
 
 	@Test
 	func test_optional() {
-		let lang = StringFPL.symbol("a".first!)
-		let opt = lang.optional()
-		#expect(opt.elements == Set([[], Array("a")]))
+		let a: StringFPL = [ set("A", "a"), set("B", "b") ]
+		let opt = a.optional()
+		#expect(opt.partitions == StringAlphabet(partitions: [
+			set("A", "a"),
+			set("B", "b"),
+			set(""),
+		]))
 	}
 
 	@Test
@@ -210,14 +214,27 @@ private func set(_ strs: String...) -> Set<Array<Character>>{
 	}
 
 	@Test
-	func test_repeating_range() {
-		let lang = StringFPL.symbol("a".first!)
-		let rep = lang.repeating(2...4)
-		#expect(rep.contains("aa"))
-		#expect(rep.contains("aaa"))
-		#expect(rep.contains("aaaa"))
-		#expect(!rep.contains("a"))
-		#expect(!rep.contains("aaaaa"))
+	func test_repeating_range_1() {
+		let a: StringFPL = [ set("A", "a") ]
+		let concat = a.repeating(1...2)
+		#expect(concat.partitions == StringAlphabet(partitions: [
+			set("A", "a"),
+			set("AA", "Aa", "aA", "aa"),
+		]))
+	}
+
+	@Test
+	func test_repeating_range_2() {
+		let a: StringFPL = [ set("A", "a"), set("B", "b") ]
+		let concat = a.repeating(1...2)
+		#expect(concat.partitions == StringAlphabet(partitions: [
+			set("A", "a"),
+			set("B", "b"),
+			set("AA", "Aa", "aA", "aa"),
+			set("AB", "Ab", "aB", "ab"),
+			set("BA", "Ba", "bA", "ba"),
+			set("BB", "Bb", "bB", "bb"),
+		]))
 	}
 
 	@Test
