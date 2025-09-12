@@ -185,13 +185,28 @@ private func set(_ strs: String...) -> Set<Array<Character>>{
 //		#expect(plus.contains("aaa"))
 	}
 
+
 	@Test
-	func test_repeating_int() {
-		let lang = StringFPL.symbol("a".first!)
-		let rep = lang.repeating(3)
-		#expect(rep.contains("aaa"))
-		#expect(!rep.contains("aa"))
-		#expect(!rep.contains("aaaa"))
+	func test_repeating_int_1() {
+		let a: StringFPL = [ set("A", "a") ]
+		let concat = a.repeating(2)
+		#expect(concat.partitions == StringAlphabet(partitions: [
+			set("AA", "Aa", "aA", "aa"),
+		]))
+		// TODO: Test ambiguous concatenation, e.g. set("a", "aa")
+	}
+
+	@Test
+	func test_repeating_int_2() {
+		let a: StringFPL = [ set("A", "a"), set("B", "b") ]
+		let concat = a.repeating(2)
+		#expect(concat.partitions == StringAlphabet(partitions: [
+			set("AA", "Aa", "aA", "aa"),
+			set("AB", "Ab", "aB", "ab"),
+			set("BA", "Ba", "bA", "ba"),
+			set("BB", "Bb", "bB", "bb"),
+		]))
+		// TODO: Test ambiguous concatenation, e.g. set("a", "aa")
 	}
 
 	@Test
