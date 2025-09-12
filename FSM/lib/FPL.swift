@@ -122,7 +122,7 @@ struct FPL<Symbol: Hashable & Comparable>: Hashable, Equatable, ExpressibleByArr
 
 	func repeating(_ count: Int) -> Self {
 		precondition(count >= 0)
-		var result = Self(elements: Set([[]]))
+		var result = Self.epsilon
 		for _ in 0..<count {
 			result = result.concatenate(self)
 		}
@@ -132,12 +132,13 @@ struct FPL<Symbol: Hashable & Comparable>: Hashable, Equatable, ExpressibleByArr
 	func repeating(_ range: ClosedRange<Int>) -> Self {
 		precondition(range.lowerBound >= 0)
 		let base = repeating(range.lowerBound)
-		let opt = self.optional()
-		var opts = Self(elements: Set([[]]))
-		for _ in 0..<range.upperBound - range.lowerBound {
-			opts = opts.concatenate(opt)
+		var opt_i = base
+		var opt_n = base
+		for _ in 0..<(range.upperBound - range.lowerBound) {
+			opt_i = opt_i.concatenate(self)
+			opt_n = opt_n.union(opt_i)
 		}
-		return base.concatenate(opts)
+		return opt_n
 	}
 
 	func reversed() -> Self {

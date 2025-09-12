@@ -111,12 +111,30 @@ private func set(_ strs: String...) -> Set<Array<Character>>{
 	}
 
 	@Test
+	func test_concatenate_0() {
+		let a: StringFPL = []
+		let b: StringFPL = []
+		let concat = a.concatenate(b)
+		#expect(concat.partitions == StringAlphabet(partitions: []));
+	}
+
+	@Test
 	func test_concatenate_1() {
 		let a: StringFPL = [ set("A", "a") ]
 		let b: StringFPL = [ set("B", "b") ]
 		let concat = a.concatenate(b)
 		#expect(concat.partitions == StringAlphabet(partitions: [
 			set("AB", "Ab", "aB", "ab"),
+		]));
+	}
+
+	@Test
+	func test_concatenate_1a() {
+		let a: StringFPL = [ set("A", "a", "") ]
+		let b: StringFPL = [ set("B", "b") ]
+		let concat = a.concatenate(b)
+		#expect(concat.partitions == StringAlphabet(partitions: [
+			set("AB", "Ab", "aB", "ab", "B", "b"),
 		]));
 	}
 
@@ -189,6 +207,12 @@ private func set(_ strs: String...) -> Set<Array<Character>>{
 //		#expect(plus.contains("aaa"))
 	}
 
+	@Test
+	func test_repeating_int_0() {
+		let a: StringFPL = [ set("A", "a") ]
+		let concat = a.repeating(0)
+		#expect(concat.partitions == StringAlphabet(partitions: [ set("") ]))
+	}
 
 	@Test
 	func test_repeating_int_1() {
@@ -216,8 +240,9 @@ private func set(_ strs: String...) -> Set<Array<Character>>{
 	@Test
 	func test_repeating_range_1() {
 		let a: StringFPL = [ set("A", "a") ]
-		let concat = a.repeating(1...2)
+		let concat = a.repeating(0...2)
 		#expect(concat.partitions == StringAlphabet(partitions: [
+			set(""),
 			set("A", "a"),
 			set("AA", "Aa", "aA", "aa"),
 		]))
@@ -226,8 +251,9 @@ private func set(_ strs: String...) -> Set<Array<Character>>{
 	@Test
 	func test_repeating_range_2() {
 		let a: StringFPL = [ set("A", "a"), set("B", "b") ]
-		let concat = a.repeating(1...2)
+		let concat = a.repeating(0...2)
 		#expect(concat.partitions == StringAlphabet(partitions: [
+			set(""),
 			set("A", "a"),
 			set("B", "b"),
 			set("AA", "Aa", "aA", "aa"),
