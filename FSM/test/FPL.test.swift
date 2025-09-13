@@ -341,4 +341,76 @@ private func set(_ strs: String...) -> Set<Array<Character>>{
 		let diff = a - b
 		#expect(diff.elements == Set([Array("a")]))
 	}
+
+	@Test
+	static func test_ascii_json(){
+		// Find the set of JSON strings
+		var json_char_parts: Array<Array<Array<Character>>> = [];
+		func uesc(_ c: Int) -> Array<Array<Character>> {
+			// TODO: A-F and a-f are equivalent
+			if c < 0x10 { [ Array("\\u000" + String(c, radix: 16)) ] }
+			else if c < 0x100 { [ Array("\\u00" + String(c, radix: 16)) ] }
+			else { [ Array("\\u0" + String(c, radix: 16)) ] }
+		}
+		func literal(_ c: Int) -> Array<Array<Character>> {
+			// Generate a character with ASCII code c
+			[ Array(String(UnicodeScalar(UInt8(c)))) ]
+		}
+		// Comment most of these out for performance reasons
+		// This takes several minutes to compute otherwise
+		//json_char_parts += (0x00...0x07).map { escaped($0) };
+		//json_char_parts += [ set("\\b") + escaped(0x08) ];
+		//json_char_parts += [ set("\\t") + escaped(0x09) ];
+		//json_char_parts += [ set("\\n") + escaped(0x0A) ];
+		//json_char_parts += (0x0B...0x0B).map { escaped($0) };
+		//json_char_parts += [ set("\\f") + escaped(0x0C) ];
+		//json_char_parts += [ set("\\r") + escaped(0x0D) ];
+		//json_char_parts += (0x0E...0x19).map { escaped($0) };
+		//json_char_parts += (0x20...0x21).map { literal($0) + escaped($0) };
+		//json_char_parts += [ set("\\\"") + escaped(0x22) ]; // double quote
+		//json_char_parts += (0x23...0x2E).map { literal($0) + escaped($0) };
+		//json_char_parts += [ literal(0x2F) + set("\\/") + escaped(0x2F) ];
+		//json_char_parts += (0x30...0x39).map { literal($0) + escaped($0) }; // numbers
+		//json_char_parts += (0x3A...0x40).map { literal($0) + escaped($0) }; // symbols
+		//json_char_parts += (0x41...0x5A).map { literal($0) + escaped($0) }; // capital letters
+		//json_char_parts += (0x5B...0x5B).map { literal($0) + escaped($0) }; // symbols
+		//json_char_parts += [ set("\\\"") + escaped(0x5C) ];
+		//json_char_parts += (0x5D...0x60).map { literal($0) + escaped($0) }; // symbols
+		json_char_parts += (0x61...0x7A).map { literal($0) + uesc($0) }; // lower letters
+		//json_char_parts += (0x7B...0x7F).map { literal($0) + escaped($0) }; // symbols
+		//print(chars.map { $0.map { String($0) } })
+		let json_char: FPL<Character> = StringFPL(partitions: json_char_parts.map { Set($0) });
+		let json_seq = json_char.repeating(0...2);
+//		for part in json_seq.partitions {
+//			for string in part {
+//				print(String(string), terminator: " / ")
+//			}
+//			print("")
+//		}
+		// Next, create a URI encoded version of strings
+		var uri_char_parts: Array<Array<Array<Character>>> = [];
+		func uriesc(_ c: Int) -> Array<Array<Character>> {
+			// TODO: A-F and a-f are equivalent here too
+			if c < 0 { fatalError("Int out of range") }
+			else if c < 0x10 { [ Array("%0" + String(c, radix: 16)) ] }
+			else if c < 0x100 { [ Array("%" + String(c, radix: 16)) ] }
+			else { fatalError("Int out of range"); }
+		}
+		// TODO: There's a lot of characters with no literal encoding here
+		//uri_char_parts += (0x00...0x2F).map { uriesc($0) }; // specials/symbols
+		//uri_char_parts += (0x30...0x39).map { literal($0) + uriesc($0) }; // numbers
+		//uri_char_parts += (0x3A...0x40).map { literal($0) + uriesc($0) }; // symbols
+		//uri_char_parts += (0x41...0x5A).map { literal($0) + uriesc($0) }; // capital letters
+		//uri_char_parts += (0x5B...0x60).map { literal($0) + uriesc($0) }; // symbols
+		uri_char_parts += (0x61...0x7A).map { literal($0) + uriesc($0) }; // lower letters
+		//uri_char_parts += (0x7B...0x7F).map { literal($0) + uriesc($0) }; // symbols
+		let uri_char: FPL<Character> = StringFPL(partitions: uri_char_parts.map { Set($0) });
+		let uri_seq = uri_char.repeating(0...2);
+//		for part in uri_seq.partitions {
+//			for string in part {
+//				print(String(string), terminator: " / ")
+//			}
+//			print("")
+//		}
+	}
 }
