@@ -311,11 +311,13 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	}
 
 	/// Get a FSM representing all the inputs that get you to an equivalent state
-	/// I.e. all of the other inputs that will produce the same results with any additional input
+	/// I.e. all of the inputs that are indistinguishable with respect to any additional input.
 	/// I.e. all the values of `other` where `other + extra == input + extra` for all `extra`
-	/// Combine this with tags on states to distinguish different end states that have different semantics
 	/// However, this will return `nil` if input lands on a non-live state.
+	/// If non-nil, this returns the partition of strings identified by the Myhill-Nerode Theorem.
+	/// Combine this with tags on states to distinguish different end states that have different semantics
 	/// In this case, it is equivalent to all inputs that land on a non-live state, which canot be enumerated without an alphabet. So don't do that.
+	///
 	public func equivalentInputs(input: any Sequence<Symbol>) -> Self? {
 		// Minimizing the FSM ensures that there's no equivalent final states
 		// If the FSM is already minimized this should be a somewhat speedy operation
@@ -676,7 +678,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		return Self.parallel(fsms: languages, merge: { $0.contains(where: { $0 }) }).fsm;
 	}
 
-	/// Finds the language of all the the ways to join a string from the first language with strings in the second language
+	/// Finds the language of all the the ways to join a string from the first language with strings in the second language.
 	public static func concatenate(_ languages: Array<Self>) -> Self {
 		if(languages.count == 0){
 			// Concatenation identity is epsilon
@@ -688,6 +690,10 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		return Self(nfa: nfa);
 	}
 
+	/// Concatenate an input after the current language
+	///
+	/// This is a shorthand for the static method ``concatenate(_:)-type.method``.
+	/// It can sometimes be inverted by ``dock(_:)``.
 	public func concatenate(_ other: Self) -> Self {
 		return Self.concatenate([self, other]);
 	}
@@ -774,10 +780,11 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		return Self(nfa: nfa)
 	}
 
-	/// Return a FSM representing all strings removing `input` from the start
+	/// Return a FSM of all strings with `input` removed from the start,
+	/// i.e. the [Brzozowski derivative](https://en.wikipedia.org/wiki/Brzozowski_derivative).
 	///
-	/// This essentially reads "input" starting from the initial state, then advances the initial state to that state.
-	/// No other modifications are made.
+	/// This essentially reads the input, then advances the initial state to the new state.
+	/// No other modifications are made. Strings not beginning with the input are discarded.
 	/// - Parameter input: The string to remove from the start
 	/// - Returns: A FSM with the given string removed
 	public func derive(_ input: Element) -> Self {
@@ -788,8 +795,10 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 	/// The left quotient; return a FSM of all strings removing `input` from the start
 	///
-	/// Sometimes this is described as the left quotient, or `input\self`,
+	/// Often  notated `input\self`,
 	/// that is, the set of all strings `y` where `x` is a string in `input` and `x++y` is a string in `self`
+	///
+	/// For the case of a language of a single string, this is the same as ``derive(_:)-(Element)``.
 	/// - Parameter input: Set of strings to remove from the start of this language
 	/// - Returns: The DFA representing the left quotient.
 	public func derive(_ input: Self) -> Self {
@@ -812,9 +821,17 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		return Self(nfa: nfa)
 	}
 
-	/// The right quotient; return a FSM of all strings after removing `input` from the end
+	/// The right quotient; return a FSM of all strings with a string from `input` removed from the end.
 	///
-	/// That is, the set of all strings `x` where `x++y` is a string in `self` and `y` is a string in `input`
+	/// That is, the set of all strings `x` where `x++y` is a string in `self` and `y` is a string in `input`.
+	///
+	/// Often denoted `self/input`, e.g.:
+	/// * <https://en.wikipedia.org/wiki/Quotient_of_a_formal_language>
+	///
+	/// When all the strings in `input` are the same length, you can think of `dock` as the inverse of `concatenate`.
+	/// i.e. `language == language.concatenate(input).dock(input)`, though if two strings are of different lengths,
+	/// then there will be some languages where `dock(input)` is not the inverse of `concatenate`.
+	///
 	/// - Parameter input: Set of strings to remove from the end of this language
 	/// - Returns: The DFA representing the right quotient.
 	public func dock(_ input: Self) -> Self {
