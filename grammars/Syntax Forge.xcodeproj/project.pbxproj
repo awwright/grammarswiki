@@ -34,18 +34,18 @@
 /* Begin PBXFileReference section */
 		281270C02D8615790095D0E1 /* catalog */ = {isa = PBXFileReference; lastKnownFileType = folder; name = catalog; path = ../catalog; sourceTree = "<group>"; };
 		285F89B32E7BB63300CDDBD4 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		28A062DE2D7A3DCE00E9F382 /* grammars.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = grammars.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		28A062F22D7A3DD000E9F382 /* grammarsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = grammarsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		28A062FC2D7A3DD000E9F382 /* grammarsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = grammarsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		28A062DE2D7A3DCE00E9F382 /* Syntax Forge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Syntax Forge.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		28A062F22D7A3DD000E9F382 /* Syntax Forge Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Syntax Forge Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		28A062FC2D7A3DD000E9F382 /* Syntax Forge UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Syntax Forge UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		28A063042D7A3DD000E9F382 /* Exceptions for "grammars" folder in "grammars" target */ = {
+		28A063042D7A3DD000E9F382 /* Exceptions for "grammars" folder in "Syntax Forge" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 28A062DD2D7A3DCE00E9F382 /* grammars */;
+			target = 28A062DD2D7A3DCE00E9F382 /* Syntax Forge */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -53,7 +53,7 @@
 		28A062E02D7A3DCE00E9F382 /* grammars */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				28A063042D7A3DD000E9F382 /* Exceptions for "grammars" folder in "grammars" target */,
+				28A063042D7A3DD000E9F382 /* Exceptions for "grammars" folder in "Syntax Forge" target */,
 			);
 			path = grammars;
 			sourceTree = "<group>";
@@ -107,9 +107,9 @@
 		28A062DF2D7A3DCE00E9F382 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				28A062DE2D7A3DCE00E9F382 /* grammars.app */,
-				28A062F22D7A3DD000E9F382 /* grammarsTests.xctest */,
-				28A062FC2D7A3DD000E9F382 /* grammarsUITests.xctest */,
+				28A062DE2D7A3DCE00E9F382 /* Syntax Forge.app */,
+				28A062F22D7A3DD000E9F382 /* Syntax Forge Tests.xctest */,
+				28A062FC2D7A3DD000E9F382 /* Syntax Forge UITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -117,9 +117,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		28A062DD2D7A3DCE00E9F382 /* grammars */ = {
+		28A062DD2D7A3DCE00E9F382 /* Syntax Forge */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 28A063052D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "grammars" */;
+			buildConfigurationList = 28A063052D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "Syntax Forge" */;
 			buildPhases = (
 				28A062DA2D7A3DCE00E9F382 /* Sources */,
 				28A062DB2D7A3DCE00E9F382 /* Frameworks */,
@@ -132,19 +132,19 @@
 			fileSystemSynchronizedGroups = (
 				28A062E02D7A3DCE00E9F382 /* grammars */,
 			);
-			name = grammars;
+			name = "Syntax Forge";
 			packageProductDependencies = (
 				28A063112D7A3F3900E9F382 /* FSM */,
 				286752AD2D891A3A00AB3FEF /* CodeEditorView */,
 				286752AF2D891A3A00AB3FEF /* LanguageSupport */,
 			);
 			productName = grammars;
-			productReference = 28A062DE2D7A3DCE00E9F382 /* grammars.app */;
+			productReference = 28A062DE2D7A3DCE00E9F382 /* Syntax Forge.app */;
 			productType = "com.apple.product-type.application";
 		};
-		28A062F12D7A3DD000E9F382 /* grammarsTests */ = {
+		28A062F12D7A3DD000E9F382 /* Syntax Forge Tests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 28A0630A2D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "grammarsTests" */;
+			buildConfigurationList = 28A0630A2D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "Syntax Forge Tests" */;
 			buildPhases = (
 				28A062EE2D7A3DD000E9F382 /* Sources */,
 				28A062EF2D7A3DD000E9F382 /* Frameworks */,
@@ -155,16 +155,16 @@
 			dependencies = (
 				28A062F42D7A3DD000E9F382 /* PBXTargetDependency */,
 			);
-			name = grammarsTests;
+			name = "Syntax Forge Tests";
 			packageProductDependencies = (
 			);
 			productName = grammarsTests;
-			productReference = 28A062F22D7A3DD000E9F382 /* grammarsTests.xctest */;
+			productReference = 28A062F22D7A3DD000E9F382 /* Syntax Forge Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		28A062FB2D7A3DD000E9F382 /* grammarsUITests */ = {
+		28A062FB2D7A3DD000E9F382 /* Syntax Forge UITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 28A0630D2D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "grammarsUITests" */;
+			buildConfigurationList = 28A0630D2D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "Syntax Forge UITests" */;
 			buildPhases = (
 				28A062F82D7A3DD000E9F382 /* Sources */,
 				28A062F92D7A3DD000E9F382 /* Frameworks */,
@@ -178,11 +178,11 @@
 			fileSystemSynchronizedGroups = (
 				28A062FF2D7A3DD000E9F382 /* grammarsUITests */,
 			);
-			name = grammarsUITests;
+			name = "Syntax Forge UITests";
 			packageProductDependencies = (
 			);
 			productName = grammarsUITests;
-			productReference = 28A062FC2D7A3DD000E9F382 /* grammarsUITests.xctest */;
+			productReference = 28A062FC2D7A3DD000E9F382 /* Syntax Forge UITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -208,12 +208,11 @@
 					};
 				};
 			};
-			buildConfigurationList = 28A062D92D7A3DCE00E9F382 /* Build configuration list for PBXProject "grammars" */;
+			buildConfigurationList = 28A062D92D7A3DCE00E9F382 /* Build configuration list for PBXProject "Syntax Forge" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
-				Base,
 			);
 			mainGroup = 28A062D52D7A3DCE00E9F382;
 			minimizedProjectReferenceProxies = 1;
@@ -226,9 +225,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				28A062DD2D7A3DCE00E9F382 /* grammars */,
-				28A062F12D7A3DD000E9F382 /* grammarsTests */,
-				28A062FB2D7A3DD000E9F382 /* grammarsUITests */,
+				28A062DD2D7A3DCE00E9F382 /* Syntax Forge */,
+				28A062F12D7A3DD000E9F382 /* Syntax Forge Tests */,
+				28A062FB2D7A3DD000E9F382 /* Syntax Forge UITests */,
 			);
 		};
 /* End PBXProject section */
@@ -286,12 +285,12 @@
 /* Begin PBXTargetDependency section */
 		28A062F42D7A3DD000E9F382 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 28A062DD2D7A3DCE00E9F382 /* grammars */;
+			target = 28A062DD2D7A3DCE00E9F382 /* Syntax Forge */;
 			targetProxy = 28A062F32D7A3DD000E9F382 /* PBXContainerItemProxy */;
 		};
 		28A062FE2D7A3DD000E9F382 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 28A062DD2D7A3DCE00E9F382 /* grammars */;
+			target = 28A062DD2D7A3DCE00E9F382 /* Syntax Forge */;
 			targetProxy = 28A062FD2D7A3DD000E9F382 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -312,6 +311,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = grammars/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -340,6 +340,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = grammars/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -487,7 +488,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/grammars.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/grammars";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Syntax Forge.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Syntax Forge";
 			};
 			name = Debug;
 		};
@@ -505,7 +506,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/grammars.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/grammars";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Syntax Forge.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Syntax Forge";
 			};
 			name = Release;
 		};
@@ -544,7 +545,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		28A062D92D7A3DCE00E9F382 /* Build configuration list for PBXProject "grammars" */ = {
+		28A062D92D7A3DCE00E9F382 /* Build configuration list for PBXProject "Syntax Forge" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				28A063082D7A3DD000E9F382 /* Debug */,
@@ -553,7 +554,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		28A063052D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "grammars" */ = {
+		28A063052D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "Syntax Forge" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				28A063062D7A3DD000E9F382 /* Debug */,
@@ -562,7 +563,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		28A0630A2D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "grammarsTests" */ = {
+		28A0630A2D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "Syntax Forge Tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				28A0630B2D7A3DD000E9F382 /* Debug */,
@@ -571,7 +572,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		28A0630D2D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "grammarsUITests" */ = {
+		28A0630D2D7A3DD000E9F382 /* Build configuration list for PBXNativeTarget "Syntax Forge UITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				28A0630E2D7A3DD000E9F382 /* Debug */,

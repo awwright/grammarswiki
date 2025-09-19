@@ -107,7 +107,7 @@ This repository is a somewhat disorganized monorepo, get started with this:
 
 - *README.md* — this file
 - *bin/* — Selection of executable utilities, in addition to the one in grammartool/
-- *catalog/* — Collection of standard ABNF grammars
+- *catalog/* — Collection of standard grammars in ABNF
 - *FSM/* — Library for parsing and manipulating ABNF and other grammars
 - *grammars/* — A macOS app for browsing and manipulating ABNF
 - *Grammars.xcworkspace/* — Xcode workspace that includes much of this repository

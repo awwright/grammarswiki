@@ -11,7 +11,7 @@
       location = "group:grammartool/grammartool.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:grammars/grammars.xcodeproj">
+      location = "group:grammars/Syntax Forge.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:README.md">
