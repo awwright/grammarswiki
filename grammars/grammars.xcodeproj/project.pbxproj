@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		281270C12D8615790095D0E1 /* catalog in Resources */ = {isa = PBXBuildFile; fileRef = 281270C02D8615790095D0E1 /* catalog */; };
+		285F89B42E7BB63700CDDBD4 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 285F89B32E7BB63300CDDBD4 /* README.md */; };
 		286752AE2D891A3A00AB3FEF /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 286752AD2D891A3A00AB3FEF /* CodeEditorView */; };
 		286752B02D891A3A00AB3FEF /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 286752AF2D891A3A00AB3FEF /* LanguageSupport */; };
 		28A063122D7A3F3900E9F382 /* FSM in Frameworks */ = {isa = PBXBuildFile; productRef = 28A063112D7A3F3900E9F382 /* FSM */; };
@@ -32,6 +33,7 @@
 
 /* Begin PBXFileReference section */
 		281270C02D8615790095D0E1 /* catalog */ = {isa = PBXFileReference; lastKnownFileType = folder; name = catalog; path = ../catalog; sourceTree = "<group>"; };
+		285F89B32E7BB63300CDDBD4 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		28A062DE2D7A3DCE00E9F382 /* grammars.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = grammars.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		28A062F22D7A3DD000E9F382 /* grammarsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = grammarsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		28A062FC2D7A3DD000E9F382 /* grammarsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = grammarsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,6 +96,7 @@
 		28A062D52D7A3DCE00E9F382 = {
 			isa = PBXGroup;
 			children = (
+				285F89B32E7BB63300CDDBD4 /* README.md */,
 				281270C02D8615790095D0E1 /* catalog */,
 				28A062E02D7A3DCE00E9F382 /* grammars */,
 				28A062FF2D7A3DD000E9F382 /* grammarsUITests */,
@@ -236,6 +239,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				281270C12D8615790095D0E1 /* catalog in Resources */,
+				285F89B42E7BB63700CDDBD4 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
