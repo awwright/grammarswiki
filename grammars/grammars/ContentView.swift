@@ -63,7 +63,7 @@ struct ContentView: View {
 				DocumentDetail(document: binding)
 					.navigationTitle(selectedDocument.name)
 			} else {
-				Text("Select a document")
+				StartView();
 			}
 		}
 	}
