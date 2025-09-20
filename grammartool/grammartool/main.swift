@@ -56,7 +56,7 @@ var stdout = StdioResponse(status: .error, contentType: "application/octet-strea
 // If this is a CGI environment, then pass this to the CGI handler
 // See <cgi.swift> for a simple Apache configuration to call this
 if arguments.count == 1 && ProcessInfo.processInfo.environment["REQUEST_URI"] != nil {
-	exit(cgi(arguments: arguments));
+	exit(cgi_args(arguments: arguments));
 }
 
 //print(arguments);
@@ -72,6 +72,7 @@ exitCode = switch programName {
 	case "abnf-to-regex-tests": abnf_to_regex_tests_args(arguments: arguments);
 	case "abnf-equivalent-inputs": abnf_equivalent_inputs_args(arguments: arguments);
 	case "catalog-list": catalog_list_args(arguments: arguments);
+	case "cgi": cgi_args(arguments: arguments);
 	case "format-html": format_html_args(arguments: arguments);
 	case "grammar-abnf-html": grammar_abnf_html_args(arguments: arguments);
 	case "grammar-abnf-rule-html": grammar_abnf_rule_html_args(arguments: arguments);
@@ -93,6 +94,7 @@ func defaultExitCode() -> Int32 {
 	abnf_to_regex_help(arguments: arguments);
 	abnf_equivalent_inputs_help(arguments: arguments);
 	catalog_list_help(arguments: arguments);
+	cgi_help(arguments: arguments);
 	format_html_help(arguments: arguments);
 	grammar_abnf_html_help(arguments: arguments);
 	grammar_abnf_rule_html_help(arguments: arguments);

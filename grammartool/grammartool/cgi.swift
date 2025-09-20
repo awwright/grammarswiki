@@ -22,13 +22,13 @@ struct CGIResponse: ResponseProtocol {
 
 	mutating func writeHeaders() {
 		sentHeaders = true;
-		print("Content-Type: \(contentType)\r\n")
+		print("Content-Type: \(contentType)", terminator: "\r\n")
 		switch status {
-			case .ok: print("Status: 200 OK\r\n")
-			case .notFound: print("Status: 404 Not Found\r\n")
-			default: print("Status: 400 Client Error\r\n")
+			case .ok: print("Status: 200 OK", terminator: "\r\n")
+			case .notFound: print("Status: 404 Not Found", terminator: "\r\n")
+			default: print("Status: 400 Client Error", terminator: "\r\n")
 		}
-		print("\r\n")
+		print("", terminator: "\r\n")
 	}
 
 	mutating func write(_ part: Array<UInt8>) {
@@ -50,12 +50,19 @@ struct CGIResponse: ResponseProtocol {
 	}
 }
 
-func cgi(arguments: Array<String>) -> Int32 {
-	let requestURI = ProcessInfo.processInfo.environment["REQUEST_URI"] ?? "/"
-	if requestURI == "/" { cgi_index_txt() }
-	else if requestURI == "/status" { cgi_status_txt() }
-	//else if let filepath = try! #/\/(.+)\.abnf/#.firstMatch(in: requestURI)?.1 { cgi_abnf_txt(filepath: String(filepath)) }
+func cgi_args(arguments: Array<String>) -> Int32 {
+	var res = CGIResponse(status: .error, contentType: .empty);
+	let requestURI = (arguments.count >= 3) ? arguments[2] : (ProcessInfo.processInfo.environment["REQUEST_URI"] ?? "/")
+	let path = String(requestURI.split(separator: "?", omittingEmptySubsequences: false).first ?? "");
+	cgi_run(res: &res, method: "GET", path: path, querystring: "")
 	return 0;
+}
+
+func cgi_run(res: inout some ResponseProtocol, method: String, path: String, querystring: String) {
+	if path == "/" { cgi_index_txt() }
+	else if path == "/status" { cgi_status_txt() }
+	//else if let filepath = try! #/\/(.+)\.abnf/#.firstMatch(in: path)?.1 { cgi_abnf_txt(filepath: String(filepath)) }
+	else { respond_not_found(res: &res); }
 }
 
 func cgi_route(res: inout some ResponseProtocol, method: String, pathinfo: String, querystring: String) {
@@ -106,26 +113,19 @@ func respond_not_found(res: inout some ResponseProtocol) {
 }
 
 func cgi_index_txt() {
-	print("Content-Type: text/plain")
-	print("")
+	print("Content-Type: text/plain", terminator: "\r\n")
+	print("", terminator: "\r\n")
 	catalog_list_args(arguments: [arguments[0], "catalog-list", FileManager.default.currentDirectoryPath])
 }
 
 func cgi_status_txt() {
-	print("Content-Type: text/plain")
-	print("")
+	print("Content-Type: text/plain", terminator: "\r\n")
+	print("", terminator: "\r\n")
 	print("CWD: \(FileManager.default.currentDirectoryPath)")
 	// Iterate through and print every environment variable
 	for (key, value) in ProcessInfo.processInfo.environment {
 		print("\(key): \(value)")
 	}
-}
-
-func cgi_not_found_txt() {
-	print("Status: 404 Not Found")
-	print("Content-Type: text/plain")
-	print("")
-	print("No match for \(ProcessInfo.processInfo.environment["REQUEST_URI"] ?? "")")
 }
 
 func text_html(_ text: String) -> String {
