@@ -55,8 +55,24 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		let content = try String(contentsOfFile: filePath, encoding: .utf8)
 		return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 	});
-	var rulelist_all_dict = rulelist_all_final.dictionary
+	let rulelist_all_dict = rulelist_all_final.dictionary
 	let definition_dependencies = rulelist_all_final.dependencies(rulename: rulename)
+
+	// First, print the rules as defined.
+	// This page includes only the rules necessary to define the top rule, including foreign rules.
+	// This means that we don't include comments for the time being (which comments are associated with each rule? Sometimes hard to say.)
+	var rule_links: Dictionary<String, String> = [:];
+	builtins.keys.forEach { rulename in rule_links[rulename] = "../abnf-core/\(rulename).html" };
+	let definition_list_html = definition_dependencies.dependencies.reversed().map {
+		let rule = rulelist_all_dict[$0]
+		guard let rule else {
+			// TODO: Detect if this is a builtin rule or just an unknown rule
+			// And display the builtin rules, maybe
+			//return "\t\t\t<li><code>; Unknown rule: " + text_html($0) + "</code></li>\n"
+			return ""
+		}
+		return rule_to_html(rule, links: rule_links);
+	}.joined()
 
 	// TODO: Add railroad diagram
 	// TODO: Add GraphViz diagram
@@ -130,18 +146,6 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 
 	let railroad_svg_html: String = (try? grammar_abnf_rule_html_railroad_svg_pipeline(filePath, rulename)) ?? "Error"
 
-	let definition_list_html = definition_dependencies.dependencies.reversed().map {
-		let rule = rulelist_all_dict[$0]
-		guard let rule else {
-			// TODO: Detect if this is a builtin rule or just an unknown rule
-			// And display the builtin rules, maybe
-			//return "\t\t\t<li><code>; Unknown rule: " + text_html($0) + "</code></li>\n"
-			return ""
-		}
-		// TODO: If the rule is imported from a different grammar, link to that one directly
-		return "" + text_html(rule.description.replacingOccurrences(of: "\r\n", with: "")) + "\n\n"
-	}.joined()
-
 	// Used Builtins
 	let used_builtins_html = definition_dependencies.builtins.map {
 		"<a href=\"\(text_attr("../abnf-core/\($0).html"))\">" + text_html($0) + "</a>"
@@ -152,11 +156,6 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	// TODO: Render this ahead-of-time and link rule names and prose to their targets
 	let head_html = """
 		<link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/xcode.min.css"/>
-		<script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
-		<script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/languages/abnf.min.js"></script>
-		<script type="application/ecmascript">
-		document.addEventListener('DOMContentLoaded', function() { hljs.highlightElement(document.getElementById('source')); });
-		</script>
 
 	""";
 

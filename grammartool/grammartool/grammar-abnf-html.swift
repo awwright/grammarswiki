@@ -46,6 +46,8 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 		return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 	});
 
+	// This page should include an entire single file, including comments, but not definitions of foreign references.
+	// TODO: Eventually, include the comments and whitespace in with the parsed ABNF elements, and use that here.
 	// FIXME: This is a super hack
 	let rulename = filePath.split(separator: "/").last!.replacingOccurrences(of: ".abnf", with: "")
 	let rulenames_list_html = root_parsed.ruleNames.map {

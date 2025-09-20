@@ -9,11 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/scripts/css/style.css"/>
   <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/xcode.min.css"/>
-  <script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
-  <script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/languages/abnf.min.js"></script>
-  <script type="application/ecmascript">
-  document.addEventListener('DOMContentLoaded', function() { hljs.highlightElement(document.getElementById('source')); });
-  </script>
 </head>
 <body>
   <header>
@@ -58,19 +53,19 @@
 
     <h2>Definition</h2>
     <pre id="source">
-LWSP = *(WSP / CRLF WSP)
+<span class="hljs-attribute">LWSP</span> <span class="hljs-operator">=</span> *( <a href="../abnf-core/WSP.html" class="hljs-variable">WSP</a> / <a href="../abnf-core/CRLF.html" class="hljs-variable">CRLF</a> <a href="../abnf-core/WSP.html" class="hljs-variable">WSP</a> )
 
-WSP = SP / HTAB
+<span class="hljs-attribute">WSP</span> <span class="hljs-operator">=</span> <a href="../abnf-core/SP.html" class="hljs-variable">SP</a> / <a href="../abnf-core/HTAB.html" class="hljs-variable">HTAB</a>
 
-SP = %x20
+<span class="hljs-attribute">SP</span> <span class="hljs-operator">=</span> <span class="hljs-number">%x20</span>
 
-HTAB = %x9
+<span class="hljs-attribute">HTAB</span> <span class="hljs-operator">=</span> <span class="hljs-number">%x9</span>
 
-CRLF = CR LF
+<span class="hljs-attribute">CRLF</span> <span class="hljs-operator">=</span> <a href="../abnf-core/CR.html" class="hljs-variable">CR</a> <a href="../abnf-core/LF.html" class="hljs-variable">LF</a>
 
-LF = %xa
+<span class="hljs-attribute">LF</span> <span class="hljs-operator">=</span> <span class="hljs-number">%xa</span>
 
-CR = %xd
+<span class="hljs-attribute">CR</span> <span class="hljs-operator">=</span> <span class="hljs-number">%xd</span>
 
     </pre>
   </section>

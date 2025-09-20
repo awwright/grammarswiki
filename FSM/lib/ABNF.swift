@@ -385,7 +385,7 @@ public enum ABNFDefinedAs: String {
 	case equal = "="
 	case incremental = "/="
 
-	var description: String {
+	public var description: String {
 		switch self {
 			case .equal: return "="
 			case .incremental: return "/="
