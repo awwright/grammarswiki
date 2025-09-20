@@ -12,19 +12,25 @@ A simple macOS app for browsing protocols and grammars.
 
 * Browse a comprehensive catalog of context-free grammars defined for use in open standards and Internet protocols.
 
-* write my own grammars, for internal applications or for specifying changes to protocols, or for proposing new standard protocols.
-
-* specify extension points, specifying what the default behavior is, and who is allowed to define changes to the default behavior.
-
 * browse examples and documentation for the existing protocols.
 
+* write my own grammars, for internal applications or for specifying changes to protocols, or for proposing new standard protocols.
+
+* Reference existing protocols/formats in new protocols, as desired (for example, specify a field as JSON or a date/time format).
+
+* specify extension points of a grammar, specifying what the default behavior is, and who is allowed to define changes to the default behavior.
+
 * fork a grammar to make edits to it; and compare the fork for all of the changes from the original.
+
+* regular expression search and replace on regular expressions; convert regular expressions matching within one language for another, e.g. change a UTF-8 regular expression to UTF-16, or a JSON regular expression to XML.
+
+* convert an unanchored regular expression to one anchored at a specific point in another grammar. For example, generate an anchored regular expression for an entire email address given an unanchored regex for the username part. Normalize the regex by default.
+
+* Normalizing a regex: expanding the language of the regex so that it matches all equivalent forms. For example, normalizing the character "A" would also match "\u0041" when normalized for JSON strings.
 
 * Click links and edit documentation embedded in the comments
 
 * Jump to definitions and see usage of a rule in the same file, and other files in the project or catalog
-
-* embed existing protocols in the new protocols, as desired (for example, JSON or date/time formats).
 
 * run example inputs to the grammars and see how it parses
 
