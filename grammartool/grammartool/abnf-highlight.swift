@@ -40,7 +40,7 @@ func alternation_to_html(_ alternation: ABNFAlternation<UInt32>, links: Dictiona
 			let expression_html =
 			switch repetition.repeating {
 				case .rulename(let r):
-					if let uri = links[r.label] { "<a href=\"\(text_html(uri))\" class=\"hljs-variable\">" + text_html(r.description) + "</a>" }
+					if let uri = links[r.label] { "<a href=\"\(text_attr(uri))\" class=\"hljs-variable\">" + text_html(r.description) + "</a>" }
 					else { "<span class=\"hljs-variable\">" + text_html(r.description) + "</span>" }
 				case .group(let o): "( " + alternation_to_html(o.alternation, links: links) + " )";
 				case .option(let o): "[ " + alternation_to_html(o.optionalAlternation, links: links) + " ]";
