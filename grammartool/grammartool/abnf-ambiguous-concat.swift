@@ -42,12 +42,16 @@ func abnf_ambiguous_concat_run(response r: inout some ResponseProtocol, lhs: Str
 
 	let nonprefix1 = fsm1.derive(fsm1).minimized();
 	let nonprefix2 = fsm2.dock(fsm2).minimized();
-	let overlap = nonprefix1.intersection(nonprefix2).subtracting(SymbolDFA<UInt32>.epsilon).minimized().normalized()
+	let overlap = nonprefix1.intersection(nonprefix2).minimized().normalized()
 	let prefix1 = fsm1.dock(overlap);
-	let prefix2 = fsm2.dock(overlap);
+	let prefix2 = fsm2.derive(overlap);
+	// Verify that the language wasn't changed
+	assert(SymbolDFA.concatenate([prefix1, overlap, prefix2]) == SymbolDFA.concatenate([fsm1, fsm2]))
 
 	r.status = .ok;
 	// TODO: Show a tuple of (prefix, overlap, sufix)
+	// If overlap == epsilon, then the concatenation is unambiguous.
+	// Otherwise, overlap can occur in any (non-epsilon) subsequence of the input
 	r.writeLn(prefix1.minimized().normalized().toViz())
 	r.writeLn(overlap.toViz())
 	r.writeLn(prefix2.minimized().normalized().toViz())
