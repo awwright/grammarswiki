@@ -141,6 +141,20 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 		return viz;
 	}
 
+	public func toDFA() -> (fsm: SymbolClassDFA<Alphabet>, forward: Dictionary<States, StateNo>, backward: Array<States>) {
+		let translation = Self.parallel(fsms: [self], merge: { $0[0] });
+		assert(translation.fsm.statesSet.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
+		return (
+			fsm: SymbolClassDFA<Alphabet>(
+				states: translation.fsm.statesSet.map { Alphabet.DFATable(uniqueKeysWithValues: $0.map { ($0.0, $0.1.first!) }) },
+				initial: translation.fsm.initials.first!,
+				finals: translation.fsm.finals,
+			),
+			forward: Dictionary(uniqueKeysWithValues: translation.forward.map { ($0[0], $1) }),
+			backward: translation.backward.map { $0[0] },
+		);
+	}
+
 	public var alphabet: Alphabet {
 		Alphabet(partitions: self.statesSet.flatMap(\.alphabet))
 	}
@@ -267,7 +281,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 		return expanded;
 	}
 
-	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> (fsm: Self, map: Array<Array<States>>) {
+	public static func parallel(fsms: [Self], merge: ([Bool]) -> Bool) -> (fsm: Self, forward: Dictionary<Array<States>, Int>, backward: Array<Array<States>>) {
 		var newStates = Array<Alphabet.NFATable>();
 		var newFinals = Set<Int>();
 		var forward = Dictionary<Array<States>, Int>();
@@ -317,7 +331,8 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 
 		return (
 			fsm: Self.init(states: newStates, epsilon: Array(repeating: [], count: newStates.count), initial: newInitialState, finals: newFinals),
-			map: backward,
+			forward: forward,
+			backward: backward,
 		);
 	}
 
