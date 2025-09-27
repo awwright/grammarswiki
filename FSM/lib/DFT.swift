@@ -13,7 +13,7 @@
 ///   - `InputSymbol`: The type of input symbols (e.g., `Character`), must conform to `Comparable` and `Hashable`.
 ///   - `OutputSymbol`: The type of output symbols (e.g., `String`), must conform to `Comparable` and `Hashable`.
 // TODO: Conformance with PartitionedSetProtocol so this can be used as the transition table for non-deterministic finite automata
-public struct DFT<Symbol: Comparable & Hashable>: Hashable {
+public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 	/// Default element type produced reading this as a Sequence
 	public typealias Element = Array<Symbol>
 	/// Default type that inputs are mapped to (to label a partition)
