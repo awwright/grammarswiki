@@ -13,6 +13,7 @@
 ///   - `InputSymbol`: The type of input symbols (e.g., `Character`), must conform to `Comparable` and `Hashable`.
 ///   - `OutputSymbol`: The type of output symbols (e.g., `String`), must conform to `Comparable` and `Hashable`.
 // TODO: Conformance with PartitionedSetProtocol so this can be used as the transition table for non-deterministic finite automata
+// TODO: Conformance with DFAProtocol, since this is just additional behaviors on a DFA
 public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 	/// Default element type produced reading this as a Sequence
 	public typealias Element = Array<Symbol>
@@ -24,11 +25,11 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 	public typealias States = StateNo?
 
 	public static var empty: Self {
-		Self(states: [[:]], initial: 0, finals: [:])
+		Self(states: [[:]], initial: 0, finalsOut: [:])
 	}
 
 	public static var epsilon: Self {
-		Self(states: [[:]], initial: 0, finals: [0: []])
+		Self(states: [[:]], initial: 0, finalsOut: [0: []])
 	}
 
 	/// The transition table, mapping each state to a dictionary of input symbol to (next state, output sequence) pairs.
@@ -38,14 +39,16 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 	/// The initial state of the DFT.
 	public let initial: StateNo
 	/// The set of accepting (final) states and associated final output
-	public let finals: Dictionary<StateNo, Output>
+	public let finalsOut: Dictionary<StateNo, Output>
+
+	public var finals: Set<StateNo> { Set(finalsOut.keys) }
 
 	/// Creates an empty DFT that accepts no sequences and produces no output.
 	public init() {
 		self.states = [[:]]
 		self.output = [[:]]
 		self.initial = 0
-		self.finals = [:]
+		self.finalsOut = [:]
 	}
 
 	/// Creates a DFT with specified states, initial state, and final states.
@@ -59,7 +62,7 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 		states: Array<Dictionary<Symbol, StateNo>> = [[:]],
 		output: Array<Dictionary<Symbol, Output>> = [[:]],
 		initial: StateNo = 0,
-		finals: Dictionary<StateNo, Output> = [:]
+		finalsOut: Dictionary<StateNo, Output> = [:]
 	) {
 		for transitions in states {
 			for (_, next) in transitions {
@@ -69,7 +72,7 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 		}
 		assert(initial >= 0)
 		assert(initial < states.count)
-		for (state, _) in finals {
+		for (state, _) in finalsOut {
 			assert(state >= 0)
 			assert(state < states.count)
 		}
@@ -77,7 +80,7 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 		self.states = states
 		self.output = output
 		self.initial = initial
-		self.finals = finals
+		self.finalsOut = finalsOut
 	}
 
 	/// Generate a DFT equivalence with a single partition
@@ -86,7 +89,7 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 		self.states = top.states
 		self.output = top.states.map { $0.mapValues { _ in [] } }
 		self.initial = top.initial
-		self.finals = Dictionary<StateNo, Output>(uniqueKeysWithValues: top.finals.map { ($0, []) })
+		self.finalsOut = Dictionary<StateNo, Output>(uniqueKeysWithValues: top.finals.map { ($0, []) })
 	}
 	/// Generate a DFT equivalence with individual partitions per input
 	/// i.e. all values are different, no values are equivalent
@@ -94,13 +97,13 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 		self.states = bottom.states
 		self.output = bottom.states.map { Dictionary<Symbol, Output>(uniqueKeysWithValues: $0.map { ($0.key, [$0.key]) }) }
 		self.initial = bottom.initial
-		self.finals = Dictionary(uniqueKeysWithValues: bottom.finals.map { ($0, []) })
+		self.finalsOut = Dictionary(uniqueKeysWithValues: bottom.finals.map { ($0, []) })
 	}
 
 	public static func == (lhs: Self, rhs: Self) -> Bool {
 		lhs.states == rhs.states &&
 		lhs.initial == rhs.initial &&
-		lhs.finals == rhs.finals
+		lhs.finalsOut == rhs.finalsOut
 	}
 
 	public var alphabet: Set<Symbol> {
@@ -124,7 +127,7 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 	/// Checks if a state is accepting.
 	public func isFinal(_ state: States) -> Bool {
 		guard let state else { return false }
-		return self.finals[state] != nil
+		return self.finalsOut[state] != nil
 	}
 
 	/// Determines if two inputs are equivalent according to the DFT (maps to the same output)
@@ -146,7 +149,7 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 			currentState = nextState
 		}
 
-		return self.finals[currentState] != nil
+		return self.finalsOut[currentState] != nil
 	}
 
 	/// Checks if the DFT accepts a given input sequence and returns the output if accepted.
@@ -161,7 +164,7 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 				output += o
 			}
 		}
-		if let final = self.finals[state] {
+		if let final = self.finalsOut[state] {
 			return output + final
 		} else {
 			return nil
@@ -171,14 +174,14 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 	/// Return a DFA that also accepts the empty sequence
 	/// i.e. adds the initial state to the set of final states
 	public func optional() -> Self {
-		var newFinals = self.finals;
+		var newFinals = self.finalsOut;
 		if(newFinals[initial] == nil) {
 			newFinals[initial] = []
 		}
 		return Self(
 			states: self.states,
 			initial: self.initial,
-			finals: newFinals
+			finalsOut: newFinals
 		);
 	}
 
@@ -213,7 +216,7 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 					currentState = nextState
 				} else {
 					// No more input, check final state and yield final output
-					guard let finalOutput = finals[currentState] else {
+					guard let finalOutput = finalsOut[currentState] else {
 						fatalError("Input sequence ended in non-final state \(currentState)")
 					}
 

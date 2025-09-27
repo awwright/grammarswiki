@@ -7,7 +7,7 @@ import Testing
 		let dft = SymbolDFT<Character>(
 			states: [[:]],
 			initial: 0,
-			finals: [:]
+			finalsOut: [:]
 		)
 		#expect(dft.map("") == nil)
 		#expect(dft.map("1") == nil)
@@ -18,7 +18,7 @@ import Testing
 		let dft = SymbolDFT<Character>(
 			states: [[:]],
 			initial: 0,
-			finals: [0: []]
+			finalsOut: [0: []]
 		)
 		#expect(dft.map("") == [])
 		#expect(dft.map("1") == nil)
