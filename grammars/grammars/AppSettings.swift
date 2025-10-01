@@ -37,10 +37,11 @@ struct SettingsView: View {
 // Enum to represent regex dialects
 enum RegexDialect: String, CaseIterable, Identifiable {
 	case swift = "Swift"            // Swift regular expression parser
+	case nsregularrxpression = "NSRegularExpression" // Swift and Obj-C regular expressions
 	case posix = "POSIX Basic"      // Standard POSIX regular expressions
 	case eposix = "POSIX Extended"  // Extended POSIX regular expressions (egrep)
 	case pcre = "PCRE"              // Perl-Compatible Regular Expressions
-	case ecma = "ECMA"              // ECMAScript (JavaScript-style regex)
+	case ecmascript = "ECMAScript"  // ECMAScript (JavaScript-style regex)
 	case java = "Java"              // Java's regex (java.util.regex)
 	case python = "Python"          // Python's re module
 	case ruby = "Ruby"              // Ruby's regex
