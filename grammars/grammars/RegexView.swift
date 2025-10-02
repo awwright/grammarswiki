@@ -73,6 +73,7 @@ struct RegexContentView: View {
 							Text("Unicode").tag("unicode")
 							Divider()
 							Text("Swift Regex Literal").tag("swift_literal")
+							Text("Swift Ignore Whitespace Literal").tag("swift_nws_literal")
 							Text("Swift Regex String").tag("swift_string")
 							Text("Swift Regex Builder").tag("swift_builder")
 							Text("Swift NSRegularExpression").tag("swift_nsregex")
@@ -87,8 +88,14 @@ struct RegexContentView: View {
 						HStack {
 							Picker("Preset", selection: $selectedPresetId) {
 								Text("None").tag(UUID?.none)
+								// TODO: Keep a "stage" item, where modifications are kept for using while they're unsaved.
+								// When the Save button is pressed, then copy the stage to the saved preset data.
+								if unsavedChanges, let id = selectedPresetId, let preset = presets.first(where: { $0.id == id }) {
+									Text(preset.name + " (Edited)").tag(UUID?.some(preset.id))
+								}
+								Divider();
 								ForEach(presets) { preset in
-									Text(preset.name + ((selectedPresetId==preset.id && unsavedChanges) ? " (Edited)" : "")).tag(UUID?.some(preset.id))
+									Text(preset.name).tag(UUID?.some(preset.id))
 								}
 							}
 							.pickerStyle(.menu)
@@ -121,22 +128,36 @@ struct RegexContentView: View {
 			}
 			.padding()
 
-			Button(
-				"Copy to Clipboard",
-				systemImage: "document.on.document",
-				action: {
-				if let copyText = regexDescription {
-#if os(macOS)
-					let pasteboard = NSPasteboard.general
-					pasteboard.clearContents()
-					pasteboard.setString(copyText, forType: .string)
-#elseif os(iOS)
-					UIPasteboard.general.string = copyText
-#endif
-				}
-			})
-			.padding()
-			.disabled(regexDescription == nil)
+			HStack {
+				Spacer();
+
+				Button(
+					"Copy to Clipboard",
+					systemImage: "document.on.document",
+					action: {
+					if let copyText = regexDescription {
+	#if os(macOS)
+						let pasteboard = NSPasteboard.general
+						pasteboard.clearContents()
+						pasteboard.setString(copyText, forType: .string)
+	#elseif os(iOS)
+						UIPasteboard.general.string = copyText
+	#endif
+					}
+				})
+				.padding()
+				.disabled(regexDescription == nil);
+
+				Button(
+					"Save As...",
+					systemImage: "square.and.arrow.down",
+					action: {
+						print("Save as...");
+					})
+				.padding()
+				.disabled(regexDescription == nil);
+
+			}
 
 			ScrollView {
 				if let regexDescription = regexDescription {

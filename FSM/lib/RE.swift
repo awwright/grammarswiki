@@ -1,4 +1,8 @@
 // Structures for parsing and generating most dialects of Regular Expressions
+// TODO: Implement a repetition finder:
+// - Sort a concatenation by its elements, to find ones that are identical.
+// - If there's any duplicates, determine if there's subsequences that are duplicates that are next to each other.
+// - Collapse these into a single, repeated element. It's OK to use a naive algorithm for now, something is better than nothing.
 
 /// A parser for a common form of regular expressions
 public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPatternBuilder, Hashable where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
