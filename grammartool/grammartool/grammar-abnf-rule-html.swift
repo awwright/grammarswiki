@@ -96,7 +96,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 			if let rule_fsm = result_fsm_dict[rulename] {
 				fsm = rule_fsm
 				let regex: REPattern<UInt32> = fsm.toPattern()
-				regex_swift_str = REDialectBuiltins.swift.encode(regex);
+				regex_swift_str = REDialectBuiltins.swift.encode(regex.factorRepetition());
 				regex_egrep_str = REDialectBuiltins.posixExtended.encode(regex);
 			} else {
 				fsm = .empty
@@ -153,7 +153,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 
 	let title = "Rule \(rulename) in \(filePath)"
 
-	// TODO: Render this ahead-of-time and link rule names and prose to their targets
+	// TODO: Inclue comments that appear to be related to the rule
 	let head_html = """
 		<link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/xcode.min.css"/>
 
