@@ -95,36 +95,35 @@ import Testing;
 		func test_UInt8_optional() async throws {
 			let a = REPattern.symbol(0x31);
 			let opt = a.optional()
-			#expect(opt.description == "|1", "Optional should union with epsilon")
+			#expect(opt.description == "1?", "Optional should be pattern followed by '?'")
 		}
 
 		@Test("Plus pattern")
 		func test_UInt8_plus() async throws {
 			let a = REPattern.symbol(0x31);
 			let plus = a.plus()
-			#expect(plus.description == "11*", "Plus should be concatenation with star")
+			#expect(plus.description == "1+", "Plus should be concatenation with star")
 		}
 
 		@Test("Repeating exact count")
 		func test_UInt8_repeatingExact() async throws {
 			let a = REPattern.symbol(0x41);
 			let repeat3 = a.repeating(3)
-			#expect(repeat3.description == "AAA", "Repeating 3 should concatenate three times")
+			#expect(repeat3.description == "A{3}", "Repeating 3 should concatenate three times")
 		}
 
 		@Test("Repeating range")
 		func test_UInt8_repeatingRange() async throws {
 			let a = REPattern.symbol(0x41);
 			let range = a.repeating(1...3)
-			// TODO: Update to "A{1,3}"
-			#expect(range.description == "A(|A)(|A)", "Range 1...3 should include optional parts")
+			#expect(range.description == "A{1,3}", "Range 1...3 should include optional parts")
 		}
 
 		@Test("Repeating at least")
 		func test_UInt8_repeatingAtLeast() async throws {
 			let a = REPattern.symbol(0x41);
 			let atLeast2 = a.repeating(2...)
-			#expect(atLeast2.description == "AAA*")
+			#expect(atLeast2.description == "A{2,}")
 		}
 
 		@Test("Sequence initialization")
@@ -265,6 +264,32 @@ import Testing;
 		func test_UInt8_symbol_star() async throws {
 			let seq = REPattern<UInt8>.symbol(0x20).star()
 			#expect(seq.description == " *", "Sequence init should concatenate elements")
+		}
+
+		@Test("factorRepetitions")
+		func test_factorRepetitions() async throws {
+			let a = REPattern<UInt8>.symbol(0x41)
+			let b = REPattern<UInt8>.symbol(0x42)
+			// AA?A -> A{2,3}
+			let aaa = a.concatenate(a.optional()).concatenate(a)
+			let factored = aaa.factorRepetition()
+			#expect(factored.description == "A{2,3}")
+			// A B A A -> A B A{2}
+			let abaa = a.concatenate(b).concatenate(a).concatenate(a)
+			let factored2 = abaa.factorRepetition()
+			#expect(factored2.description == "ABA{2}")
+			// A A B B -> A{2} B{2}
+			let aabb = a.concatenate(a).concatenate(b).concatenate(b)
+			let factored3 = aabb.factorRepetition()
+			#expect(factored3.description == "A{2}B{2}")
+			// A B A B -> (AB){2}
+			let abab = a.concatenate(b).concatenate(a).concatenate(b)
+			let factored4 = abab.factorRepetition()
+			#expect(factored4.description == "(AB){2}")
+			// A{2,3}A? -> A{2,4}
+			let aaaaa = a.repeating(2...3).concatenate(a.optional())
+			let factored5 = aaaaa.factorRepetition()
+			#expect(factored5.description == "A{2,4}")
 		}
 	}
 

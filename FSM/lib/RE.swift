@@ -17,7 +17,7 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 	// MARK: Properties
 	case alternation([Self])
 	case concatenation([Self])
-	case star(Self)
+	case repetition(Self, min: Int, max: Int?)
 	case range(SymbolClass)
 
 	public init() {
@@ -48,8 +48,9 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 		switch self {
 			case .alternation(let array): return Set(array.flatMap(\.alphabet))
 			case .concatenation(let array): return Set(array.flatMap(\.alphabet))
-			case .star(let regex): return regex.alphabet
-		case .range(let c): return Set(c.flatMap { $0 }) // Cast ClosedRange to a Set
+			// TODO: Return empty if max == 0
+			case .repetition(let regex, _, _): return regex.alphabet
+			case .range(let c): return Set(c.flatMap { $0 }) // Cast ClosedRange to a Set
 		}
 	}
 
@@ -61,7 +62,7 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 		switch self {
 			case .alternation: return 4
 			case .concatenation: return 3
-			case .star: return 2
+			case .repetition: return 2
 			case .range: return 1
 		}
 	}
@@ -79,6 +80,10 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 		if (array.contains { $0 == .empty }) { return .empty }
 		if array.count == 1 { return array[0] }
 		return .concatenation(array)
+	}
+
+	static public func star(_ element: Self) -> Self {
+		.repetition(element, min: 0, max: nil)
 	}
 
 	public func union(_ other: Self) -> Self {
@@ -104,20 +109,150 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 		switch self {
 			case .alternation(let array): return array.isEmpty ? .concatenation([]) : .star(self)
 			case .concatenation(let array): return array.isEmpty ? self : .star(self)
-			case .star: return self
+			case .repetition: return .star(self)
 			case .range: return .star(self)
 		}
+	}
+
+	/// A default implementation of ``RegularPatternBuilder.optional()``
+	/// - Returns: A pattern that unions this pattern with epsilon.
+	public func optional() -> Self {
+		return .repetition(self, min: 0, max: 1)
+	}
+
+	/// Implements one or more repetitions as this pattern followed by zero or more repetitions.
+	/// - Returns: A pattern equivalent to `self{0,1}`.
+	public func plus() -> Self {
+		return .repetition(self, min: 1, max: nil)
+	}
+
+	/// Returns a DFA accepting exactly `count` repetitions of its language.
+	///
+	/// Implements ``RegularPatternBuilder``
+	public func repeating(_ count: Int) -> Self {
+		precondition(count >= 0)
+		return .repetition(self, min: count, max: count)
+	}
+
+	/// Returns a DFA accepting between `range.lowerBound` and `range.upperBound` repetitions.
+	public func repeating(_ range: ClosedRange<Int>) -> Self {
+		precondition(range.lowerBound >= 0)
+		return .repetition(self, min: range.lowerBound, max: range.upperBound)
+	}
+
+	/// Returns a DFA accepting `range.lowerBound` or more repetitions.
+	///
+	/// Implements ``RegularPatternBuilder``
+	public func repeating(_ range: PartialRangeFrom<Int>) -> Self {
+		precondition(range.lowerBound >= 0)
+		return .repetition(self, min: range.lowerBound, max: nil)
 	}
 
 	public func encode(_ dialect: REDialectProtocol) -> String {
 		return dialect.encode(self)
 	}
 
+	/// Normalize a regular expression with repeated expressions in a concatenation to use a repetition instead.
+	/// Examples:
+	/// ```
+	/// AA* -> A+
+	/// AAA* -> A{2,}
+	/// AA? -> A{1,2}
+	/// (A|) -> A?
+	/// (AB)(AB) -> (AB){2}
+	/// ```
+
+	public func factorRepetition() -> REPattern {
+		func collapseRepetitions(_ patterns: [REPattern]) -> REPattern {
+			if patterns.isEmpty { return Self.concatenation([]) }
+			let n = patterns.count
+			// Try to find subsequence repetition
+			// A subsequence longer than half of the sequence can't possibly be repeated, so stop trying there
+			for k in 1...n/2 {
+				if n % k == 0 {
+					let count = n / k
+					let prefix = Array(patterns[0..<k])
+					var allEqual = true
+					for i in 1..<count {
+						let segment = Array(patterns[i*k..<(i+1)*k])
+						if segment != prefix {
+							allEqual = false;
+							break
+						}
+					}
+					if allEqual {
+						let sub = prefix.count == 1 ? prefix[0] : Self.concatenation(prefix)
+						return .repetition(sub, min: count, max: count);
+					}
+				}
+			}
+			// No subsequence repetition, collapse consecutive repetitions of the same pattern
+			func effectiveRep(_ p: REPattern) -> (inner: REPattern, min: Int, max: Int?) {
+				if case .repetition(let i, let m, let x) = p {
+					return (i, m, x)
+				} else if case .alternation(let array) = p, array.count == 2, array[0] == .concatenation([]), array[1] != .concatenation([]) {
+					return (array[1], 0, 1)
+				} else {
+					return (p, 1, 1)
+				}
+			}
+			var result: [REPattern] = []
+			var i = 0
+			while i < patterns.count {
+				let (inner, min, max) = effectiveRep(patterns[i])
+				var totalMin = min
+				var totalMax: Int? = max
+				i += 1
+				while i < patterns.count {
+					let (nextInner, nextMin, nextMax) = effectiveRep(patterns[i])
+					if nextInner != inner { break }
+					totalMin += nextMin
+					if totalMax == nil || nextMax == nil {
+						totalMax = nil
+					} else {
+						totalMax! += nextMax!
+					}
+					i += 1
+				}
+				if totalMin == 1 && totalMax == 1 {
+					result.append(inner)
+				} else {
+					result.append(.repetition(inner, min: totalMin, max: totalMax))
+				}
+			}
+			return Self.concatenation(result);
+		}
+
+		switch self {
+			case .alternation(let parts):
+				return .alternation(parts.flatMap {
+					if case .alternation(let inner) = $0 { return inner }
+					else { return [$0] }
+				}.map { $0.factorRepetition() })
+
+			case .concatenation(let parts):
+				let flat = parts.flatMap {
+					if case .concatenation(let inner) = $0 { return inner }
+					else { return [$0] }
+				}.map { $0.factorRepetition() }
+
+				return collapseRepetitions(flat);
+
+			case .repetition(let inner, let min, let max):
+				return .repetition(inner.factorRepetition(), min: min, max: max)
+
+			case .range:
+				return self
+		}
+
+	}
+
 	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: ClosedRangePatternBuilder, PatternType.Symbol == Symbol {
 		switch self {
 			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))
-			case .star(let regex): return regex.toPattern(as: PatternType.self).star()
+			case .repetition(let regex, let min, let max):
+				return if let max { regex.toPattern(as: PatternType.self).repeating(min...max) } else { regex.toPattern(as: PatternType.self).repeating(min...) }
 			case .range(let c): return PatternType.union(c.map { PatternType.range($0) })
 		}
 	}
@@ -188,9 +323,40 @@ public struct REDialect: REDialectProtocol {
 			if array.isEmpty { return emptyClass }
 			return array.map(\.description).joined(separator: "|")
 		case .concatenation(let array):
-			return array.isEmpty ? "" : array.map(toString).joined(separator: "")
-		case .star(let regex):
-			return toString(regex) + "*"
+			if array.isEmpty { return "" }
+			var collapsed: [(REPattern<Symbol>, Int)] = []
+			for pat in array {
+				if let last = collapsed.last, last.0 == pat {
+					collapsed[collapsed.count-1].1 += 1
+				} else {
+					collapsed.append((pat, 1))
+				}
+			}
+			return collapsed.map { (pat, count) in
+				let str = toString(pat)
+				if count == 1 {
+					return str
+				} else {
+					return "\(str){\(count)}"
+				}
+			}.joined(separator: "")
+		case .repetition(let regex, let min, let max):
+			let str = toString(regex);
+			if min == 0 && max == 1 {
+				return "\(str)?"
+			} else if min == 0 && max == nil {
+				return "\(str)*"
+			} else if min == 1 && max == nil {
+				return "\(str)+"
+			} else if let max {
+				if min == max {
+					return "\(str){\(min)}"
+				} else {
+					return "\(str){\(min),\(max)}"
+				}
+			} else {
+				return "\(str){\(min),}"
+			}
 		case .range(let list):
 			if list.count == 1 && list[0].lowerBound == list[0].upperBound {
 				return charPrintable(list[0].lowerBound)
