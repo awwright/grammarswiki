@@ -258,6 +258,107 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 	}
 }
 
+public struct REDialactCollection {
+	public let languages: Array<String>;
+	public let engines: Array<String>;
+
+	public struct Constructor: Identifiable {
+		public let id: String;
+		public let label: String;
+		public let language: String;
+		public let engine: String;
+		public let reference: String;
+		public let description: (REPattern<UInt32>) -> String;
+	}
+	public let constructors: Array<Constructor>;
+
+	public init(languages: Array<String>, engines: Array<String>, constructors: Array<Constructor>) {
+		self.languages = languages
+		self.engines = engines
+		self.constructors = constructors
+	}
+
+	public init(_ constructors: Constructor...) {
+		let languages = Set(constructors.map { $0.language }).sorted()
+		let engines = Set(constructors.map { $0.engine }).sorted()
+		self.languages = languages
+		self.engines = engines
+		self.constructors = constructors
+	}
+
+	// Return a subset of this REDialectCollection with only the engines and constructors usable from the given language
+	public func filter(language: String?) -> Self {
+		guard let language, language != "" else { return self }
+		let filteredLanguages = languages.filter { $0 == language }
+		let filteredConstructors = constructors.filter { $0.language == language }
+		// Filter to engines used by at least one of the remaining constructors
+		let filteredEngines = engines.filter { engineName in filteredConstructors.contains(where: { $0.engine == engineName }) }
+		return REDialactCollection(languages: filteredLanguages, engines: filteredEngines, constructors: filteredConstructors)
+	}
+
+	public static var builtins = REDialactCollection.init(
+		Constructor(
+			id: "swift",
+			label: "Swift Raw Regular Expression",
+			language: "Swift",
+			engine: "Swift",
+			reference: "",
+			description: { REDialectBuiltins.swift.encode($0) }
+		),
+		Constructor(
+			id: "swift,literal",
+			label: "Swift Regex Literal",
+			language: "Swift",
+			engine: "Swift",
+			reference: "",
+			// FIXME: Escape this string
+			description: { "/" + REDialectBuiltins.swift.encode($0) + "/" }
+		),
+		Constructor(
+			id: "swift,nswliteral",
+			label: "Swift Insiginficant-Whitespace Regex Literal",
+			language: "Swift",
+			engine: "Swift",
+			reference: "",
+			description: { _ in "fatalError(\"Unimplemented\")" }
+		),
+		Constructor(
+			id: "swift,NSRegularExpression",
+			label: "Swift NSRegularExpression string",
+			language: "Swift",
+			engine: "Swift",
+			reference: "https://developer.apple.com/documentation/foundation/nsregularexpression",
+			description: { "\"\(REDialectBuiltins.swift.encode($0))\"" }
+		),
+		Constructor(
+			id: "swift,NSRegularExpression,init",
+			label: "Swift NSRegularExpression constructor",
+			language: "Swift",
+			engine: "NSRegularExpression",
+			reference: "https://developer.apple.com/documentation/foundation/nsregularexpression",
+			// FIXME: Escape this string
+			description: { "try NSRegularExpression(pattern: \"\(REDialectBuiltins.swift.encode($0))\");" }
+		),
+		Constructor(
+			id: "posixe",
+			label: "POSIX Extended pattern",
+			language: "Shell",
+			engine: "POSIX Extended",
+			reference: "",
+			description: { REDialectBuiltins.posixExtended.encode($0) }
+		),
+		Constructor(
+			id: "posixe,grep",
+			label: "grep -e <pattern>",
+			language: "Shell",
+			engine: "POSIX Extended",
+			reference: "",
+			// FIXME: Escape this string
+			description: { "grep -e \"\(REDialectBuiltins.posixExtended.encode($0))\"" }
+		),
+	);
+}
+
 public struct REString<Symbol> where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	let dialect: REDialectProtocol;
 	let pattern: REPattern<Symbol>;
@@ -273,6 +374,8 @@ public protocol REDialectProtocol {
 }
 
 /// Most regular expression dialects can be described with the appropriate parameters on this structure
+/// TODO: Change these to use patterns to describe the class of strings that denote each rule.
+/// Use a placeholder character like the SUB character (0x1A) to denote the inside.
 public struct REDialect: REDialectProtocol {
 	public let openQuote: String           // Delimiter starting the pattern (e.g., "/" for Perl)
 	public let closeQuote: String          // Delimiter ending the pattern (e.g., "/" for Perl)

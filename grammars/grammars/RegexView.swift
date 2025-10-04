@@ -15,14 +15,14 @@ struct RegexPreset: Identifiable, Codable {
 	var dialect: String
 	/// Specifies if the generated regex should use the "case insensitive" flag, if the case of all the characters is insignificant to the result.
 	var caseInsensitive: Bool
-	var escaping: String
+	var constructorId: String
 
-	init(id: UUID = UUID(), name: String, dialect: String, caseInsensitive: Bool, escaping: String) {
+	init(id: UUID = UUID(), name: String, dialect: String, caseInsensitive: Bool, constructorId: String) {
 		self.id = id
 		self.name = name
 		self.dialect = dialect
 		self.caseInsensitive = caseInsensitive
-		self.escaping = escaping
+		self.constructorId = constructorId
 	}
 }
 
@@ -34,15 +34,19 @@ struct RegexContentView: View {
 	@State private var presetExpanded: Bool = true
 	//@State private var option_exclude_rules: String = ""
 
-	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.posix.rawValue
+	@AppStorage("selectedDialect") private var selectedDialectName: String = ""
 	@AppStorage("regexPresets") private var presetsData: Data = Data()
 
 	@State private var presets: [RegexPreset] = []
 	@State private var selectedPresetId: UUID? = nil
+	@State private var selectedLanguage: String? = nil
+	@State private var selectedDialect: String = ""
 	@State private var selectedPreset: RegexPreset? = nil
+	@State private var filteredDialects: Array<String> = []
+	@State private var filteredConstructors: Array<REDialactCollection.Constructor> = []
 	@State private var presetName: String = ""
 	@State private var caseInsensitive: Bool = false
-	@State private var escaping: String = ""
+	@State private var selectedConstructorId: String = ""
 	@State private var renameText: String = ""
 	@State private var showingNamePopover: Bool = false
 
@@ -52,37 +56,42 @@ struct RegexContentView: View {
 				DisclosureGroup(
 					isExpanded: $presetExpanded,
 					content: {
-						Picker("Dialect", selection: $regexDialect) {
-							ForEach(RegexDialect.allCases) { dialect in
-								Text(dialect.rawValue).tag(dialect.rawValue)
+						// First the user picks the programming language environment in use
+						// This will filter the regex engines and output formats to a useful set
+						Picker("Filter Language", selection: $selectedLanguage) {
+							Text("All").tag("")
+							Divider()
+							ForEach(REDialactCollection.builtins.languages, id: \.self) { language in
+								Text(language).tag(language)
 							}
 						}
 						.pickerStyle(.menu)
 
-						// Per-dialect specific options
-						if(regexDialect == RegexDialect.swift.rawValue){
+						// From the regex engines available in the language, the user picks the one
+						Picker("Dialect", selection: $selectedDialect) {
+							Text("All").tag("")
+							Divider()
+							ForEach(filteredDialects, id: \.self) { dialect in
+								Text(dialect).tag(dialect)
+							}
+						}
+						.pickerStyle(.menu)
+
+						Picker("Constructor", selection: $selectedConstructorId) {
+							ForEach(filteredConstructors, id: \.id) { constructor in
+								Text(constructor.label).tag(constructor.id)
+							}
+						}
+						.pickerStyle(.menu)
+
+						// Constructor or engine specific options
+						if(selectedDialect == "Swift"){
 							GroupBox(content: {
 								Toggle("Case-insensitive flag when possible", isOn: $caseInsensitive)
 							}, label: {
 								Text("Swift options")
 							})
-						}
-
-						Picker("Escape", selection: $escaping) {
-							Text("ASCII").tag("ascii")
-							Text("Unicode").tag("unicode")
-							Divider()
-							Text("Swift Regex Literal").tag("swift_literal")
-							Text("Swift Ignore Whitespace Literal").tag("swift_nws_literal")
-							Text("Swift Regex String").tag("swift_string")
-							Text("Swift Regex Builder").tag("swift_builder")
-							Text("Swift NSRegularExpression").tag("swift_nsregex")
-							Text("Shell").tag("shell")
-						}
-						.pickerStyle(.menu)
-
-						//TextField("Exclude rules", text: $option_exclude_rules);
-					},
+						}					},
 					label: {
 						// TODO: Allow user to star/favorite specific dialects and configurations
 						HStack {
@@ -181,15 +190,13 @@ struct RegexContentView: View {
 			computeRegexDescription()
 		}
 		.onChange(of: rule_fsm) { computeRegexDescription() }
-		.onChange(of: regexDialect) { checkPresetMismatch(); computeRegexDescription() }
 		.onChange(of: caseInsensitive) { checkPresetMismatch() }
-		.onChange(of: escaping) { checkPresetMismatch() }
 		.onChange(of: selectedPresetId) {
 			if let id = selectedPresetId, let preset = presets.first(where: { $0.id == id }) {
 				selectedPreset = preset
-				regexDialect = preset.dialect
+				selectedDialect = preset.dialect
 				caseInsensitive = preset.caseInsensitive
-				escaping = preset.escaping
+				selectedConstructorId = preset.constructorId
 				presetName = preset.name
 				unsavedChanges = false
 			} else {
@@ -197,6 +204,22 @@ struct RegexContentView: View {
 				unsavedChanges = false
 			}
 		}
+		.onChange(of: selectedLanguage) {
+			filteredDialects = REDialactCollection.builtins.filter(language: selectedLanguage).engines
+			selectedDialect = ""
+			checkPresetMismatch()
+			computeRegexDescription()
+		}
+		.onChange(of: selectedDialect) {
+			if selectedDialect == "" {
+				filteredConstructors = REDialactCollection.builtins.constructors
+			} else {
+				filteredConstructors = REDialactCollection.builtins.constructors.filter { $0.engine == selectedDialect }
+			}
+			checkPresetMismatch();
+			computeRegexDescription();
+		}
+		.onChange(of: selectedConstructorId) { checkPresetMismatch(); computeRegexDescription() }
 	}
 
 	private func computeRegexDescription() {
@@ -205,13 +228,14 @@ struct RegexContentView: View {
 		guard let fsm = rule_fsm else {
 			return
 		}
-		let regexDialect = regexDialect;
+		let selectedConstructorId = selectedConstructorId;
 		Task.detached(priority: .utility) {
 			let regex: REPattern<UInt32> = fsm.toPattern()
-			let description = switch regexDialect {
-				case "Swift": REDialectBuiltins.swift.encode(regex)
-				case "POSIX Extended": REDialectBuiltins.posixExtended.encode(regex)
-				default: "[:Unknown:]"
+			let description: String
+			if let constructor = REDialactCollection.builtins.constructors.first(where: { $0.id == selectedConstructorId }) {
+				description = constructor.description(regex)
+			} else {
+				description = ""
 			}
 			await MainActor.run {
 				regexDescription = description
@@ -235,21 +259,21 @@ struct RegexContentView: View {
 			unsavedChanges = false
 			return
 		}
-		unsavedChanges = selectedPreset.dialect != regexDialect ||
+		unsavedChanges = selectedPreset.dialect != selectedDialect ||
 						 selectedPreset.caseInsensitive != caseInsensitive ||
-						 selectedPreset.escaping != escaping
+						 selectedPreset.constructorId != selectedConstructorId
 	}
 
 	private func savePreset() {
 		if let selectedPreset {
 			// update existing
 			if let index = presets.firstIndex(where: { $0.id == selectedPreset.id }) {
-				presets[index] = RegexPreset(id: selectedPreset.id, name: presetName, dialect: regexDialect, caseInsensitive: caseInsensitive, escaping: escaping)
+				presets[index] = RegexPreset(id: selectedPreset.id, name: presetName, dialect: selectedDialect ?? "", caseInsensitive: caseInsensitive, constructorId: selectedConstructorId)
 				self.selectedPreset = presets[index]
 			}
 		} else {
 			// save new
-			let newPreset = RegexPreset(name: presetName, dialect: regexDialect, caseInsensitive: caseInsensitive, escaping: escaping)
+			let newPreset = RegexPreset(name: presetName, dialect: selectedDialect ?? "", caseInsensitive: caseInsensitive, constructorId: selectedConstructorId)
 			presets.append(newPreset)
 			selectedPresetId = newPreset.id
 		}
@@ -280,7 +304,7 @@ struct RegexContentView: View {
 		let baseName = selectedPreset.name
 		// TODO: If this ends with "Copy" or a number, then rename to an unused number
 		let newName = baseName + " Copy"
-		let newPreset = RegexPreset(name: newName, dialect: regexDialect, caseInsensitive: caseInsensitive, escaping: escaping)
+		let newPreset = RegexPreset(name: newName, dialect: selectedDialect ?? "", caseInsensitive: caseInsensitive, constructorId: selectedConstructorId)
 		presets.append(newPreset)
 		selectedPresetId = newPreset.id
 		savePresets()

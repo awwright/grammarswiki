@@ -13,7 +13,7 @@ struct PatternTestCase: CustomDebugStringConvertible {
 	}
 }
 
-struct Tests {
+private struct Tests {
 	// Shared list of test cases
 	static let standardTestCases: [PatternTestCase] = [
 		PatternTestCase(
@@ -161,6 +161,12 @@ struct Tests {
 			acceptingInputs: (set.map { $0.asciiValue! }).map { String((UnicodeScalar($0))) },
 			rejectingInputs: Set(0...0x7F).subtracting(set.map { $0.asciiValue! }).map { String((UnicodeScalar($0))) }
 		)
+	}
+}
+
+@Suite("REDialactCollection.builtins") struct REDialactCollection_Test {
+	@Test func example() {
+		#expect(REDialactCollection.builtins.filter(language: "foo").engines == [])
 	}
 }
 
