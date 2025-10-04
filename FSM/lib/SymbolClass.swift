@@ -867,8 +867,6 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	}
 }
 
-public typealias RangeDFA<Symbol: BinaryInteger> = SymbolClassDFA<ClosedRangeAlphabet<Symbol>> where Symbol.Stride: SignedInteger;
-
 /// A Dictionary-like structure that maps a collection of symbols to a value
 /// Unlike a Dictionary, multiple symbols can be set at the same time, while one symbol can be looked up at a time.
 public protocol AlphabetTableProtocol: Collection, ExpressibleByDictionaryLiteral, Equatable, Hashable where Key == Alphabet.SymbolClass, Element == (key: Key, value: Value) {

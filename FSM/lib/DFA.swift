@@ -1295,4 +1295,5 @@ extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeA
 extension SymbolClassDFA: SymbolClassPatternBuilder where Symbol: Comparable {
 }
 
-public typealias SymbolDFA<Symbol: Hashable> = SymbolClassDFA<SymbolAlphabet<Symbol>>
+public typealias SymbolDFA<Symbol: Hashable> = SymbolClassDFA<SymbolAlphabet<Symbol>>;
+public typealias RangeDFA<Symbol: BinaryInteger> = SymbolClassDFA<ClosedRangeAlphabet<Symbol>> where Symbol.Stride: SignedInteger;
