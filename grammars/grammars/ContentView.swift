@@ -105,7 +105,8 @@ struct DocumentItemView: View {
 		})
 		.contextMenu {
 			Button {
-				if let filepath = filepath {
+				if let filepath {
+					// TODO: If file no longer exists, show an alert
 					NSWorkspace.shared.selectFile(filepath.path, inFileViewerRootedAtPath: "")
 				}
 			} label: {Text("Show in Finder")}
@@ -238,9 +239,10 @@ struct DocumentDetail: View {
 						HStack {
 							Text("Filepath").foregroundColor(.primary)
 							Text(filepath.absoluteString).foregroundColor(.secondary)
-							Button("Show in Finder", systemImage: "folder.circle") {
+							Button("Show in Finder", systemImage: "magnifyingglass.circle.fill") {
+								// TODO: If file no longer exists, show an alert
 								NSWorkspace.shared.selectFile(filepath.path, inFileViewerRootedAtPath: "")
-							}.labelStyle(.iconOnly)
+							}.labelStyle(.iconOnly).buttonStyle(.plain)
 						}
 					}
 
