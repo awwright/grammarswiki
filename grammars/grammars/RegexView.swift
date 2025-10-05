@@ -1,5 +1,8 @@
 import SwiftUI
 import FSM
+#if os(macOS)
+import AppKit
+#endif
 
 // This view generates a regular expression from a DFA/FSM.
 // There are many variations of regular expressions, so the user may pick a dialect and other options.
@@ -91,7 +94,8 @@ struct RegexContentView: View {
 							}, label: {
 								Text("Swift options")
 							})
-						}					},
+						}
+					},
 					label: {
 						// TODO: Allow user to star/favorite specific dialects and configurations
 						HStack {
@@ -119,7 +123,7 @@ struct RegexContentView: View {
 									}
 							}
 							if(unsavedChanges){
-								Button("Save", systemImage: "square.and.arrow.down", action: savePreset)
+								Button("Update Preset", systemImage: "square.and.arrow.down", action: savePreset)
 							}
 							Spacer();
 							if(presetExpanded){
@@ -158,11 +162,9 @@ struct RegexContentView: View {
 				.disabled(regexDescription == nil);
 
 				Button(
-					"Save As...",
+					"Save As\u{2026}",
 					systemImage: "square.and.arrow.down",
-					action: {
-						print("Save as...");
-					})
+					action: saveAs)
 				.padding()
 				.disabled(regexDescription == nil);
 
@@ -315,6 +317,26 @@ struct RegexContentView: View {
 		presets.remove(at: index)
 		selectedPresetId = nil
 		savePresets()
+	}
+
+	private func saveAs() {
+		guard let regex = regexDescription else { return }
+		#if os(macOS)
+		let savePanel = NSSavePanel()
+		savePanel.allowedContentTypes = [.text]
+		savePanel.nameFieldStringValue = "regex.txt"
+		savePanel.begin { response in
+			if response == .OK, let url = savePanel.url {
+				do {
+					try regex.write(to: url, atomically: true, encoding: .utf8)
+				} catch {
+					self.error = "Failed to save file: \(error.localizedDescription)"
+				}
+			}
+		}
+		return;
+		#endif
+		fatalError("Not implemented on this platform")
 	}
 }
 
