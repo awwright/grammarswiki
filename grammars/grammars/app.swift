@@ -19,6 +19,14 @@ class AppModel {
 	let catalog: [DocumentItem]
 
 	static let fileExtension = ".abnf"
+	static let typeExtensions: [String: String] = [
+		"Plain text": ".txt",
+		"ABNF": ".abnf",
+		"EBNF": ".ebnf",
+		"Regex (Swift)": ".swift",
+		"Regex (POSIX-e)": ".posix"
+	]
+	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: typeExtensions.map { ($0.value, $0.key) })
 
 	init(){
 		user = [:]
@@ -41,12 +49,12 @@ class AppModel {
 			contents = []
 		}
 		for filename in contents {
-			if filename.hasSuffix(AppModel.fileExtension) {
+			let components = filename.split(separator: ".")
+			if components.count > 1, let ext = components.last, let type = AppModel.extensionsType[String(ext)] {
+				let name = components.dropLast().joined(separator: ".")
 				let filePath = userDocumentsDirectory.appendingPathComponent(filename)
-				// Remove fileExtension from the end of filename
-				let name = filename.hasSuffix(AppModel.fileExtension) ? String(filename.dropLast(AppModel.fileExtension.count)) : filename
 				let content = try! String(contentsOf: filePath, encoding: .utf8)
-				let newDocument = DocumentItem(name: name, content: content)
+				let newDocument = DocumentItem(name: name, type: type, content: content)
 				addDocument(newDocument)
 			}
 		}
@@ -65,7 +73,8 @@ class AppModel {
 			print("Error creating folder <\(userDocumentsDirectory)>: \(error)")
 		}
 		// Figure out if we need to rename the file
-		let filepath = userDocumentsDirectory.appendingPathComponent(document.name + AppModel.fileExtension)
+		let ext = AppModel.typeExtensions[document.type] ?? ".txt"
+		let filepath = userDocumentsDirectory.appendingPathComponent(document.name + ext)
 		do {
 			if let oldFilepath, oldFilepath != filepath {
 				print("move", oldFilepath, " -> ", filepath);
@@ -107,7 +116,7 @@ class AppModel {
 				if filename.hasSuffix(fileExtension) {
 					let filePath = textDirectory + "/" + filename
 					let content = try String(contentsOfFile: filePath, encoding: .utf8)
-					loadedFiles.append(DocumentItem(name: filename, content: content))
+					loadedFiles.append(DocumentItem(name: filename, type: "ABNF", content: content))
 				}
 			}
 			return loadedFiles.sorted { $0.name < $1.name }
@@ -122,10 +131,12 @@ class AppModel {
 @Observable class DocumentItem: Identifiable, Hashable, Equatable {
 	let id = UUID()
 	var name: String
+	var type: String
 	var content: String
 
-	init(name: String, content: String) {
+	init(name: String, type: String, content: String) {
 		self.name = name
+		self.type = type
 		self.content = content
 	}
 
@@ -134,6 +145,6 @@ class AppModel {
 	}
 
 	static func == (lhs: DocumentItem, rhs: DocumentItem) -> Bool {
-		lhs.id == rhs.id && lhs.name == rhs.name && lhs.content == rhs.content
+		lhs.id == rhs.id && lhs.name == rhs.name && lhs.content == rhs.content && lhs.type == rhs.type
 	}
 }

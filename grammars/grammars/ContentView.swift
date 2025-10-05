@@ -23,13 +23,14 @@ struct ContentView: View {
 				Section("Saved") {
 					ForEach(Array(model.user.values), id: \.self) {
 						document in
-						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }))
+						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), filepath: model.filepaths[document.id])
 					}
 				}
 				Section("Catalog") {
 					ForEach(model.catalog, id: \.self) {
 						document in
-						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }))
+						let filepath = Bundle.main.resourcePath.map { URL(fileURLWithPath: $0 + "/catalog/" + document.name) }
+						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), filepath: filepath)
 					}
 				}
 			}
@@ -51,6 +52,7 @@ struct ContentView: View {
 						// Attemting to set on this document makes a copy
 						let newDocument = DocumentItem(
 							name: "\($0.name) copy",
+							type: $0.type,
 							content: $0.content
 						)
 						model.addDocument(newDocument)
@@ -60,7 +62,10 @@ struct ContentView: View {
 					get: { model.user[selectedDocument.id]! },
 					set: { model.addDocument($0) }
 				);
-				DocumentDetail(document: binding)
+				let filepath = model.catalog.contains(selectedDocument) ?
+				Bundle.main.resourcePath.map { URL(fileURLWithPath: $0 + "/catalog/" + selectedDocument.name) } :
+				model.filepaths[selectedDocument.id]
+				DocumentDetail(document: binding, filepath: filepath)
 					.navigationTitle(selectedDocument.name)
 			} else {
 				StartView();
@@ -72,8 +77,9 @@ struct ContentView: View {
 		withAnimation {
 			let newDocument = DocumentItem(
 				name: "New Document \(model.user.count + 1)",
-				content: ""
-			)
+				type: "ABNF",
+				content: "",
+			);
 			model.addDocument(newDocument)
 			selection = newDocument
 		}
@@ -82,6 +88,7 @@ struct ContentView: View {
 
 struct DocumentItemView: View {
 	@Binding var document: DocumentItem
+	let filepath: URL?
 	@State private var isRenaming: Bool = false
 	@State private var draftName: String = ""
 
@@ -97,7 +104,11 @@ struct DocumentItemView: View {
 			}
 		})
 		.contextMenu {
-			Button {} label: {Text("Show in Finder")}
+			Button {
+				if let filepath = filepath {
+					NSWorkspace.shared.selectFile(filepath.path, inFileViewerRootedAtPath: "")
+				}
+			} label: {Text("Show in Finder")}
 			Divider()
 			Button {isRenaming = true} label: {Text("Rename")}
 			Button {} label: {Text("Duplicate")}
@@ -109,8 +120,10 @@ struct DocumentItemView: View {
 
 struct DocumentDetail: View {
 	@Binding var document: DocumentItem
+	let filepath: URL?
 
 	// User input
+	@State private var selectedDocumentLanguage: String = "ABNF"
 	@State private var selectedRule: String? = nil
 	@State private var testInput: String = ""
 
@@ -221,10 +234,33 @@ struct DocumentDetail: View {
 			.padding()
 			.inspector(isPresented: $inspector_isPresented) {
 				ScrollView {
+					if let filepath {
+						HStack {
+							Text("Filepath").foregroundColor(.primary)
+							Text(filepath.absoluteString).foregroundColor(.secondary)
+							Button("Show in Finder", systemImage: "folder.circle") {
+								NSWorkspace.shared.selectFile(filepath.path, inFileViewerRootedAtPath: "")
+							}.labelStyle(.iconOnly)
+						}
+					}
+
 					// First, show information true about the whole grammar file
 					// If there's no rulelist, then the grammar file isn't parsed at all.
+					Picker("Parse as", selection: $selectedDocumentLanguage) {
+						Text("Plain text").tag("Plain text");
+						Text("ABNF").tag("ABNF");
+						Text("EBNF").tag("EBNF");
+						Text("Regex (Swift)").tag("Regex (Swift)");
+						Text("Regex (POSIX-e)").tag("Regex (POSIX-e)");
+					}
+					.pickerStyle(MenuPickerStyle())
+
+					// TODO: Add a sheet/dialog that actually transforms the language from one to another
+					//Button("Convert\u{2026}", systemImage: "arrow.trianglehead.swap", action: {});
 
 					if let content_rulelist {
+						Divider();
+
 						// TODO: Order this in the same order as in the grammar
 						let (orphanGroup, subGroup) = computeGroupedRules(for: content_rulelist)
 						Picker("Select Starting Rule", selection: $selectedRule) {
@@ -339,8 +375,9 @@ struct DocumentDetail: View {
 			}
 		} // HStack
 		.onChange(of: document.content) { updatedDocument() }
-		.onChange(of: selectedRule) { updatedRule() }
-		.onAppear { updatedDocument(); updatedRule() }
+		.onChange(of: selectedRule) { updatedRule(); updatedDocument() }
+		.onChange(of: selectedDocumentLanguage) { document.type = selectedDocumentLanguage }
+		.onAppear { selectedDocumentLanguage = document.type; updatedDocument(); updatedRule() }
 		.toolbar {
 			Button {
 				inspector_isPresented.toggle()
@@ -363,7 +400,7 @@ struct DocumentDetail: View {
 		let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 		Task.detached(priority: .utility) {
 			do {
-				let root_parsed = try! ABNFRulelist<UInt32>.parse(input)
+				let root_parsed = try ABNFRulelist<UInt32>.parse(input)
 				let rulelist_all_final = try dereferenceABNFRulelist(root_parsed, {
 					filename in
 					let filePath = bundlePath + "/catalog/" + filename
