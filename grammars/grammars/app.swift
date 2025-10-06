@@ -1,10 +1,12 @@
 import SwiftUI
+import FSM
 import LanguageSupport
 
 struct FileType {
     let label: String
     let fileExtension: String
     let languageConfiguration: LanguageConfiguration
+    let parser: (String) throws -> ABNFRulelist<UInt32> // nil for no parsing
 }
 
 @main
@@ -26,62 +28,65 @@ class AppModel: ObservableObject {
 	let catalog: [DocumentItem]
 
 	static let fileTypes: [FileType] = [
-		FileType(label: "Plain text", fileExtension: ".txt", languageConfiguration: LanguageConfiguration(
-			name: "Plain",
-			supportsSquareBrackets: true,
-			supportsCurlyBrackets: false,
-			stringRegex: nil,
-			characterRegex: nil,
-			numberRegex: nil,
-			singleLineComment: "//",
-			nestedComment: nil,
-			identifierRegex: nil,
-			operatorRegex: nil,
-			reservedIdentifiers: [],
-			reservedOperators: []
-		)),
-		FileType(label: "ABNF", fileExtension: ".abnf", languageConfiguration: LanguageConfiguration(
-			name: "ABNF",
-			supportsSquareBrackets: true,
-			supportsCurlyBrackets: false,
-			stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
-			characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
-			numberRegex: try! Regex("[1-9][0-9]*"),
-			singleLineComment: ";",
-			nestedComment: nil,
-			identifierRegex: try! Regex("[0-9A-Za-z-]+"),
-			operatorRegex: try! Regex("/|\\*|=|=/"),
-			reservedIdentifiers: [],
-			reservedOperators: []
-		)),
-		FileType(label: "Regex (ECMAScript)", fileExtension: ".js", languageConfiguration: LanguageConfiguration(
-			name: "ECMAScript",
-			supportsSquareBrackets: true,
-			supportsCurlyBrackets: false,
-			stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
-			characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
-			numberRegex: try! Regex("[1-9][0-9]*"),
-			singleLineComment: ";",
-			nestedComment: nil,
-			identifierRegex: try! Regex("[0-9A-Za-z-]+"),
-			operatorRegex: try! Regex("/|\\*|=|=/"),
-			reservedIdentifiers: [],
-			reservedOperators: []
-		)),
-		FileType(label: "Regex (Swift)", fileExtension: ".swift", languageConfiguration: LanguageConfiguration(
-			name: "Swift",
-			supportsSquareBrackets: true,
-			supportsCurlyBrackets: false,
-			stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
-			characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
-			numberRegex: try! Regex("[1-9][0-9]*"),
-			singleLineComment: ";",
-			nestedComment: nil,
-			identifierRegex: try! Regex("[0-9A-Za-z-]+"),
-			operatorRegex: try! Regex("/|\\*|=|=/"),
-			reservedIdentifiers: [],
-			reservedOperators: []
-		)),
+		FileType(
+			label: "Plain text",
+			fileExtension: ".txt",
+			languageConfiguration: LanguageConfiguration(
+				name: "Plain",
+				supportsSquareBrackets: true,
+				supportsCurlyBrackets: false,
+				stringRegex: nil,
+				characterRegex: nil,
+				numberRegex: nil,
+				singleLineComment: "//",
+				nestedComment: nil,
+				identifierRegex: nil,
+				operatorRegex: nil,
+				reservedIdentifiers: [],
+				reservedOperators: [],
+			),
+			parser:  { _ in return ABNFRulelist<UInt32>.init() },
+		),
+		FileType(
+			label: "ABNF",
+			fileExtension: ".abnf",
+			languageConfiguration: LanguageConfiguration(
+				name: "ABNF",
+				supportsSquareBrackets: true,
+				supportsCurlyBrackets: false,
+				stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
+				characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
+				numberRegex: try! Regex("[1-9][0-9]*"),
+				singleLineComment: ";",
+				nestedComment: nil,
+				identifierRegex: try! Regex("[0-9A-Za-z-]+"),
+				operatorRegex: try! Regex("/|\\*|=|=/"),
+				reservedIdentifiers: [],
+				reservedOperators: [],
+			),
+			parser: { text in
+				let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
+				return try ABNFRulelist<UInt32>.parse(input)
+			},
+		),
+		FileType(
+			label: "Regex (ECMAScript)",
+			fileExtension: ".js",
+			languageConfiguration: LanguageConfiguration.swift(), // FIXME: Swift is pretty close, but this can be adjusted
+			parser: { text in
+				let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
+				return try ABNFRulelist<UInt32>.parse(input)
+			},
+		),
+		FileType(
+			label: "Regex (Swift)",
+			fileExtension: ".swift",
+			languageConfiguration: LanguageConfiguration.swift(),
+			parser: { text in
+				let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
+				return try ABNFRulelist<UInt32>.parse(input)
+			},
+		),
 	]
 	static let typeExtensions: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.label, $0.fileExtension) })
 	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.fileExtension, $0.label) })

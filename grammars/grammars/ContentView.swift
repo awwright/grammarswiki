@@ -404,16 +404,20 @@ struct DocumentDetail: View {
 		rule_alphabet = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
+		guard let fileType = AppModel.fileTypes.first(where: { $0.label == selectedDocumentLanguage }) else {
+			// No parser for this type
+			return
+		}
+		let parser = fileType.parser
 		guard let bundlePath = Bundle.main.resourcePath else { return }
-		let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 		Task.detached(priority: .utility) {
 			do {
-				let root_parsed = try ABNFRulelist<UInt32>.parse(input)
+				let root_parsed = try parser(text);
 				let rulelist_all_final = try dereferenceABNFRulelist(root_parsed, {
 					filename in
 					let filePath = bundlePath + "/catalog/" + filename
 					let content = try String(contentsOfFile: filePath, encoding: .utf8)
-					return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
+					return try parser(content)
 				});
 				await MainActor.run {
 					content_rulelist = rulelist_all_final
@@ -430,6 +434,7 @@ struct DocumentDetail: View {
 					content_rulelist = nil
 					content_rulelist_error = "Error at index: " + String(describing: error.index)
 					rule_alphabet = nil
+					let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 					let line = input[0...error.index.startIndex].count(where: { $0 == 0xA })
 					messages = Set([
 						TextLocated(location: TextLocation(zeroBasedLine: line, column: 0), entity: Message(category: .error, length: 2, summary: "Syntax Error", description: nil))
