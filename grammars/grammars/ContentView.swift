@@ -14,7 +14,7 @@ import CodeEditorView
 import LanguageSupport
 
 struct ContentView: View {
-	@Binding var model: AppModel
+	@ObservedObject var model: AppModel
 	@State private var selection: DocumentItem? = nil
 
 	var body: some View {
@@ -23,14 +23,14 @@ struct ContentView: View {
 				Section("Saved") {
 					ForEach(Array(model.user.values), id: \.self) {
 						document in
-						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), filepath: model.filepaths[document.id])
+						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), filepath: model.filepaths[document.id], onDelete: { model.delDocument(document) }, onDuplicate: { let newDoc = DocumentItem(name: "Copy of " + document.name, type: document.type, content: document.content); model.addDocument(newDoc) }, isEditable: true)
 					}
 				}
 				Section("Catalog") {
 					ForEach(model.catalog, id: \.self) {
 						document in
 						let filepath = Bundle.main.resourcePath.map { URL(fileURLWithPath: $0 + "/catalog/" + document.name) }
-						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), filepath: filepath)
+						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), filepath: filepath, onDelete: {}, onDuplicate: {}, isEditable: false)
 					}
 				}
 			}
@@ -256,12 +256,9 @@ struct DocumentDetail: View {
 					// First, show information true about the whole grammar file
 					// If there's no rulelist, then the grammar file isn't parsed at all.
 					Picker("Parse as", selection: $selectedDocumentLanguage) {
-						Text("Plain text").tag("Plain text");
-						Text("ABNF").tag("ABNF");
-						//Text("EBNF").tag("EBNF");
-						Text("Regex (ECMAScript)").tag("Regex (ECMAScript)");
-						Text("Regex (Swift)").tag("Regex (Swift)");
-						//Text("Regex (POSIX-e)").tag("Regex (POSIX-e)");
+						ForEach(AppModel.fileTypes, id: \.label) { type in
+							Text(type.label).tag(type.label)
+						}
 					}
 					.pickerStyle(MenuPickerStyle())
 
@@ -501,55 +498,9 @@ struct DocumentDetail: View {
 		}
 	}
 
-	// Simplified ABNF language configuration
+	// Language configuration
 	private func abnfLanguageConfiguration() -> LanguageConfiguration {
-		switch selectedDocumentLanguage {
-			case "ABNF":
-			LanguageConfiguration(
-				name: "ABNF",
-				supportsSquareBrackets: true,
-				supportsCurlyBrackets: false,
-				stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
-				characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
-				numberRegex: try! Regex("[1-9][0-9]*"),
-				singleLineComment: ";",
-				nestedComment: nil,
-				identifierRegex: try! Regex("[0-9A-Za-z-]+"),
-				operatorRegex: try! Regex("/|\\*|=|=/"),
-				reservedIdentifiers: [],
-				reservedOperators: []
-			);
-			case "Regex (Swift)":
-			LanguageConfiguration(
-				name: "Swift",
-				supportsSquareBrackets: true,
-				supportsCurlyBrackets: false,
-				stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
-				characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
-				numberRegex: try! Regex("[1-9][0-9]*"),
-				singleLineComment: ";",
-				nestedComment: nil,
-				identifierRegex: try! Regex("[0-9A-Za-z-]+"),
-				operatorRegex: try! Regex("/|\\*|=|=/"),
-				reservedIdentifiers: [],
-				reservedOperators: []
-			);
-			default:
-			LanguageConfiguration(
-				name: "Plain",
-				supportsSquareBrackets: true,
-				supportsCurlyBrackets: false,
-				stringRegex: nil,
-				characterRegex: nil,
-				numberRegex: nil,
-				singleLineComment: "//",
-				nestedComment: nil,
-				identifierRegex: nil,
-				operatorRegex: nil,
-				reservedIdentifiers: [],
-				reservedOperators: []
-			);
-		}
+		return AppModel.fileTypes.first { $0.label == selectedDocumentLanguage }?.languageConfiguration ?? AppModel.fileTypes[0].languageConfiguration
 	}
 
 	private func computeGroupedRules(for rulelist: ABNFRulelist<UInt32>) -> (orphanGroup: [String], subGroup: [String]) {

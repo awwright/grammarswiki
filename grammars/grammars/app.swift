@@ -1,4 +1,11 @@
 import SwiftUI
+import LanguageSupport
+
+struct FileType {
+    let label: String
+    let fileExtension: String
+    let languageConfiguration: LanguageConfiguration
+}
 
 @main
 struct ABNFEditorApp: App {
@@ -18,16 +25,66 @@ class AppModel: ObservableObject {
 	@Published var filepaths: [UUID: URL] = [:]
 	let catalog: [DocumentItem]
 
-	static let fileExtension = ".abnf"
-	static let typeExtensions: [String: String] = [
-		"Plain text": ".txt",
-		"ABNF": ".abnf",
-		"EBNF": ".ebnf",
-		"Regex (ECMAScript)": ".js",
-		"Regex (Swift)": ".swift",
-		"Regex (POSIX-e)": ".posix"
+	static let fileTypes: [FileType] = [
+		FileType(label: "Plain text", fileExtension: ".txt", languageConfiguration: LanguageConfiguration(
+			name: "Plain",
+			supportsSquareBrackets: true,
+			supportsCurlyBrackets: false,
+			stringRegex: nil,
+			characterRegex: nil,
+			numberRegex: nil,
+			singleLineComment: "//",
+			nestedComment: nil,
+			identifierRegex: nil,
+			operatorRegex: nil,
+			reservedIdentifiers: [],
+			reservedOperators: []
+		)),
+		FileType(label: "ABNF", fileExtension: ".abnf", languageConfiguration: LanguageConfiguration(
+			name: "ABNF",
+			supportsSquareBrackets: true,
+			supportsCurlyBrackets: false,
+			stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
+			characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
+			numberRegex: try! Regex("[1-9][0-9]*"),
+			singleLineComment: ";",
+			nestedComment: nil,
+			identifierRegex: try! Regex("[0-9A-Za-z-]+"),
+			operatorRegex: try! Regex("/|\\*|=|=/"),
+			reservedIdentifiers: [],
+			reservedOperators: []
+		)),
+		FileType(label: "Regex (ECMAScript)", fileExtension: ".js", languageConfiguration: LanguageConfiguration(
+			name: "ECMAScript",
+			supportsSquareBrackets: true,
+			supportsCurlyBrackets: false,
+			stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
+			characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
+			numberRegex: try! Regex("[1-9][0-9]*"),
+			singleLineComment: ";",
+			nestedComment: nil,
+			identifierRegex: try! Regex("[0-9A-Za-z-]+"),
+			operatorRegex: try! Regex("/|\\*|=|=/"),
+			reservedIdentifiers: [],
+			reservedOperators: []
+		)),
+		FileType(label: "Regex (Swift)", fileExtension: ".swift", languageConfiguration: LanguageConfiguration(
+			name: "Swift",
+			supportsSquareBrackets: true,
+			supportsCurlyBrackets: false,
+			stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
+			characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
+			numberRegex: try! Regex("[1-9][0-9]*"),
+			singleLineComment: ";",
+			nestedComment: nil,
+			identifierRegex: try! Regex("[0-9A-Za-z-]+"),
+			operatorRegex: try! Regex("/|\\*|=|=/"),
+			reservedIdentifiers: [],
+			reservedOperators: []
+		)),
 	]
-	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: typeExtensions.map { ($0.value, $0.key) })
+	static let typeExtensions: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.label, $0.fileExtension) })
+	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.fileExtension, $0.label) })
 
 	init(){
 		catalog = Self.getCatalog()
@@ -120,6 +177,8 @@ class AppModel: ObservableObject {
 					let filePath = textDirectory + "/" + filename
 					let content = try String(contentsOfFile: filePath, encoding: .utf8)
 					loadedFiles.append(DocumentItem(name: name, type: type, content: content))
+				} else {
+					print("Ignoring extension of \(filename)");
 				}
 			}
 			return loadedFiles.sorted { $0.name < $1.name }
