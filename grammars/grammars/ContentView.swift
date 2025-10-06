@@ -189,7 +189,7 @@ struct DocumentDetail: View {
 
 					if showRegex {
 						Tab("Regex", systemImage: "pencil") {
-							RegexContentView(rule_fsm: $rule_fsm)
+							RegexContentView(rule_fsm: $rule_fsm, rulelist_fsm: content_rulelist?.ruleNames)
 						}
 					}
 

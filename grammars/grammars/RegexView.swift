@@ -31,6 +31,7 @@ struct RegexPreset: Identifiable, Codable {
 
 struct RegexContentView: View {
 	@Binding var rule_fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>?
+	var rulelist_fsm: Array<String>? = nil;
 	@State private var regexDescription: String?
 	@State private var error: String?
 	@State private var unsavedChanges: Bool = false
@@ -47,6 +48,8 @@ struct RegexContentView: View {
 	@State private var selectedPreset: RegexPreset? = nil
 	@State private var filteredDialects: Array<String> = []
 	@State private var filteredConstructors: Array<REDialactCollection.Constructor> = []
+	@State private var selectedRule: String = "\u{1B}all"
+	@State private var selectedRules: Set<String> = []
 	@State private var presetName: String = ""
 	@State private var caseInsensitive: Bool = false
 	@State private var selectedConstructorId: String = ""
@@ -88,12 +91,13 @@ struct RegexContentView: View {
 						.pickerStyle(.menu)
 
 						// Constructor or engine specific options
-						if(selectedDialect == "Swift"){
+						let selectedConstructor = filteredConstructors.first(where: { $0.id == selectedConstructorId });
+						if(selectedConstructor?.language == "Swift"){
 							GroupBox(content: {
 								Toggle("Case-insensitive flag when possible", isOn: $caseInsensitive)
 							}, label: {
 								Text("Swift options")
-							})
+							}).frame(maxWidth: .infinity, alignment: .leading)
 						}
 					},
 					label: {
@@ -141,6 +145,26 @@ struct RegexContentView: View {
 			}
 			.padding()
 
+			// TODO: This doesn't currently do anything
+			if let rulelist_fsm {
+				Group {
+					Picker("Rules", selection: $selectedRule) {
+						// TODO: Show the name of the starting rule, e.g. "Starting rule (HTTP-message)"
+						Text("Starting Rule").tag("")
+						//Text("All").tag("\u{1B}all")
+						//Text("Orphans").tag("\u{1B}orphans")
+						//Text("Multiple\u{2026}").tag("\u{1B}multi")
+						Divider()
+						ForEach(rulelist_fsm, id: \.self) { key in
+							Text(key).tag(key)
+						}
+					}
+					.pickerStyle(.menu)
+				}.padding();
+			}
+
+			// TODO: Add a "Compare all/selected presets" option to show multiple regex next to each other
+
 			HStack {
 				Spacer();
 
@@ -186,10 +210,12 @@ struct RegexContentView: View {
 				}
 			}
 		}
-		.frame(maxWidth: .infinity, maxHeight: .infinity)
+		.frame(maxWidth: .infinity)
 		.onAppear {
 			loadPresets()
 			computeRegexDescription()
+			filteredDialects = REDialactCollection.builtins.engines
+			filteredConstructors = REDialactCollection.builtins.constructors
 		}
 		.onChange(of: rule_fsm) { computeRegexDescription() }
 		.onChange(of: caseInsensitive) { checkPresetMismatch() }
@@ -208,7 +234,8 @@ struct RegexContentView: View {
 		}
 		.onChange(of: selectedLanguage) {
 			filteredDialects = REDialactCollection.builtins.filter(language: selectedLanguage).engines
-			selectedDialect = ""
+			selectedDialect = filteredDialects.contains { $0 == selectedDialect } ? selectedDialect : filteredDialects.first ?? ""
+//			selectedConstructorId = filteredConstructors.contains { $0.id == selectedConstructorId } ? selectedConstructorId : filteredConstructors?.first.id ?? ""
 			checkPresetMismatch()
 			computeRegexDescription()
 		}
@@ -218,10 +245,14 @@ struct RegexContentView: View {
 			} else {
 				filteredConstructors = REDialactCollection.builtins.constructors.filter { $0.engine == selectedDialect }
 			}
+			selectedConstructorId = filteredConstructors.first?.id ?? ""
 			checkPresetMismatch();
 			computeRegexDescription();
 		}
-		.onChange(of: selectedConstructorId) { checkPresetMismatch(); computeRegexDescription() }
+		.onChange(of: selectedConstructorId) {
+			checkPresetMismatch();
+			computeRegexDescription();
+		}
 	}
 
 	private func computeRegexDescription() {
@@ -342,5 +373,5 @@ struct RegexContentView: View {
 
 #Preview {
 	let fsm = SymbolClassDFA<ClosedRangeAlphabet<UInt32>>.empty;
-	RegexContentView(rule_fsm: Binding(get: { fsm }, set: { fsm in }))
+	RegexContentView(rule_fsm: Binding(get: { fsm }, set: { fsm in }), rulelist_fsm: ["rule1", "rule2"])
 }
