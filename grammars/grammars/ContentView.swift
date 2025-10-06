@@ -89,6 +89,9 @@ struct ContentView: View {
 struct DocumentItemView: View {
 	@Binding var document: DocumentItem
 	let filepath: URL?
+	let onDelete: () -> Void
+	let onDuplicate: () -> Void
+	let isEditable: Bool
 	@State private var isRenaming: Bool = false
 	@State private var draftName: String = ""
 
@@ -111,10 +114,14 @@ struct DocumentItemView: View {
 				}
 			} label: {Text("Show in Finder")}
 			Divider()
-			Button {isRenaming = true} label: {Text("Rename")}
-			Button {} label: {Text("Duplicate")}
-			Divider()
-			Button {} label: {Text("Delete")}
+			if isEditable {
+				Button {isRenaming = true} label: {Text("Rename")}
+			}
+			Button { onDuplicate() } label: {Text("Duplicate")}
+			if isEditable {
+				Divider()
+				Button { onDelete() } label: {Text("Delete")}
+			}
 		}
 	}
 }
@@ -251,9 +258,10 @@ struct DocumentDetail: View {
 					Picker("Parse as", selection: $selectedDocumentLanguage) {
 						Text("Plain text").tag("Plain text");
 						Text("ABNF").tag("ABNF");
-						Text("EBNF").tag("EBNF");
+						//Text("EBNF").tag("EBNF");
+						Text("Regex (ECMAScript)").tag("Regex (ECMAScript)");
 						Text("Regex (Swift)").tag("Regex (Swift)");
-						Text("Regex (POSIX-e)").tag("Regex (POSIX-e)");
+						//Text("Regex (POSIX-e)").tag("Regex (POSIX-e)");
 					}
 					.pickerStyle(MenuPickerStyle())
 
@@ -376,9 +384,10 @@ struct DocumentDetail: View {
 				.inspectorColumnWidth(min: 300, ideal: 500, max: 2000)
 			}
 		} // HStack
-		.onChange(of: document.content) { updatedDocument() }
+ 		.onChange(of: document.content) { updatedDocument() }
 		.onChange(of: selectedRule) { updatedRule(); updatedDocument() }
 		.onChange(of: selectedDocumentLanguage) { document.type = selectedDocumentLanguage }
+		.onChange(of: document.id) { selectedDocumentLanguage = document.type; updatedDocument(); updatedRule() }
 		.onAppear { selectedDocumentLanguage = document.type; updatedDocument(); updatedRule() }
 		.toolbar {
 			Button {
@@ -494,20 +503,53 @@ struct DocumentDetail: View {
 
 	// Simplified ABNF language configuration
 	private func abnfLanguageConfiguration() -> LanguageConfiguration {
-		LanguageConfiguration(
-			name: "ABNF",
-			supportsSquareBrackets: true,
-			supportsCurlyBrackets: false,
-			stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
-			characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
-			numberRegex: try! Regex("[1-9][0-9]*"),
-			singleLineComment: ";",
-			nestedComment: nil,
-			identifierRegex: try! Regex("[0-9A-Za-z-]+"),
-			operatorRegex: try! Regex("/|\\*|=|=/"),
-			reservedIdentifiers: [],
-			reservedOperators: []
-		)
+		switch selectedDocumentLanguage {
+			case "ABNF":
+			LanguageConfiguration(
+				name: "ABNF",
+				supportsSquareBrackets: true,
+				supportsCurlyBrackets: false,
+				stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
+				characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
+				numberRegex: try! Regex("[1-9][0-9]*"),
+				singleLineComment: ";",
+				nestedComment: nil,
+				identifierRegex: try! Regex("[0-9A-Za-z-]+"),
+				operatorRegex: try! Regex("/|\\*|=|=/"),
+				reservedIdentifiers: [],
+				reservedOperators: []
+			);
+			case "Regex (Swift)":
+			LanguageConfiguration(
+				name: "Swift",
+				supportsSquareBrackets: true,
+				supportsCurlyBrackets: false,
+				stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
+				characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
+				numberRegex: try! Regex("[1-9][0-9]*"),
+				singleLineComment: ";",
+				nestedComment: nil,
+				identifierRegex: try! Regex("[0-9A-Za-z-]+"),
+				operatorRegex: try! Regex("/|\\*|=|=/"),
+				reservedIdentifiers: [],
+				reservedOperators: []
+			);
+			default:
+			LanguageConfiguration(
+				name: "Plain",
+				supportsSquareBrackets: true,
+				supportsCurlyBrackets: false,
+				stringRegex: nil,
+				characterRegex: nil,
+				numberRegex: nil,
+				singleLineComment: "//",
+				nestedComment: nil,
+				identifierRegex: nil,
+				operatorRegex: nil,
+				reservedIdentifiers: [],
+				reservedOperators: []
+			);
+		}
 	}
 
 	private func computeGroupedRules(for rulelist: ABNFRulelist<UInt32>) -> (orphanGroup: [String], subGroup: [String]) {

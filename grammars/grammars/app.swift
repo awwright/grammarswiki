@@ -5,7 +5,7 @@ struct ABNFEditorApp: App {
 	@State private var model = AppModel()
 	var body: some Scene {
 		WindowGroup {
-			ContentView(model: $model)
+			ContentView(model: model)
 		}
 		Settings {
 			SettingsView()
@@ -13,9 +13,9 @@ struct ABNFEditorApp: App {
 	}
 }
 
-class AppModel {
-	var user: [UUID: DocumentItem]
-	var filepaths: [UUID: URL]
+class AppModel: ObservableObject {
+	@Published var user: [UUID: DocumentItem] = [:]
+	@Published var filepaths: [UUID: URL] = [:]
 	let catalog: [DocumentItem]
 
 	static let fileExtension = ".abnf"
@@ -23,14 +23,13 @@ class AppModel {
 		"Plain text": ".txt",
 		"ABNF": ".abnf",
 		"EBNF": ".ebnf",
+		"Regex (ECMAScript)": ".js",
 		"Regex (Swift)": ".swift",
 		"Regex (POSIX-e)": ".posix"
 	]
 	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: typeExtensions.map { ($0.value, $0.key) })
 
 	init(){
-		user = [:]
-		filepaths = [:]
 		catalog = Self.getCatalog()
 		reloadUser()
 	}
@@ -50,13 +49,16 @@ class AppModel {
 		}
 		for filename in contents {
 			let components = filename.split(separator: ".")
-			if components.count > 1, let ext = components.last, let type = AppModel.extensionsType[String(ext)] {
+			if components.count > 1, let ext = components.last, let type = AppModel.extensionsType["."+String(ext)] {
+				print("\tLoading \(filename) -> \(type)");
 				let name = components.dropLast().joined(separator: ".")
 				let filePath = userDocumentsDirectory.appendingPathComponent(filename)
 				let content = try! String(contentsOf: filePath, encoding: .utf8)
 				let newDocument = DocumentItem(name: name, type: type, content: content)
 				addDocument(newDocument)
-			}
+			} else {
+				print("Ignoring extension of \(filename)");
+			  }
 		}
 	}
 
@@ -81,9 +83,8 @@ class AppModel {
 				// Name changed, rename the file
 				try FileManager.default.moveItem(at: oldFilepath, to: filepath)
 			}
-//			print("write", filepath);
-//			let data = Data(document.content.utf8);
-//			try data.write(to: filepath, options: [.atomic, .completeFileProtection])
+			let data = Data(document.content.utf8);
+			try data.write(to: filepath, options: [.atomic, .completeFileProtection])
 			filepaths[document.id] = filepath
 		} catch {
 			// Use old name
@@ -113,10 +114,12 @@ class AppModel {
 			let contents = try fileManager.contentsOfDirectory(atPath: textDirectory)
 			var loadedFiles: [DocumentItem] = []
 			for filename in contents {
-				if filename.hasSuffix(fileExtension) {
+				let components = filename.split(separator: ".")
+				if components.count > 1, let ext = components.last, let type = AppModel.extensionsType["."+String(ext)] {
+					let name = components.dropLast().joined(separator: ".")
 					let filePath = textDirectory + "/" + filename
 					let content = try String(contentsOfFile: filePath, encoding: .utf8)
-					loadedFiles.append(DocumentItem(name: filename, type: "ABNF", content: content))
+					loadedFiles.append(DocumentItem(name: name, type: type, content: content))
 				}
 			}
 			return loadedFiles.sorted { $0.name < $1.name }
