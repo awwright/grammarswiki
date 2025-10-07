@@ -93,15 +93,21 @@ struct DocumentItemView: View {
 	let onDuplicate: () -> Void
 	let isEditable: Bool
 	@State private var isRenaming: Bool = false
+	@FocusState private var isFocused: Bool
 	@State private var draftName: String = ""
 
 	var body: some View {
 		NavigationLink(value: document, label: {
 			if isRenaming {
-				TextField("Name", text: $draftName, onCommit: {
-					document.name = draftName
-					isRenaming = false
-				})
+				HStack {
+					TextField("Name", text: $draftName, onCommit: {
+						if !draftName.isEmpty {
+							document.name = draftName
+						}
+						isRenaming = false
+						isFocused = false
+					}).focused($isFocused)
+				}
 			} else {
 				Text(document.name)
 			}
@@ -115,13 +121,18 @@ struct DocumentItemView: View {
 			} label: {Text("Show in Finder")}
 			Divider()
 			if isEditable {
-				Button {isRenaming = true} label: {Text("Rename")}
+				RenameButton()
 			}
 			Button { onDuplicate() } label: {Text("Duplicate")}
 			if isEditable {
 				Divider()
 				Button { onDelete() } label: {Text("Delete")}
 			}
+		}
+		.renameAction {
+			draftName = document.name
+			isRenaming = true;
+			isFocused = true;
 		}
 	}
 }
