@@ -15,22 +15,21 @@ import LanguageSupport
 
 struct ContentView: View {
 	@ObservedObject var model: AppModel
-	@State private var selection: DocumentItem? = nil
+	@State private var selectionId: UUID? = nil
 
 	var body: some View {
 		NavigationSplitView {
-			List(selection: $selection) {
+			List(selection: $selectionId) {
 				Section("Saved") {
-					ForEach(Array(model.user.values), id: \.self) {
+					ForEach(Array(model.user.values), id: \.id) {
 						document in
-						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), filepath: model.filepaths[document.id], onDelete: { model.delDocument(document) }, onDuplicate: { let newDoc = DocumentItem(name: "Copy of " + document.name, type: document.type, content: document.content); model.addDocument(newDoc) }, isEditable: true)
+						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), onDelete: { self.selectionId = nil; model.delDocument(document) }, onDuplicate: { let newDoc = DocumentItem(filepath: nil, name: "Copy of " + document.name, type: document.type, content: document.content); model.addDocument(newDoc); selectionId = newDoc.id; }, isEditable: true)
 					}
 				}
 				Section("Catalog") {
-					ForEach(model.catalog, id: \.self) {
+					ForEach(model.catalog, id: \.id) {
 						document in
-						let filepath = Bundle.main.resourcePath.map { URL(fileURLWithPath: $0 + "/catalog/" + document.name) }
-						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), filepath: filepath, onDelete: {}, onDuplicate: {}, isEditable: false)
+						DocumentItemView(document: Binding(get: { document }, set: { let newDoc = DocumentItem(filepath: nil, name: $0.name, type: $0.type, content: $0.content); model.addDocument(newDoc); selectionId = newDoc.id }), onDelete: {}, onDuplicate: {}, isEditable: false)
 					}
 				}
 			}
@@ -42,53 +41,48 @@ struct ContentView: View {
 					}
 				}
 			}
-		} detail: {
-			// FIXME: This technique mangles the undo stack when you switch documents. I don't know how to fix this.
-			if let selectedDocument = selection {
-				let binding: Binding<DocumentItem> = model.catalog.contains(selectedDocument) ?
-				Binding(
-					get: { selectedDocument },
-					set: {
-						// Attemting to set on this document makes a copy
-						let newDocument = DocumentItem(
-							name: "\($0.name) copy",
-							type: $0.type,
-							content: $0.content
+			} detail: {
+				if let id = selectionId {
+					if let document = model.user[id] {
+						let binding = Binding(get: { document }, set: { model.addDocument($0) })
+						DocumentDetail(document: binding)
+							.navigationTitle(document.name)
+					} else if let document = model.catalog.first(where: { $0.id == id }) {
+						let binding = Binding(
+							get: { document },
+							set: {
+								let newDocument = DocumentItem(filepath: nil, name: $0.name, type: $0.type, content: $0.content)
+								model.addDocument(newDocument)
+								selectionId = newDocument.id
+							}
 						)
-						model.addDocument(newDocument)
-						selection = newDocument
+						DocumentDetail(document: binding)
+							.navigationTitle(document.name)
+					} else {
+						StartView()
 					}
-				) : Binding(
-					get: { model.user[selectedDocument.id]! },
-					set: { model.addDocument($0) }
-				);
-				let filepath = model.catalog.contains(selectedDocument) ?
-				Bundle.main.resourcePath.map { URL(fileURLWithPath: $0 + "/catalog/" + selectedDocument.name) } :
-				model.filepaths[selectedDocument.id]
-				DocumentDetail(document: binding, filepath: filepath)
-					.navigationTitle(selectedDocument.name)
-			} else {
-				StartView();
+				} else {
+					StartView()
+				}
 			}
-		}
 	}
 
-	func addDocument(){
-		withAnimation {
-			let newDocument = DocumentItem(
-				name: "New Document \(model.user.count + 1)",
-				type: "ABNF",
-				content: "",
-			);
-			model.addDocument(newDocument)
-			selection = newDocument
-		}
-	}
+ 	func addDocument(){
+ 		withAnimation {
+ 			let newDocument = DocumentItem(
+				filepath: nil,
+ 				name: "New Document \(model.user.count + 1)",
+ 				type: "ABNF",
+ 				content: "",
+ 			);
+ 			model.addDocument(newDocument)
+ 			selectionId = newDocument.id
+ 		}
+ 	}
 }
 
 struct DocumentItemView: View {
 	@Binding var document: DocumentItem
-	let filepath: URL?
 	let onDelete: () -> Void
 	let onDuplicate: () -> Void
 	let isEditable: Bool
@@ -97,7 +91,7 @@ struct DocumentItemView: View {
 	@State private var draftName: String = ""
 
 	var body: some View {
-		NavigationLink(value: document, label: {
+		NavigationLink(value: document.id, label: {
 			if isRenaming {
 				HStack {
 					TextField("Name", text: $draftName, onCommit: {
@@ -106,6 +100,9 @@ struct DocumentItemView: View {
 						}
 						isRenaming = false
 						isFocused = false
+//						NotificationCenter.default.post(name: .didRenameDocument, object: document)
+						// Save the changes, trigger a binding set operation
+						document = document;
 					}).focused($isFocused)
 				}
 			} else {
@@ -114,7 +111,7 @@ struct DocumentItemView: View {
 		})
 		.contextMenu {
 			Button {
-				if let filepath {
+				if let filepath = document.filepath {
 					// TODO: If file no longer exists, show an alert
 					NSWorkspace.shared.selectFile(filepath.path, inFileViewerRootedAtPath: "")
 				}
@@ -139,7 +136,6 @@ struct DocumentItemView: View {
 
 struct DocumentDetail: View {
 	@Binding var document: DocumentItem
-	let filepath: URL?
 
 	// User input
 	@State private var selectedDocumentLanguage: String = "ABNF"
@@ -190,7 +186,7 @@ struct DocumentDetail: View {
 		HStack(spacing: 20) {
 			VStack(alignment: .leading) {
 				TabView {
-					Tab("Editor", systemImage: "pencil") {
+					Tab("Code", systemImage: "pencil") {
 						// Some views that were considered for this:
 						// - Builtin TextEditor - would be sufficient except it automatically curls quotes and there's no way to disable it
 						// - https://github.com/krzyzanowskim/STTextView - more like a text field, lacks code highlighting, instead wants an AttributedString, though maybe that's what I want
@@ -259,10 +255,10 @@ struct DocumentDetail: View {
 			.padding()
 			.inspector(isPresented: $inspector_isPresented) {
 				ScrollView {
-					if let filepath {
+					if let filepath = document.filepath {
 						HStack {
 							Text("Filepath").foregroundColor(.primary)
-							Text(filepath.absoluteString).foregroundColor(.secondary)
+							Text(filepath.path).foregroundColor(.secondary)
 							Button("Show in Finder", systemImage: "magnifyingglass.circle.fill") {
 								// TODO: If file no longer exists, show an alert
 								NSWorkspace.shared.selectFile(filepath.path, inFileViewerRootedAtPath: "")
@@ -288,9 +284,10 @@ struct DocumentDetail: View {
 						// TODO: Order this in the same order as in the grammar
 						let (first, orphanGroup, subGroup) = computeGroupedRules(for: content_rulelist)
 						Picker("Select Starting Rule", selection: $selectedRule) {
-							Text("Select a rule").tag(String?.none)
 							if let first {
 								Text(first).tag(String?.some(first))
+							} else {
+								Text("No rules defined").disabled(true)
 							}
 							if !orphanGroup.isEmpty {
 								Section("Orphan Rules") {
