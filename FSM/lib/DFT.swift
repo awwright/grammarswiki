@@ -66,15 +66,15 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 	) {
 		for transitions in states {
 			for (_, next) in transitions {
-				assert(next >= 0)
-				assert(next < states.count)
+				assert(next >= 0, "Transition target state \(next) is not defined")
+				assert(next < states.count, "Transition target state \(next) is not defined")
 			}
 		}
 		assert(initial >= 0)
 		assert(initial < states.count)
 		for (state, _) in finalsOut {
-			assert(state >= 0)
-			assert(state < states.count)
+			assert(state >= 0, "Final state \(state) is not defined")
+			assert(state < states.count, "Final state \(state) is not defined")
 		}
 
 		self.states = states
