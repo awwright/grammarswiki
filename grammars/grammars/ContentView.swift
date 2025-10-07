@@ -275,9 +275,12 @@ struct DocumentDetail: View {
 						Divider();
 
 						// TODO: Order this in the same order as in the grammar
-						let (orphanGroup, subGroup) = computeGroupedRules(for: content_rulelist)
+						let (first, orphanGroup, subGroup) = computeGroupedRules(for: content_rulelist)
 						Picker("Select Starting Rule", selection: $selectedRule) {
 							Text("Select a rule").tag(String?.none)
+							if let first {
+								Text(first).tag(String?.some(first))
+							}
 							if !orphanGroup.isEmpty {
 								Section("Orphan Rules") {
 									ForEach(orphanGroup, id: \.self) { rule in
@@ -516,15 +519,15 @@ struct DocumentDetail: View {
 		return AppModel.fileTypes.first { $0.label == selectedDocumentLanguage }?.languageConfiguration ?? AppModel.fileTypes[0].languageConfiguration
 	}
 
-	private func computeGroupedRules(for rulelist: ABNFRulelist<UInt32>) -> (orphanGroup: [String], subGroup: [String]) {
+	private func computeGroupedRules(for rulelist: ABNFRulelist<UInt32>) -> (first: String?, orphanGroup: [String], subGroup: [String]) {
 		let orderedRules = rulelist.ruleNames
-		guard !orderedRules.isEmpty else { return ([], []) }
+		guard !orderedRules.isEmpty else { return (nil, [], []) }
 
 		let allReferenced = rulelist.referencedRules
 		let orphans = orderedRules.filter { !allReferenced.contains($0) }
 
 		let first = orderedRules[0]
-		var orphanGroup: [String] = [first]
+		var orphanGroup: [String] = []
 
 		for orphan in orphans {
 			if orphan != first {
@@ -534,7 +537,7 @@ struct DocumentDetail: View {
 
 		let subGroup = orderedRules.filter { !orphanGroup.contains($0) }
 
-		return (orphanGroup, subGroup)
+		return (first, orphanGroup, subGroup)
 	}
 }
 
