@@ -140,6 +140,8 @@ struct DocumentDetail: View {
 	@State private var content_rulelist: ABNFRulelist<UInt32>? = nil
 	@State private var content_rulelist_error: String? = nil
 
+	@State private var content_cfg: SymbolCFG<UInt32> = SymbolCFG<UInt32>(rules: []);
+
 	@State private var rule_error: String? = nil
 	@State private var rule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
 	@State private var rule_fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>? = nil
@@ -192,6 +194,10 @@ struct DocumentDetail: View {
 						.environment(\.codeEditorTheme, colorScheme == .dark ? Theme.defaultDark : Theme.defaultLight)
 						.frame(minHeight: 300)
 						.font(.system(size: 14, design: .monospaced))
+					}
+
+					Tab("CFG", systemImage: "pencil") {
+						CFGContentView(grammar: content_cfg);
 					}
 
 					if showRegex {
@@ -400,6 +406,7 @@ struct DocumentDetail: View {
 		let text = document.content;
 		content_rulelist = nil
 		content_rulelist_error = nil
+		//content_cfg = nil
 		// invalidate updatedRule
 		rule_alphabet = nil
 		rule_fsm = nil
@@ -421,6 +428,7 @@ struct DocumentDetail: View {
 				});
 				await MainActor.run {
 					content_rulelist = rulelist_all_final
+					content_cfg = try! rulelist_all_final.toCFG()
 					// Select the first rule by default
 					if selectedRule == nil, let firstRule = content_rulelist?.rules.first {
 						selectedRule = firstRule.rulename.label

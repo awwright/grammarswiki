@@ -355,6 +355,83 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 		return resolvedRules;
 	}
 
+	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Symbol == Symbol {
+		func addRules(for alternation: ABNFAlternation<Symbol>, withName ruleName: String, to cfgRules: inout [CFGRule<Symbol>]) throws {
+			for concat in alternation.matches {
+				var prod: [CFGSymbol<Symbol>] = []
+				for rep in concat.repetitions {
+					if rep.min == 1 && rep.max == 1 {
+						switch rep.repeating {
+						case .rulename(let rn):
+							prod.append(.rule(rn.label))
+						case .charVal(let cv):
+							for sym in cv.sequence {
+								prod.append(.terminal(sym))
+							}
+						case .numVal(let nv):
+							switch nv.value {
+							case .sequence(let seq):
+								for sym in seq {
+									prod.append(.terminal(sym))
+								}
+							case .range(let range):
+								let newName = ruleName + "_range\(cfgRules.count)"
+								for val in range {
+									print("\(ruleName) -> \(val)");
+									cfgRules.append(CFGRule(name: newName, production: [.terminal(val)]))
+								}
+								prod.append(.rule(newName))
+							}
+						case .group(let g):
+							let newName = ruleName + "_group\(cfgRules.count)"
+							try addRules(for: g.alternation, withName: newName, to: &cfgRules)
+							prod.append(.rule(newName))
+						case .option(let o):
+							let newName = ruleName + "_opt\(cfgRules.count)"
+							try addRules(for: o.optionalAlternation, withName: newName, to: &cfgRules)
+							cfgRules.append(CFGRule(name: newName, production: []))
+							prod.append(.rule(newName))
+						case .proseVal:
+							throw ABNFExportError(message: "ProseVal not supported in CFG")
+						}
+					} else if rep.min == 0 && rep.max == 1 {
+						let newName = ruleName + "_opt\(cfgRules.count)"
+						try addRules(for: rep.repeating.alternation, withName: newName, to: &cfgRules)
+						cfgRules.append(CFGRule(name: newName, production: []))
+						prod.append(.rule(newName))
+					} else {
+						let elementName = ruleName + "_elem\(cfgRules.count)"
+						try addRules(for: rep.repeating.alternation, withName: elementName, to: &cfgRules)
+						let elementSymbol = CFGSymbol<Symbol>.rule(elementName)
+							let repName = ruleName + "_rep\(cfgRules.count)"
+							if let max = rep.max {
+								for i in Int(rep.min)...Int(max) {
+									let prod = Array(repeating: elementSymbol, count: i)
+									cfgRules.append(CFGRule(name: repName, production: prod))
+								}
+							} else {
+								let starName = ruleName + "_star\(cfgRules.count)"
+								cfgRules.append(CFGRule(name: starName, production: [])) // epsilon
+								cfgRules.append(CFGRule(name: starName, production: [elementSymbol, .rule(starName)])) // element star
+								var prod = Array(repeating: elementSymbol, count: Int(rep.min))
+								prod.append(.rule(starName))
+								cfgRules.append(CFGRule(name: repName, production: prod))
+							}
+							prod.append(.rule(repName))
+					}
+				}
+				cfgRules.append(CFGRule(name: ruleName, production: prod))
+			}
+		}
+		var cfgRules: [CFGRule<Symbol>] = []
+		for rule in self.rules {
+			let name = rule.rulename.label
+			try addRules(for: rule.alternation, withName: name, to: &cfgRules)
+		}
+		// Assume CFGType is SymbolCFG
+		return SymbolCFG(rules: cfgRules, start: rules.first?.rulename.label ?? "") as! CFGType
+	}
+
 	/// Parses an input string into a rulelist.
 	///
 	/// - Parameter input: A collection of `UInt8` values representing the ABNF grammar text.
@@ -1425,34 +1502,34 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 
 	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
-            case .rulename(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .group(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .option(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .charVal(let s): return s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .numVal(let s): return s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .proseVal(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .rulename(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .group(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .option(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .charVal(let s): return s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .numVal(let s): return s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .proseVal(let s): return try s.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 		}
 	}
 
 	public func toSymbolClassPattern<PatternType: SymbolClassPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType>, alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
-            case .rulename(let s): return try s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .group(let s): return try s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .option(let s): return try s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .charVal(let s): return s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .numVal(let s): return s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
-            case .proseVal(let s): return try s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .rulename(let s): return try s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .group(let s): return try s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .option(let s): return try s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .charVal(let s): return s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .numVal(let s): return s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+			case .proseVal(let s): return try s.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 		}
 	}
 
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		switch self {
-            case .rulename(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
-            case .group(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
-            case .option(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
-            case .charVal(let s): return s.toClosedRangePattern(as: PatternType.self, rules: rules)
-            case .numVal(let s): return s.toClosedRangePattern(as: PatternType.self, rules: rules)
-            case .proseVal(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
+			case .rulename(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
+			case .group(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
+			case .option(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
+			case .charVal(let s): return s.toClosedRangePattern(as: PatternType.self, rules: rules)
+			case .numVal(let s): return s.toClosedRangePattern(as: PatternType.self, rules: rules)
+			case .proseVal(let s): return try s.toClosedRangePattern(as: PatternType.self, rules: rules)
 		}
 	}
 
@@ -2464,19 +2541,19 @@ private func collectImports<T>(from: ABNFRulelist<T>) -> (Array<(String, String)
 	var references: Array<(String, String)> = []
 	let mangled: ABNFRulelist<T> = from.mapElements {
 		switch $0 {
-			case .proseVal(let proseVal):
-				let parts = proseVal.remark.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
-				guard parts.count >= 3 else { return $0 }
-				guard parts[0] == "import" else { return $0 }
-				let filename = parts[1];
-				let rulename = parts[2];
-				let tuple = (filename, rulename)
-				// Add tuple to references, if it does not already exist
-				if !references.contains(where: { $0.0 == filename && $0.1 == rulename }) {
-					references.append(tuple)
-				}
-				return ABNFElement.rulename(ABNFRulename(label: mangleRulename(filename: filename, rulename: rulename)))
-			default: return $0
+		case .proseVal(let proseVal):
+			let parts = proseVal.remark.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
+			guard parts.count >= 3 else { return $0 }
+			guard parts[0] == "import" else { return $0 }
+			let filename = parts[1];
+			let rulename = parts[2];
+			let tuple = (filename, rulename)
+			// Add tuple to references, if it does not already exist
+			if !references.contains(where: { $0.0 == filename && $0.1 == rulename }) {
+				references.append(tuple)
+			}
+			return ABNFElement.rulename(ABNFRulename(label: mangleRulename(filename: filename, rulename: rulename)))
+		default: return $0
 		}
 	}
 	return (references, mangled)
