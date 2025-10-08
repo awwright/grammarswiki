@@ -1,24 +1,41 @@
 import SwiftUI;
 import FSM;
 
-extension CFGSymbol where Symbol == UInt32 {
-	var displayString: String {
-		switch self {
-		case .terminal(let sym):
-			return String(UnicodeScalar(sym)!)
-		case .rule(let name):
-			return name
-		}
-	}
-}
-
 struct CFGContentView: View {
 	public var grammar: SymbolCFG<UInt32>;
 	var body: some View {
 		ScrollView {
-			ForEach(grammar.rules, id: \.self) { rule in
-				Text("\(rule.name) \u{2192} \(rule.production.map(\.displayString).joined(separator: " "))")
+			VStack(alignment: .leading) {
+				Text("\u{2192} \(grammar.start)")
+				Spacer()
+				let dictionary = grammar.dictionary
+				let ruleNames = grammar.ruleNames;
+				ForEach(ruleNames, id: \.self) { ruleName in
+					let rules = dictionary[ruleName] ?? []
+					Text("\(ruleName)").font(.headline);
+					if rules.isEmpty {
+						Text("\t= \u{2205}");
+					}
+					ForEach(rules, id: \.self) { rule in
+						HStack {
+							Text("\t\u{2192} ")
+							ForEach(rule.production, id: \.self) { (token: CFGSymbol<UInt32>) in
+								switch token {
+								case .terminal(let sym): Text(quotePrintable(sym)).monospaced()
+								case .range(let lower, let upper): Text(quotePrintable(lower) + "\u{22EF}" + quotePrintable(upper)).monospaced()
+								case .rule(let name): Text(name)
+								default: Text(String(describing: token))
+								}
+							}
+							if rule.production.isEmpty {
+								Text("\u{3B5}") // Epsilon
+							}
+						}
+					}
+					Spacer()
+				}
 			}
+			.frame(maxWidth: .infinity, alignment: .topLeading)
 		}
 	}
 }

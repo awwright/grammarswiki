@@ -579,8 +579,24 @@ func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>) -> String {
 		.joined(separator: "\u{2001}")
 }
 
+func quotePrintable(_ char: UInt32) -> String {
+	if(char <= 0x20) {
+		String(UnicodeScalar(0x2400 + char)!)
+	} else if (char == 0x21) {
+		"\"!\""
+	} else if (char == 0x22) {
+		"'" + String(UnicodeScalar(char)!) + "'"
+	} else if (char >= 0x23 && char <= 0x7E) {
+		"\"" + String(UnicodeScalar(char)!) + "\""
+	}  else if (char == 0x7F) {
+		"\u{2421}"
+	} else {
+		"U+\(String(format: "%04X", Int(char)))"
+	}
+}
+
 func getPrintable(_ char: UInt32) -> String {
-	if(char < 0x21) {
+	if(char <= 0x20) {
 		String(UnicodeScalar(0x2400 + char)!)
 	} else if (char >= 0x21 && char <= 0x7E) {
 		String(UnicodeScalar(char)!)

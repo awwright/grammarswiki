@@ -1,4 +1,4 @@
-// A SwiftUI View accepting a FSM and outputting a plot of the finite state machine
+// A SwiftUI View for rendering railroad diagrams
 import FSM
 import SwiftUI
 

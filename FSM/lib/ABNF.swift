@@ -376,10 +376,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 								}
 							case .range(let range):
 								let newName = ruleName + "_range\(cfgRules.count)"
-								for val in range {
-									print("\(ruleName) -> \(val)");
-									cfgRules.append(CFGRule(name: newName, production: [.terminal(val)]))
-								}
+								cfgRules.append(CFGRule(name: newName, production: [.range(range.lowerBound, range.upperBound)]))
 								prod.append(.rule(newName))
 							}
 						case .group(let g):

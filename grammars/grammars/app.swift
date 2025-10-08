@@ -3,10 +3,10 @@ import FSM
 import LanguageSupport
 
 struct FileType {
-    let label: String
-    let fileExtension: String
-    let languageConfiguration: LanguageConfiguration
-    let parser: (String) throws -> ABNFRulelist<UInt32> // nil for no parsing
+	let label: String
+	let fileExtension: String
+	let languageConfiguration: LanguageConfiguration
+	let parser: (String) throws -> ABNFRulelist<UInt32> // nil for no parsing
 }
 
 @main
