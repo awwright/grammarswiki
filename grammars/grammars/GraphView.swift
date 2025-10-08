@@ -5,6 +5,7 @@ import SwiftUI
 struct DFAGraphView: View {
 	typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<UInt32>>
 	@Binding var rule_fsm: DFA?
+	let charset: Charset
 
 	var body: some View {
 		GeometryReader { geometry in
@@ -25,7 +26,7 @@ struct DFAGraphView: View {
 						EdgeView(
 							source: nodePosition(i, in: geometry),
 							target: nodePosition(target, in: geometry),
-							label: symbol
+							label: describeCharacterSet(symbol, charset: charset)
 						)
 					}
 				}

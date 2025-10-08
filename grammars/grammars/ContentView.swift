@@ -226,7 +226,7 @@ struct DocumentDetail: View {
 					}
 
 					Tab("Graph", systemImage: "pencil") {
-						DFAGraphView(rule_fsm: $rule_fsm)
+						DFAGraphView(rule_fsm: $rule_fsm, charset: AppModel.charsetDict[selectedCharsetId]!)
 					}
 
 					Tab("Railroad", systemImage: "pencil") {
