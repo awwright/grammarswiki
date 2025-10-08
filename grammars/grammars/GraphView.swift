@@ -84,33 +84,49 @@ private struct EdgeView<Symbol: Hashable>: View {
 	let arrowSize: CGFloat = 10
 
 	var body: some View {
-		let direction = (target - source).normalized()
-		let start = source + nodeRadius * direction
-		let end = target - nodeRadius * direction
-
-		// Draw the edge line
-		Path { path in
-			path.move(to: start)
-			path.addLine(to: end)
+		ZStack {
+			if source == target {
+				let loopRadius: CGFloat = 15
+				let center = source + CGPoint(x: 0, y: -nodeRadius - loopRadius)
+				Path { path in
+					path.addArc(center: center, radius: loopRadius, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: true)
+				}.stroke(Color.black)
+				let arrowAngle = Angle(degrees: 45)
+				let arrowPos = center + CGPoint(x: loopRadius * cos(CGFloat(arrowAngle.radians)), y: loopRadius * sin(CGFloat(arrowAngle.radians)))
+				let tangent = CGPoint(x: -sin(arrowAngle.radians), y: cos(arrowAngle.radians))
+				Path { path in
+					path.move(to: arrowPos)
+					path.addLine(to: arrowPos - arrowSize * tangent.rotated(by: .pi / 6))
+					path.move(to: arrowPos)
+					path.addLine(to: arrowPos - arrowSize * tangent.rotated(by: -.pi / 6))
+				}.stroke(Color.black)
+				Text(String(describing: label))
+					.font(.caption)
+					.position(center + CGPoint(x: 0, y: -5))
+			} else {
+				let direction = (target - source).normalized()
+				let start = source + nodeRadius * direction
+				let end = target - nodeRadius * direction
+				Path { path in
+					path.move(to: start)
+					path.addLine(to: end)
+				}
+				.stroke(Color.black)
+				let arrowDirection1 = direction.rotated(by: .pi / 6)
+				let arrowDirection2 = direction.rotated(by: -.pi / 6)
+				Path { path in
+					path.move(to: end)
+					path.addLine(to: end - arrowSize * arrowDirection1)
+					path.move(to: end)
+					path.addLine(to: end - arrowSize * arrowDirection2)
+				}
+				.stroke(Color.black)
+				let midpoint = CGPoint(x: (2*start.x + end.x) / 3, y: (2*start.y + end.y) / 3)
+				Text(String(describing: label))
+					.font(.caption)
+					.position(midpoint)
+			}
 		}
-		.stroke(Color.black)
-
-		// Draw the arrowhead
-		let arrowDirection1 = direction.rotated(by: .pi / 6) // 30 degrees
-		let arrowDirection2 = direction.rotated(by: -.pi / 6)
-		Path { path in
-			path.move(to: end)
-			path.addLine(to: end - arrowSize * arrowDirection1)
-			path.move(to: end)
-			path.addLine(to: end - arrowSize * arrowDirection2)
-		}
-		.stroke(Color.black)
-
-		// Place a label at the midpoint
-		let midpoint = CGPoint(x: (2*start.x + end.x) / 3, y: (2*start.y + end.y) / 3)
-		Text(String(describing: label))
-			.font(.caption)
-			.position(midpoint)
 	}
 }
 
