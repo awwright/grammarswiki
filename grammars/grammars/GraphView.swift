@@ -51,7 +51,7 @@ struct DFAGraphView: View {
 	}
 }
 
-struct NodeView: View {
+private struct NodeView: View {
 	let position: CGPoint
 	let index: Int
 	let radius: CGFloat = 10
@@ -75,7 +75,7 @@ struct NodeView: View {
 	}
 }
 
-struct EdgeView<Symbol: Hashable>: View {
+private struct EdgeView<Symbol: Hashable>: View {
 	let source: CGPoint
 	let target: CGPoint
 	let label: Symbol

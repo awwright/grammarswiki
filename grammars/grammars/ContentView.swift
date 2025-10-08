@@ -228,7 +228,7 @@ struct DocumentDetail: View {
 					}
 
 					Tab("Railroad", systemImage: "pencil") {
-						Text("Railroad Diagram").font(.headline)
+						DFARailroadView(rule_fsm: $rule_fsm)
 					}
 
 					if showInstances {
