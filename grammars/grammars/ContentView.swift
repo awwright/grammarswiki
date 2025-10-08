@@ -23,13 +23,13 @@ struct ContentView: View {
 				Section("Saved") {
 					ForEach(Array(model.user.values), id: \.id) {
 						document in
-						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), onDelete: { self.selectionId = nil; model.delDocument(document) }, onDuplicate: { let newDoc = DocumentItem(filepath: nil, name: "Copy of " + document.name, type: document.type, content: document.content); model.addDocument(newDoc); selectionId = newDoc.id; }, isEditable: true)
+						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), onDelete: { self.selectionId = nil; model.delDocument(document) }, onDuplicate: { let newDoc = document.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id; }, isEditable: true)
 					}
 				}
 				Section("Catalog") {
 					ForEach(model.catalog, id: \.id) {
 						document in
-						DocumentItemView(document: Binding(get: { document }, set: { let newDoc = DocumentItem(filepath: nil, name: $0.name, type: $0.type, content: $0.content); model.addDocument(newDoc); selectionId = newDoc.id }), onDelete: {}, onDuplicate: {}, isEditable: false)
+						DocumentItemView(document: Binding(get: { document }, set: { let newDoc = $0.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id }), onDelete: {}, onDuplicate: {}, isEditable: false)
 					}
 				}
 			}
@@ -51,7 +51,7 @@ struct ContentView: View {
 						let binding = Binding(
 							get: { document },
 							set: {
-								let newDocument = DocumentItem(filepath: nil, name: $0.name, type: $0.type, content: $0.content)
+								let newDocument = $0.duplicate();
 								model.addDocument(newDocument)
 								selectionId = newDocument.id
 							}
@@ -73,6 +73,7 @@ struct ContentView: View {
 				filepath: nil,
  				name: "New Document \(model.user.count + 1)",
  				type: "ABNF",
+				charset: "UTF-32",
  				content: "",
  			);
  			model.addDocument(newDocument)
@@ -139,6 +140,7 @@ struct DocumentDetail: View {
 
 	// User input
 	@State private var selectedDocumentLanguage: String = "ABNF"
+ 	@State private var selectedCharsetId: String = "UTF-32"
 	@State private var selectedRule: String? = nil
 	@State private var testInput: String = ""
 
@@ -204,7 +206,7 @@ struct DocumentDetail: View {
 					}
 
 					Tab("CFG", systemImage: "pencil") {
-						CFGContentView(grammar: content_cfg);
+						CFGContentView(grammar: content_cfg, charset: AppModel.charsetDict[selectedCharsetId]!);
 					}
 
 					if showRegex {
@@ -244,7 +246,8 @@ struct DocumentDetail: View {
 									content_rulelist: $content_rulelist,
 									selectedRule: $selectedRule,
 									rule_alphabet: $rule_alphabet,
-									rule_fsm: $rule_fsm
+									rule_fsm: $rule_fsm,
+									charset: AppModel.charsetDict[selectedCharsetId]!,
 								)
 								Spacer()
 							}
@@ -271,6 +274,16 @@ struct DocumentDetail: View {
 					Picker("Parse as", selection: $selectedDocumentLanguage) {
 						ForEach(AppModel.fileTypes, id: \.label) { type in
 							Text(type.label).tag(type.label)
+						}
+					}
+					.pickerStyle(MenuPickerStyle())
+
+					// Determine how to display the numbers described by this language
+					// This does not change the definition of the symbols within the language!
+					// Not that that matters in most all cases.
+					Picker("Charset", selection: $selectedCharsetId) {
+						ForEach(AppModel.charsets, id: \.id) { type in
+							Text(type.label).tag(type.id)
 						}
 					}
 					.pickerStyle(MenuPickerStyle())
@@ -334,9 +347,7 @@ struct DocumentDetail: View {
 									let rule_alphabet_sorted: [ClosedRangeAlphabet<UInt32>.SymbolClass] = Array(rule_alphabet)
 									ForEach(rule_alphabet_sorted, id: \.self) {
 										(part: ClosedRangeAlphabet<UInt32>.SymbolClass) in
-										// TODO: Convert to a String
-										//Text(describeCharacterSet(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
-										Text(String(describing: part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
+										Text(describeCharacterSet(part, charset: AppModel.charsetDict[document.charset]!)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
 									}
 								}else{
 									Text("Computing alphabet...")
@@ -371,7 +382,8 @@ struct DocumentDetail: View {
 										content_rulelist: $content_rulelist,
 										selectedRule: $selectedRule,
 										rule_alphabet: $rule_alphabet,
-										rule_fsm: $rule_fsm
+										rule_fsm: $rule_fsm,
+										charset: AppModel.charsetDict[selectedCharsetId]!,
 									)
 								})
 							}
@@ -398,11 +410,12 @@ struct DocumentDetail: View {
 				.inspectorColumnWidth(min: 300, ideal: 500, max: 2000)
 			}
 		} // HStack
- 		.onChange(of: document.content) { updatedDocument() }
+		.onChange(of: document.content) { updatedDocument() }
 		.onChange(of: selectedRule) { updatedRule(); updatedDocument() }
 		.onChange(of: selectedDocumentLanguage) { document.type = selectedDocumentLanguage }
-		.onChange(of: document.id) { selectedDocumentLanguage = document.type; updatedDocument(); updatedRule() }
-		.onAppear { selectedDocumentLanguage = document.type; updatedDocument(); updatedRule() }
+		.onChange(of: selectedCharsetId) { document.charset = selectedCharsetId; }
+		.onChange(of: document.id) { switchDocument(); }
+		.onAppear { switchDocument(); }
 		.toolbar {
 			Button {
 				inspector_isPresented.toggle()
@@ -410,6 +423,14 @@ struct DocumentDetail: View {
 				Label("Inspector", systemImage: "sidebar.squares.right")
 			}
 		}
+	}
+
+	/// Parses the grammar text into a rulelist
+	private func switchDocument() {
+		selectedDocumentLanguage = document.type;
+		selectedCharsetId = document.charset;
+		updatedDocument();
+		updatedRule();
 	}
 
 	/// Parses the grammar text into a rulelist
@@ -549,7 +570,7 @@ struct DocumentDetail: View {
 	}
 }
 
-func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>) -> String {
+func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>, charset: Charset) -> String {
 	// Handle empty set case
 	guard !rangeSet.isEmpty else { return "∅" }
 
@@ -575,32 +596,6 @@ func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>) -> String {
 	}
 
 	return merged
-		.map { getPrintable($0.lowerBound) + ($0.lowerBound==$0.upperBound ? "" : ("⋯" + getPrintable($0.upperBound)) ) }
+		.map { charset.toQuoted($0.lowerBound) + ($0.lowerBound==$0.upperBound ? "" : ("⋯" + charset.toQuoted($0.upperBound)) ) }
 		.joined(separator: "\u{2001}")
-}
-
-func quotePrintable(_ char: UInt32) -> String {
-	if(char <= 0x20) {
-		String(UnicodeScalar(0x2400 + char)!)
-	} else if (char == 0x21) {
-		"\"!\""
-	} else if (char == 0x22) {
-		"'" + String(UnicodeScalar(char)!) + "'"
-	} else if (char >= 0x23 && char <= 0x7E) {
-		"\"" + String(UnicodeScalar(char)!) + "\""
-	}  else if (char == 0x7F) {
-		"\u{2421}"
-	} else {
-		"U+\(String(format: "%04X", Int(char)))"
-	}
-}
-
-func getPrintable(_ char: UInt32) -> String {
-	if(char <= 0x20) {
-		String(UnicodeScalar(0x2400 + char)!)
-	} else if (char >= 0x21 && char <= 0x7E) {
-		String(UnicodeScalar(char)!)
-	} else {
-		"U+\(String(format: "%04X", Int(char)))"
-	}
 }

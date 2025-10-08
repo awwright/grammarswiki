@@ -9,6 +9,19 @@ struct FileType {
 	let parser: (String) throws -> ABNFRulelist<UInt32> // nil for no parsing
 }
 
+/// Stores a method of converting from a string of numbers to a String, for display purposes
+struct Charset {
+	let id: String
+	let label: String
+	/// Convert to a String, if there is such a representation
+	let toString: ((UInt32) -> String)?
+	/// Show a (possibly lossy) representation of the string, using ? or placeholders as necessary
+	let toPrintable: (UInt32) -> String
+	/// Represent literal characters from this character set in single or double quotes
+	/// Escape other characters using U+... or other notation
+	let toQuoted: (UInt32) -> String
+}
+
 @main
 struct ABNFEditorApp: App {
 	@State private var model = AppModel()
@@ -86,9 +99,87 @@ class AppModel: ObservableObject {
 				return try ABNFRulelist<UInt32>.parse(input)
 			},
 		),
-	]
+	];
  	static let typeExtensions: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.label, $0.fileExtension) })
  	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.fileExtension, $0.label) })
+
+	static let charsets: [Charset] = [
+		Charset(
+			id: "Decimal",
+			label: "10",
+			toString: { String(format: "%02d", $0) },
+			toPrintable: { String(format: "%02d", $0) },
+			toQuoted: { String(format: "%02d", $0) },
+		),
+		Charset(
+			id: "Hexadecimal",
+			label: "16",
+			toString: { String(format: "%02X", $0) },
+			toPrintable: { String(format: "%02X", $0) },
+			toQuoted: { String(format: "%02X", $0) },
+		),
+		Charset(
+			id: "UTF-8",
+			label: "UTF-8 / ASCII",
+			toString: { String(UnicodeScalar($0)!) },
+			toPrintable: { char in
+				if(char <= 0x20) {
+					String(UnicodeScalar(0x2400 + char)!)
+				} else if (char >= 0x21 && char <= 0x7E) {
+					String(UnicodeScalar(char)!)
+				} else {
+					"x\(String(format: "%02X", Int(char)))"
+				}
+			},
+			toQuoted: { char in
+				if(char <= 0x20) {
+					String(UnicodeScalar(0x2400 + char)!)
+				} else if (char == 0x21) {
+					"\"!\""
+				} else if (char == 0x22) {
+					"'" + String(UnicodeScalar(char)!) + "'"
+				} else if (char >= 0x23 && char <= 0x7E) {
+					"\"" + String(UnicodeScalar(char)!) + "\""
+				}  else if (char == 0x7F) {
+					"\u{2421}"
+				} else {
+					"U+\(String(format: "%04X", Int(char)))"
+				}
+			},
+		),
+		// TODO: Add UTF-16
+		// Display surrogate code points with a syntax like [D800xDC00]
+		Charset(
+			id: "UTF-32",
+			label: "UTF-32 / Unicode",
+			toString: { String(UnicodeScalar($0)!) },
+			toPrintable: { char in
+				if(char <= 0x20) {
+					String(UnicodeScalar(0x2400 + char)!)
+				} else if (char >= 0x21 && char <= 0x7E) {
+					String(UnicodeScalar(char)!)
+				} else {
+					"U+\(String(format: "%04X", Int(char)))"
+				}
+			},
+			toQuoted: { char in
+				if(char <= 0x20) {
+					String(UnicodeScalar(0x2400 + char)!)
+				} else if (char == 0x21) {
+					"\"!\""
+				} else if (char == 0x22) {
+					"'" + String(UnicodeScalar(char)!) + "'"
+				} else if (char >= 0x23 && char <= 0x7E) {
+					"\"" + String(UnicodeScalar(char)!) + "\""
+				}  else if (char == 0x7F) {
+					"\u{2421}"
+				} else {
+					"U+\(String(format: "%04X", Int(char)))"
+				}
+			},
+		),
+	];
+	static let charsetDict: Dictionary<String, Charset> = Dictionary(uniqueKeysWithValues: charsets.map { ($0.id, $0) });
 
  	init(){
 		catalog = Self.getCatalog()
@@ -115,7 +206,7 @@ class AppModel: ObservableObject {
 				let name = components.dropLast().joined(separator: ".")
 				let filePath = userDocumentsDirectory.appendingPathComponent(filename)
 				let content = try! String(contentsOf: filePath, encoding: .utf8)
-				let newDocument = DocumentItem(filepath: filePath, name: name, type: type, content: content)
+				let newDocument = DocumentItem(filepath: filePath, name: name, type: type, charset: "UTF-32", content: content)
 				user[newDocument.id] = newDocument
 			} else {
 				print("Ignoring extension of \(filename)");
@@ -179,7 +270,7 @@ class AppModel: ObservableObject {
  					let filePath = textDirectory + "/" + filename
  					let content = try String(contentsOfFile: filePath, encoding: .utf8)
 					let filepath = URL(fileURLWithPath: filePath)
-					let document = DocumentItem(filepath: filepath, name: name, type: type, content: content)
+					let document = DocumentItem(filepath: filepath, name: name, type: type, charset: "UTF-32", content: content)
  					loadedFiles.append(document)
  				} else {
  					print("Ignoring extension of \(filename)");
@@ -199,13 +290,15 @@ class AppModel: ObservableObject {
 	var filepath: URL?
 	var name: String
 	var type: String
+	var charset: String
 	var content: String
 
-	init(filepath: URL?, name: String, type: String, content: String) {
+	init(filepath: URL?, name: String, type: String, charset: String, content: String) {
 		self.filepath = filepath
 		self.name = name
 		self.type = type
 		self.content = content
+		self.charset = charset
 	}
 
 	func hash(into hasher: inout Hasher) {
@@ -214,5 +307,9 @@ class AppModel: ObservableObject {
 
 	static func == (lhs: DocumentItem, rhs: DocumentItem) -> Bool {
 		lhs.id == rhs.id && lhs.name == rhs.name && lhs.content == rhs.content && lhs.type == rhs.type
+	}
+
+	func duplicate() -> DocumentItem {
+		DocumentItem(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
 	}
 }

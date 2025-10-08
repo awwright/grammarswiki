@@ -10,6 +10,7 @@ struct InputTestingView: View {
 	@Binding var selectedRule: String?
 	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
 	@Binding var rule_fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>?
+	let charset: Charset
 	@State private var testInput: String = ""
 	@State private var fsm_test_result: Bool? = nil
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
@@ -49,7 +50,7 @@ struct InputTestingView: View {
 				Text("Result: " + (fsm_test_result ? "Accepted" : fsm_test_error ?? "Rejected"))
 					.foregroundColor(fsm_test_result == true ? .green : .red)
 				if let fsm_test_next {
-					Text("Next symbols: " + describeCharacterSet(fsm_test_next))
+					Text("Next symbols: " + describeCharacterSet(fsm_test_next, charset: charset))
 				} else {
 					Text("Next symbols: Oblivion")
 				}

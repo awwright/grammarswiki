@@ -3,6 +3,7 @@ import FSM;
 
 struct CFGContentView: View {
 	public var grammar: SymbolCFG<UInt32>;
+	public var charset: Charset;
 	var body: some View {
 		ScrollView {
 			VStack(alignment: .leading) {
@@ -21,8 +22,8 @@ struct CFGContentView: View {
 							Text("\t\u{2192} ")
 							ForEach(rule.production, id: \.self) { (token: CFGSymbol<UInt32>) in
 								switch token {
-								case .terminal(let sym): Text(quotePrintable(sym)).monospaced()
-								case .range(let lower, let upper): Text(quotePrintable(lower) + "\u{22EF}" + quotePrintable(upper)).monospaced()
+								case .terminal(let sym): Text(charset.toQuoted(sym)).monospaced()
+								case .range(let lower, let upper): Text(charset.toQuoted(lower) + "\u{22EF}" + charset.toQuoted(upper)).monospaced()
 								case .rule(let name): Text(name)
 								default: Text(String(describing: token))
 								}
