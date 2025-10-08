@@ -525,7 +525,7 @@ struct DocumentDetail: View {
 				let result_alphabet = result.alphabet
 
 				await MainActor.run {
-					rule_fsm = result
+					rule_fsm = result.normalized()
 					rule_fsm_error = nil
 					rule_alphabet = result_alphabet
 				}

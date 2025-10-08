@@ -4,6 +4,7 @@ import SwiftUI
 
 struct DFAGraphView: View {
 	typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<UInt32>>
+	// This comes in from ContentView normalized. If it's not normalized, paths will cross without reason and it'll look much worse.
 	@Binding var rule_fsm: DFA?
 	let charset: Charset
 
@@ -41,14 +42,49 @@ struct DFAGraphView: View {
 	func nodePosition(_ i: Int, in geometry: GeometryProxy) -> CGPoint {
 		let dfa: DFA = rule_fsm ?? DFA()
 		let n = dfa.states.count
-		let angle = 2 * Double.pi * Double(i) / Double(n)
-		let x = cos(angle)
-		let y = sin(angle)
-		let scale = min(geometry.size.width, geometry.size.height) / 2 - 20 // Margin
-		return CGPoint(
-			x: geometry.size.width / 2 + scale * x,
-			y: geometry.size.height / 2 + scale * y
-		)
+		if n == 0 { return .zero }
+		var levels: [Int: Int] = [:]
+		var queue: [Int] = [dfa.initial]
+		levels[dfa.initial] = 0
+		var visited: Set<Int> = [dfa.initial]
+		while !queue.isEmpty {
+			let current = queue.removeFirst()
+			let currentLevel = levels[current]!
+			let list = Array(dfa.states[current].alphabet)
+			for symbol in list {
+				let next = dfa.states[current][symbol]!
+				if !visited.contains(next) {
+					visited.insert(next)
+					levels[next] = currentLevel + 1
+					queue.append(next)
+				}
+			}
+		}
+		var maxLevel = levels.values.max() ?? 0
+		let unvisitedLevel = maxLevel + 1
+		for j in 0..<n {
+			if levels[j] == nil {
+				levels[j] = unvisitedLevel
+			}
+		}
+		var statesInLevel: [Int: [Int]] = [:]
+		for (state, lev) in levels {
+			statesInLevel[lev, default: []].append(state)
+		}
+		for key in statesInLevel.keys {
+			statesInLevel[key] = statesInLevel[key]!.sorted()
+		}
+		let lev = levels[i]!
+		let statesAtLev = statesInLevel[lev]!
+		guard let idx = statesAtLev.firstIndex(of: i) else { return .zero }
+		let num = statesAtLev.count
+		maxLevel = levels.values.max() ?? 0
+		let totalLevels = maxLevel + 1
+		let layerHeight = geometry.size.height / CGFloat(totalLevels)
+		let y = layerHeight * (CGFloat(lev) + 0.5)
+		let layerWidth = geometry.size.width
+		let x = layerWidth * (CGFloat(idx) + 0.5) / CGFloat(num)
+		return CGPoint(x: x, y: y)
 	}
 }
 
@@ -102,29 +138,51 @@ private struct EdgeView<Symbol: Hashable>: View {
 				}.stroke(Color.black)
 				Text(String(describing: label))
 					.font(.caption)
-					.position(center + CGPoint(x: 0, y: -5))
+					.position(center + CGPoint(x: 0, y: -20))
 			} else {
 				let direction = (target - source).normalized()
 				let start = source + nodeRadius * direction
 				let end = target - nodeRadius * direction
-				Path { path in
-					path.move(to: start)
-					path.addLine(to: end)
+				let isBackward = target.y < source.y
+				if isBackward {
+					let midX = (start.x + end.x) / 2
+					let midY = min(start.y, end.y) - 50
+					let control = CGPoint(x: midX, y: midY)
+					Path { path in
+						path.move(to: start)
+						path.addQuadCurve(to: end, control: control)
+					}
+					.stroke(Color.black)
+					let arrowDirection = (end - control).normalized()
+					let arrowDirection1 = arrowDirection.rotated(by: .pi / 6)
+					let arrowDirection2 = arrowDirection.rotated(by: -.pi / 6)
+					Path { path in
+						path.move(to: end)
+						path.addLine(to: end - arrowSize * arrowDirection1)
+						path.move(to: end)
+						path.addLine(to: end - arrowSize * arrowDirection2)
+					}
+					.stroke(Color.black)
+				} else {
+					Path { path in
+						path.move(to: start)
+						path.addLine(to: end)
+					}
+					.stroke(Color.black)
+					let arrowDirection1 = direction.rotated(by: .pi / 6)
+					let arrowDirection2 = direction.rotated(by: -.pi / 6)
+					Path { path in
+						path.move(to: end)
+						path.addLine(to: end - arrowSize * arrowDirection1)
+						path.move(to: end)
+						path.addLine(to: end - arrowSize * arrowDirection2)
+					}
+					.stroke(Color.black)
 				}
-				.stroke(Color.black)
-				let arrowDirection1 = direction.rotated(by: .pi / 6)
-				let arrowDirection2 = direction.rotated(by: -.pi / 6)
-				Path { path in
-					path.move(to: end)
-					path.addLine(to: end - arrowSize * arrowDirection1)
-					path.move(to: end)
-					path.addLine(to: end - arrowSize * arrowDirection2)
-				}
-				.stroke(Color.black)
 				let midpoint = CGPoint(x: (2*start.x + end.x) / 3, y: (2*start.y + end.y) / 3)
 				Text(String(describing: label))
 					.font(.caption)
-					.position(midpoint)
+					.position(midpoint + CGPoint(x: 0, y: -10))
 			}
 		}
 	}
