@@ -53,6 +53,7 @@ struct SettingsView: View {
 }
 
 // Enum to represent regex dialects
+// TODO: Remove this, read available regex dialects from AppModel
 enum RegexDialect: String, CaseIterable, Identifiable {
 	case swift = "Swift"            // Swift regular expression parser
 	case nsregularrxpression = "NSRegularExpression" // Swift and Obj-C regular expressions
