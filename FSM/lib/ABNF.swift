@@ -605,11 +605,20 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	public typealias Alphabet = ClosedRangeAlphabet<Symbol>
 	public typealias Element = Array<Symbol>;
 
-	// TODO: Store a normalized (lowercased) form for actually looking up rules.
-	// TODO: Emit a warning if the rule case is a mismatch.
+	/// A normalized rule name, which must be unique among all of the other rules in a Rulelist
+	public let id: String;
+
+	// TODO: Emit a warning if the rule case is a mismatch with other labels with the same id
+	/// The name of the rule, as notated in the document
 	public let label: String;
 
 	public init(label: String) {
+		self.id = label.lowercased();
+		self.label = label;
+	}
+
+	public init(id: String, label: String) {
+		self.id = id;
 		self.label = label;
 	}
 
