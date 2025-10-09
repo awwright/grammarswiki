@@ -605,6 +605,8 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	public typealias Alphabet = ClosedRangeAlphabet<Symbol>
 	public typealias Element = Array<Symbol>;
 
+	// TODO: Store a normalized (lowercased) form for actually looking up rules.
+	// TODO: Emit a warning if the rule case is a mismatch.
 	public let label: String;
 
 	public init(label: String) {
