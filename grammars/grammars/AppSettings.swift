@@ -10,26 +10,44 @@ struct SettingsView: View {
 	@AppStorage("showInstances") private var showInstances: Bool = true
 	@AppStorage("showTestInput") private var showTestInput: Bool = true
 	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.swift.rawValue
+	@AppStorage("graphvizEnabled") private var graphvizEnabled: Bool = false
+	@AppStorage("graphvizDot") private var graphvizDot: String = ""
+	@AppStorage("wiresharkEnabled") private var wiresharkEnabled: Bool = false
+	@AppStorage("wiresharkExts") private var wiresharkExts: String = ""
 
 	var body: some View {
-		Form {
-			Section(header: Text("Pattern Display Options").font(.headline)) {
-				Toggle("Show Alphabet", isOn: $showAlphabet)
-				Toggle("Show State Count", isOn: $showStateCount)
-				Toggle("Show FSM", isOn: $showFSM)
-				Toggle("Show Regex", isOn: $showRegex)
-				Toggle("Show GraphViz", isOn: $showExport)
-				Toggle("Show Example Instances", isOn: $showInstances)
-				Toggle("Show Test Input", isOn: $showTestInput)
-				Picker("Regex Dialect", selection: $regexDialect) {
-					ForEach(RegexDialect.allCases) { dialect in
-						Text(dialect.rawValue).tag(dialect.rawValue)
+		TabView {
+			Tab("Display", systemImage: "eye") {
+				Form {
+					Toggle("Show Alphabet", isOn: $showAlphabet)
+					Toggle("Show State Count", isOn: $showStateCount)
+					Toggle("Show FSM", isOn: $showFSM)
+					Toggle("Show Regex", isOn: $showRegex)
+					Toggle("Show GraphViz", isOn: $showExport)
+					Toggle("Show Example Instances", isOn: $showInstances)
+					Toggle("Show Test Input", isOn: $showTestInput)
+					Picker("Regex Dialect", selection: $regexDialect) {
+						ForEach(RegexDialect.allCases) { dialect in
+							Text(dialect.rawValue).tag(dialect.rawValue)
+						}
 					}
 				}
-				.pickerStyle(.menu) // Use a dropdown menu style
-				.frame(width: 300)
+			}
+			Tab("Tools", systemImage: "book.and.wrench") {
+				Form {
+					Section("Graphviz") {
+						Toggle("Preview with Graphviz", isOn: $graphvizEnabled)
+						TextField("dot file path", text: $graphvizDot)
+					}
+					Section("Wireshark") {
+						Toggle("Wireshark Extensions", isOn: $wiresharkEnabled)
+						TextField("Extensions path", text: $wiresharkExts)
+					}
+				}
 			}
 		}
+		.frame(width: 450, alignment: .leading)
+		.formStyle(.grouped)
 		.padding()
 	}
 }

@@ -254,6 +254,7 @@ struct DocumentDetail: View {
 						}
 					}
 				} //TabView
+				.tabViewStyle(.automatic)
 			} // VStack
 			.padding()
 			.inspector(isPresented: $inspector_isPresented) {
