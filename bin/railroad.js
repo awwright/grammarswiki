@@ -41,7 +41,11 @@ async function main() {
 	let Skip = funcs.Skip;
 	let Block = funcs.Block;
 	let result = eval(input).format();
-	console.log(result.toStandalone());
+	switch(process.argv[2]){
+		case 'text': console.log(result.toText()); break;
+		case 'svg': console.log(result.toStandalone()); break;
+		case 'html': console.log(result.toString()); break;
+	}
 }
 
 // Export function versions of all the constructors.
@@ -57,7 +61,7 @@ const Options = {
 	INTERNAL_ALIGNMENT: 'center', // how to align items when they have extra space. left/right/center
 	CHAR_WIDTH: 8.5, // width of each monospace character. play until you find the right value for your font
 	COMMENT_CHAR_WIDTH: 7, // comments are in smaller text by default
-    ESCAPE_HTML: true, // Should Diagram.toText() produce HTML-escaped text, or raw?
+	ESCAPE_HTML: true, // Should Diagram.toText() produce HTML-escaped text, or raw?
 };
 
 const defaultCSS = `

@@ -551,8 +551,8 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 		try alternation.toClosedRangePattern(as: PatternType.self, rules: rules)
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		Diagram.Diagram(start: Diagram.Start(label: rulename.label), sequence: [alternation.toRailroad()], end: Diagram.End(label: nil))
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+		Diagram.Diagram(start: Diagram.Start(label: rulename.label), sequence: [alternation.toRailroad(rules: rules)], end: Diagram.End(label: nil))
 	}
 
 	public func union(_ other: ABNFRule<Symbol>) -> ABNFRule<Symbol> {
@@ -707,9 +707,14 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		return pattern
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		// TODO: If an ABNF rule list is passed, then show this as a Group (if not recursive)
-		Diagram.NonTerminal(text: label)
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+		let definition = rules[label]
+		if let definition {
+			let filtered = Dictionary<String, ABNFAlternation<Symbol>>(uniqueKeysWithValues: rules.filter { $0.0 != label })
+			return Diagram.Group(item: definition.toRailroad(rules: filtered), label: label);
+		} else {
+			return Diagram.NonTerminal(text: label)
+		}
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -846,9 +851,9 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder, Cl
 		PatternType.union(try matches.map({ try $0.toClosedRangePattern(as: PatternType.self, rules: rules) }))
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		if matches.count == 1 { matches[0].toRailroad() }
-		else { Diagram.Choice(items: matches.map { $0.toRailroad() }) }
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+		if matches.count == 1 { matches[0].toRailroad(rules: rules) }
+		else { Diagram.Choice(items: matches.map { $0.toRailroad(rules: rules) }) }
 	}
 
 	public static func union(_ elements: [Self]) -> Self {
@@ -1079,9 +1084,9 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 		PatternType.concatenate(try repetitions.map({ try $0.toClosedRangePattern(as: PatternType.self, rules: rules) }))
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		if repetitions.count == 1 { repetitions[0].toRailroad() }
-		else { Diagram.Sequence(items: repetitions.map { $0.toRailroad() }) }
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+		if repetitions.count == 1 { repetitions[0].toRailroad(rules: rules) }
+		else { Diagram.Sequence(items: repetitions.map { $0.toRailroad(rules: rules) }) }
 	}
 
 	public static func concatenate(_ concatenations: [ABNFConcatenation<Symbol>]) -> ABNFConcatenation<Symbol> {
@@ -1373,8 +1378,8 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		}
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		let inner: Diagram = repeating.toRailroad()
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+		let inner: Diagram = repeating.toRailroad(rules: rules)
 		if min == 1 && max == 1 {
 			return inner
 		} else if min == 0 && max == 1 {
@@ -1386,7 +1391,7 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		} else {
 			// FIXME: There should be a type of diagram that can do n...m loops
 			var sequence: Array<Diagram> = [];
-			let element: Diagram = repetition.repeating.toRailroad()
+			let element: Diagram = repetition.repeating.toRailroad(rules: rules)
 			for _ in 0..<repetition.min {
 				sequence.append(element)
 			}
@@ -1588,14 +1593,14 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		}
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		switch self {
-		case .rulename(let r): r.toRailroad();
-		case .charVal(let c): c.toRailroad();
-		case .numVal(let n): n.toRailroad();
-		case .group(let g): g.toRailroad();
-		case .option(let o): o.toRailroad();
-		case .proseVal(let p): p.toRailroad();
+		case .rulename(let r): r.toRailroad(rules: rules);
+		case .charVal(let c): c.toRailroad(rules: rules);
+		case .numVal(let n): n.toRailroad(rules: rules);
+		case .group(let g): g.toRailroad(rules: rules);
+		case .option(let o): o.toRailroad(rules: rules);
+		case .proseVal(let p): p.toRailroad(rules: rules);
 		}
 	}
 
@@ -1752,8 +1757,8 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		try alternation.toClosedRangePattern(as: PatternType.self, rules: rules)
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		alternation.toRailroad()
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+		alternation.toRailroad(rules: rules)
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1854,8 +1859,8 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		try optionalAlternation.toClosedRangePattern(as: PatternType.self, rules: rules).optional()
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		Diagram.Optional(item: optionalAlternation.toRailroad())
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+		Diagram.Optional(item: optionalAlternation.toRailroad(rules: rules))
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1994,7 +1999,7 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 		})
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		// FIXME: This is case-insensitive
 		Diagram.Terminal(text: CHAR_string(sequence.map{ UInt8($0) }))
 	}
@@ -2198,7 +2203,7 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		}
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		Diagram.NonTerminal(text: description)
 	}
 
@@ -2379,7 +2384,7 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		throw ABNFExportError(message: "Cannot convert prose to FSM: <\(self.remark)>")
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		Diagram.Comment(text: description)
 	}
 

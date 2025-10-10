@@ -77,7 +77,7 @@ import Testing;
 			"   ╭───╮   ",
 			"╮──│ A │──╭",
 			"│  ╰───╯  │",
-			"│         │",
+			"│         │", // TODO: Remove this line
 			"│  ╭───╮  │",
 			"╰──│ B │──╯",
 			"   ╰───╯   ",
@@ -89,7 +89,7 @@ import Testing;
 		let diagram = RailroadTextNode.Optional(item: RailroadTextNode.Terminal(text: "A"));
 		#expect(diagram.lines == [
 			"╮─────────╭",
-			"│         │",
+			"│         │", // TODO: Remove this line
 			"│  ╭───╮  │",
 			"╰──│ A │──╯",
 			"   ╰───╯   ",
@@ -112,7 +112,7 @@ import Testing;
 		let diagram = RailroadTextNode.ZeroOrMore(item: RailroadTextNode.Terminal(text: "A"));
 		#expect(diagram.lines == [
 			"╮─────────────╭",
-			"│             │",
+			"│             │", // TODO: Remove this line
 			"│    ╭───╮    │",
 			"╰─╭──│ A │──╮─╯",
 			"  │  ╰───╯  │  ",
@@ -124,8 +124,8 @@ import Testing;
 	func testGroup() async throws {
 		let diagram = RailroadTextNode.Group(item: RailroadTextNode.Terminal(text: "A"), label: "group");
 		#expect(diagram.lines == [
-			"             ",
-			"    group    ",
+			"             ", // TODO: Remove this line
+			"    group    ", // TODO: Draw this label over dashed box
 			" ╭┄┄┄┄┄┄┄┄┄╮ ",
 			" ┆  ╭───╮  ┆ ",
 			"─┼──│ A │──┼─",
@@ -216,7 +216,7 @@ import Testing;
 			" ┌────┐    ╭───╮    ┌───┐ ",
 			"─│ 1+ │─╮──│ A │──╭─│ ↺ │─",
 			" └────┘ │  ╰───╯  │ └───┘ ",
-			"        │         │       ",
+			"        │         │       ", // TODO: Remove this line
 			"        │  ╭───╮  │       ",
 			"        ╰──│ B │──╯       ",
 			"           ╰───╯          ",

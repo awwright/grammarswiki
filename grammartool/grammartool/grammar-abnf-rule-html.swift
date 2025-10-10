@@ -212,7 +212,7 @@ func grammar_abnf_rule_html_railroad_svg_pipeline(_ arg1: String, _ arg2: String
 	// Create the second process: node bin/railroad.js
 	let node = Process()
 	node.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-	node.arguments = ["node", "bin/railroad.js"]
+	node.arguments = ["node", "bin/railroad.js", "html"]
 
 	// Create a pipe to connect the processes
 	let pipe = Pipe()
