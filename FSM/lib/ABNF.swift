@@ -400,21 +400,21 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 						let elementName = ruleName + "_elem\(cfgRules.count)"
 						try addRules(for: rep.repeating.alternation, withName: elementName, to: &cfgRules)
 						let elementSymbol = CFGSymbol<Symbol>.rule(elementName)
-							let repName = ruleName + "_rep\(cfgRules.count)"
-							if let max = rep.max {
-								for i in Int(rep.min)...Int(max) {
-									let prod = Array(repeating: elementSymbol, count: i)
-									cfgRules.append(CFGRule(name: repName, production: prod))
-								}
-							} else {
-								let starName = ruleName + "_star\(cfgRules.count)"
-								cfgRules.append(CFGRule(name: starName, production: [])) // epsilon
-								cfgRules.append(CFGRule(name: starName, production: [elementSymbol, .rule(starName)])) // element star
-								var prod = Array(repeating: elementSymbol, count: Int(rep.min))
-								prod.append(.rule(starName))
+						let repName = ruleName + "_rep\(cfgRules.count)"
+						if let max = rep.max {
+							for i in Int(rep.min)...Int(max) {
+								let prod = Array(repeating: elementSymbol, count: i)
 								cfgRules.append(CFGRule(name: repName, production: prod))
 							}
-							prod.append(.rule(repName))
+						} else {
+							let starName = ruleName + "_star\(cfgRules.count)"
+							cfgRules.append(CFGRule(name: starName, production: [])) // epsilon
+							cfgRules.append(CFGRule(name: starName, production: [elementSymbol, .rule(starName)])) // element star
+							var prod = Array(repeating: elementSymbol, count: Int(rep.min))
+							prod.append(.rule(starName))
+							cfgRules.append(CFGRule(name: repName, production: prod))
+						}
+						prod.append(.rule(repName))
 					}
 				}
 				cfgRules.append(CFGRule(name: ruleName, production: prod))
@@ -847,7 +847,8 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder, Cl
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		Diagram.Choice(items: matches.map { $0.toRailroad() })
+		if matches.count == 1 { matches[0].toRailroad() }
+		else { Diagram.Choice(items: matches.map { $0.toRailroad() }) }
 	}
 
 	public static func union(_ elements: [Self]) -> Self {
@@ -1079,7 +1080,8 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		Diagram.Sequence(items: repetitions.map { $0.toRailroad() })
+		if repetitions.count == 1 { repetitions[0].toRailroad() }
+		else { Diagram.Sequence(items: repetitions.map { $0.toRailroad() }) }
 	}
 
 	public static func concatenate(_ concatenations: [ABNFConcatenation<Symbol>]) -> ABNFConcatenation<Symbol> {
@@ -1381,10 +1383,21 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 			return Diagram.ZeroOrMore(item: inner)
 		} else if min == 1 && max == nil {
 			return Diagram.OneOrMore(item: inner, max: "")
-		} else if let max {
-			return Diagram.OneOrMore(item: inner, max: "\(min)...\(max)")
 		} else {
-			return Diagram.OneOrMore(item: inner, max: "\(min)+")
+			// FIXME: There should be a type of diagram that can do n...m loops
+			var sequence: Array<Diagram> = [];
+			let element: Diagram = repetition.repeating.toRailroad()
+			for _ in 0..<repetition.min {
+				sequence.append(element)
+			}
+			if repetition.max == nil {
+				return Diagram.Sequence(items: sequence + [ Diagram.ZeroOrMore(item: element) ])
+			} else if repetition.max! > repetition.min {
+				for _ in repetition.min..<repetition.max! {
+					sequence.append(Diagram.Optional(item: element));
+				}
+			}
+			return Diagram.Sequence(items: sequence);
 		}
 	}
 
@@ -1577,12 +1590,12 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
 		switch self {
-		case .rulename(let r): Diagram.NonTerminal(text: r.label)
-		case .charVal(let c): Diagram.Terminal(text: c.description)
-		case .numVal(let n): Diagram.Terminal(text: n.description)
-		case .group(let g): Diagram.Group(item: g.alternation.toRailroad(), label: "")
-		case .option(let o): Diagram.Optional(item: o.optionalAlternation.toRailroad())
-		case .proseVal(let p): Diagram.Comment(text: p.description)
+		case .rulename(let r): r.toRailroad();
+		case .charVal(let c): c.toRailroad();
+		case .numVal(let n): n.toRailroad();
+		case .group(let g): g.toRailroad();
+		case .option(let o): o.toRailroad();
+		case .proseVal(let p): p.toRailroad();
 		}
 	}
 
@@ -1982,7 +1995,8 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		Diagram.Terminal(text: description)
+		// FIXME: This is case-insensitive
+		Diagram.Terminal(text: CHAR_string(sequence.map{ UInt8($0) }))
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -2185,7 +2199,7 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
-		Diagram.Terminal(text: description)
+		Diagram.NonTerminal(text: description)
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
