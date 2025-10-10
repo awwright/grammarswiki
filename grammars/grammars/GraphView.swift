@@ -98,12 +98,13 @@ private struct NodeView: View {
 		ZStack {
 			if isFinal {
 				Circle()
-					.stroke(Color.black)
+					// Stroke with current text color, depending on dark mode
+					.stroke(.foreground)
 					.frame(width: 2 * (radius + 3), height: 2 * (radius + 3))
 			}
 			Circle()
-				.fill(Color.white)
-				.stroke(Color.black)
+				.fill(.background)
+				.stroke(.foreground)
 				.frame(width: 2 * radius, height: 2 * radius)
 			Text("\(index)")
 				.font(.caption)
@@ -126,7 +127,7 @@ private struct EdgeView<Symbol: Hashable>: View {
 				let center = source + CGPoint(x: 0, y: -nodeRadius - loopRadius)
 				Path { path in
 					path.addArc(center: center, radius: loopRadius, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: true)
-				}.stroke(Color.black)
+				}.stroke(.foreground)
 				let arrowAngle = Angle(degrees: 45)
 				let arrowPos = center + CGPoint(x: loopRadius * cos(CGFloat(arrowAngle.radians)), y: loopRadius * sin(CGFloat(arrowAngle.radians)))
 				let tangent = CGPoint(x: -sin(arrowAngle.radians), y: cos(arrowAngle.radians))
@@ -135,7 +136,7 @@ private struct EdgeView<Symbol: Hashable>: View {
 					path.addLine(to: arrowPos - arrowSize * tangent.rotated(by: .pi / 6))
 					path.move(to: arrowPos)
 					path.addLine(to: arrowPos - arrowSize * tangent.rotated(by: -.pi / 6))
-				}.stroke(Color.black)
+				}.stroke(.foreground)
 				Text(String(describing: label))
 					.font(.caption)
 					.position(center + CGPoint(x: 0, y: -20))
@@ -152,7 +153,7 @@ private struct EdgeView<Symbol: Hashable>: View {
 						path.move(to: start)
 						path.addQuadCurve(to: end, control: control)
 					}
-					.stroke(Color.black)
+					.stroke(.foreground)
 					let arrowDirection = (end - control).normalized()
 					let arrowDirection1 = arrowDirection.rotated(by: .pi / 6)
 					let arrowDirection2 = arrowDirection.rotated(by: -.pi / 6)
@@ -162,13 +163,13 @@ private struct EdgeView<Symbol: Hashable>: View {
 						path.move(to: end)
 						path.addLine(to: end - arrowSize * arrowDirection2)
 					}
-					.stroke(Color.black)
+					.stroke(.foreground)
 				} else {
 					Path { path in
 						path.move(to: start)
 						path.addLine(to: end)
 					}
-					.stroke(Color.black)
+					.stroke(.foreground)
 					let arrowDirection1 = direction.rotated(by: .pi / 6)
 					let arrowDirection2 = direction.rotated(by: -.pi / 6)
 					Path { path in
@@ -177,7 +178,7 @@ private struct EdgeView<Symbol: Hashable>: View {
 						path.move(to: end)
 						path.addLine(to: end - arrowSize * arrowDirection2)
 					}
-					.stroke(Color.black)
+					.stroke(.foreground)
 				}
 				let midpoint = CGPoint(x: (2*start.x + end.x) / 3, y: (2*start.y + end.y) / 3)
 				Text(String(describing: label))
