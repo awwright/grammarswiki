@@ -551,6 +551,10 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 		try alternation.toClosedRangePattern(as: PatternType.self, rules: rules)
 	}
 
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		Diagram.Diagram(start: Diagram.Start(label: rulename.label), sequence: [alternation.toRailroad()], end: Diagram.End(label: nil))
+	}
+
 	public func union(_ other: ABNFRule<Symbol>) -> ABNFRule<Symbol> {
 		return self.union(other.alternation);
 	}
@@ -703,6 +707,11 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		return pattern
 	}
 
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		// TODO: If an ABNF rule list is passed, then show this as a Group (if not recursive)
+		Diagram.NonTerminal(text: label)
+	}
+
 	public func hasUnion(_ other: Self) -> Self? {
 		if self == other {
 			return self;
@@ -835,6 +844,10 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder, Cl
 
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		PatternType.union(try matches.map({ try $0.toClosedRangePattern(as: PatternType.self, rules: rules) }))
+	}
+
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		Diagram.Choice(items: matches.map { $0.toRailroad() })
 	}
 
 	public static func union(_ elements: [Self]) -> Self {
@@ -1063,6 +1076,10 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		PatternType.concatenate(try repetitions.map({ try $0.toClosedRangePattern(as: PatternType.self, rules: rules) }))
+	}
+
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		Diagram.Sequence(items: repetitions.map { $0.toRailroad() })
 	}
 
 	public static func concatenate(_ concatenations: [ABNFConcatenation<Symbol>]) -> ABNFConcatenation<Symbol> {
@@ -1354,6 +1371,23 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		}
 	}
 
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		let inner: Diagram = repeating.toRailroad()
+		if min == 1 && max == 1 {
+			return inner
+		} else if min == 0 && max == 1 {
+			return Diagram.Optional(item: inner)
+		} else if min == 0 && max == nil {
+			return Diagram.ZeroOrMore(item: inner)
+		} else if min == 1 && max == nil {
+			return Diagram.OneOrMore(item: inner, max: "")
+		} else if let max {
+			return Diagram.OneOrMore(item: inner, max: "\(min)...\(max)")
+		} else {
+			return Diagram.OneOrMore(item: inner, max: "\(min)+")
+		}
+	}
+
 	public static func match<T>(_ input: T) throws -> (Self, T.SubSequence)? where T: Collection, T.Element == UInt8 {
 		if let (match, remainder1) = Terminals.repeat_range.match(input) {
 			// (*DIGIT "*" *DIGIT) element
@@ -1541,6 +1575,17 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		}
 	}
 
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		switch self {
+		case .rulename(let r): Diagram.NonTerminal(text: r.label)
+		case .charVal(let c): Diagram.Terminal(text: c.description)
+		case .numVal(let n): Diagram.Terminal(text: n.description)
+		case .group(let g): Diagram.Group(item: g.alternation.toRailroad(), label: "")
+		case .option(let o): Diagram.Optional(item: o.optionalAlternation.toRailroad())
+		case .proseVal(let p): Diagram.Comment(text: p.description)
+		}
+	}
+
 	public func hasUnion(_ other: Self) -> Self? {
 		// TODO: numVal can sometimes be unioned with charVal
 		// TODO: group and option too
@@ -1694,6 +1739,10 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		try alternation.toClosedRangePattern(as: PatternType.self, rules: rules)
 	}
 
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		alternation.toRailroad()
+	}
+
 	public func hasUnion(_ other: Self) -> Self? {
 		return nil
 	}
@@ -1790,6 +1839,10 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		try optionalAlternation.toClosedRangePattern(as: PatternType.self, rules: rules).optional()
+	}
+
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		Diagram.Optional(item: optionalAlternation.toRailroad())
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -1926,6 +1979,10 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 			else if(codepoint >= 0x61 && codepoint <= 0x7A) { return PatternType.union([ sym(codepoint-0x20), sym(codepoint) ]) }
 			else { return sym(codepoint) }
 		})
+	}
+
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		Diagram.Terminal(text: description)
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -2127,6 +2184,10 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		}
 	}
 
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		Diagram.Terminal(text: description)
+	}
+
 	public func hasUnion(_ other: Self) -> Self? {
 		// Extract range bounds from self
 		let (selfLow, selfHigh): (Symbol, Symbol)
@@ -2302,6 +2363,10 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		throw ABNFExportError(message: "Cannot convert prose to FSM: <\(self.remark)>")
+	}
+
+	public func toRailroad<Diagram: RailroadDiagramProtocol>() -> Diagram {
+		Diagram.Comment(text: description)
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
