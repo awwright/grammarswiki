@@ -47,9 +47,8 @@ async function main() {
 // Export function versions of all the constructors.
 // Each class will add itself to this object.
 const funcs = {};
-export default funcs;
 
-export const Options = {
+const Options = {
 	DEBUG: false, // if true, writes some debug information into attributes
 	VS: 8, // minimum vertical separation between things. For a 3px stroke, must be at least 4
 	AR: 10, // radius of arcs
@@ -61,7 +60,7 @@ export const Options = {
     ESCAPE_HTML: true, // Should Diagram.toText() produce HTML-escaped text, or raw?
 };
 
-export const defaultCSS = `
+const defaultCSS = `
 	svg {
 		background-color: hsl(30,20%,95%);
 	}
@@ -111,7 +110,7 @@ export const defaultCSS = `
 	}`;
 
 
-export class FakeSVG {
+class FakeSVG {
 	constructor(tagName, attrs, text) {
 		if(text) this.children = text;
 		else this.children = [];
@@ -177,7 +176,7 @@ export class FakeSVG {
 }
 
 
-export class Path extends FakeSVG {
+class Path extends FakeSVG {
 	constructor(x,y) {
 		super('path');
 		this.attrs.d = "M"+x+' '+y;
@@ -262,7 +261,7 @@ export class Path extends FakeSVG {
 }
 
 
-export class DiagramMultiContainer extends FakeSVG {
+class DiagramMultiContainer extends FakeSVG {
 	constructor(tagName, items, attrs, text) {
 		super(tagName, attrs, text);
 		this.items = items.map(wrapString);
@@ -274,7 +273,7 @@ export class DiagramMultiContainer extends FakeSVG {
 }
 
 
-export class Diagram extends DiagramMultiContainer {
+class Diagram extends DiagramMultiContainer {
 	constructor(...items) {
 		super('svg', items, {class: Options.DIAGRAM_CLASS});
 		if(!(this.items[0] instanceof Start)) {
@@ -371,7 +370,7 @@ export class Diagram extends DiagramMultiContainer {
 funcs.Diagram = (...args)=>new Diagram(...args);
 
 
-export class ComplexDiagram extends FakeSVG {
+class ComplexDiagram extends FakeSVG {
 	constructor(...items) {
 		var diagram = new Diagram(...items);
 		diagram.items[0] = new Start({type:"complex"});
@@ -382,7 +381,7 @@ export class ComplexDiagram extends FakeSVG {
 funcs.ComplexDiagram = (...args)=>new ComplexDiagram(...args);
 
 
-export class Sequence extends DiagramMultiContainer {
+class Sequence extends DiagramMultiContainer {
 	constructor(...items) {
 		super('g', items);
 		var numberOfItems = this.items.length;
@@ -441,7 +440,7 @@ export class Sequence extends DiagramMultiContainer {
 funcs.Sequence = (...args)=>new Sequence(...args);
 
 
-export class Stack extends DiagramMultiContainer {
+class Stack extends DiagramMultiContainer {
 	constructor(...items) {
 		super('g', items);
 		if( items.length === 0 ) {
@@ -581,7 +580,7 @@ export class Stack extends DiagramMultiContainer {
 funcs.Stack = (...args)=>new Stack(...args);
 
 
-export class OptionalSequence extends DiagramMultiContainer {
+class OptionalSequence extends DiagramMultiContainer {
 	constructor(...items) {
 		super('g', items);
 		if( items.length === 0 ) {
@@ -810,7 +809,7 @@ export class OptionalSequence extends DiagramMultiContainer {
 funcs.OptionalSequence = (...args)=>new OptionalSequence(...args);
 
 
-export class AlternatingSequence extends DiagramMultiContainer {
+class AlternatingSequence extends DiagramMultiContainer {
 	constructor(...items) {
 		super('g', items);
 		if( items.length === 1 ) {
@@ -949,7 +948,7 @@ export class AlternatingSequence extends DiagramMultiContainer {
 funcs.AlternatingSequence = (...args)=>new AlternatingSequence(...args);
 
 
-export class Choice extends DiagramMultiContainer {
+class Choice extends DiagramMultiContainer {
 	constructor(normal, ...items) {
 		super('g', items);
 		if( typeof normal !== "number" || normal !== Math.floor(normal) ) {
@@ -1160,7 +1159,7 @@ export class Choice extends DiagramMultiContainer {
 funcs.Choice = (...args)=>new Choice(...args);
 
 
-export class HorizontalChoice extends DiagramMultiContainer {
+class HorizontalChoice extends DiagramMultiContainer {
 	constructor(...items) {
 		super('g', items);
 		if( items.length === 0 ) {
@@ -1428,7 +1427,7 @@ export class HorizontalChoice extends DiagramMultiContainer {
 funcs.HorizontalChoice = (...args)=>new HorizontalChoice(...args);
 
 
-export class MultipleChoice extends DiagramMultiContainer {
+class MultipleChoice extends DiagramMultiContainer {
 	constructor(normal, type, ...items) {
 		super('g', items);
 		if( typeof normal !== "number" || normal !== Math.floor(normal) ) {
@@ -1554,7 +1553,7 @@ export class MultipleChoice extends DiagramMultiContainer {
 funcs.MultipleChoice = (...args)=>new MultipleChoice(...args);
 
 
-export class Optional extends FakeSVG {
+class Optional extends FakeSVG {
 	constructor(item, skip) {
 		if( skip === undefined )
 			return new Choice(1, new Skip(), item);
@@ -1567,7 +1566,7 @@ export class Optional extends FakeSVG {
 funcs.Optional = (...args)=>new Optional(...args);
 
 
-export class OneOrMore extends FakeSVG {
+class OneOrMore extends FakeSVG {
 	constructor(item, rep) {
 		super('g');
 		rep = rep || (new Skip());
@@ -1641,7 +1640,7 @@ export class OneOrMore extends FakeSVG {
 funcs.OneOrMore = (...args)=>new OneOrMore(...args);
 
 
-export class ZeroOrMore extends FakeSVG {
+class ZeroOrMore extends FakeSVG {
 	constructor(item, rep, skip) {
 		return new Optional(new OneOrMore(item, rep), skip);
 	}
@@ -1649,7 +1648,7 @@ export class ZeroOrMore extends FakeSVG {
 funcs.ZeroOrMore = (...args)=>new ZeroOrMore(...args);
 
 
-export class Group extends FakeSVG {
+class Group extends FakeSVG {
 	constructor(item, label) {
 		super('g');
 		this.item = wrapString(item);
@@ -1719,7 +1718,7 @@ export class Group extends FakeSVG {
 funcs.Group = (...args)=>new Group(...args);
 
 
-export class Start extends FakeSVG {
+class Start extends FakeSVG {
 	constructor({type="simple", label}={}) {
 		super('g');
 		this.width = 20;
@@ -1775,7 +1774,7 @@ export class Start extends FakeSVG {
 funcs.Start = (...args)=>new Start(...args);
 
 
-export class End extends FakeSVG {
+class End extends FakeSVG {
 	constructor({type="simple"}={}) {
 		super('path');
 		this.width = 20;
@@ -1809,7 +1808,7 @@ export class End extends FakeSVG {
 funcs.End = (...args)=>new End(...args);
 
 
-export class Terminal extends FakeSVG {
+class Terminal extends FakeSVG {
 	constructor(text, {href, title, cls}={}) {
 		super('g', {'class': ['terminal', cls].join(" ")});
 		this.text = ""+text;
@@ -1851,7 +1850,7 @@ export class Terminal extends FakeSVG {
 funcs.Terminal = (...args)=>new Terminal(...args);
 
 
-export class NonTerminal extends FakeSVG {
+class NonTerminal extends FakeSVG {
 	constructor(text, {href, title, cls=""}={}) {
 		super('g', {'class': ['non-terminal', cls].join(" ")});
 		this.text = ""+text;
@@ -1893,7 +1892,7 @@ export class NonTerminal extends FakeSVG {
 funcs.NonTerminal = (...args)=>new NonTerminal(...args);
 
 
-export class Comment extends FakeSVG {
+class Comment extends FakeSVG {
 	constructor(text, {href, title, cls=""}={}) {
 		super('g', {'class': ['comment', cls].join(" ")});
 		this.text = ""+text;
@@ -1934,7 +1933,7 @@ export class Comment extends FakeSVG {
 funcs.Comment = (...args)=>new Comment(...args);
 
 
-export class Skip extends FakeSVG {
+class Skip extends FakeSVG {
 	constructor() {
 		super('g');
 		this.width = 0;
@@ -1959,7 +1958,7 @@ export class Skip extends FakeSVG {
 funcs.Skip = (...args)=>new Skip(...args);
 
 
-export class Block extends FakeSVG {
+class Block extends FakeSVG {
 	constructor({width=50, up=15, height=25, down=15, needsSpace=true}={}) {
 		super('g');
 		this.width = width;
@@ -1988,7 +1987,7 @@ export class Block extends FakeSVG {
 }
 funcs.Block = (...args)=>new Block(...args);
 
-export class TextDiagram {
+class TextDiagram {
 	constructor(entry, exit, lines) {
 		// entry: The entry line for this diagram-part.
 		this.entry = entry;
