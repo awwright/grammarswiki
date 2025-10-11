@@ -207,29 +207,15 @@ func grammar_abnf_rule_html_railroad_svg_pipeline(_ arg1: String, _ arg2: String
 	// Create the first process: bin/grammartool abnf-to-railroad-js arg1 arg2
 	let grammartool = Process()
 	grammartool.executableURL = URL(fileURLWithPath: "bin/grammartool")
-	grammartool.arguments = ["abnf-to-railroad-js", arg1, arg2]
-
-	// Create the second process: node bin/railroad.js
-	let node = Process()
-	node.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-	node.arguments = ["node", "bin/railroad.js", "svg"]
-
-	// Create a pipe to connect the processes
-	let pipe = Pipe()
-	grammartool.standardOutput = pipe
-	node.standardInput = pipe
+	grammartool.arguments = ["abnf-to-railroad-svg", arg1, arg2]
 
 	// Create a pipe to capture the final output
 	let outputPipe = Pipe()
-	node.standardOutput = outputPipe
+	grammartool.standardOutput = outputPipe
 
-	// Run the processes
+	// Run the process
 	try grammartool.run()
-	try node.run()
-
-	// Wait for both processes to complete
 	grammartool.waitUntilExit()
-	node.waitUntilExit()
 
 	// Read the output
 	let outputData = try outputPipe.fileHandleForReading.readToEnd()
@@ -237,6 +223,5 @@ func grammar_abnf_rule_html_railroad_svg_pipeline(_ arg1: String, _ arg2: String
 			let outputString = String(data: output, encoding: .utf8) else {
 		throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to read pipeline output"])
 	}
-
 	return outputString
 }
