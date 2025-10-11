@@ -1,7 +1,6 @@
 import FSM;
 import Foundation;
 private typealias Symbol = UInt32;
-private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<Symbol>>;
 
 func abnf_to_railroad_js_help(arguments: Array<String>) {
 	print("\(arguments[0]) \(bold("abnf-to-railroad-js")) <filepath> <expression>");
@@ -14,21 +13,7 @@ func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
 		abnf_to_railroad_js_help(arguments: arguments);
 		return 1;
 	}
-
-	let imported: Data?;
-	let expressionIndex: Array.Index
-	if(arguments.count == 4){
-		imported = getInput(filename: arguments[2]);
-		expressionIndex = 3;
-	} else {
-		imported = nil
-		expressionIndex = 2;
-	}
-
-	// Prepare the list of builtin rules, which the imported dict and expression can refer to
-	let builtins = ABNFBuiltins<DFA>.dictionary;
-
-	// builtins will be copied to the output
+	let imported = getInput(filename: arguments[2]);
 	let dereferencedRulelist: ABNFRulelist<Symbol>
 	do {
 		let importedRulelist = try ABNFRulelist<Symbol>.parse(imported!);
@@ -67,6 +52,82 @@ func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
 	// class Skip extends FakeSVG
 	// class Block extends FakeSVG
 	// class TextDiagram
+
+	let rule = dereferencedRulelist.dictionary[arguments[3]];
+	guard let rule else {
+		print(stderr, "Error: No such rule: \(arguments[3])");
+		exit(1);
+	}
+	print(generateDiagram(rule));
+	return 0
+}
+
+func abnf_to_railroad_svg_help(arguments: Array<String>) {
+	print("\(arguments[0]) \(bold("abnf-to-railroad-svg")) <filepath> <expression>");
+	print("\tReads <filepath> and converts <rulename> to a railroad script for railroad.js");
+}
+
+func abnf_to_railroad_svg_args(arguments: Array<String>) -> Int32 {
+	guard arguments.count == 4 else {
+		print(arguments.count);
+		abnf_to_railroad_svg_help(arguments: arguments);
+		return 1;
+	}
+	let imported: Data? = getInput(filename: arguments[2]);
+	guard let imported else { return 1 }
+	// builtins will be copied to the output
+	let dereferencedRulelist: ABNFRulelist<Symbol>
+	do {
+		let importedRulelist = try ABNFRulelist<Symbol>.parse(imported);
+		dereferencedRulelist = try dereferenceABNFRulelist(importedRulelist, {
+			filename in
+			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
+			let content = try String(contentsOfFile: filePath, encoding: .utf8)
+			return try ABNFRulelist<Symbol>.parse(content.utf8)
+		});
+	} catch {
+		print("Could not parse input")
+		print(error)
+		return 2;
+	}
+	let rule = dereferencedRulelist.dictionary[arguments[3]];
+	guard let rule else {
+		print(stderr, "Error: No such rule: \(arguments[3])");
+		exit(1);
+	}
+
+	// Create the second process: node bin/railroad.js
+	let node = Process()
+	node.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+	node.arguments = ["node", "bin/railroad.js", "svg"]
+
+	let inputPipe = Pipe()
+	let outputPipe = Pipe()
+	node.standardInput = inputPipe
+	node.standardOutput = outputPipe
+	node.standardError = FileHandle.standardError
+
+	do {
+		try node.run()
+		if let scriptData = generateDiagram(rule).data(using: .utf8) {
+			inputPipe.fileHandleForWriting.write(scriptData)
+		}
+		try! inputPipe.fileHandleForWriting.close()
+		node.waitUntilExit()
+		let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+		if let outputString = String(data: outputData, encoding: .utf8) {
+			print(outputString, terminator: "")
+		}
+	} catch {
+		print("Error running node: \(error)")
+		return 3
+	}
+
+	return node.terminationStatus
+}
+
+private func generateDiagram(_ rule: ABNFRule<Symbol>) -> String {
+	return "Diagram(Start({label: \(text_json(rule.rulename.label))}), \(processAlternation(rule.alternation)));";
 
 	func processAlternation(_ alternation: ABNFAlternation<Symbol>) -> String {
 		if(alternation.matches.count == 1){
@@ -131,24 +192,12 @@ func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
 		}
 	}
 
-	let rule = dereferencedRulelist.dictionary[arguments[3]];
-	guard let rule else {
-		print(stderr, "Error: No such rule: \(arguments[3])");
-		exit(1);
+	func text_json(_ input: String) -> String {
+		return "\"" + input
+			.replacingOccurrences(of: "\r", with: "\\r")
+			.replacingOccurrences(of: "\n", with: "\\n")
+			.replacingOccurrences(of: "\\", with: "\\\\")
+			.replacingOccurrences(of: "\"", with: "\\\"")
+		+ "\"";
 	}
-	print("Diagram(");
-	print("Start({label: \(text_json(rule.rulename.label))}),");
-	print(processAlternation(rule.alternation));
-	print(");");
-
-	return 0
-}
-
-private func text_json(_ input: String) -> String {
-	return "\"" + input
-		.replacingOccurrences(of: "\r", with: "\\r")
-		.replacingOccurrences(of: "\n", with: "\\n")
-		.replacingOccurrences(of: "\\", with: "\\\\")
-		.replacingOccurrences(of: "\"", with: "\\\"")
-	+ "\"";
 }
