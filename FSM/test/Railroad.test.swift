@@ -98,7 +98,7 @@ import Testing;
 
 	@Test("OneOrMore")
 	func testOneOrMore() async throws {
-		let diagram = RailroadTextNode.OneOrMore(item: RailroadTextNode.Terminal(text: "A"));
+		let diagram = RailroadTextNode.OneOrMore(item: RailroadTextNode.Terminal(text: "A"), separator: nil);
 		#expect(diagram.lines == [
 			"   ╭───╮   ",
 			"╭──│ A │──╮",
@@ -107,9 +107,12 @@ import Testing;
 		])
 	}
 
+	// TODO: OneOrMore with separator
+	// TODO: OneOrMore with max
+
 	@Test("ZeroOrMore")
 	func testZeroOrMore() async throws {
-		let diagram = RailroadTextNode.ZeroOrMore(item: RailroadTextNode.Terminal(text: "A"));
+		let diagram = RailroadTextNode.ZeroOrMore(item: RailroadTextNode.Terminal(text: "A"), separator: nil);
 		#expect(diagram.lines == [
 			"╮─────────────╭",
 			"│             │", // TODO: Remove this line
@@ -119,6 +122,9 @@ import Testing;
 			"  ╰─────────╯  ",
 		])
 	}
+
+	// TODO: ZeroOrMore with separator
+	// TODO: ZeroOrMore with max
 
 	@Test("Group")
 	func testGroup() async throws {
@@ -200,7 +206,7 @@ import Testing;
 			"╭──────────╮          ",
 			"│  ╭───╮   │  ╭───╮   ",
 			"╯──│ A │──╮╰──│ B │──╭",
-			"   ╰───╯  ││  ╰───╯  │",
+			"   ╰───╯  ││  ╰───╯  │", // TODO: Fix the extra line not connected to anything
 			"          ╰──────────╯",
 		]);
 	}

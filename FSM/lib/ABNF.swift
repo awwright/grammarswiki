@@ -1380,14 +1380,19 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		let inner: Diagram = repeating.toRailroad(rules: rules)
+		let separator: Diagram? = switch(self.rangeop) {
+			case 0x2A: nil;
+			case 0x23: Diagram.Terminal(text: ",");
+			default: fatalError("Unsupported repetition range operator \(rangeop)");
+		}
 		if min == 1 && max == 1 {
 			return inner
 		} else if min == 0 && max == 1 {
 			return Diagram.Optional(item: inner)
 		} else if min == 0 && max == nil {
-			return Diagram.ZeroOrMore(item: inner)
+			return Diagram.ZeroOrMore(item: inner, separator: separator)
 		} else if min == 1 && max == nil {
-			return Diagram.OneOrMore(item: inner, max: "")
+			return Diagram.OneOrMore(item: inner, separator: separator, max: "")
 		} else {
 			// FIXME: There should be a type of diagram that can do n...m loops
 			var sequence: Array<Diagram> = [];
@@ -1396,7 +1401,7 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 				sequence.append(element)
 			}
 			if repetition.max == nil {
-				return Diagram.Sequence(items: sequence + [ Diagram.ZeroOrMore(item: element) ])
+				return Diagram.Sequence(items: sequence + [ Diagram.ZeroOrMore(item: element, separator: separator) ])
 			} else if repetition.max! > repetition.min {
 				for _ in repetition.min..<repetition.max! {
 					sequence.append(Diagram.Optional(item: element));

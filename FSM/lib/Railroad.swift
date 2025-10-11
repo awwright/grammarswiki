@@ -199,14 +199,33 @@ public protocol RailroadDiagramProtocol {
 	/// This represents repetition where the element occurs at least once, up to a specified maximum
 	/// if provided, or unbounded otherwise.
 	///
+	/// ```
+	///     ┌───┐
+	/// ─╭──┤ X ├──╮─
+	///  │  └───┘  │
+	///  ╰─────────╯
+	/// ```
+	///
+	/// If separator is defined, then it is placed in the track while looping back to the start. For example, a comma:
+	///
+	/// ```
+	///     ┌─────────┐
+	/// ─╭──┤ Element ├──╮─
+	///  │  └─────────┘  │
+	///  │     ╭───╮     │
+	///  ╰─────┤ , ├─────╯
+	///        ╰───╯
+	/// ```
+	///
 	/// - Parameters:
 	///   - item: The element to repeat.
+	///   - separator: An element that goes in between repeated elements, if any
 	///   - max: A string representing the maximum number of repetitions (e.g., "3" for up to 3 times).
 	/// - Returns: A diagram element representing the repeated item.
 	///
 	/// - Example: `OneOrMore(A, max: "3")` represents `A{1,3}`, equivalent to the regex `A{1,3}`.
 	///   Without max, it represents `A+`, equivalent to `A+`.
-	static func OneOrMore(item: Self, max: String) -> Self
+	static func OneOrMore(item: Self, separator: Self?, max: String) -> Self
 
 	/// Creates an element that may appear zero or more times.
 	///
@@ -224,7 +243,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the zero-or-more repetition.
 	///
 	/// - Example: `ZeroOrMore(A)` represents `A*`, equivalent to the regex `A*`.
-	static func ZeroOrMore(item: Self) -> Self
+	static func ZeroOrMore(item: Self, separator: Self?) -> Self
 
 	/// Groups an element with a descriptive label for clarity in the diagram.
 	///
@@ -415,6 +434,11 @@ extension RailroadDiagramProtocol {
 	/// - SeeAlso: `MultipleChoice(normal:items:)`
 	static func MultipleChoice(normal: Int = 0, _ items: Self...) -> Self {
 		Self.MultipleChoice(normal: normal, items: items);
+	}
+
+	/// An shorthand for ``OneOrMore(item:separator:max:)``
+	public static func OneOrMore(_ item: Self, separator: Self? = nil, max: String = "") -> Self {
+		OneOrMore(item: item, separator: separator, max: max)
 	}
 }
 
@@ -1130,7 +1154,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return Choice(items: [Skip(), item])
 	}
 
-	public static func OneOrMore(item: Self, max: String = "") -> Self {
+	public static func OneOrMore(item: Self, separator: Self?, max: String = "") -> Self {
 		let line = Self.part_line
 		let repeat_top_left = Self.box_roundrect.top_left
 		let repeat_left = Self.box_roundrect.left
@@ -1163,8 +1187,8 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func ZeroOrMore(item: Self) -> Self {
-		return Optional(item: OneOrMore(item: item))
+	public static func ZeroOrMore(item: Self, separator: Self?) -> Self {
+		return Optional(item: OneOrMore(item, separator: separator))
 	}
 
 	public static func Group(item: Self, label: String) -> Self {
