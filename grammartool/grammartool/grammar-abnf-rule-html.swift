@@ -204,10 +204,10 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 }
 
 func grammar_abnf_rule_html_railroad_svg_pipeline(_ arg1: String, _ arg2: String) throws -> String {
-	// Create the first process: bin/grammartool abnf-to-railroad arg1 arg2
+	// Create the first process: bin/grammartool abnf-to-railroad-js arg1 arg2
 	let grammartool = Process()
 	grammartool.executableURL = URL(fileURLWithPath: "bin/grammartool")
-	grammartool.arguments = ["abnf-to-railroad", arg1, arg2]
+	grammartool.arguments = ["abnf-to-railroad-js", arg1, arg2]
 
 	// Create the second process: node bin/railroad.js
 	let node = Process()

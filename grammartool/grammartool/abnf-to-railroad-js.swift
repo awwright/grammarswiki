@@ -3,15 +3,15 @@ import Foundation;
 private typealias Symbol = UInt32;
 private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<Symbol>>;
 
-func abnf_to_railroad_help(arguments: Array<String>) {
-	print("\(arguments[0]) \(bold("abnf-to-railroad")) <filepath> <expression>");
+func abnf_to_railroad_js_help(arguments: Array<String>) {
+	print("\(arguments[0]) \(bold("abnf-to-railroad-js")) <filepath> <expression>");
 	print("\tReads <filepath> and converts <rulename> to a railroad script for railroad.js");
 }
 
-func abnf_to_railroad_args(arguments: Array<String>) -> Int32 {
+func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
 	guard arguments.count == 4 else {
 		print(arguments.count);
-		abnf_to_railroad_help(arguments: arguments);
+		abnf_to_railroad_js_help(arguments: arguments);
 		return 1;
 	}
 
@@ -144,7 +144,7 @@ func abnf_to_railroad_args(arguments: Array<String>) -> Int32 {
 	return 0
 }
 
-func text_json(_ input: String) -> String {
+private func text_json(_ input: String) -> String {
 	return "\"" + input
 		.replacingOccurrences(of: "\r", with: "\\r")
 		.replacingOccurrences(of: "\n", with: "\\n")
