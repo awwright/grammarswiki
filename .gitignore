@@ -1,3 +1,7 @@
+# Build targets
+bin/grammartool
+
+# Tool output
 node_modules/
 catalog/rfcs-text-only/
 yarn.lock
@@ -13,4 +17,4 @@ DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 +.netrc
-bin/grammartool
+**/xcshareddata/WorkspaceSettings.xcsettings
