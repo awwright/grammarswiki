@@ -523,25 +523,27 @@ public struct REDialect: REDialectProtocol {
 
 	public func encodeWhole<Symbol>(_ pattern: REPattern<Symbol>) -> String {
 		if isFind {
-			startAnchor + openGroup + encode(pattern) + closeGroup + endAnchor;
+			let inner = pattern.precedence > 3 ? openGroup + encode(pattern) + closeGroup : encode(pattern)
+			return openQuote + startAnchor + inner + endAnchor + closeQuote;
 		} else {
-			encode(pattern);
+			return openQuote + encode(pattern) + closeQuote;
 		}
 	}
 
 	public func encodeFind<Symbol>(_ pattern: REPattern<Symbol>) -> String {
 		if isFind {
-			encode(pattern);
+			return openQuote + encode(pattern) + closeQuote;
 		} else {
-			allClass + openGroup + encode(pattern) + closeGroup + allClass;
+			let inner = pattern.precedence > 3 ? openGroup + encode(pattern) + closeGroup : encode(pattern)
+			return openQuote + allClass + inner + allClass + closeQuote;
 		}
 	}
 }
 
 public struct REDialectBuiltins {
 	public static let swift: REDialectProtocol = REDialect(
-		openQuote: "/",
-		closeQuote: "/",
+		openQuote: "",
+		closeQuote: "",
 		startAnchor: "^",
 		endAnchor: "$",
 		flags: "gimsuy", // Example: global, multiline, unicode, etc.
@@ -564,8 +566,8 @@ public struct REDialectBuiltins {
 	)
 
 	public static let posixExtended: REDialectProtocol = REDialect(
-		openQuote: "/",
-		closeQuote: "/",
+		openQuote: "",
+		closeQuote: "",
 		startAnchor: "",
 		endAnchor: "",
 		flags: "",
@@ -614,7 +616,32 @@ public struct REDialectBuiltins {
 		isFind: true,
 	)
 
-	public static let ecmascript: REDialectProtocol = REDialect(
+	public static let ecmascriptString: REDialectProtocol = REDialect(
+		openQuote: "",
+		closeQuote: "",
+		startAnchor: "^",
+		endAnchor: "$",
+		flags: "gimsuy",
+		openGroup: "(",
+		closeGroup: ")",
+		allClass: "[^]",
+		emptyClass: "[]",
+		xEscape: true,
+		escapeChar: "\\",
+		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
+		openCharClass: "[",
+		closeCharClass: "]",
+		charClassMetaCharacters: Set(["^", "-", "]"]),
+		groupTypeIndicators: Set(["?:", "?=", "?!", "?<=", "?<!", "?<"]),
+		charClassEscapes: [
+			"\\d": Set("0123456789"),
+			"\\w": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"),
+		],
+		isFind: true,
+	)
+
+	// Just like above, but uses slash as the quoting characters, and is also specified as a meta-character so that it is escaped
+	public static let ecmascriptLiteral: REDialectProtocol = REDialect(
 		openQuote: "/",
 		closeQuote: "/",
 		startAnchor: "^",
@@ -626,7 +653,7 @@ public struct REDialectBuiltins {
 		emptyClass: "[]",
 		xEscape: true,
 		escapeChar: "\\",
-		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
+		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")", "/"]),
 		openCharClass: "[",
 		closeCharClass: "]",
 		charClassMetaCharacters: Set(["^", "-", "]"]),

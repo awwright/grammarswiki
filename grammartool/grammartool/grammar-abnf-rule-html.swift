@@ -81,6 +81,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	// TODO: Add Swift NSRegularExpression
 	let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>;
 	var result_fsm_dict: Dictionary<String, SymbolClassDFA<ClosedRangeAlphabet<UInt32>>> = builtins;
+	let regex_es_str: String;
 	let regex_swift_str: String;
 	let regex_egrep_str: String;
 
@@ -96,20 +97,24 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 			if let rule_fsm = result_fsm_dict[rulename] {
 				fsm = rule_fsm
 				let regex: REPattern<UInt32> = fsm.toPattern()
+				regex_es_str = REDialectBuiltins.ecmascriptLiteral.encodeWhole(regex.factorRepetition());
 				regex_swift_str = REDialectBuiltins.swift.encode(regex.factorRepetition());
 				regex_egrep_str = REDialectBuiltins.posixExtended.encode(regex);
 			} else {
 				fsm = .empty
+				regex_es_str = "[recursive]"
 				regex_swift_str = "[recursive]"
 				regex_egrep_str = "[recursive]"
 			}
 		} catch {
 			fsm = .empty
+			regex_es_str = "[error]"
 			regex_swift_str = "[error]"
 			regex_egrep_str = "[error]"
 		}
 	} else {
 		fsm = .empty
+		regex_es_str = "[recursive]"
 		regex_swift_str = "[recursive]"
 		regex_egrep_str = "[recursive]"
 	}
@@ -187,6 +192,10 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 			<section>
 				<h3>Railroad Diagram</h3>
 				<div>\(railroad_svg_html)</div>
+			</section>
+			<section>
+				<h3>ECMAScript/JavaScript Regular Expression Literal</h3>
+				<pre>\(text_html(regex_es_str))</pre>
 			</section>
 			<section>
 				<h3>Swift Regular Expression</h3>
