@@ -7,7 +7,7 @@ import Testing;
 		@Test("Empty pattern")
 		func test_UInt8_empty() async throws {
 			let empty = REPattern<Int>.empty
-			#expect(empty.description == "[^]", "Empty pattern should be represented as an impossible regex")
+			#expect(empty.description == "^(?!.*)", "Empty pattern should be represented as an impossible regex")
 		}
 
 		@Test("Epsilon pattern")
@@ -136,7 +136,7 @@ import Testing;
 		func test_UInt8_empty_union_empty() async throws {
 			let seq = REPattern<UInt8>.empty.union(REPattern<UInt8>.empty)
 			// Union of two empty sets is empty
-			#expect(seq.description == "[^]")
+			#expect(seq.description == "^(?!.*)")
 		}
 
 		@Test("empty.union(epsilon)")
@@ -157,21 +157,21 @@ import Testing;
 		func test_UInt8_empty_concatenate_empty() async throws {
 			let seq = REPattern<UInt8>.empty.concatenate(REPattern<UInt8>.empty)
 			// Concatenation with empty set is empty set
-			#expect(seq.description == "[^]")
+			#expect(seq.description == "^(?!.*)")
 		}
 
 		@Test("empty.concatenate(epsilon)")
 		func test_UInt8_empty_concatenate_epsilon() async throws {
 			let seq = REPattern<UInt8>.empty.concatenate(REPattern<UInt8>.epsilon)
 			// Concatenation with empty set is empty set
-			#expect(seq.description == "[^]")
+			#expect(seq.description == "^(?!.*)")
 		}
 
 		@Test("empty.concatenate(symbol)")
 		func test_UInt8_empty_concatenate_symbol() async throws {
 			let seq = REPattern<UInt8>.empty.concatenate(REPattern<UInt8>.symbol(0x20))
 			// Concatenation with empty set is empty set
-			#expect(seq.description == "[^]")
+			#expect(seq.description == "^(?!.*)")
 		}
 
 		@Test("empty.star")
@@ -206,7 +206,7 @@ import Testing;
 		func test_UInt8_epsilon_concatenate_empty() async throws {
 			let seq = REPattern<UInt8>.epsilon.concatenate(REPattern<UInt8>.empty)
 			// Concatenation with empty set is empty set
-			#expect(seq.description == "[^]")
+			#expect(seq.description == "^(?!.*)")
 		}
 
 		@Test("epsilon.concatenate(epsilon)")

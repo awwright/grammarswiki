@@ -548,7 +548,7 @@ public struct REDialectBuiltins {
 		openGroup: "(",
 		closeGroup: ")",
 		allClass: "(.|\n|\r)",
-		emptyClass: "[]",
+		emptyClass: "^(?!.*)",
 		xEscape: false,
 		escapeChar: "\\",
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),

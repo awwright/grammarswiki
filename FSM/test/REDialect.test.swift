@@ -17,6 +17,18 @@ struct REDialectTests {
 	// Shared list of test cases
 	static let standardTestCases: [PatternTestCase] = [
 		PatternTestCase(
+			description: "Empty language",
+			pattern: RangeDFA<UInt32>.empty,
+			acceptingInputs: [],
+			rejectingInputs: ["", "a", "\r", "\n"],
+		),
+		PatternTestCase(
+			description: "Language of empty string",
+			pattern: RangeDFA<UInt32>.epsilon,
+			acceptingInputs: [""],
+			rejectingInputs: ["a", "\r", "\n"],
+		),
+		PatternTestCase(
 			description: "[A-Za-z]",
 			pattern: RangeDFA<UInt32>(
 				states: [
