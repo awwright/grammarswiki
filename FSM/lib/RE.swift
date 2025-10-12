@@ -370,7 +370,17 @@ public struct REString<Symbol> where Symbol: Strideable & BinaryInteger, Symbol.
 
 public protocol REDialectProtocol {
 	/// Encodes a given REPattern into a string representation using this dialect.
+	/// This is the "embedding" form, the form that matches a whole string and can be placed inside a group.
+	/// Generally, you will want to use one of the forms below instead.
 	func encode<Symbol>(_ pattern: REPattern<Symbol>) -> String where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger
+
+	/// Get a regular expression where the expression will match the input string exactly.
+	/// In many regular expression dialects, this means adding anchoring characters like `($^)`.
+	func encodeWhole<Symbol>(_ pattern: REPattern<Symbol>) -> String
+
+	/// Get a regular expression where the input regular expression has to match some substring of the input.
+	/// This is the default mode for many regular expression dialects; but if not, then
+	func encodeFind<Symbol>(_ pattern: REPattern<Symbol>) -> String
 }
 
 /// Most regular expression dialects can be described with the appropriate parameters on this structure
@@ -383,6 +393,7 @@ public struct REDialect: REDialectProtocol {
 	public let endAnchor: String           // Delimiter for matching EOF, if necessary
 	public let flags: String               // Flags for the pattern (e.g., "ims" for Perl)
 	public let emptyClass: String          // A pattern that matches no characters (not even the empty string)
+	public let allClass: String            // A pattern that matches all characters. Note that "." usually excludes CR/LF.
 	public let xEscape: Bool             // Use \x to escape characters < 0x20
 	public let openGroup: String           // String opening a group (e.g., "(")
 	public let closeGroup: String          // String closing a group (e.g., ")")
@@ -393,8 +404,9 @@ public struct REDialect: REDialectProtocol {
 	public let charClassMetaCharacters: Set<Character> // Special characters inside character classes (e.g., "^", "-")
 	public let groupTypeIndicators: Set<String> // Indicators after openGroup for special groups (e.g., "?:", "?=")
 	public let charClassEscapes: [String: Set<Character>] // Predefined character class escapes (e.g., "\s", "\w")
+	public let isFind: Bool // If `escape` creates a "Find" regex, as opposed to a "whole" regex
 
-	public init(openQuote: String, closeQuote: String, startAnchor: String, endAnchor: String, flags: String, openGroup: String, closeGroup: String, emptyClass: String, xEscape: Bool, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>]) {
+	public init(openQuote: String, closeQuote: String, startAnchor: String, endAnchor: String, flags: String, openGroup: String, closeGroup: String, allClass: String, emptyClass: String, xEscape: Bool, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>], isFind: Bool) {
 		self.openQuote = openQuote
 		self.closeQuote = closeQuote
 		self.startAnchor = startAnchor
@@ -402,6 +414,7 @@ public struct REDialect: REDialectProtocol {
 		self.flags = flags
 		self.openGroup = openGroup
 		self.closeGroup = closeGroup
+		self.allClass = allClass
 		self.emptyClass = emptyClass
 		self.xEscape = xEscape;
 		self.escapeChar = escapeChar
@@ -411,6 +424,7 @@ public struct REDialect: REDialectProtocol {
 		self.charClassMetaCharacters = charClassMetaCharacters
 		self.groupTypeIndicators = groupTypeIndicators
 		self.charClassEscapes = charClassEscapes
+		self.isFind = isFind
 	}
 
 	public func encode<Symbol>(_ pattern: REPattern<Symbol>) -> String where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
@@ -473,7 +487,7 @@ public struct REDialect: REDialectProtocol {
 			//if metaCharacters.contains(Int(char)) {
 			//	"\(escapeChar)\(Character(char))"
 			//} else
-			if(xEscape && char < 0x210) {
+			if(xEscape && char < 0x20) {
 				"\\x0\(String(char, radix: 16, uppercase: true))"
 			} else if(xEscape && char < 0x20) {
 				"\\x\(String(char, radix: 16, uppercase: true))"
@@ -506,6 +520,22 @@ public struct REDialect: REDialectProtocol {
 
 		}
 	}
+
+	public func encodeWhole<Symbol>(_ pattern: REPattern<Symbol>) -> String {
+		if isFind {
+			startAnchor + openGroup + encode(pattern) + closeGroup + endAnchor;
+		} else {
+			encode(pattern);
+		}
+	}
+
+	public func encodeFind<Symbol>(_ pattern: REPattern<Symbol>) -> String {
+		if isFind {
+			encode(pattern);
+		} else {
+			allClass + openGroup + encode(pattern) + closeGroup + allClass;
+		}
+	}
 }
 
 public struct REDialectBuiltins {
@@ -517,7 +547,8 @@ public struct REDialectBuiltins {
 		flags: "gimsuy", // Example: global, multiline, unicode, etc.
 		openGroup: "(",
 		closeGroup: ")",
-		emptyClass: "[^]",
+		allClass: "(.|\n|\r)",
+		emptyClass: "[]",
 		xEscape: false,
 		escapeChar: "\\",
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
@@ -528,7 +559,8 @@ public struct REDialectBuiltins {
 		charClassEscapes: [
 			"\\d": Set("0123456789"),
 			"\\w": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"),
-		]
+		],
+		isFind: true,
 	)
 
 	public static let posixExtended: REDialectProtocol = REDialect(
@@ -539,7 +571,8 @@ public struct REDialectBuiltins {
 		flags: "",
 		openGroup: "(",
 		closeGroup: ")",
-		emptyClass: "[^]",
+		allClass: "[^]",
+		emptyClass: "[]",
 		xEscape: true,
 		escapeChar: "\\",
 		metaCharacters: Set([".", "[", "\\", "(", ")", "|", "*", "+", "?", "{", "}", "^", "$"]),
@@ -552,7 +585,8 @@ public struct REDialectBuiltins {
 			"[:alpha:]": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"),
 			"[:digit:]": Set("0123456789"),
 			// Add more POSIX classes like [:lower:], [:upper:], etc.
-		]
+		],
+		isFind: true,
 	)
 
 	public static let perl: REDialectProtocol = REDialect(
@@ -563,7 +597,8 @@ public struct REDialectBuiltins {
 		flags: "imsx",
 		openGroup: "(",
 		closeGroup: ")",
-		emptyClass: "[^]",
+		allClass: "[^]",
+		emptyClass: "[]",
 		xEscape: true,
 		escapeChar: "\\",
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
@@ -575,7 +610,8 @@ public struct REDialectBuiltins {
 			"\\d": Set("0123456789"),                    // Digits
 			"\\w": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"), // Word characters
 			// Note: \p{} for Unicode properties could be added, but requires a more complex representation
-		]
+		],
+		isFind: true,
 	)
 
 	public static let ecmascript: REDialectProtocol = REDialect(
@@ -586,7 +622,8 @@ public struct REDialectBuiltins {
 		flags: "gimsuy",
 		openGroup: "(",
 		closeGroup: ")",
-		emptyClass: "[^]",
+		allClass: "[^]",
+		emptyClass: "[]",
 		xEscape: true,
 		escapeChar: "\\",
 		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")"]),
@@ -597,6 +634,7 @@ public struct REDialectBuiltins {
 		charClassEscapes: [
 			"\\d": Set("0123456789"),
 			"\\w": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"),
-		]
+		],
+		isFind: true,
 	)
 }

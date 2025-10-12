@@ -47,6 +47,7 @@ struct InputTestingView: View {
 			}
 
 			if let fsm_test_result {
+				// TODO: Show symbols that are valid to enter at given cursor position
 				Text("Result: " + (fsm_test_result ? "Accepted" : fsm_test_error ?? "Rejected"))
 					.foregroundColor(fsm_test_result == true ? .green : .red)
 				if let fsm_test_next {
