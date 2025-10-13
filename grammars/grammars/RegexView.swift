@@ -51,7 +51,7 @@ struct RegexContentView: View {
 	@State private var selectedPreset: RegexPreset? = nil
 	@State private var filteredDialects: Array<String> = []
 	@State private var filteredConstructors: Array<REDialactCollection.Constructor> = []
-	@State private var selectedRule: String = "\u{1B}all"
+	@State private var selectedRule: String = ""
 	@State private var selectedRules: Set<String> = []
 	@State private var presetName: String = ""
 	@State private var caseInsensitive: Bool = false
