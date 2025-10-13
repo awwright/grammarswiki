@@ -45,9 +45,9 @@ struct RegexContentView: View {
 
 	@State private var presets: [RegexPreset] = []
 	@State private var selectedPresetId: UUID? = nil
-	@State private var selectedLanguage: String? = nil
+	@State private var selectedLanguage: String = ""
 	@State private var selectedDialect: String = ""
-	@State private var selectedMatchType: String = ""
+	@State private var selectedMatchType: String = "find"
 	@State private var selectedPreset: RegexPreset? = nil
 	@State private var filteredDialects: Array<String> = []
 	@State private var filteredConstructors: Array<REDialactCollection.Constructor> = []
@@ -104,6 +104,8 @@ struct RegexContentView: View {
 								}).frame(maxWidth: .infinity, alignment: .leading)
 							}
 
+							// TODO: Offer ability to match start of string, end of string, etc.
+							// Maybe even mismatched.
 							Picker("Match type", selection: $selectedMatchType) {
 								Text("Whole").tag("whole")
 								Text("Line").tag("line").disabled(true)

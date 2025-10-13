@@ -392,6 +392,7 @@ public struct REString<Symbol> where Symbol: Strideable & BinaryInteger, Symbol.
 }
 
 public protocol REDialectProtocol {
+	// TODO: Add ability to specify start and end anchors separately, e.g. "line starts with..."
 	/// Encodes a given REPattern into a string representation using this dialect.
 	/// This is the "embedding" form, the form that matches a whole string and can be placed inside a group.
 	/// Generally, you will want to use one of the forms below instead.
