@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Search - Grammars.wiki</title>
+  <meta name="description" content=""/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&amp;display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/scripts/css/style.css"/>
+  <script src="https://unpkg.com/lunr/lunr.js"></script>
+  <script src="/scripts/search-index.js"></script>
+  <script src="/scripts/search.js"></script>
+</head>
+<body>
+  <header>
+    <section class="v-align--grid col-2-auto">
+      <a id="logo" href="/">
+        <div class="large">Grammars.wiki</div>
+        <div class="small">ABNF Toolchain &amp; Generator</div>
+      </a>
+
+      <nav>
+        <input id="toggle--state" type="checkbox"/>
+        <label id="toggle" for="toggle--state">
+          <span></span>
+          <span></span>
+          <span></span>
+        </label>
+
+        <ul id="menu">
+          <li><a href="/index.html">About</a></li>
+          <li class="category">
+            <a href="catalog.html">Catalog</a>
+            <ul class="dropdown">
+              <li><a href="grammars-and-formats.html">Grammars and Formats</a></li>
+              <li><a href="handbook.html">Handbook</a></li>
+            </ul>
+          </li>
+
+          <li><a href="test-cases.html">Test Cases</a></li>
+          <li><form class="filter-menu filter-menu--quick-search pointer" method="get" action="/search.html">
+            <label for="search" hidden="">Search</label>
+            <input type="text" name="q"/>
+            <input class="icon icon__search icon--border--left" type="submit" value="&#x1F50D;"/>
+          </form></li>
+        </ul>
+      </nav>
+    </section>
+  </header>
+
+  <main>    
+    <!-- Mostly for testing, this doesn't have to stick around end users -->
+    <!-- This can be generated using ../bin/build-sitemap.js -->
+    <section>
+      <h2>Sitemap</h2>
+      <ul>
+        <li><a href="_dev-body.html">_dev-body.html</a></li>
+        <li><a href="_dev-dynamic-container.html">_dev-dynamic-container.html</a></li>
+        <li><a href="_dev-elements.html">_dev-elements.html</a></li>
+        <li><a href="_dev-no-js.html">_dev-no-js.html</a></li>
+        <li><a href="_dev-pages.html">_dev-pages.html</a></li>
+        <li><a href="_dev-style.html">_dev-style.html</a></li>
+        <li>catalog/<ul>
+          <li><a href="catalog/abnf-core.html">abnf-core.html</a></li>
+          <li><a href="catalog/abnf-syntax.html">abnf-syntax.html</a></li>
+          <li><a href="catalog/number.html">number.html</a></li>
+          <li><a href="catalog/rfc3339-datetime.html">rfc3339-datetime.html</a></li>
+          <li><a href="catalog/rfc3986-uri.html">rfc3986-uri.html</a></li>
+          <li><a href="catalog/rfc3987-iri.html">rfc3987-iri.html</a></li>
+          <li><a href="catalog/rfc4647-langrange.html">rfc4647-langrange.html</a></li>
+          <li><a href="catalog/rfc5322-email.html">rfc5322-email.html</a></li>
+          <li><a href="catalog/rfc5646-langtag.html">rfc5646-langtag.html</a></li>
+          <li><a href="catalog/rfc6570-uri-template.html">rfc6570-uri-template.html</a></li>
+          <li><a href="catalog/rfc8259-json/number.html">number.html</a></li>
+          <li><a href="catalog/rfc8259-json-array.html">rfc8259-json-array.html</a></li>
+          <li><a href="catalog/rfc8259-json-number.html">rfc8259-json-number.html</a></li>
+          <li><a href="catalog/rfc8259-json-object.html">rfc8259-json-object.html</a></li>
+          <li><a href="catalog/rfc8259-json-string.html">rfc8259-json-string.html</a></li>
+          <li><a href="catalog/rfc8259-json.html">rfc8259-json.html</a></li>
+          <li><a href="catalog/rfc8288-http-link.html">rfc8288-http-link.html</a></li>
+          <li><a href="catalog/rfc8941-http-structured-fields.html">rfc8941-http-structured-fields.html</a></li>
+          <li><a href="catalog/rfc9110-http.html">rfc9110-http.html</a></li>
+          <li><a href="catalog/rfc9112-http11.html">rfc9112-http11.html</a></li>
+        </ul></li>
+        <li><a href="catalog.html">catalog.html</a></li>
+        <li><a href="error.html">error.html</a></li>
+        <li><a href="generator.html">generator.html</a></li>
+        <li><a href="grammars-and-formats.html">grammars-and-formats.html</a></li>
+        <li><a href="handbook.html">handbook.html</a></li>
+        <li><a href="index.html">index.html</a></li>
+        <li><a href="test-case.html">test-case.html</a></li>
+        <li>test-cases/<ul>
+          <li><a href="test-cases/Email_Protocol_Standards.html">Email_Protocol_Standards.html</a></li>
+          <li><a href="test-cases/ISO_1.html">ISO_1.html</a></li>
+          <li><a href="test-cases/RFC_1.html">RFC_1.html</a></li>
+          <li><a href="test-cases/RFC_3339.html">RFC_3339.html</a></li>
+        </ul></li>
+        <li><a href="test-cases.html">test-cases.html</a></li>
+      </ul>
+    </section>
+    </main>
+
+  <footer>
+    <section class="col-4">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </section>
+  </footer>
+</body>
+</html>
