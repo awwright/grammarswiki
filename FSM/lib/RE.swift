@@ -269,6 +269,9 @@ public struct REDialactCollection {
 		public let engine: String;
 		public let reference: String;
 		public let description: (REPattern<UInt32>) -> String;
+		public let findMatchCode: ((REPattern<UInt32>) -> String)?;
+		public let lineMatchCode: ((REPattern<UInt32>) -> String)?;
+		public let wholeMatchCode: ((REPattern<UInt32>) -> String)?;
 	}
 	public let constructors: Array<Constructor>;
 
@@ -303,7 +306,10 @@ public struct REDialactCollection {
 			language: "Swift",
 			engine: "Swift",
 			reference: "",
-			description: { REDialectBuiltins.swift.encode($0) }
+			description: { REDialectBuiltins.swift.encode($0) },
+			findMatchCode: { REDialectBuiltins.swift.encode($0) },
+			lineMatchCode: nil,
+			wholeMatchCode: { REDialectBuiltins.swift.encode($0) },
 		),
 		Constructor(
 			id: "swift,literal",
@@ -311,8 +317,10 @@ public struct REDialactCollection {
 			language: "Swift",
 			engine: "Swift",
 			reference: "",
-			// FIXME: Escape this string
-			description: { "/" + REDialectBuiltins.swift.encode($0) + "/" }
+			description: { REDialectBuiltins.swiftLiteral.encode($0) },
+			findMatchCode: { REDialectBuiltins.swiftLiteral.encodeFind($0) },
+			lineMatchCode: { REDialectBuiltins.swiftLiteral.encodeLine($0) },
+			wholeMatchCode: { REDialectBuiltins.swiftLiteral.encodeWhole($0) },
 		),
 		Constructor(
 			id: "swift,nswliteral",
@@ -320,7 +328,10 @@ public struct REDialactCollection {
 			language: "Swift",
 			engine: "Swift",
 			reference: "",
-			description: { _ in "fatalError(\"Unimplemented\")" }
+			description: { _ in "fatalError(\"Unimplemented\")" },
+			findMatchCode: { _ in "fatalError(\"Unimplemented\")" },
+			lineMatchCode: { _ in "fatalError(\"Unimplemented\")" },
+			wholeMatchCode: { _ in "fatalError(\"Unimplemented\")" },
 		),
 		Constructor(
 			id: "swift,NSRegularExpression",
@@ -328,7 +339,10 @@ public struct REDialactCollection {
 			language: "Swift",
 			engine: "Swift",
 			reference: "https://developer.apple.com/documentation/foundation/nsregularexpression",
-			description: { "\"\(REDialectBuiltins.swift.encode($0))\"" }
+			description: { "\"\(REDialectBuiltins.swift.encode($0))\"" },
+			findMatchCode: { "\"\(REDialectBuiltins.swift.encodeFind($0))\"" },
+			lineMatchCode: { "\"\(REDialectBuiltins.swift.encodeLine($0))\"" },
+			wholeMatchCode: { "\"\(REDialectBuiltins.swift.encodeWhole($0))\"" },
 		),
 		Constructor(
 			id: "swift,NSRegularExpression,init",
@@ -337,7 +351,10 @@ public struct REDialactCollection {
 			engine: "NSRegularExpression",
 			reference: "https://developer.apple.com/documentation/foundation/nsregularexpression",
 			// FIXME: Escape this string
-			description: { "try NSRegularExpression(pattern: \"\(REDialectBuiltins.swift.encode($0))\");" }
+			description: { "try NSRegularExpression(pattern: \"\(REDialectBuiltins.swift.encode($0))\");" },
+			findMatchCode: { "try NSRegularExpression(pattern: \"\(REDialectBuiltins.swift.encodeFind($0))\");" },
+			lineMatchCode: { "try NSRegularExpression(pattern: \"\(REDialectBuiltins.swift.encodeLine($0))\");" },
+			wholeMatchCode: { "try NSRegularExpression(pattern: \"\(REDialectBuiltins.swift.encodeWhole($0))\");" },
 		),
 		Constructor(
 			id: "posixe",
@@ -345,7 +362,10 @@ public struct REDialactCollection {
 			language: "Shell",
 			engine: "POSIX Extended",
 			reference: "",
-			description: { REDialectBuiltins.posixExtended.encode($0) }
+			description: { REDialectBuiltins.posixExtended.encode($0) },
+			findMatchCode: { REDialectBuiltins.posixExtended.encodeFind($0) },
+			lineMatchCode: { REDialectBuiltins.posixExtended.encodeLine($0) },
+			wholeMatchCode: { REDialectBuiltins.posixExtended.encodeWhole($0) },
 		),
 		Constructor(
 			id: "posixe,grep",
@@ -354,7 +374,10 @@ public struct REDialactCollection {
 			engine: "POSIX Extended",
 			reference: "",
 			// FIXME: Escape this string
-			description: { "grep -e \"\(REDialectBuiltins.posixExtended.encode($0))\"" }
+			description: { "grep -e \"\(REDialectBuiltins.posixExtended.encode($0))\"" },
+			findMatchCode: { "grep -e \"\(REDialectBuiltins.posixExtended.encodeFind($0))\"" },
+			lineMatchCode: { "grep -e \"\(REDialectBuiltins.posixExtended.encodeLine($0))\"" },
+			wholeMatchCode: { "grep -z \"\(REDialectBuiltins.posixExtended.encodeLine($0))\"" },
 		),
 	);
 }
@@ -378,6 +401,10 @@ public protocol REDialectProtocol {
 	/// In many regular expression dialects, this means adding anchoring characters like `($^)`.
 	func encodeWhole<Symbol>(_ pattern: REPattern<Symbol>) -> String
 
+	/// Get a regular expression where the expression will match any entire line of input.
+	/// Note that the concept of a "line" may be context-dependent. (e.g. CRLF, or just LF)
+	func encodeLine<Symbol>(_ pattern: REPattern<Symbol>) -> String
+
 	/// Get a regular expression where the input regular expression has to match some substring of the input.
 	/// This is the default mode for many regular expression dialects; but if not, then
 	func encodeFind<Symbol>(_ pattern: REPattern<Symbol>) -> String
@@ -391,6 +418,8 @@ public struct REDialect: REDialectProtocol {
 	public let closeQuote: String          // Delimiter ending the pattern (e.g., "/" for Perl)
 	public let startAnchor: String         // Delimiter for matching the start of the input, if necessary
 	public let endAnchor: String           // Delimiter for matching EOF, if necessary
+	public let startLine: String           // Delimiter for matching the start of the input, if necessary
+	public let endLine: String             // Delimiter for matching EOF, if necessary
 	public let flags: String               // Flags for the pattern (e.g., "ims" for Perl)
 	public let emptyClass: String          // A pattern that matches no characters (not even the empty string)
 	public let allClass: String            // A pattern that matches all characters. Note that "." usually excludes CR/LF.
@@ -406,9 +435,11 @@ public struct REDialect: REDialectProtocol {
 	public let charClassEscapes: [String: Set<Character>] // Predefined character class escapes (e.g., "\s", "\w")
 	public let isFind: Bool // If `escape` creates a "Find" regex, as opposed to a "whole" regex
 
-	public init(openQuote: String, closeQuote: String, startAnchor: String, endAnchor: String, flags: String, openGroup: String, closeGroup: String, allClass: String, emptyClass: String, xEscape: Bool, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>], isFind: Bool) {
+	public init(openQuote: String, closeQuote: String, startAnchor: String, endAnchor: String, startLine: String, endLine: String, flags: String, openGroup: String, closeGroup: String, allClass: String, emptyClass: String, xEscape: Bool, escapeChar: Character, metaCharacters: Set<Character>, openCharClass: String, closeCharClass: String, charClassMetaCharacters: Set<Character>, groupTypeIndicators: Set<String>, charClassEscapes: [String: Set<Character>], isFind: Bool) {
 		self.openQuote = openQuote
 		self.closeQuote = closeQuote
+		self.startLine = startLine
+		self.endLine = endLine
 		self.startAnchor = startAnchor
 		self.endAnchor = endAnchor
 		self.flags = flags
@@ -530,6 +561,15 @@ public struct REDialect: REDialectProtocol {
 		}
 	}
 
+	public func encodeLine<Symbol>(_ pattern: REPattern<Symbol>) -> String {
+		if isFind {
+			let inner = pattern.precedence > 3 ? openGroup + encode(pattern) + closeGroup : encode(pattern)
+			return openQuote + startLine + inner + endLine + closeQuote;
+		} else {
+			return openQuote + encode(pattern) + closeQuote;
+		}
+	}
+
 	public func encodeFind<Symbol>(_ pattern: REPattern<Symbol>) -> String {
 		if isFind {
 			return openQuote + encode(pattern) + closeQuote;
@@ -544,8 +584,10 @@ public struct REDialectBuiltins {
 	public static let swift: REDialectProtocol = REDialect(
 		openQuote: "",
 		closeQuote: "",
-		startAnchor: "^",
-		endAnchor: "$",
+		startAnchor: "\\A",
+		endAnchor: "\\z",
+		startLine: "^",
+		endLine: "$",
 		flags: "gimsuy", // Example: global, multiline, unicode, etc.
 		openGroup: "(",
 		closeGroup: ")",
@@ -565,11 +607,39 @@ public struct REDialectBuiltins {
 		isFind: true,
 	)
 
+	public static let swiftLiteral: REDialectProtocol = REDialect(
+		openQuote: "/",
+		closeQuote: "/",
+		startAnchor: "\\A",
+		endAnchor: "\\z",
+		startLine: "^",
+		endLine: "$",
+		flags: "gimsuy", // Example: global, multiline, unicode, etc.
+		openGroup: "(",
+		closeGroup: ")",
+		allClass: "(.|\n|\r)",
+		emptyClass: "^(?!.*)",
+		xEscape: false,
+		escapeChar: "\\",
+		metaCharacters: Set([".", "^", "$", "*", "+", "?", "{", "[", "]", "\\", "|", "(", ")", "/"]),
+		openCharClass: "[",
+		closeCharClass: "]",
+		charClassMetaCharacters: Set(["^", "-", "[", "]"]),
+		groupTypeIndicators: Set(["?:", "?=", "?!", "?<=", "?<!", "?<"]),
+		charClassEscapes: [
+			"\\d": Set("0123456789"),
+			"\\w": Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"),
+		],
+		isFind: true,
+	)
+
 	public static let posixExtended: REDialectProtocol = REDialect(
 		openQuote: "",
 		closeQuote: "",
 		startAnchor: "",
 		endAnchor: "",
+		startLine: "",
+		endLine: "",
 		flags: "",
 		openGroup: "(",
 		closeGroup: ")",
@@ -596,6 +666,8 @@ public struct REDialectBuiltins {
 		closeQuote: "/",
 		startAnchor: "^",
 		endAnchor: "$",
+		startLine: "^",
+		endLine: "$",
 		flags: "imsx",
 		openGroup: "(",
 		closeGroup: ")",
@@ -621,6 +693,8 @@ public struct REDialectBuiltins {
 		closeQuote: "",
 		startAnchor: "^",
 		endAnchor: "$",
+		startLine: "^",
+		endLine: "$",
 		flags: "gimsuy",
 		openGroup: "(",
 		closeGroup: ")",
@@ -646,6 +720,8 @@ public struct REDialectBuiltins {
 		closeQuote: "/",
 		startAnchor: "^",
 		endAnchor: "$",
+		startLine: "^",
+		endLine: "$",
 		flags: "gimsuy",
 		openGroup: "(",
 		closeGroup: ")",

@@ -19,13 +19,15 @@ struct RegexPreset: Identifiable, Codable {
 	/// Specifies if the generated regex should use the "case insensitive" flag, if the case of all the characters is insignificant to the result.
 	var caseInsensitive: Bool
 	var constructorId: String
+	var matchType: String
 
-	init(id: UUID = UUID(), name: String, dialect: String, caseInsensitive: Bool, constructorId: String) {
+	init(id: UUID = UUID(), name: String, dialect: String, caseInsensitive: Bool, constructorId: String, matchType: String) {
 		self.id = id
 		self.name = name
 		self.dialect = dialect
 		self.caseInsensitive = caseInsensitive
 		self.constructorId = constructorId
+		self.matchType = matchType
 	}
 }
 
@@ -45,6 +47,7 @@ struct RegexContentView: View {
 	@State private var selectedPresetId: UUID? = nil
 	@State private var selectedLanguage: String? = nil
 	@State private var selectedDialect: String = ""
+	@State private var selectedMatchType: String = ""
 	@State private var selectedPreset: RegexPreset? = nil
 	@State private var filteredDialects: Array<String> = []
 	@State private var filteredConstructors: Array<REDialactCollection.Constructor> = []
@@ -62,43 +65,53 @@ struct RegexContentView: View {
 				DisclosureGroup(
 					isExpanded: $presetExpanded,
 					content: {
-						// First the user picks the programming language environment in use
-						// This will filter the regex engines and output formats to a useful set
-						Picker("Filter Language", selection: $selectedLanguage) {
-							Text("All").tag("")
-							Divider()
-							ForEach(REDialactCollection.builtins.languages, id: \.self) { language in
-								Text(language).tag(language)
+						Form {
+							// First the user picks the programming language environment in use
+							// This will filter the regex engines and output formats to a useful set
+							Picker("Filter Language", selection: $selectedLanguage) {
+								Text("All").tag("")
+								Divider()
+								ForEach(REDialactCollection.builtins.languages, id: \.self) { language in
+									Text(language).tag(language)
+								}
 							}
-						}
-						.pickerStyle(.menu)
+							.pickerStyle(.menu)
 
-						// From the regex engines available in the language, the user picks the one
-						Picker("Dialect", selection: $selectedDialect) {
-							Text("All").tag("")
-							Divider()
-							ForEach(filteredDialects, id: \.self) { dialect in
-								Text(dialect).tag(dialect)
+							// From the regex engines available in the language, the user picks the one
+							Picker("Dialect", selection: $selectedDialect) {
+								Text("All").tag("")
+								Divider()
+								ForEach(filteredDialects, id: \.self) { dialect in
+									Text(dialect).tag(dialect)
+								}
 							}
-						}
-						.pickerStyle(.menu)
+							.pickerStyle(.menu)
 
-						Picker("Constructor", selection: $selectedConstructorId) {
-							ForEach(filteredConstructors, id: \.id) { constructor in
-								Text(constructor.label).tag(constructor.id)
+							Picker("Constructor", selection: $selectedConstructorId) {
+								ForEach(filteredConstructors, id: \.id) { constructor in
+									Text(constructor.label).tag(constructor.id)
+								}
 							}
-						}
-						.pickerStyle(.menu)
+							.pickerStyle(.menu)
 
-						// Constructor or engine specific options
-						let selectedConstructor = filteredConstructors.first(where: { $0.id == selectedConstructorId });
-						if(selectedConstructor?.language == "Swift"){
-							GroupBox(content: {
-								Toggle("Case-insensitive flag when possible", isOn: $caseInsensitive)
-							}, label: {
-								Text("Swift options")
-							}).frame(maxWidth: .infinity, alignment: .leading)
-						}
+							// Constructor or engine specific options
+							let selectedConstructor = filteredConstructors.first(where: { $0.id == selectedConstructorId });
+							if(selectedConstructor?.language == "Swift"){
+								GroupBox(content: {
+									Toggle("Case-insensitive flag when possible", isOn: $caseInsensitive)
+								}, label: {
+									Text("Swift options")
+								}).frame(maxWidth: .infinity, alignment: .leading)
+							}
+
+							Picker("Match type", selection: $selectedMatchType) {
+								Text("Whole").tag("whole")
+								Text("Line").tag("line").disabled(true)
+								Text("Find").tag("find")
+							}
+							.pickerStyle(.segmented)
+
+						}.formStyle(.grouped)
 					},
 					label: {
 						// TODO: Allow user to star/favorite specific dialects and configurations
@@ -253,6 +266,10 @@ struct RegexContentView: View {
 			checkPresetMismatch();
 			computeRegexDescription();
 		}
+		.onChange(of: selectedMatchType) {
+			checkPresetMismatch();
+			computeRegexDescription();
+		}
 	}
 
 	private func computeRegexDescription() {
@@ -265,10 +282,30 @@ struct RegexContentView: View {
 		Task.detached(priority: .utility) {
 			let regex: REPattern<UInt32> = fsm.toPattern()
 			let description: String
-			if let constructor = REDialactCollection.builtins.constructors.first(where: { $0.id == selectedConstructorId }) {
-				description = constructor.description(regex)
-			} else {
-				description = ""
+			switch selectedMatchType {
+			case "find":
+				if let constructor = REDialactCollection.builtins.constructors.first(where: { $0.id == selectedConstructorId }), let describe = constructor.findMatchCode {
+					description = describe(regex)
+				} else {
+					description = ""
+				}
+
+			case "line":
+				if let constructor = REDialactCollection.builtins.constructors.first(where: { $0.id == selectedConstructorId }), let describe = constructor.lineMatchCode {
+					description = describe(regex)
+				} else {
+					description = ""
+				}
+
+			case "whole":
+				if let constructor = REDialactCollection.builtins.constructors.first(where: { $0.id == selectedConstructorId }), let describe = constructor.wholeMatchCode {
+					description = describe(regex)
+				} else {
+					description = ""
+				}
+
+			default:
+				description = ("Unknown match type: \(selectedMatchType)");
 			}
 			await MainActor.run {
 				regexDescription = description
@@ -294,19 +331,20 @@ struct RegexContentView: View {
 		}
 		unsavedChanges = selectedPreset.dialect != selectedDialect ||
 						 selectedPreset.caseInsensitive != caseInsensitive ||
-						 selectedPreset.constructorId != selectedConstructorId
+						 selectedPreset.constructorId != selectedConstructorId ||
+						 selectedPreset.matchType != selectedMatchType
 	}
 
 	private func savePreset() {
 		if let selectedPreset {
 			// update existing
 			if let index = presets.firstIndex(where: { $0.id == selectedPreset.id }) {
-				presets[index] = RegexPreset(id: selectedPreset.id, name: presetName, dialect: selectedDialect ?? "", caseInsensitive: caseInsensitive, constructorId: selectedConstructorId)
+				presets[index] = RegexPreset(id: selectedPreset.id, name: presetName, dialect: selectedDialect ?? "", caseInsensitive: caseInsensitive, constructorId: selectedConstructorId, matchType: selectedMatchType)
 				self.selectedPreset = presets[index]
 			}
 		} else {
 			// save new
-			let newPreset = RegexPreset(name: presetName, dialect: selectedDialect ?? "", caseInsensitive: caseInsensitive, constructorId: selectedConstructorId)
+			let newPreset = RegexPreset(name: presetName, dialect: selectedDialect ?? "", caseInsensitive: caseInsensitive, constructorId: selectedConstructorId, matchType: selectedMatchType)
 			presets.append(newPreset)
 			selectedPresetId = newPreset.id
 		}
@@ -337,7 +375,7 @@ struct RegexContentView: View {
 		let baseName = selectedPreset.name
 		// TODO: If this ends with "Copy" or a number, then rename to an unused number
 		let newName = baseName + " Copy"
-		let newPreset = RegexPreset(name: newName, dialect: selectedDialect ?? "", caseInsensitive: caseInsensitive, constructorId: selectedConstructorId)
+		let newPreset = RegexPreset(name: newName, dialect: selectedDialect ?? "", caseInsensitive: caseInsensitive, constructorId: selectedConstructorId, matchType: selectedMatchType)
 		presets.append(newPreset)
 		selectedPresetId = newPreset.id
 		savePresets()
