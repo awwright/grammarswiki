@@ -9,6 +9,7 @@ func abnf_to_railroad_text_help(arguments: Array<String>) {
 }
 
 func abnf_to_railroad_text_args(arguments: Array<String>) -> Int32 {
+	// TODO: Add an argument to limit the width of the diagram by wrapping
 	guard arguments.count == 4 else {
 		print(arguments.count);
 		abnf_to_railroad_text_help(arguments: arguments);

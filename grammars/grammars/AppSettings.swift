@@ -12,6 +12,8 @@ struct SettingsView: View {
 	@AppStorage("regexDialect") private var regexDialect: String = RegexDialect.swift.rawValue
 	@AppStorage("graphvizEnabled") private var graphvizEnabled: Bool = false
 	@AppStorage("graphvizDot") private var graphvizDot: String = ""
+	@AppStorage("ragelEnabled") private var ragelEnabled: Bool = false
+	@AppStorage("ragelPath") private var ragelPath: String = ""
 	@AppStorage("wiresharkEnabled") private var wiresharkEnabled: Bool = false
 	@AppStorage("wiresharkExts") private var wiresharkExts: String = ""
 
@@ -37,11 +39,15 @@ struct SettingsView: View {
 				Form {
 					Section("Graphviz") {
 						Toggle("Preview with Graphviz", isOn: $graphvizEnabled)
-						TextField("dot file path", text: $graphvizDot)
+						TextField("'dot' executable path", text: $graphvizDot)
+					}
+					Section("Ragel") {
+						Toggle("Ragen Compiler", isOn: $ragelEnabled)
+						TextField("'ragel' executable path", text: $ragelPath)
 					}
 					Section("Wireshark") {
 						Toggle("Wireshark Extensions", isOn: $wiresharkEnabled)
-						TextField("Extensions path", text: $wiresharkExts)
+						TextField("Extensions directory path", text: $wiresharkExts)
 					}
 				}
 			}
