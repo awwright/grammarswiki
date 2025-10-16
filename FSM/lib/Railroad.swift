@@ -442,6 +442,28 @@ extension RailroadDiagramProtocol {
 	}
 }
 
+public indirect enum RailroadNode: RailroadDiagramProtocol, Hashable {
+	case Diagram(start: RailroadNode, sequence: [RailroadNode], end: RailroadNode)
+	case Sequence(items: [RailroadNode])
+	case Stack(items: [RailroadNode])
+	case OptionalSequence(items: [RailroadNode])
+	case AlternatingSequence(items: [RailroadNode])
+	case Choice(items: [RailroadNode])
+	case HorizontalChoice(items: [RailroadNode])
+	case MultipleChoice(normal: Int, items: [RailroadNode])
+	case Group(item: RailroadNode, label: String)
+	case Optional(item: RailroadNode)
+	case ZeroOrMore(item: RailroadNode, separator: RailroadNode?)
+	case OneOrMore(item: RailroadNode, separator: RailroadNode?, max: String)
+	case Start(label: String?)
+	case End(label: String?)
+	case Terminal(text: String)
+	case NonTerminal(text: String)
+	case Comment(text: String)
+	case Skip
+	public static func Skip() -> RailroadNode { .Skip }
+}
+
 /// Generate text-art railroad diagrams using box-drawing characters
 /// Ported from <http://github.com/tabatkins/railroad-diagrams>
 public struct RailroadTextNode: RailroadDiagramProtocol {

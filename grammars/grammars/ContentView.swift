@@ -150,6 +150,7 @@ struct DocumentDetail: View {
 	@State private var content_rulelist_error: String? = nil
 
 	@State private var content_cfg: SymbolCFG<UInt32> = SymbolCFG<UInt32>(rules: []);
+	@State private var content_rr: RailroadNode? = nil
 
 	@State private var rule_error: String? = nil
 	@State private var rule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
@@ -229,8 +230,15 @@ struct DocumentDetail: View {
 						DFAGraphView(rule_fsm: $rule_fsm, charset: AppModel.charsetDict[selectedCharsetId]!)
 					}
 
-					Tab("Railroad", systemImage: "pencil") {
-						DFARailroadView(rule_fsm: $rule_fsm)
+					Tab("Railroad", systemImage: "train.side.front.car") {
+						ScrollView([.horizontal, .vertical]) {
+							if let content_rr {
+								RRView(diagram: content_rr)
+							} else {
+								Text("Select a rule to view its railroad diagram")
+									.foregroundColor(.gray)
+							}
+						}
 					}
 
 					if showInstances {
@@ -462,6 +470,7 @@ struct DocumentDetail: View {
 				await MainActor.run {
 					content_rulelist = rulelist_all_final
 					content_cfg = try! rulelist_all_final.toCFG()
+					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad()
 					// Select the first rule by default
 					if selectedRule == nil, let firstRule = content_rulelist?.rules.first {
 						selectedRule = firstRule.rulename.label

@@ -7,6 +7,7 @@ struct FileType {
 	let fileExtension: String
 	let languageConfiguration: LanguageConfiguration
 	let parser: (String) throws -> ABNFRulelist<UInt32> // nil for no parsing
+	let toRailroad: ((ABNFRulelist<UInt32>, String) throws -> RailroadNode)?
 }
 
 /// Stores a method of converting from a string of numbers to a String, for display purposes
@@ -58,6 +59,7 @@ class AppModel: ObservableObject {
 				reservedOperators: [],
 			),
 			parser:  { _ in return ABNFRulelist<UInt32>.init() },
+			toRailroad: nil,
 		),
 		FileType(
 			label: "ABNF",
@@ -80,6 +82,12 @@ class AppModel: ObservableObject {
 				let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 				return try ABNFRulelist<UInt32>.parse(input)
 			},
+			toRailroad: {
+				content_rulelist, selectedRule in
+				let dictionary = content_rulelist.dictionary;
+				guard let rule = dictionary[selectedRule] else { fatalError() }
+				return rule.toRailroad(rules: dictionary.mapValues { $0.alternation });
+			},
 		),
 		FileType(
 			label: "Regex (ECMAScript)",
@@ -89,6 +97,7 @@ class AppModel: ObservableObject {
 				let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 				return try ABNFRulelist<UInt32>.parse(input)
 			},
+			toRailroad: nil,
 		),
 		FileType(
 			label: "Regex (Swift)",
@@ -98,6 +107,7 @@ class AppModel: ObservableObject {
 				let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 				return try ABNFRulelist<UInt32>.parse(input)
 			},
+			toRailroad: nil,
 		),
 	];
  	static let typeExtensions: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.label, $0.fileExtension) })
