@@ -205,19 +205,19 @@ struct DocumentDetail: View {
 						.font(.system(size: 14, design: .monospaced))
 					}
 
-					Tab("CFG", systemImage: "pencil") {
+					Tab("Translate", systemImage: "translate") {
 						CFGContentView(grammar: content_cfg, charset: AppModel.charsetDict[selectedCharsetId]!);
 					}
 
 					if showRegex {
-						Tab("Regex", systemImage: "pencil") {
+						Tab("Regex", systemImage: "textformat.characters.arrow.left.and.right") {
 							RegexContentView(rule_fsm: $rule_fsm, rulelist_fsm: content_rulelist?.ruleNames)
 						}
 					}
 
 					if showExport {
 						// TODO: "Copy to clipboard" button
-						Tab("FSM", systemImage: "pencil") {
+						Tab("Export", systemImage: "rectangle.portrait.and.arrow.right") {
 							ScrollView {
 								FSMExportView(rule_alphabet: $rule_alphabet, rule_fsm: $rule_fsm)
 								Spacer()
@@ -225,7 +225,7 @@ struct DocumentDetail: View {
 						}
 					}
 
-					Tab("Graph", systemImage: "pencil") {
+					Tab("Graph", systemImage: "photo") {
 						DFAGraphView(rule_fsm: $rule_fsm, charset: AppModel.charsetDict[selectedCharsetId]!)
 					}
 
@@ -234,7 +234,7 @@ struct DocumentDetail: View {
 					}
 
 					if showInstances {
-						Tab("Instances", systemImage: "pencil") {
+						Tab("Instances", systemImage: "printer.dotmatrix") {
 							InstanceGeneratorView(rule_fsm: $rule_fsm)
 						}
 					}
