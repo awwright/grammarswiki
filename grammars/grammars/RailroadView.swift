@@ -31,29 +31,13 @@ struct RRView: View {
 	static func render(_ node: RailroadNode) -> any View {
 		return switch node {
 		case .Diagram(start: let start, sequence: let seq, end: let end):
-			HStack {
-				AnyView(render(start));
-				ForEach(seq, id: \.self) { node in
-					AnyView(self.render(node))
-				}
-				AnyView(render(end))
-			}
+			AnyView(render(.Sequence(items: [start] + seq + [end])));
 		case .Start(label: let text):
-			VStack {
-				if let text { RRComment(text: text); }
-				Text("┝┿");
-			}
+			RRStart(text: text ?? "")
 		case .End(label: let text):
-			VStack {
-				if let text { RRComment(text: text); }
-				Text("┿┥");
-			}
+			RREnd(text: text ?? "")
 		case .Sequence(items: let seq):
-			HStack {
-				ForEach(seq, id: \.self) { node in
-					AnyView(self.render(node))
-				}
-			}
+			RRSequence(items: seq)
 		case .Optional(item: let item):
 			AnyView(self.render(item))
 		case .Terminal(text: let text):
@@ -68,6 +52,39 @@ struct RRView: View {
 	}
 }
 
+struct RRStart: View {
+	let text: String
+	var body: some View {
+		Text("┝┿")
+			.fixedSize()
+			.monospaced()
+	}
+}
+
+struct RREnd: View {
+	let text: String
+	var body: some View {
+		Text("┿┥")
+			.fixedSize()
+			.monospaced()
+	}
+}
+
+struct RRSequence: View {
+	let items: [RailroadNode]
+	var body: some View {
+		if items.isEmpty {
+			RRSkip()
+		} else {
+			HStack {
+				ForEach(items, id: \.self) { node in
+					AnyView(RRView.render(node))
+				}
+			}
+		}
+	}
+}
+
 struct RRTerminal: View {
 	let text: String
 	var body: some View {
@@ -77,8 +94,8 @@ struct RRTerminal: View {
 			.padding(.horizontal, 10)
 			.padding(.vertical, 5)
 			.background(
-				RoundedRectangle(cornerRadius: 8)
-					.stroke(Color.black, lineWidth: 2)
+				RoundedRectangle(cornerRadius: .infinity)
+					.stroke(.foreground, lineWidth: 2)
 			)
 	}
 }
@@ -92,8 +109,14 @@ struct RRNonTerminal: View {
 			.padding(.vertical, 5)
 			.background(
 				Rectangle()
-					.stroke(Color.black, lineWidth: 2)
+					.stroke(.foreground, lineWidth: 2)
 			)
+	}
+}
+
+struct RRSkip: View {
+	var body: some View {
+		Color.clear.frame(width: 10, height: 10)
 	}
 }
 
