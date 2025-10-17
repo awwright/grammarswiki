@@ -186,16 +186,7 @@ struct RegexContentView: View {
 				Button(
 					"Copy to Clipboard",
 					systemImage: "document.on.document",
-					action: {
-					if let copyText = regexDescription {
-	#if os(macOS)
-						let pasteboard = NSPasteboard.general
-						pasteboard.clearContents()
-						pasteboard.setString(copyText, forType: .string)
-	#elseif os(iOS)
-						UIPasteboard.general.string = copyText
-	#endif
-					}
+					action: { if let regexDescription { copyToPasteboard(regexDescription) }
 				})
 				.padding()
 				.disabled(regexDescription == nil);

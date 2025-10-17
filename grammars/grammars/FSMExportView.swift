@@ -35,15 +35,7 @@ struct FSMExportView: View {
 			.padding()
 
 			Button(action: {
-				if let vizSource = vizSource {
-#if os(macOS)
-					let pasteboard = NSPasteboard.general
-					pasteboard.clearContents()
-					pasteboard.setString(vizSource, forType: .string)
-#elseif os(iOS)
-					UIPasteboard.general.string = vizSource
-#endif
-				}
+				if let vizSource { copyToPasteboard(vizSource) }
 			}) {
 				Text("Copy to Clipboard")
 			}
