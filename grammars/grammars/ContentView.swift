@@ -20,10 +20,12 @@ struct ContentView: View {
 	var body: some View {
 		NavigationSplitView {
 			List(selection: $selectionId) {
-				Section("Saved") {
-					ForEach(Array(model.user.values), id: \.id) {
-						document in
-						DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), onDelete: { self.selectionId = nil; model.delDocument(document) }, onDuplicate: { let newDoc = document.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id; }, isEditable: true)
+				if model.user.values.isEmpty == false {
+					Section("Saved") {
+						ForEach(Array(model.user.values), id: \.id) {
+							document in
+							DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), onDelete: { self.selectionId = nil; model.delDocument(document) }, onDuplicate: { let newDoc = document.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id; }, isEditable: true)
+						}
 					}
 				}
 				Section("Catalog") {
