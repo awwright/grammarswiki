@@ -159,14 +159,12 @@ public protocol RailroadDiagramProtocol {
 	/// while others are available alternatives.
 	///
 	/// ```
-	///   ╭───╮
-	///╮──│ 1 │──╭
-	///│  ╰───╯  │
-	///│         │
-	///│  ╭───╮  │
-	///╰──│ 2 │──╯
-	///   ╰───╯
-
+	///    ╭───╮
+	/// ╮──│ 1 │──╭
+	/// │  ╰───╯  │
+	/// │  ╭───╮  │
+	/// ╰──│ 2 │──╯
+	///    ╰───╯
 	/// ```
 	///
 	/// - Parameters:
