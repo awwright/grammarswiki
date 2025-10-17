@@ -2,6 +2,19 @@
 import FSM
 import SwiftUI
 
+struct RRIO: Hashable, Equatable {
+	let i: UnitPoint;
+	let o: UnitPoint;
+
+	struct Preference: PreferenceKey {
+		typealias Value = [RRIO]
+		static var defaultValue: Value = []
+		static func reduce(value: inout Value, nextValue: () -> Value) {
+			 value += nextValue()
+		}
+	}
+}
+
 struct DFARailroadView: View {
 	typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<UInt32>>
 	@Binding var rule_fsm: DFA?
@@ -58,6 +71,7 @@ struct RRStart: View {
 		Text("┝┿")
 			.fixedSize()
 			.monospaced()
+			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
 	}
 }
 
@@ -67,20 +81,52 @@ struct RREnd: View {
 		Text("┿┥")
 			.fixedSize()
 			.monospaced()
+			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
 	}
 }
 
 struct RRSequence: View {
 	let items: [RailroadNode]
+	@State private var point: RRIO? = nil
+
+	struct OverlayedView: View {
+		let node: RailroadNode
+		@State private var points: [RRIO] = []
+		var body: some View {
+			ZStack {
+				AnyView(RRView.render(node))
+				ForEach(points, id: \.self) { rr in
+					GeometryReader { geo in
+						Circle().fill(Color.green).frame(width: 10, height: 10)
+							.position(x: geo.size.width * rr.i.x, y: geo.size.height * rr.i.y)
+						Circle().fill(Color.red).frame(width: 10, height: 10)
+							.position(x: geo.size.width * rr.o.x, y: geo.size.height * rr.o.y)
+					}
+				}
+			}
+			.onPreferenceChange(RRIO.Preference.self) { self.points = $0 }
+		}
+	}
+
 	var body: some View {
 		if items.isEmpty {
 			RRSkip()
 		} else {
 			HStack {
 				ForEach(items, id: \.self) { node in
-					AnyView(RRView.render(node))
+					OverlayedView(node: node)
 				}
 			}
+			.onPreferenceChange(RRIO.Preference.self) { pointsArray in
+				if pointsArray.isEmpty {
+					point = RRIO(i: UnitPoint.center, o: UnitPoint.center)
+				} else {
+					let first = pointsArray[0]
+					let last = pointsArray[pointsArray.count - 1]
+					point = RRIO(i: first.i, o: last.o)
+				}
+			}
+			.preference(key: RRIO.Preference.self, value: point.map { [$0] } ?? [])
 		}
 	}
 }
@@ -97,6 +143,7 @@ struct RRTerminal: View {
 				RoundedRectangle(cornerRadius: .infinity)
 					.stroke(.foreground, lineWidth: 2)
 			)
+			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
 	}
 }
 
@@ -111,12 +158,14 @@ struct RRNonTerminal: View {
 				Rectangle()
 					.stroke(.foreground, lineWidth: 2)
 			)
+			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
 	}
 }
 
 struct RRSkip: View {
 	var body: some View {
 		Color.clear.frame(width: 10, height: 10)
+			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
 	}
 }
 
@@ -128,5 +177,6 @@ struct RRComment: View {
 			.padding(.horizontal, 10)
 			.padding(.vertical, 5)
 			.font(.caption)
+			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
 	}
 }
