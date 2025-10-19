@@ -2,16 +2,42 @@
 import FSM
 import SwiftUI
 
-struct RRIO: Hashable, Equatable {
-	let i: UnitPoint;
-	let o: UnitPoint;
+/// A struct representing the positional metadata of a Railroad View.
+struct RRIO: Equatable, Hashable {
+	/// The position of the "in point"
+	let i: CGPoint;
+	/// The position of the "out point"
+	let o: CGPoint;
+
+	init(i: CGPoint, o: CGPoint) {
+		self.i = i;
+		self.o = o;
+	}
+
+	init(_ geo: CGRect) {
+		self.i = CGPoint(x: geo.minX, y: geo.midY);
+		self.o = CGPoint(x: geo.maxX, y: geo.midY);
+	}
+
+	init(_ geo: CGRect, i: UnitPoint, o: UnitPoint) {
+		self.i = CGPoint(x: geo.maxX * i.x, y: geo.maxY * i.y);
+		self.o = CGPoint(x: geo.maxX * o.x, y: geo.maxY * o.y);
+	}
 
 	struct Preference: PreferenceKey {
 		typealias Value = [RRIO]
 		static var defaultValue: Value = []
 		static func reduce(value: inout Value, nextValue: () -> Value) {
-			 value += nextValue()
+			value += nextValue()
 		}
+	}
+}
+
+struct RRGeometryPreference: PreferenceKey {
+	typealias Value = [Int: CGRect]
+	static var defaultValue: Value = [:]
+	static func reduce(value: inout Value, nextValue: () -> Value) {
+		value.merge(nextValue(), uniquingKeysWith: { $1 })
 	}
 }
 
@@ -51,6 +77,8 @@ struct RRView: View {
 			RREnd(text: text ?? "")
 		case .Sequence(items: let seq):
 			RRSequence(items: seq)
+		case .Choice(items: let seq):
+			RRChoice(items: seq)
 		case .Optional(item: let item):
 			AnyView(self.render(item))
 		case .Terminal(text: let text):
@@ -68,65 +96,126 @@ struct RRView: View {
 struct RRStart: View {
 	let text: String
 	var body: some View {
-		Text("┝┿")
+		Text(text)
 			.fixedSize()
 			.monospaced()
-			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
+			.padding(.horizontal, 10)
+			.padding(.vertical, 5)
+			.background(
+				RoundedRectangle(cornerRadius: .infinity)
+					.stroke(.foreground, lineWidth: 2)
+			)
+			.background {
+				GeometryReader { geo in
+					Color.clear
+						.preference(key: RRIO.Preference.self, value: [RRIO(geo.frame(in: .named("RRComposite")))])
+				}
+			}
 	}
 }
 
 struct RREnd: View {
 	let text: String
 	var body: some View {
-		Text("┿┥")
+		Text(text)
 			.fixedSize()
 			.monospaced()
-			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
+			.padding(.horizontal, 10)
+			.padding(.vertical, 5)
+			.background(
+				RoundedRectangle(cornerRadius: .infinity)
+					.stroke(.foreground, lineWidth: 2)
+			)
+			.background {
+				GeometryReader { geo in
+					Color.clear
+						.preference(key: RRIO.Preference.self, value: [RRIO(geo.frame(in: .named("RRComposite")))])
+				}
+			}
 	}
 }
 
 struct RRSequence: View {
 	let items: [RailroadNode]
 	@State private var point: RRIO? = nil
-
-	struct OverlayedView: View {
-		let node: RailroadNode
-		@State private var points: [RRIO] = []
-		var body: some View {
-			ZStack {
-				AnyView(RRView.render(node))
-				ForEach(points, id: \.self) { rr in
-					GeometryReader { geo in
-						Circle().fill(Color.green).frame(width: 10, height: 10)
-							.position(x: geo.size.width * rr.i.x, y: geo.size.height * rr.i.y)
-						Circle().fill(Color.red).frame(width: 10, height: 10)
-							.position(x: geo.size.width * rr.o.x, y: geo.size.height * rr.o.y)
-					}
-				}
-			}
-			.onPreferenceChange(RRIO.Preference.self) { self.points = $0 }
-		}
-	}
+	@State private var points: [RRIO] = []
 
 	var body: some View {
 		if items.isEmpty {
 			RRSkip()
 		} else {
-			HStack {
-				ForEach(items, id: \.self) { node in
-					OverlayedView(node: node)
+			HStack(spacing: 50) {
+				ForEach(items.indices, id: \.self) { index in
+					AnyView(RRView.render(items[index]))
 				}
-			}
-			.onPreferenceChange(RRIO.Preference.self) { pointsArray in
-				if pointsArray.isEmpty {
-					point = RRIO(i: UnitPoint.center, o: UnitPoint.center)
+			}.padding(5)
+			.coordinateSpace(name: "RRComposite")
+			.onPreferenceChange(RRIO.Preference.self) { newPoints in
+				self.points = newPoints
+				if newPoints.isEmpty {
+					point = nil
 				} else {
-					let first = pointsArray[0]
-					let last = pointsArray[pointsArray.count - 1]
+					let first = newPoints[0]
+					let last = newPoints[newPoints.count - 1]
 					point = RRIO(i: first.i, o: last.o)
 				}
 			}
+			.background(
+				RoundedRectangle(cornerRadius: 3)
+					.stroke(style: StrokeStyle(lineWidth: 2, dash: [5]))
+			)
+			.overlay {
+				if !points.isEmpty {
+					Path { path in
+						for i in 0..<(points.count-1) {
+							path.move(to: points[i % points.count].o)
+							path.addLine(to: points[(i+1) % points.count].i)
+						}
+					}
+					.stroke(.foreground, lineWidth: 2)
+				}
+			}
 			.preference(key: RRIO.Preference.self, value: point.map { [$0] } ?? [])
+		}
+	}
+}
+
+struct RRChoice: View {
+	let items: [RailroadNode]
+	@State private var point: RRIO? = nil
+	@State private var points: [RRIO] = []
+
+	var body: some View {
+		if items.isEmpty {
+			RRSkip()
+		} else {
+
+			VStack(spacing: 10) {
+				ForEach(items.indices, id: \.self) { index in
+					AnyView(RRView.render(items[index]))
+				}
+			}.padding(20)
+			.coordinateSpace(name: "RRComposite")
+			.onPreferenceChange(RRIO.Preference.self) { newPoints in
+				self.points = newPoints
+			}
+			.background(
+				RoundedRectangle(cornerRadius: 3)
+					.stroke(Color.secondary, lineWidth: 2)
+			)
+			.overlay {
+				if let point, !points.isEmpty {
+					Path { path in
+						for i in 0..<points.count {
+							path.move(to: point.i)
+							path.addLine(to: points[i].i)
+							path.move(to: points[i].o)
+							path.addLine(to: point.o)
+						}
+					}
+					.stroke(Color.accentColor, lineWidth: 2)
+				}
+			}
 		}
 	}
 }
@@ -143,7 +232,12 @@ struct RRTerminal: View {
 				RoundedRectangle(cornerRadius: .infinity)
 					.stroke(.foreground, lineWidth: 2)
 			)
-			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
+			.background {
+				GeometryReader { geo in
+					Color.clear
+						.preference(key: RRIO.Preference.self, value: [RRIO(geo.frame(in: .named("RRComposite")))])
+				}
+			}
 	}
 }
 
@@ -158,14 +252,24 @@ struct RRNonTerminal: View {
 				Rectangle()
 					.stroke(.foreground, lineWidth: 2)
 			)
-			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
+			.background {
+				GeometryReader { geo in
+					Color.clear
+						.preference(key: RRIO.Preference.self, value: [RRIO(geo.frame(in: .named("RRComposite")))])
+				}
+			}
 	}
 }
 
 struct RRSkip: View {
 	var body: some View {
 		Color.clear.frame(width: 10, height: 10)
-			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
+			.background {
+				GeometryReader { geo in
+					Color.clear
+						.preference(key: RRIO.Preference.self, value: [RRIO(geo.frame(in: .named("RRComposite")))])
+				}
+			}
 	}
 }
 
@@ -177,6 +281,93 @@ struct RRComment: View {
 			.padding(.horizontal, 10)
 			.padding(.vertical, 5)
 			.font(.caption)
-			.preference(key: RRIO.Preference.self, value: [RRIO(i: UnitPoint.leading, o: UnitPoint.trailing)])
+			.background {
+				GeometryReader { geo in
+					Color.clear
+						.preference(key: RRIO.Preference.self, value: [RRIO(geo.frame(in: .named("RRComposite")))])
+				}
+			}
 	}
+}
+
+extension View {
+	func showRRTerminals() -> some View {
+		RRShowTerminals { self }
+	}
+}
+
+struct RRShowTerminals<Content: View>: View {
+	let content: () -> Content
+	@State private var points: [RRIO] = []
+	init(@ViewBuilder content: @escaping () -> Content) {
+		self.content = content
+	}
+	var body: some View {
+		content()
+			.onPreferenceChange(RRIO.Preference.self) { newPointPairs in
+				self.points = newPointPairs
+			}
+			.overlay {
+				print(points)
+				return ZStack {
+					ForEach(points, id: \.self) { point in
+						Circle().fill(Color.green).frame(width: 10, height: 10).position(x: point.i.x, y: point.i.y)
+						Circle().fill(Color.red).frame(width: 10, height: 10).position(x: point.o.x, y: point.o.y)
+					}
+				}
+			}
+	}
+}
+
+#Preview {
+	VStack(spacing: 20) {
+		Section("Sequence") {
+			RRView(diagram: .Sequence(items: [
+				.Start(label: "O"),
+				.Terminal(text: "1"),
+				.Terminal(text: "2"),
+				.Terminal(text: "3"),
+				.End(label: "X"),
+			]));
+		}
+		Section("Choice") {
+			RRView(diagram: .Choice(items: [
+				.Terminal(text: "1"),
+				.Terminal(text: "2"),
+				.Terminal(text: "3"),
+			]));
+		}
+		Section("Sequence of Choice") {
+			RRView(diagram: .Sequence(items: [
+				.Choice(items: [
+					.Terminal(text: "1"),
+					.Terminal(text: "2"),
+					.Terminal(text: "3"),
+				]),
+				.Choice(items: [
+					.Terminal(text: "A"),
+					.Terminal(text: "B"),
+					.Terminal(text: "C"),
+				]),
+			]));
+		}
+		Section("Diagram") {
+			RRView(diagram: .Sequence(items: [
+				.Start(label: "O"),
+				.Sequence(items: [
+					.Choice(items: [
+						.Terminal(text: "1"),
+						.Terminal(text: "2"),
+						.Terminal(text: "3"),
+					]),
+					.Choice(items: [
+						.Terminal(text: "A"),
+						.Terminal(text: "B"),
+						.Terminal(text: "C"),
+					]),
+				]),
+				.End(label: "O"),
+			]));
+		}
+	}.padding(50)
 }
