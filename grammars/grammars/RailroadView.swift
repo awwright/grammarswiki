@@ -322,7 +322,7 @@ struct RRShowTerminals<Content: View>: View {
 			HStack(spacing: 40) {
 				RRStart(text: "RRStart").showRRTerminals();
 				RRTerminal(text: "RRTerminal").showRRTerminals();
-				RRNonTerminal(text: "RRTerminal").showRRTerminals();
+				RRNonTerminal(text: "RRNonTerminal").showRRTerminals();
 				RRComment(text: "RRComment").showRRTerminals();
 				RREnd(text: "RREnd").showRRTerminals();
 			}
@@ -351,28 +351,28 @@ struct RRShowTerminals<Content: View>: View {
 					.Terminal(text: "3"),
 				]),
 				.Choice(items: [
-					.Terminal(text: "A"),
-					.Terminal(text: "B"),
-					.Terminal(text: "C"),
+					.NonTerminal(text: "A"),
+					.NonTerminal(text: "B"),
+					.NonTerminal(text: "C"),
 				]),
 			])).showRRTerminals();
 		}
-		Section("Diagram") {
+		Section("Choice of Sequence Diagram") {
 			RRView(diagram: .Sequence(items: [
-				.Start(label: "O"),
-				.Sequence(items: [
-					.Choice(items: [
+				.Start(label: "Start"),
+				.Choice(items: [
+					.Sequence(items: [
 						.Terminal(text: "1"),
 						.Terminal(text: "2"),
 						.Terminal(text: "3"),
 					]),
-					.Choice(items: [
+					.Sequence(items: [
 						.NonTerminal(text: "A"),
 						.NonTerminal(text: "B"),
 						.NonTerminal(text: "C"),
 					]),
 				]),
-				.End(label: "O"),
+				.End(label: "End"),
 			])).showRRTerminals();
 		}
 	}.padding(50)
