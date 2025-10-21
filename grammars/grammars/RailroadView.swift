@@ -59,7 +59,20 @@ struct RRStart: View {
 				RoundedRectangle(cornerRadius: .infinity)
 					.stroke(.foreground, lineWidth: 2)
 			)
-			.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+			.background {
+				// See RRTerminal for how this works
+				GeometryReader { geometry in
+					Color.clear
+						.frame(height: 0)
+						.frame(maxWidth: .infinity)
+						.position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+						.background(
+							Color.clear
+								.frame(height: 0)
+								.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+						)
+				}
+			}
 	}
 }
 
@@ -75,7 +88,20 @@ struct RREnd: View {
 				RoundedRectangle(cornerRadius: .infinity)
 					.stroke(.foreground, lineWidth: 2)
 			)
-			.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+			.background {
+				// See RRTerminal for how this works
+				GeometryReader { geometry in
+					Color.clear
+						.frame(height: 0)
+						.frame(maxWidth: .infinity)
+						.position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+						.background(
+							Color.clear
+								.frame(height: 0)
+								.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+						)
+				}
+			}
 	}
 }
 
@@ -88,13 +114,11 @@ struct RRSequence: View {
 		if items.isEmpty {
 			RRSkip()
 		} else {
-			HStack(spacing: 50) {
+			HStack(spacing: 25) {
 				ForEach(items.indices, id: \.self) { index in
 					AnyView(RRView.render(items[index]))
 				}
 			}
-			.padding(10)
-			.padding(.bottom, 20)
 //				.onPreferenceChange(CGRectPreference.self) { newPoints in
 //					self.points = newPoints
 //					if newPoints.isEmpty {
@@ -132,6 +156,7 @@ struct RRSequence: View {
 				}
 			}
 			.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+			.padding(.horizontal, 20)
 		}
 	}
 }
@@ -166,7 +191,6 @@ struct RRChoice: View {
 						}
 					}
 				}
-
 			}
 			.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
 		}
@@ -185,7 +209,22 @@ struct RRTerminal: View {
 				RoundedRectangle(cornerRadius: .infinity)
 					.stroke(.foreground, lineWidth: 2)
 			)
-			.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+			.background {
+				// Draw a rectangle behind the View and pass up the bounds of it as a preference.
+				// This is a strange work around for the fact that you can't pass up an arbirtirary CGRect,
+				// you have to draw it as a View first.
+				GeometryReader { geometry in
+					Color.clear
+						.frame(height: 0)
+						.frame(maxWidth: .infinity)
+						.position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+						.background(
+							Color.clear
+								.frame(height: 0)
+								.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+						)
+				}
+			}
 	}
 }
 
