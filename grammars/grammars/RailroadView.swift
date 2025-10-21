@@ -50,50 +50,56 @@ struct RRView: View {
 struct RRStart: View {
 	let text: String
 	var body: some View {
-		Text(text)
-			.fixedSize()
-			.monospaced()
-			.padding(.horizontal, 10)
-			.padding(.vertical, 5)
-			.background(
-				RoundedRectangle(cornerRadius: .infinity)
-					.stroke(.foreground, lineWidth: 2)
-			)
-			.background {
-				// See RRTerminal for how this works
-				GeometryReader { geometry in
-					Color.clear
-						.frame(height: 0)
-						.frame(maxWidth: .infinity)
-						.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
-						.position(x: geometry.size.width / 2, y: geometry.size.height / 2)
-				}
-			}
+		Path { path in
+			path.move(to: CGPoint(x: 10, y: 0));
+			path.addLine(to: CGPoint(x: 10, y: 20));
+			path.move(to: CGPoint(x: 20, y: 0));
+			path.addLine(to: CGPoint(x: 20, y: 20));
+			path.move(to: CGPoint(x: 10, y: 10));
+			path.addLine(to: CGPoint(x: 30, y: 10));
+		}
+		.stroke(.foreground, lineWidth: 2)
+		.overlay {
+			Text(text)
+				.fixedSize()
+				.monospaced()
+				.font(.caption)
+				.padding(.bottom, 40)
+		}
+		.background {
+			Color.clear
+				.frame(height: 0, alignment: .center)
+				.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+		}
+		.frame(width: 30, height: 20)
 	}
 }
 
 struct RREnd: View {
 	let text: String
 	var body: some View {
-		Text(text)
-			.fixedSize()
-			.monospaced()
-			.padding(.horizontal, 10)
-			.padding(.vertical, 5)
-			.background(
-				RoundedRectangle(cornerRadius: .infinity)
-					.stroke(.foreground, lineWidth: 2)
-			)
-			.background {
-				// See RRTerminal for how this works
-				GeometryReader { geometry in
-					Color.clear
-						.frame(height: 0)
-						.frame(maxWidth: .infinity)
-						.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
-						.position(x: geometry.size.width / 2, y: geometry.size.height / 2)
-				}
-			}
+		Path { path in
+			path.move(to: CGPoint(x: 10, y: 0));
+			path.addLine(to: CGPoint(x: 10, y: 20));
+			path.move(to: CGPoint(x: 20, y: 0));
+			path.addLine(to: CGPoint(x: 20, y: 20));
+			path.move(to: CGPoint(x: 0, y: 10));
+			path.addLine(to: CGPoint(x: 20, y: 10));
+		}
+		.stroke(.foreground, lineWidth: 2)
+		.overlay {
+			Text(text)
+				.fixedSize()
+				.monospaced()
+				.font(.caption)
+				.padding(.bottom, 40)
+		}
+		.background {
+			Color.clear
+				.frame(height: 0, alignment: .center)
+				.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+		}
+		.frame(width: 30, height: 20)
 	}
 }
 
@@ -216,6 +222,7 @@ struct RRTerminal: View {
 			.padding(.vertical, 5)
 			.background(
 				RoundedRectangle(cornerRadius: .infinity)
+					.fill(.background)
 					.stroke(.foreground, lineWidth: 2)
 			)
 			.background {
@@ -241,6 +248,7 @@ struct RRNonTerminal: View {
 			.padding(.vertical, 5)
 			.background(
 				Rectangle()
+					.fill(.background)
 					.stroke(.foreground, lineWidth: 2)
 			)
 			.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
