@@ -33,6 +33,8 @@ struct RRView: View {
 			RRSequence(items: seq)
 		case .Choice(items: let seq):
 			RRChoice(items: seq)
+		case .Group(item: let seq, label: let label):
+			RRGroup(item: seq, label: label)
 		case .Optional(item: let item):
 			AnyView(self.render(item))
 		case .Terminal(text: let text):
@@ -145,7 +147,7 @@ struct RRSequence: View {
 				}
 			}
 			.transformAnchorPreference(key: CGRectPreference.self, value: .bounds) { $0 = [$0.first ?? $1] }
-			.padding(.horizontal, 20)
+			//.padding(.horizontal, 20)
 		}
 	}
 }
@@ -164,7 +166,7 @@ struct RRChoice: View {
 					AnyView(RRView.render(items[index]))
 				}
 			}
-			.padding(.horizontal, 30)
+			.padding(.horizontal, 20)
 			.backgroundPreferenceValue(CGRectPreference.self) { preferences in
 				GeometryReader { geo in
 					if preferences.isEmpty {
@@ -175,7 +177,8 @@ struct RRChoice: View {
 						let inPoint = CGPoint(x: 0, y: bounding.minY)
 						let outPoint = CGPoint(x: geo.size.width, y: bounding.maxY)
 						ZStack {
-							ForEach(points, id: \.self) { rect in
+							ForEach(points.indices, id: \.self) { i in
+								let rect = points[i]
 								RRConnector(start: inPoint, end: CGPoint(x: rect.minX, y: rect.minY)).stroke(.foreground, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
 								RRConnector(start: CGPoint(x: rect.maxX, y: rect.maxY), end: outPoint).stroke(.foreground, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
 							}
@@ -208,6 +211,41 @@ struct RRChoice: View {
 					}
 				}
 			}
+		}
+	}
+}
+
+struct RRGroup: View {
+	let item: RailroadNode
+	let label: String
+	@State var expanded: Bool = true
+	var body: some View {
+		VStack {
+			//Toggle(label, isOn: $expanded).toggleStyle(.switch).frame(alignment: .topLeading)
+			Button {
+				withAnimation { expanded.toggle() }
+			} label: {
+				Text(label)
+			}
+			.fixedSize()
+			.buttonStyle(.accessoryBarAction)
+			if expanded {
+				// TODO: Putting this in a conditional is not good for the animator, so I'm told
+				AnyView(RRView.render(item))
+					// This specifies how the inner diagram will appear and disappear
+					.transition(.blurReplace)
+			}
+		}
+		.padding(.vertical, 10)
+		.overlay {
+			if !expanded {
+				Color.clear
+					.frame(width: .infinity, height: 0)
+					.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+			}
+			RoundedRectangle(cornerRadius: 10)
+			// Stroke in a dashed line
+				.stroke(Color.secondary, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
 		}
 	}
 }
@@ -279,6 +317,21 @@ struct RRConnector: Shape {
 	var end: CGPoint
 	var radius: CGFloat = 10.0
 
+	// This property specifies how to animate the connectors,
+	// otherwise they will jump around when an animation starts.
+	var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, AnimatablePair<CGFloat, CGFloat>> {
+		get {
+			AnimatablePair(
+				AnimatablePair(start.x, start.y),
+				AnimatablePair(end.x, end.y)
+			)
+		}
+		set {
+			start = CGPoint(x: newValue.first.first, y: newValue.first.second)
+			end = CGPoint(x: newValue.second.first, y: newValue.second.second)
+		}
+	}
+
 	func path(in rect: CGRect) -> Path {
 		var path = Path()
 		let dx = end.x - start.x
@@ -340,7 +393,8 @@ struct RRShowTerminals<Content: View>: View {
 			.overlayPreferenceValue(CGRectPreference.self) { points in
 				GeometryReader { geo in
 					ZStack {
-						ForEach(points, id: \.self) { point in
+						ForEach(points.indices, id: \.self) { i in
+							let point = points[i]
 							Circle().fill(Color.green).frame(width: 10, height: 10).position(x: geo[point].minX, y: geo[point].minY)
 							Circle().fill(Color.red).frame(width: 10, height: 10).position(x: geo[point].maxX, y: geo[point].maxY)
 						}
@@ -371,24 +425,25 @@ struct RRShowTerminals<Content: View>: View {
 			])).showRRTerminals();
 		}
 		Section("Choice") {
-			RRView(diagram: .Choice(items: [
+			RRView(diagram: .Group(item: .Choice(items: [
 				.Terminal(text: "1"),
 				.Terminal(text: "2"),
 				.Terminal(text: "3"),
-			])).showRRTerminals();
+			]), label: "Choice"
+			)).showRRTerminals();
 		}
 		Section("Sequence of Choice") {
 			RRView(diagram: .Sequence(items: [
-				.Choice(items: [
+				.Group(item: .Choice(items: [
 					.Terminal(text: "1"),
 					.Terminal(text: "2"),
 					.Terminal(text: "3"),
-				]),
-				.Choice(items: [
+				]), label: "Alpha"),
+				.Group(item: .Choice(items: [
 					.NonTerminal(text: "A"),
 					.NonTerminal(text: "B"),
 					.NonTerminal(text: "C"),
-				]),
+				]), label: "Bravo"),
 			])).showRRTerminals();
 		}
 		Section("Choice of Sequence Diagram") {
@@ -402,7 +457,18 @@ struct RRShowTerminals<Content: View>: View {
 					]),
 					.Sequence(items: [
 						.NonTerminal(text: "A"),
-						.NonTerminal(text: "B"),
+						.Sequence(items: [
+							.Group(item: .Choice(items: [
+								.Terminal(text: "1"),
+								.Terminal(text: "2"),
+								.Terminal(text: "3"),
+							]), label: "Alpha"),
+							.Group(item: .Choice(items: [
+								.NonTerminal(text: "A"),
+								.NonTerminal(text: "B"),
+								.NonTerminal(text: "C"),
+							]), label: "Bravo"),
+						]),
 						.NonTerminal(text: "C"),
 					]),
 				]),
