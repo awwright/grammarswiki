@@ -111,20 +111,6 @@ struct RRSequence: View {
 					AnyView(RRView.render(items[index]))
 				}
 			}
-//				.onPreferenceChange(CGRectPreference.self) { newPoints in
-//					self.points = newPoints
-//					if newPoints.isEmpty {
-//						point = nil
-//					} else {
-//						let first = newPoints[0]
-//						let last = newPoints[newPoints.count - 1]
-//						point = CGRect(i: first.i, o: last.o)
-//					}
-//				}
-			.background(
-				RoundedRectangle(cornerRadius: 3)
-					.stroke(style: StrokeStyle(lineWidth: 2, dash: [5]))
-			)
 			.backgroundPreferenceValue(CGRectPreference.self) { preferences in
 				GeometryReader { geo in
 					let rects = preferences.map { geo[$0] };
@@ -137,12 +123,7 @@ struct RRSequence: View {
 								let rect1 = rects[i+1]
 								let from = CGPoint(x: rect0.maxX, y: rect0.maxY)
 								let to = CGPoint(x: rect1.minX, y: rect1.minY)
-
-								Path { path in
-									path.move(to: from)
-									path.addLine(to: to)
-								}
-								.stroke(Color.red, lineWidth: 2)
+								RRConnector(start: from, end: to).stroke(.foreground, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
 							}
 						}
 					}
@@ -151,9 +132,9 @@ struct RRSequence: View {
 						let inPoint = CGPoint(x: rects[0].minX, y: rects[0].minY)
 						let outPoint = CGPoint(x: rects[rects.count-1].maxX, y: rects[rects.count-1].maxY)
 						Color.clear
-							 .frame(width: outPoint.x - inPoint.x, height: outPoint.y - inPoint.y)
-							 .anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
-							 .position(x: inPoint.x + (outPoint.x - inPoint.x)/2, y: inPoint.y + (outPoint.y - inPoint.y)/2)
+							.frame(width: outPoint.x - inPoint.x, height: outPoint.y - inPoint.y)
+							.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+							.position(x: inPoint.x + (outPoint.x - inPoint.x)/2, y: inPoint.y + (outPoint.y - inPoint.y)/2)
 					}
 				}
 			}
@@ -189,16 +170,11 @@ struct RRChoice: View {
 						let outPoint = CGPoint(x: geo.size.width, y: bounding.maxY)
 						ZStack {
 							ForEach(points, id: \.self) { rect in
-								Path { path in
-									path.move(to: inPoint)
-									path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
-									path.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
-									path.addLine(to: outPoint)
-								}
-								.stroke(Color.red, lineWidth: 2)
+								RRConnector(start: inPoint, end: CGPoint(x: rect.minX, y: rect.minY)).stroke(.foreground, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+								RRConnector(start: CGPoint(x: rect.maxX, y: rect.maxY), end: outPoint).stroke(.foreground, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
 							}
 						}
-					  Color.clear
+						Color.clear
 							.frame(width: outPoint.x - inPoint.x, height: outPoint.y - inPoint.y)
 							.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
 							.position(x: inPoint.x + (outPoint.x - inPoint.x)/2, y: inPoint.y + (outPoint.y - inPoint.y)/2)
@@ -290,6 +266,56 @@ struct RRComment: View {
 	}
 }
 
+struct RRConnector: Shape {
+	var start: CGPoint
+	var end: CGPoint
+	var radius: CGFloat = 10.0
+
+	func path(in rect: CGRect) -> Path {
+		var path = Path()
+		let dx = end.x - start.x
+		let dy = end.y - start.y
+
+		// Reduce radius for points very close together
+		// TODO: In the future, draw a partial arc instead of the full 1/4 circle arc
+		let radius = min(min(abs(dx), abs(dy))/2, self.radius);
+		if abs(dx) < 1 || abs(dy) < 1 {
+			path.move(to: start)
+			path.addLine(to: end)
+			return path
+		}
+
+		// Determine directions
+		let horizontalDirection: CGFloat = dx > 0 ? 1 : -1;
+		let verticalDirection: CGFloat = dy > 0 ? 1 : -1;
+		path.move(to: start)
+
+		// First line
+		let arc1Start = CGPoint(x: start.x + dx - 2 * radius, y: start.y)
+		path.addLine(to: arc1Start)
+
+		// First arc: Connect to vertical line direction
+		let center1 = CGPoint(x: arc1Start.x, y: start.y + verticalDirection * radius)
+		let startAngle1: Angle = .degrees(verticalDirection > 0 ? 270 : 90)
+		let endAngle1: Angle = .degrees(horizontalDirection > 0 ? 0 : 180)
+		let clockwise1 = (horizontalDirection * verticalDirection < 0)
+		path.addArc(center: center1, radius: radius, startAngle: startAngle1, endAngle: endAngle1, clockwise: clockwise1)
+
+		// Vertical line to the second arc
+		let arc2Start = CGPoint(x: arc1Start.x + horizontalDirection * radius, y: end.y - verticalDirection * radius)
+		path.addLine(to: arc2Start)
+
+		// Second arc: Turn back to horizontal
+		let center2 = CGPoint(x: arc2Start.x + horizontalDirection * radius, y: arc2Start.y)
+		let startAngle2: Angle = .degrees(horizontalDirection > 0 ? 180 : 0)
+		let endAngle2: Angle = .degrees(verticalDirection > 0 ? 90 : 270)
+		let clockwise2 = (horizontalDirection * verticalDirection > 0)
+		path.addArc(center: center2, radius: radius, startAngle: startAngle2, endAngle: endAngle2, clockwise: clockwise2)
+
+		return path;
+	}
+}
+
 extension View {
 	func showRRTerminals() -> some View {
 		RRShowTerminals { self }
@@ -374,6 +400,22 @@ struct RRShowTerminals<Content: View>: View {
 				]),
 				.End(label: "End"),
 			])).showRRTerminals();
+		}
+		Section("Arc") {
+			HStack(spacing: 10) {
+				RRConnector(start: CGPoint(x: 0, y: 0), end: CGPoint(x: 0, y: 30))
+					.stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+					.frame(width: 100, height: 50)
+				RRConnector(start: CGPoint(x: 0, y: 0), end: CGPoint(x: 100, y: 30))
+					.stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+					.frame(width: 100, height: 50)
+				RRConnector(start: CGPoint(x: 0, y: 30), end: CGPoint(x: 100, y: 0))
+					.stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+					.frame(width: 100, height: 50)
+				RRConnector(start: CGPoint(x: 0, y: 30), end: CGPoint(x: 0, y: 0))
+					.stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+					.frame(width: 100, height: 50)
+			}
 		}
 	}.padding(50)
 }
