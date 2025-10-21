@@ -176,18 +176,24 @@ struct RRChoice: View {
 				}
 			}
 			.padding(.horizontal, 30)
- 			.backgroundPreferenceValue(CGRectPreference.self) { preferences in
+			.backgroundPreferenceValue(CGRectPreference.self) { preferences in
 				GeometryReader { geo in
-					ZStack {
-						ForEach(0..<preferences.count, id: \.self) { i in
-							let rect = geo[preferences[i]]
-							Path { path in
-								path.move(to: CGPoint(x: 0, y: 0))
-								path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
-								path.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
-								path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height))
+					if preferences.isEmpty {
+						EmptyView()
+					} else {
+						let rects = preferences.map { geo[$0] };
+						let minY = rects.map { $0.minY }.min() ?? 0;
+						let maxY = rects.map { $0.maxY }.max() ?? geo.size.height;
+						ZStack {
+							ForEach(rects, id: \.self) { rect in
+								Path { path in
+									path.move(to: CGPoint(x: 0, y: minY))
+									path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+									path.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
+									path.addLine(to: CGPoint(x: geo.size.width, y: maxY))
+								}
+								.stroke(Color.red, lineWidth: 2)
 							}
-							.stroke(Color.red, lineWidth: 2)
 						}
 					}
 				}
