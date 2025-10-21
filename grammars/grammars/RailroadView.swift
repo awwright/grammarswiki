@@ -65,12 +65,8 @@ struct RRStart: View {
 					Color.clear
 						.frame(height: 0)
 						.frame(maxWidth: .infinity)
+						.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
 						.position(x: geometry.size.width / 2, y: geometry.size.height / 2)
-						.background(
-							Color.clear
-								.frame(height: 0)
-								.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
-						)
 				}
 			}
 	}
@@ -94,12 +90,8 @@ struct RREnd: View {
 					Color.clear
 						.frame(height: 0)
 						.frame(maxWidth: .infinity)
+						.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
 						.position(x: geometry.size.width / 2, y: geometry.size.height / 2)
-						.background(
-							Color.clear
-								.frame(height: 0)
-								.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
-						)
 				}
 			}
 	}
@@ -135,13 +127,14 @@ struct RRSequence: View {
 			)
 			.backgroundPreferenceValue(CGRectPreference.self) { preferences in
 				GeometryReader { geo in
-					if preferences.count <= 1 {
+					let rects = preferences.map { geo[$0] };
+					if rects.count <= 1 {
 						EmptyView();
 					} else {
 						ZStack {
-							ForEach(0..<preferences.count-1, id: \.self) { i in
-								let rect0 = geo[preferences[i]]
-								let rect1 = geo[preferences[i+1]]
+							ForEach(0..<rects.count-1, id: \.self) { i in
+								let rect0 = rects[i]
+								let rect1 = rects[i+1]
 								let from = CGPoint(x: rect0.maxX, y: rect0.maxY)
 								let to = CGPoint(x: rect1.minX, y: rect1.minY)
 
@@ -153,9 +146,18 @@ struct RRSequence: View {
 							}
 						}
 					}
+					if !rects.isEmpty {
+						// Pass up the first in point and last out point
+						let inPoint = CGPoint(x: rects[0].minX, y: rects[0].minY)
+						let outPoint = CGPoint(x: rects[rects.count-1].maxX, y: rects[rects.count-1].maxY)
+						Color.clear
+							 .frame(width: outPoint.x - inPoint.x, height: outPoint.y - inPoint.y)
+							 .anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+							 .position(x: inPoint.x + (outPoint.x - inPoint.x)/2, y: inPoint.y + (outPoint.y - inPoint.y)/2)
+					}
 				}
 			}
-			.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+			.transformAnchorPreference(key: CGRectPreference.self, value: .bounds) { $0 = [$0.first ?? $1] }
 			.padding(.horizontal, 20)
 		}
 	}
@@ -181,24 +183,49 @@ struct RRChoice: View {
 					if preferences.isEmpty {
 						EmptyView()
 					} else {
-						let rects = preferences.map { geo[$0] };
-						let minY = rects.map { $0.minY }.min() ?? 0;
-						let maxY = rects.map { $0.maxY }.max() ?? geo.size.height;
+						let points = preferences.map { geo[$0] };
+						let bounding = points.reduce(points[0]) { $0.union($1) }
+						let inPoint = CGPoint(x: 0, y: bounding.minY)
+						let outPoint = CGPoint(x: geo.size.width, y: bounding.maxY)
 						ZStack {
-							ForEach(rects, id: \.self) { rect in
+							ForEach(points, id: \.self) { rect in
 								Path { path in
-									path.move(to: CGPoint(x: 0, y: minY))
+									path.move(to: inPoint)
 									path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
 									path.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
-									path.addLine(to: CGPoint(x: geo.size.width, y: maxY))
+									path.addLine(to: outPoint)
 								}
 								.stroke(Color.red, lineWidth: 2)
 							}
 						}
+					  Color.clear
+							.frame(width: outPoint.x - inPoint.x, height: outPoint.y - inPoint.y)
+							.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+							.position(x: inPoint.x + (outPoint.x - inPoint.x)/2, y: inPoint.y + (outPoint.y - inPoint.y)/2)
 					}
 				}
 			}
-			.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+			// Clear the points received from children
+			// The last preference will be the one that was added in backgroundPreferenceValue above
+			// If there's no such preference, just take the bounding box, since this guarantees exactly one preference.
+			// Note that backgroundPreferenceValue adds to the beginning, overlayPreferenceValue adds to the end.
+			.transformAnchorPreference(key: CGRectPreference.self, value: .bounds) { $0 = [$0.first ?? $1] }
+			// And add a new one
+			.background {
+				// Draw a rectangle behind the View and pass up the bounds of it as a preference.
+				// This is a strange work around for the fact that you can't pass up an arbirtirary CGRect,
+				// you have to draw it as a View first.
+				// .position needs to go last so that it transforms the anchorPreference along with the rectangle.
+				GeometryReader { geometry in
+					if let point {
+						// TODO: ... To here, position this to the CGRect from backgroundPreferenceValue above
+						Color.clear
+							.frame(width: 0, height: 0)
+							.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
+							.position(x: point.midX, y: point.midY)
+					}
+				}
+			}
 		}
 	}
 }
@@ -221,14 +248,9 @@ struct RRTerminal: View {
 				// you have to draw it as a View first.
 				GeometryReader { geometry in
 					Color.clear
-						.frame(height: 0)
-						.frame(maxWidth: .infinity)
+						.frame(width: geometry.size.width, height: 0)
+						.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
 						.position(x: geometry.size.width / 2, y: geometry.size.height / 2)
-						.background(
-							Color.clear
-								.frame(height: 0)
-								.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
-						)
 				}
 			}
 	}
@@ -296,6 +318,15 @@ struct RRShowTerminals<Content: View>: View {
 
 #Preview {
 	VStack(spacing: 20) {
+		Section("Nodes") {
+			HStack(spacing: 40) {
+				RRStart(text: "RRStart").showRRTerminals();
+				RRTerminal(text: "RRTerminal").showRRTerminals();
+				RRNonTerminal(text: "RRTerminal").showRRTerminals();
+				RRComment(text: "RRComment").showRRTerminals();
+				RREnd(text: "RREnd").showRRTerminals();
+			}
+		}
 		Section("Sequence") {
 			RRView(diagram: .Sequence(items: [
 				.Start(label: "O"),
@@ -303,14 +334,14 @@ struct RRShowTerminals<Content: View>: View {
 				.NonTerminal(text: "2"),
 				.Terminal(text: "3"),
 				.End(label: "X"),
-			]));
+			])).showRRTerminals();
 		}
 		Section("Choice") {
 			RRView(diagram: .Choice(items: [
 				.Terminal(text: "1"),
 				.Terminal(text: "2"),
 				.Terminal(text: "3"),
-			]));
+			])).showRRTerminals();
 		}
 		Section("Sequence of Choice") {
 			RRView(diagram: .Sequence(items: [
@@ -324,7 +355,7 @@ struct RRShowTerminals<Content: View>: View {
 					.Terminal(text: "B"),
 					.Terminal(text: "C"),
 				]),
-			]));
+			])).showRRTerminals();
 		}
 		Section("Diagram") {
 			RRView(diagram: .Sequence(items: [
@@ -342,7 +373,7 @@ struct RRShowTerminals<Content: View>: View {
 					]),
 				]),
 				.End(label: "O"),
-			]));
+			])).showRRTerminals();
 		}
 	}.padding(50)
 }
