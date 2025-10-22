@@ -140,7 +140,7 @@ struct RRSequence: View {
 						let inPoint = CGPoint(x: rects[0].minX, y: rects[0].minY)
 						let outPoint = CGPoint(x: rects[rects.count-1].maxX, y: rects[rects.count-1].maxY)
 						Color.clear
-							.frame(width: outPoint.x - inPoint.x, height: outPoint.y - inPoint.y)
+							.frame(width: outPoint.x - inPoint.x, height: abs(outPoint.y - inPoint.y))
 							.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
 							.position(x: inPoint.x + (outPoint.x - inPoint.x)/2, y: inPoint.y + (outPoint.y - inPoint.y)/2)
 					}
@@ -225,7 +225,7 @@ struct RRGroup: View {
 			Button {
 				withAnimation { expanded.toggle() }
 			} label: {
-				Text(label)
+				Text(label).padding(.horizontal, 10)
 			}
 			.fixedSize()
 			.buttonStyle(.accessoryBarAction)
@@ -234,18 +234,20 @@ struct RRGroup: View {
 				AnyView(RRView.render(item))
 					// This specifies how the inner diagram will appear and disappear
 					.transition(.blurReplace)
+					.padding(5)
 			}
 		}
-		.padding(.vertical, 10)
-		.overlay {
-			if !expanded {
+		.background {
+			if expanded {
+				RoundedRectangle(cornerRadius: 10)
+				 // Stroke in a dashed line
+				 .stroke(Color.secondary, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
+				 .transition(.scale)
+			} else {
 				Color.clear
-					.frame(width: .infinity, height: 0)
+					.frame(maxWidth: .infinity, maxHeight: 0)
 					.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
 			}
-			RoundedRectangle(cornerRadius: 10)
-			// Stroke in a dashed line
-				.stroke(Color.secondary, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
 		}
 	}
 }
