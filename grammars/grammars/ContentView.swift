@@ -472,7 +472,7 @@ struct DocumentDetail: View {
 				await MainActor.run {
 					content_rulelist = rulelist_all_final
 					content_cfg = try! rulelist_all_final.toCFG()
-					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad()
+					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
 					// Select the first rule by default
 					if selectedRule == nil, let firstRule = content_rulelist?.rules.first {
 						selectedRule = firstRule.rulename.label
