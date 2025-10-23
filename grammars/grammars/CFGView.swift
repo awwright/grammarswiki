@@ -4,8 +4,19 @@ import FSM;
 struct CFGContentView: View {
 	public var grammar: SymbolCFG<UInt32>;
 	public var charset: Charset;
+
+	@State private var selectedDialect: String = "bnf"
+
 	var body: some View {
 		ScrollView {
+			Form {
+				Picker("Dialect", selection: $selectedDialect) {
+					Text("BNF").tag("bnf")
+				}
+			}
+			.pickerStyle(.menu)
+			.formStyle(.grouped)
+
 			VStack(alignment: .leading) {
 				Text("\u{2192} \(grammar.start)")
 				Spacer()
