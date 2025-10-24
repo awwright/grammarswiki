@@ -22,7 +22,7 @@ struct CFGContentView: View {
 				Spacer()
 				let dictionary = grammar.dictionary
 				let ruleNames = grammar.ruleNames;
-				ForEach(ruleNames, id: \.self) { ruleName in
+				ForEach(ruleNames, id: \.self) { (ruleName: String) in
 					let rules = dictionary[ruleName] ?? []
 					Text("\(ruleName)").font(.headline);
 					if rules.isEmpty {
@@ -31,11 +31,11 @@ struct CFGContentView: View {
 					ForEach(rules, id: \.self) { rule in
 						HStack {
 							Text("\t\u{2192} ")
-							ForEach(rule.production, id: \.self) { (token: CFGSymbol<UInt32>) in
+							ForEach(rule.production, id: \.self) { (token: SymbolCFG<UInt32>.Term) in
 								switch token {
-								case .terminal(let sym): Text(charset.toQuoted(sym)).monospaced()
-								case .range(let lower, let upper): Text(charset.toQuoted(lower) + "\u{22EF}" + charset.toQuoted(upper)).monospaced()
-								case .rule(let name): Text(name)
+								case .symbol(let sym): Text(charset.toQuoted(sym)).monospaced()
+//								case .range(let lower, let upper): Text(charset.toQuoted(lower) + "\u{22EF}" + charset.toQuoted(upper)).monospaced()
+								case .variable(let name): Text(name)
 								default: Text(String(describing: token))
 								}
 							}

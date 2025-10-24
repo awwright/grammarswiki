@@ -355,78 +355,78 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 		return resolvedRules;
 	}
 
-	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Symbol == Symbol {
-		func addRules(for alternation: ABNFAlternation<Symbol>, withName ruleName: String, to cfgRules: inout [CFGRule<Symbol>]) throws {
+	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Symbol == Symbol, CFGType.Variable == String {
+		func addRules(for alternation: ABNFAlternation<Symbol>, withName ruleName: String, to cfgRules: inout [CFGType.Production]) throws {
 			for concat in alternation.matches {
-				var prod: [CFGSymbol<Symbol>] = []
+				var prod: Array<CFGType.Production.Term> = []
 				for rep in concat.repetitions {
 					if rep.min == 1 && rep.max == 1 {
 						switch rep.repeating {
 						case .rulename(let rn):
-							prod.append(.rule(rn.label))
+							prod.append(.variable(rn.label))
 						case .charVal(let cv):
 							for sym in cv.sequence {
-								prod.append(.terminal(sym))
+								prod.append(.symbol(sym))
 							}
 						case .numVal(let nv):
 							switch nv.value {
 							case .sequence(let seq):
 								for sym in seq {
-									prod.append(.terminal(sym))
+									prod.append(.symbol(sym))
 								}
 							case .range(let range):
 								let newName = ruleName + "_range\(cfgRules.count)"
-								cfgRules.append(CFGRule(name: newName, production: [.range(range.lowerBound, range.upperBound)]))
-								prod.append(.rule(newName))
+//								cfgRules.append(CFGType.Production(name: newName, production: [.range(range.lowerBound, range.upperBound)]))
+								cfgRules.append(CFGType.Production(name: newName, production: [.symbol(range.lowerBound)]))
+								prod.append(CFGType.Production.Term.variable(newName))
 							}
 						case .group(let g):
 							let newName = ruleName + "_group\(cfgRules.count)"
 							try addRules(for: g.alternation, withName: newName, to: &cfgRules)
-							prod.append(.rule(newName))
+							prod.append(.variable(newName))
 						case .option(let o):
 							let newName = ruleName + "_opt\(cfgRules.count)"
 							try addRules(for: o.optionalAlternation, withName: newName, to: &cfgRules)
-							cfgRules.append(CFGRule(name: newName, production: []))
-							prod.append(.rule(newName))
+							cfgRules.append(CFGType.Production(name: newName, production: []))
+							prod.append(.variable(newName))
 						case .proseVal:
 							throw ABNFExportError(message: "ProseVal not supported in CFG")
 						}
 					} else if rep.min == 0 && rep.max == 1 {
 						let newName = ruleName + "_opt\(cfgRules.count)"
 						try addRules(for: rep.repeating.alternation, withName: newName, to: &cfgRules)
-						cfgRules.append(CFGRule(name: newName, production: []))
-						prod.append(.rule(newName))
+						cfgRules.append(CFGType.Production(name: newName, production: []))
+						prod.append(.variable(newName))
 					} else {
 						let elementName = ruleName + "_elem\(cfgRules.count)"
 						try addRules(for: rep.repeating.alternation, withName: elementName, to: &cfgRules)
-						let elementSymbol = CFGSymbol<Symbol>.rule(elementName)
+						let elementSymbol = CFGType.Term.variable(elementName)
 						let repName = ruleName + "_rep\(cfgRules.count)"
 						if let max = rep.max {
 							for i in Int(rep.min)...Int(max) {
 								let prod = Array(repeating: elementSymbol, count: i)
-								cfgRules.append(CFGRule(name: repName, production: prod))
+								cfgRules.append(CFGType.Production(name: repName, production: prod))
 							}
 						} else {
 							let starName = ruleName + "_star\(cfgRules.count)"
-							cfgRules.append(CFGRule(name: starName, production: [])) // epsilon
-							cfgRules.append(CFGRule(name: starName, production: [elementSymbol, .rule(starName)])) // element star
+							cfgRules.append(CFGType.Production(name: starName, production: [])) // epsilon
+							cfgRules.append(CFGType.Production(name: starName, production: [elementSymbol, .variable(starName)])) // element star
 							var prod = Array(repeating: elementSymbol, count: Int(rep.min))
-							prod.append(.rule(starName))
-							cfgRules.append(CFGRule(name: repName, production: prod))
+							prod.append(.variable(starName))
+							cfgRules.append(CFGType.Production(name: repName, production: prod))
 						}
-						prod.append(.rule(repName))
+						prod.append(.variable(repName))
 					}
 				}
-				cfgRules.append(CFGRule(name: ruleName, production: prod))
+				cfgRules.append(CFGType.Production(name: ruleName, production: prod))
 			}
 		}
-		var cfgRules: [CFGRule<Symbol>] = []
+		var cfgRules: [CFGType.Production] = []
 		for rule in self.rules {
 			let name = rule.rulename.label
 			try addRules(for: rule.alternation, withName: name, to: &cfgRules)
 		}
-		// Assume CFGType is SymbolCFG
-		return SymbolCFG(rules: cfgRules, start: rules.first?.rulename.label ?? "") as! CFGType
+		return CFGType(rules: cfgRules, start: rules.first?.rulename.label ?? "")
 	}
 
 	/// Parses an input string into a rulelist.
