@@ -31,7 +31,7 @@ struct ContentView: View {
 				Section("Catalog") {
 					ForEach(model.catalog, id: \.id) {
 						document in
-						DocumentItemView(document: Binding(get: { document }, set: { let newDoc = $0.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id }), onDelete: {}, onDuplicate: {}, isEditable: false)
+						DocumentItemView(document: Binding(get: { document }, set: { let newDoc = $0.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id }), onDelete: {}, onDuplicate: { let newDoc = document.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id }, isEditable: false)
 					}
 				}
 			}
