@@ -65,6 +65,7 @@ if arguments.count == 1 && ProcessInfo.processInfo.environment["REQUEST_URI"] !=
 exitCode = switch programName {
 	case "abnf-ambiguous-concat": abnf_ambiguous_concat_args(arguments: arguments);
 	case "abnf-expression-test-input": abnf_expression_test_input_args(arguments: arguments);
+	case "abnf-generate": abnf_generate_args(arguments: arguments);
 	case "abnf-list-rulenames": abnf_list_rulenames_args(arguments: arguments);
 	case "abnf-list-rules": abnf_list_rules_args(arguments: arguments);
 	case "abnf-to-railroad-js": abnf_to_railroad_js_args(arguments: arguments);
@@ -90,6 +91,7 @@ func defaultExitCode() -> Int32 {
 	print("");
 	abnf_ambiguous_concat_help(arguments: arguments);
 	abnf_expression_test_input_help(arguments: arguments);
+	abnf_generate_help(arguments: arguments);
 	abnf_list_rulenames_help(arguments: arguments);
 	abnf_list_rules_help(arguments: arguments);
 	abnf_to_railroad_js_help(arguments: arguments);
