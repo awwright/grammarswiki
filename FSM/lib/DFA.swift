@@ -450,15 +450,24 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	public func coreachable() -> Set<StateNo> {
 		// TODO: Add "finalStates" as a function argument
 		var coReachable: Set<StateNo> = self.finals
-		var coReachableList = Array(coReachable)
+		var coReachableList = coReachable.sorted();
 		var index = 0
+
+		// Build reverse transitions for efficiency
+		var reverse: [StateNo: Set<StateNo>] = [:]
+		for (state, transitions) in states.enumerated() {
+			for nextState in transitions.values {
+				reverse[nextState, default: []].insert(state)
+			}
+		}
+
 		while index < coReachableList.count {
 			let current = coReachableList[index]
 			index += 1
-			for (state, transitions) in states.enumerated() {
-				for nextState in transitions.values {
-					if nextState == current && coReachable.insert(state).inserted {
-						coReachableList.append(state)
+			if let predecessors = reverse[current] {
+				for predecessor in predecessors {
+					if coReachable.insert(predecessor).inserted {
+						coReachableList.append(predecessor)
 					}
 				}
 			}

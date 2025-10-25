@@ -547,6 +547,31 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 		try alternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 	}
 
+	// An alternative to the above that will automatically convert all the dependencies as needed
+	public func toPattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: ABNFRulelist<Symbol>, alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
+		let rulename = self.rulename.label;
+		let dependencies_list = rules.dependencies(rulename: rulename);
+		let dict = rules.dictionary;
+		let dependencies = dependencies_list.dependencies.compactMap { if let rule = dict[$0] { ($0, rule) } else { nil } }
+		if(dependencies.isEmpty){
+			fatalError()
+		}
+		if(dependencies_list.recursive.isEmpty == false){
+			// Rule is recursive
+			fatalError()
+		}
+		do {
+			//var result_fsm_dict = ABNFBuiltins<Symbol>.mapValues { $0.minimized() }
+			var result_fsm_dict: Dictionary<String, PatternType> = [:];
+			for (rulename, definition) in dependencies {
+				let pat = try definition.toClosedRangePattern(rules: result_fsm_dict);
+				// FIXME: The existance of minimized() is not guaranteed here, depending on Symbol
+				result_fsm_dict[rulename] = pat; //.minimized()
+			}
+			return result_fsm_dict[rulename]!
+		}
+	}
+
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
 		try alternation.toClosedRangePattern(as: PatternType.self, rules: rules)
 	}
