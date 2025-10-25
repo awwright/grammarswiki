@@ -684,7 +684,8 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
-		return Self.parallel(fsms: languages, merge: { $0.contains(where: { $0 }) }).fsm;
+		let minimizedLanguages = languages.map { $0.minimized() }
+		return Self.parallel(fsms: minimizedLanguages, merge: { $0.contains(where: { $0 }) }).fsm;
 	}
 
 	/// Finds the language of all the the ways to join a string from the first language with strings in the second language.

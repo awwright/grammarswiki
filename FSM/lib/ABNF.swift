@@ -869,11 +869,23 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder, Cl
 	}
 
 	public func toSymbolClassPattern<PatternType: SymbolClassPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
-		PatternType.union(try matches.map({ try $0.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter) }))
+		if matches.isEmpty {
+			PatternType.empty
+		} else if matches.count == 1 {
+			try matches[0].toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
+		} else {
+			PatternType.union(try matches.map({ try $0.toSymbolClassPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter) }))
+		}
 	}
 
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
-		PatternType.union(try matches.map({ try $0.toClosedRangePattern(as: PatternType.self, rules: rules) }))
+		if matches.isEmpty {
+			PatternType.empty
+		} else if matches.count == 1 {
+			try matches[0].toClosedRangePattern(as: PatternType.self, rules: rules)
+		} else {
+			PatternType.union(try matches.map({ try $0.toClosedRangePattern(as: PatternType.self, rules: rules) }))
+		}
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
