@@ -1,23 +1,3 @@
-/// Declares a type of sequence that can be consumed or produced by a finite state automata
-/// It defines the empty sequence, and can be built from the empty sequence by appending elements.
-/// An elements of this sequence is a Symbol. They must be usable as keys for a `Dictionary`, so Symbol depends on `Hashable`.
-public protocol SymbolSequenceProtocol: Sequence where Element: Hashable {
-	typealias Symbol = Element;
-
-	/// An instance of this type that has no elements
-	static var empty: Self { get }
-
-	/// An instance of this type that has no elements
-	init();
-
-	/// Return a new sequence concatenated with the given sequence
-	/// This is usually implemented by Array and String.
-	static func + (_: Self, _: Self) -> Self;
-
-	/// Return a new sequence with the given alement appended
-	func appending(_: Symbol) -> Self;
-}
-
 /// A language that can be constructed through a combination of symbol, union, concatenation, and repetition operations.
 /// It is very flexible and allows constructing a regular expression of any type from any other conforming type.
 ///

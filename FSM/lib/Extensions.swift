@@ -1,21 +1,3 @@
-extension Array: SymbolSequenceProtocol where Array.Element: Hashable {
-	public static var empty: Self {
-		return [];
-	}
-	public func appending(_ newElement: Element) -> Self {
-		return self + [newElement];
-	}
-}
-
-extension String: SymbolSequenceProtocol {
-	public static var empty: Self {
-		return "";
-	}
-	public func appending(_ newElement: Element) -> Self {
-		return self + String(newElement);
-	}
-}
-
 // For some reason an Array isn't comparable when its elements are
 // Add suitable lexiocographic sorting support so that we can use Arrays of symbols as input e.g. Array<UInt32>
 extension Array: @retroactive Comparable where Element: Comparable {
