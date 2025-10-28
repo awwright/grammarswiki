@@ -3,12 +3,12 @@ import Foundation;
 private typealias Symbol = UInt32;
 private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<Symbol>>;
 
-func abnf_to_regex_help(arguments: Array<String>) {
+func abnf_generate_help(arguments: Array<String>) {
 	print("\(arguments[0]) \(bold("abnf-to-regex")) [<filepath>] <expression>");
 	print("\tConverts <expression> to a regular expression, optionally importing rules from <filepath>");
 }
 
-func abnf_to_regex_args(arguments: Array<String>) -> Int32 {
+func abnf_generate_args(arguments: Array<String>) -> Int32 {
 	guard arguments.count >= 3 && arguments.count <= 4 else {
 		print(arguments.count);
 		abnf_generate_help(arguments: arguments);

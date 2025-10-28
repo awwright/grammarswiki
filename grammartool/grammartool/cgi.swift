@@ -51,7 +51,7 @@ struct CGIResponse: ResponseProtocol {
 }
 
 func cgi_args(arguments: Array<String>) -> Int32 {
-	var res = CGIResponse(status: .error, contentType: .empty);
+	var res = CGIResponse(status: .error, contentType: "");
 	let requestURI = (arguments.count >= 3) ? arguments[2] : (ProcessInfo.processInfo.environment["REQUEST_URI"] ?? "/")
 	let path = String(requestURI.split(separator: "?", omittingEmptySubsequences: false).first ?? "");
 	cgi_run(res: &res, method: "GET", path: path, querystring: "")
