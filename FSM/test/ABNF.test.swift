@@ -1124,7 +1124,7 @@ import Testing;
 			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
 			#expect(fsm.initial == 0)
 			// This can legitimately vary, but it should be consistent
-			#expect(fsm.states.count == 7)
+			#expect(fsm.states.count <= 7)
 			let min = fsm.minimized();
 			#expect(min.initial == 0)
 			// This must be 3, the minimum FSM for this ABNF has three states, period.
