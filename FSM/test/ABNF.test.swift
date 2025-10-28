@@ -1187,6 +1187,10 @@ import Testing;
 
 	// Test converting from ABNF to an FSM and back and forth
 	@Test("FSM<->ABNF", arguments: [
+		"%x0 %x1",
+		"%x0 / %x1",
+		"*(%x0 %x1)",
+		"*(%x0 / %x1)",
 		"*(%x0 / %x1 *%x3 %x2) %x1 *%x3",
 		"*%x0 %x1 *%x3 *(%x2 *%x0 %x1 *%x3)",
 		"*((%x20 / %x09) / %x0D %x0A (%x20 / %x09))",
@@ -1195,6 +1199,7 @@ import Testing;
 		let abnf0 = abnf_lf.replacing("\n", with: "\r\n").replacing("\r\r", with: "\r")
 		let rulelist = try ABNFAlternation<UInt8>.parse(abnf0.utf8)
 		let fsm0: SymbolClassDFA<ClosedRangeAlphabet<UInt8>> = try rulelist.toSymbolClassPattern()
+		// If we convert this FSM to ABNF and back, will it be the same?
 		let abnf1: ABNFAlternation<UInt8> = fsm0.toPattern()
 		let fsm1: SymbolClassDFA<ClosedRangeAlphabet<UInt8>> = try abnf1.toSymbolClassPattern()
 		#expect(fsm0 == fsm1);

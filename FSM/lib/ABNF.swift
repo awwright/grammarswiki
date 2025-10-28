@@ -1087,9 +1087,11 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 		return ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
-		repetitions.allSatisfy { $0.isEmpty }
+		// Cross product of anything with empty set is empty set
+		repetitions.contains { $0.isEmpty }
 	}
 	public var isOptional: Bool {
+		// If all the segments contain epsilon, then the concatenation can produce epsilon
 		repetitions.allSatisfy { $0.isOptional }
 	}
 
