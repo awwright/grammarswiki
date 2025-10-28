@@ -15,7 +15,7 @@ public protocol ABNFProduction: Equatable, Comparable, Hashable, CustomStringCon
 	// `Element.Element.Stride: SignedInteger` is for iterating over a range of symbols, e.g. (0x20...0x7F)
 	/// The type of value that this ABNF is describing
 	/// This will typically be `Array<UInt8>` or `Array<Uint32>`
-	associatedtype Element: SymbolSequenceProtocol where Element.Element: BinaryInteger & Comparable, Element.Element.Stride: SignedInteger;
+	associatedtype Element: Sequence where Element.Element: BinaryInteger & Comparable, Element.Element.Stride: SignedInteger;
 
 	/// A single character of a document that will be matched by the ABNF.
 	/// In ABNF itself, this is UInt8 for ASCII characters. For Unicode documents, this will be UInt16 or UInt32.
@@ -96,8 +96,11 @@ public protocol ABNFExpression: ABNFProduction {
 	/// Get the smallest equivalent ``ABNFGroup``
 	var group: ABNFGroup<Symbol> {get}
 
-	/// If this will accept only the empty string
+	/// If this contains no strings
 	var isEmpty: Bool {get}
+
+	/// If this accepts only the empty string
+	var isEpsilon: Bool {get}
 
 	/// If this will accept the empty string (maybe among other values)
 	var isOptional: Bool {get}
@@ -686,6 +689,9 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		// At least, not _necessarially_ empty
 		return false
 	}
+	public var isEpsilon: Bool {
+		return false
+	}
 	public var isOptional: Bool {
 		// Not necessarially empty
 		false
@@ -836,7 +842,10 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder, Cl
 		return ABNFGroup<Symbol>(alternation: self)
 	}
 	public var isEmpty: Bool {
-		return matches.allSatisfy({$0.isEmpty})
+		return matches.allSatisfy { $0.isEmpty }
+	}
+	public var isEpsilon: Bool {
+		return matches.allSatisfy { $0.isEmpty || $0.isEpsilon } && matches.contains { $0.isEpsilon }
 	}
 	public var isOptional: Bool {
 		// If any of the elements can be empty, the whole alternation accepts empty
@@ -894,15 +903,17 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder, Cl
 	}
 
 	public static func union(_ elements: [Self]) -> Self {
-		if(elements.isEmpty){
+		let nonempty = elements.filter { $0.isEmpty == false }
+		if(nonempty.isEmpty){
 			return Self(matches: [])
-		}else if(elements.count == 1){
-			return elements[0]
+		}else if(nonempty.count == 1){
+			return nonempty[0]
 		}
-		return elements[1...].reduce(elements[0], {$0.union($1)})
+		return nonempty[1...].reduce(nonempty[0], {$0.union($1)})
 	}
 
 	public static func concatenate(_ elements: [Self]) -> Self {
+		let nonempty = elements.filter { $0.isOptional == false }
 		if(elements.isEmpty){
 			return Self(matches: [ABNFConcatenation(repetitions: [])])
 		}else if(elements.count == 1){
@@ -1090,6 +1101,10 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 		// Cross product of anything with empty set is empty set
 		repetitions.contains { $0.isEmpty }
 	}
+	public var isEpsilon: Bool {
+		// If all the segments are epsilon exactly (cardinality one), then the result is of cardinality=1
+		repetitions.allSatisfy { $0.isEpsilon }
+	}
 	public var isOptional: Bool {
 		// If all the segments contain epsilon, then the concatenation can produce epsilon
 		repetitions.allSatisfy { $0.isOptional }
@@ -1259,6 +1274,9 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 	}
 	public var isEmpty: Bool {
 		max == 0 || repeating.isEmpty
+	}
+	public var isEpsilon: Bool {
+		if let max { max >= 1 && repeating.isEpsilon } else { false }
 	}
 	public var isOptional: Bool {
 		min == 0 || repeating.isOptional
@@ -1560,6 +1578,16 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 			case .proseVal(let p): return p.isEmpty
 		}
 	}
+	public var isEpsilon: Bool {
+		switch self {
+			case .rulename(let r): return r.isEpsilon
+			case .group(let g): return g.isEpsilon
+			case .option(let o): return o.isEpsilon
+			case .charVal(let c): return c.isEpsilon
+			case .numVal(let n): return n.isEpsilon
+			case .proseVal(let p): return p.isEpsilon
+		}
+	}
 	public var isOptional: Bool {
 		switch self {
 			case .rulename(let r): return r.isOptional
@@ -1773,6 +1801,9 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 	public var isEmpty: Bool {
 		alternation.isEmpty
 	}
+	public var isEpsilon: Bool {
+		alternation.isEpsilon
+	}
 	public var isOptional: Bool {
 		alternation.isOptional
 	}
@@ -1872,7 +1903,12 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
-		optionalAlternation.isEmpty
+		// Since this is being unioned with epsilon, an optional expression is never empty
+		false
+	}
+	public var isEpsilon: Bool {
+		// This is epsilon only when the inner expression is
+		optionalAlternation.isEpsilon
 	}
 	public var isOptional: Bool {
 		// Defitionally
@@ -1987,6 +2023,9 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 		ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
+		false
+	}
+	public var isEpsilon: Bool {
 		sequence.isEmpty
 	}
 	public var isOptional: Bool {
@@ -2129,6 +2168,9 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
+		false
+	}
+	public var isEpsilon: Bool {
 		// You can't actually notate an empty num_val sequence in ABNF, but if you could, it would be empty
 		switch self.value {
 			case .sequence(let seq): return seq.isEmpty
@@ -2396,6 +2438,10 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		ABNFGroup<Symbol>(alternation: self.alternation)
 	}
 	public var isEmpty: Bool {
+		// Not necessarially empty
+		false
+	}
+	public var isEpsilon: Bool {
 		// Not necessarially empty
 		false
 	}
