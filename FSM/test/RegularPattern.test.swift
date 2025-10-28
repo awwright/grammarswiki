@@ -4,32 +4,32 @@ import Testing;
 // This file runs the same tests on a whole bunch of different conforming types.
 // Swift doesn't have an obvious way to do this, so there's lots of boilerplate in this file.
 
-protocol RegularPatternBuilderData: RegularPatternBuilder {
+private protocol RegularPatternBuilderData: RegularPatternBuilder {
 	associatedtype FSM: DFAProtocol;
 	static var alpha: Self { get };
 	static var beta: Self { get };
 	var fsm: FSM { get };
 }
 
-extension ABNFAlternation<UInt8>: RegularPatternBuilderData {
-	typealias FSM = SymbolDFA<UInt8>;
-	static var alpha: ABNFAlternation<UInt8> { .symbol(1) }
-	static var beta: ABNFAlternation<UInt8> { .symbol(2) }
-	var fsm: SymbolDFA<UInt8> { try! self.toPattern() }
+extension ABNFAlternation: RegularPatternBuilderData {
+	typealias FSM = SymbolDFA<Symbol>;
+	static var alpha: ABNFAlternation<Symbol> { .symbol(1) }
+	static var beta: ABNFAlternation<Symbol> { .symbol(2) }
+	var fsm: SymbolDFA<Symbol> { try! self.toPattern() }
 }
 
-extension SymbolDFA<UInt8>: RegularPatternBuilderData {
-	typealias FSM = SymbolDFA<UInt8>;
-	static var alpha: SymbolDFA<UInt8> { .symbol(1) }
-	static var beta: SymbolDFA<UInt8> { .symbol(2) }
-	var fsm: SymbolDFA<UInt8> { self.toPattern() }
+extension SymbolClassDFA: RegularPatternBuilderData where Alphabet.Symbol: BinaryInteger, Alphabet.Element == SymbolClass {
+	typealias FSM = SymbolClassDFA<Alphabet>;
+	static var alpha: SymbolClassDFA<Alphabet> { .symbol(1) }
+	static var beta: SymbolClassDFA<Alphabet> { .symbol(2) }
+	var fsm: FSM { self.toPattern() }
 }
 
-extension SymbolClassNFA<SymbolAlphabet<UInt8>>: RegularPatternBuilderData {
-	typealias FSM = SymbolDFA<UInt8>;
-	static var alpha: SymbolClassNFA<SymbolAlphabet<UInt8>> { .symbol(1) }
-	static var beta: SymbolClassNFA<SymbolAlphabet<UInt8>> { .symbol(2) }
-	var fsm: SymbolDFA<UInt8> { self.toDFA().fsm }
+extension SymbolClassNFA: RegularPatternBuilderData where Alphabet.Symbol: BinaryInteger {
+	typealias FSM = SymbolClassDFA<Alphabet>;
+	static var alpha: SymbolClassNFA<Alphabet> { .symbol(1) }
+	static var beta: SymbolClassNFA<Alphabet> { .symbol(2) }
+	var fsm: FSM { self.toDFA().fsm }
 }
 
 extension REPattern<UInt8>: RegularPatternBuilderData {
@@ -39,28 +39,34 @@ extension REPattern<UInt8>: RegularPatternBuilderData {
 	var fsm: SymbolDFA<UInt8> { self.toPattern() }
 }
 
-extension SimpleRegex<UInt8>: RegularPatternBuilderData {
-	typealias FSM = SymbolDFA<UInt8>;
-	static var alpha: SimpleRegex<UInt8> { .symbol(1) }
-	static var beta: SimpleRegex<UInt8> { .symbol(2) }
-	var fsm: SymbolDFA<UInt8> { self.toPattern() }
+extension SimpleRegex: RegularPatternBuilderData {
+	typealias FSM = SymbolDFA<Symbol>;
+	static var alpha: SimpleRegex<Symbol> { .symbol(1) }
+	static var beta: SimpleRegex<Symbol> { .symbol(2) }
+	var fsm: SymbolDFA<Symbol> { self.toPattern() }
 }
 
-struct RegularPatternBuilderTests {
+private struct RegularPatternBuilderTests {
+	// "Pattern Type"
 	struct PT: CustomDebugStringConvertible {
 		var type: any RegularPatternBuilderData.Type
 		var debugDescription: String { "\(type)" }
-		init<T: RegularPatternBuilderData>(_ type: T.Type) {
+//		var alpha: any RegularPatternBuilderData
+//		var beta: any RegularPatternBuilderData
+		init<T: RegularPatternBuilderData>(_ type: T.Type, _ alpha: T, _ beta: T) {
 			self.type = type
+//			self.alpha = alpha
+//			self.beta = beta
 		}
 	}
 
 	static var allTests = [
-		PT(ABNFAlternation<UInt8>.self),
-		PT(SymbolDFA<UInt8>.self),
-		PT(SymbolClassNFA<SymbolAlphabet<UInt8>>.self),
-		PT(REPattern<UInt8>.self),
-		PT(SimpleRegex<UInt8>.self),
+		PT(ABNFAlternation<UInt8>.self, .symbol(1), .symbol(2)),
+		PT(SymbolDFA<UInt8>.self, .symbol(1), .symbol(2)),
+		PT(SymbolClassNFA<SymbolAlphabet<UInt8>>.self, .symbol(1), .symbol(2)),
+		PT(RangeDFA<UInt8>.self, .symbol(1), .symbol(2)),
+		PT(REPattern<UInt8>.self, .symbol(1), .symbol(2)),
+		PT(SimpleRegex<UInt8>.self, .symbol(1), .symbol(2)),
 	];
 
 	@Test(arguments: RegularPatternBuilderTests.allTests)
@@ -139,6 +145,7 @@ struct RegularPatternBuilderTests {
 			#expect(T.epsilon.concatenate(T.epsilon).fsm == T.epsilon.fsm)
 			#expect(T.alpha.concatenate(T.empty).fsm == T.empty.fsm)
 			#expect(T.alpha.concatenate(T.epsilon).fsm == T.alpha.fsm)
+			#expect(T.alpha.concatenate(T.epsilon).concatenate(T.beta).fsm == T.alpha.fsm.concatenate(T.beta.fsm))
 			#expect(T.alpha.concatenate(T.alpha).fsm == T.concatenate([ T.alpha, T.alpha ]).fsm)
 		}
 		test(helper.type)
