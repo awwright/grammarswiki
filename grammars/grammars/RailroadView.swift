@@ -36,13 +36,15 @@ struct RRView: View {
 		case .Group(item: let seq, label: let label):
 			RRGroup(item: seq, label: label)
 		case .Optional(item: let item):
-			AnyView(self.render(item))
+				AnyView(self.render(.Choice(items: [.Skip, item])))
 		case .Terminal(text: let text):
 			RRTerminal(text: text);
 		case .NonTerminal(text: let text):
 			RRNonTerminal(text: text);
 		case .Comment(text: let text):
 			RRComment(text: text);
+		case .Skip:
+			RRSkip();
 		default:
 			RRComment(text: "Unknown node type: \(node)");
 		}
@@ -297,7 +299,7 @@ struct RRNonTerminal: View {
 
 struct RRSkip: View {
 	var body: some View {
-		Color.clear.frame(width: 10, height: 10)
+		Color.clear.frame(width: 0, height: 0)
 			.anchorPreference(key: CGRectPreference.self, value: .bounds) { [$0] }
 	}
 }
@@ -433,6 +435,9 @@ struct RRShowTerminals<Content: View>: View {
 				.Terminal(text: "3"),
 			]), label: "Choice"
 			)).showRRTerminals();
+		}
+		Section("Optional") {
+			RRView(diagram: .Optional(item: .Terminal(text: "foo"))).showRRTerminals();
 		}
 		Section("Sequence of Choice") {
 			RRView(diagram: .Sequence(items: [
