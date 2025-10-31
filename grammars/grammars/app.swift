@@ -1,6 +1,11 @@
 import SwiftUI
 import FSM
 import LanguageSupport
+import UniformTypeIdentifiers
+
+extension UTType {
+	static var grammarsDoc = UTType(exportedAs: "name.awwright.grammars.doc")
+}
 
 struct FileType {
 	let label: String
@@ -25,9 +30,27 @@ struct Charset {
 
 @main
 struct ABNFEditorApp: App {
+	@NSApplicationDelegateAdaptor var appdelegate: AppDelegate
+	class AppDelegate: NSObject, NSApplicationDelegate {
+		@Environment(\.openWindow)
+		var openWindow
+		func applicationDidFinishLaunching(_ notification: Notification) {
+			DispatchQueue.main.async {
+				if let window = NSApp.windows.filter({ $0.identifier?.rawValue == "Catalog" }).first {
+					window.makeKeyAndOrderFront(self)
+				} else {
+					self.openWindow(id: "Catalog")
+				}
+			}
+		}
+	}
+
 	@State private var model = AppModel()
 	var body: some Scene {
-		WindowGroup {
+		DocumentGroup(newDocument: DocumentItemDocument()) { file in
+			DocumentEditor(document: .constant(file.document))
+		}
+		Window("Catalog", id: "Catalog") {
 			ContentView(model: model)
 		}
 		Settings {
@@ -110,8 +133,8 @@ class AppModel: ObservableObject {
 			toRailroad: nil,
 		),
 	];
- 	static let typeExtensions: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.label, $0.fileExtension) })
- 	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.fileExtension, $0.label) })
+	static let typeExtensions: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.label, $0.fileExtension) })
+	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.fileExtension, $0.label) })
 
 	static let charsets: [Charset] = [
 		Charset(
@@ -191,7 +214,7 @@ class AppModel: ObservableObject {
 	];
 	static let charsetDict: Dictionary<String, Charset> = Dictionary(uniqueKeysWithValues: charsets.map { ($0.id, $0) });
 
- 	init(){
+	init(){
 		catalog = Self.getCatalog()
 		reloadUser()
 	}
@@ -220,51 +243,51 @@ class AppModel: ObservableObject {
 				user[newDocument.id] = newDocument
 			} else {
 				print("Ignoring extension of \(filename)");
-			  }
+			}
 		}
 	}
 
- 	func addDocument(_ document: DocumentItem) {
- 		user[document.id] = document
- 		print(document)
- 		let oldFilepath = document.filepath
- 		// Try to save this document to storage
- 		let userDocumentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("user")
- 		// Create a storage directory if it doesn't exist
- 		do {
- 			try FileManager.default.createDirectory(at: userDocumentsDirectory, withIntermediateDirectories: true, attributes: nil)
- 		} catch {
- 			print("Error creating folder <\(userDocumentsDirectory)>: \(error)")
- 		}
- 		// If the name changed, assign the new filepath
- 		let ext = AppModel.typeExtensions[document.type] ?? ".txt"
- 		let filepath = userDocumentsDirectory.appendingPathComponent(document.name + ext)
- 		do {
- 			if let oldFilepath, oldFilepath != filepath {
- 				print("move", oldFilepath, " -> ", filepath);
- 				// Name changed, rename the file
- 				try FileManager.default.moveItem(at: oldFilepath, to: filepath)
- 			}
- 			let data = Data(document.content.utf8);
- 			try data.write(to: filepath, options: [.atomic, .completeFileProtection])
- 			document.filepath = filepath
- 		} catch {
- 			// Use old name
- //			document.name = user[document.id]!.name
- 			print("Error writing file <\(filepath)>: \(error.localizedDescription)")
- 		}
- 	}
+	func addDocument(_ document: DocumentItem) {
+		user[document.id] = document
+		print(document)
+		let oldFilepath = document.filepath
+		// Try to save this document to storage
+		let userDocumentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("user")
+		// Create a storage directory if it doesn't exist
+		do {
+			try FileManager.default.createDirectory(at: userDocumentsDirectory, withIntermediateDirectories: true, attributes: nil)
+		} catch {
+			print("Error creating folder <\(userDocumentsDirectory)>: \(error)")
+		}
+		// If the name changed, assign the new filepath
+		let ext = AppModel.typeExtensions[document.type] ?? ".txt"
+		let filepath = userDocumentsDirectory.appendingPathComponent(document.name + ext)
+		do {
+			if let oldFilepath, oldFilepath != filepath {
+				print("move", oldFilepath, " -> ", filepath);
+				// Name changed, rename the file
+				try FileManager.default.moveItem(at: oldFilepath, to: filepath)
+			}
+			let data = Data(document.content.utf8);
+			try data.write(to: filepath, options: [.atomic, .completeFileProtection])
+			document.filepath = filepath
+		} catch {
+			// Use old name
+			//			document.name = user[document.id]!.name
+			print("Error writing file <\(filepath)>: \(error.localizedDescription)")
+		}
+	}
 
- 	func delDocument(_ document: DocumentItem) {
- 		if let oldFilepath = document.filepath {
- 			do {
- 				try FileManager.default.removeItem(at: oldFilepath)
- 			} catch {
- 				print(error.localizedDescription)
- 			}
- 		}
- 		user.removeValue(forKey: document.id)
- 	}
+	func delDocument(_ document: DocumentItem) {
+		if let oldFilepath = document.filepath {
+			do {
+				try FileManager.default.removeItem(at: oldFilepath)
+			} catch {
+				print(error.localizedDescription)
+			}
+		}
+		user.removeValue(forKey: document.id)
+	}
 
 	static private func getCatalog() -> Array<DocumentItem> {
 		guard let bundlePath = Bundle.main.resourcePath else { return [] }
@@ -273,19 +296,19 @@ class AppModel: ObservableObject {
 			let textDirectory = bundlePath + "/catalog"
 			let contents = try fileManager.contentsOfDirectory(atPath: textDirectory)
 			var loadedFiles: [DocumentItem] = []
- 			for filename in contents {
- 				let components = filename.split(separator: ".")
- 				if components.count > 1, let ext = components.last, let type = AppModel.extensionsType["."+String(ext)] {
- 					let name = components.dropLast().joined(separator: ".")
- 					let filePath = textDirectory + "/" + filename
- 					let content = try String(contentsOfFile: filePath, encoding: .utf8)
+			for filename in contents {
+				let components = filename.split(separator: ".")
+				if components.count > 1, let ext = components.last, let type = AppModel.extensionsType["."+String(ext)] {
+					let name = components.dropLast().joined(separator: ".")
+					let filePath = textDirectory + "/" + filename
+					let content = try String(contentsOfFile: filePath, encoding: .utf8)
 					let filepath = URL(fileURLWithPath: filePath)
 					let document = DocumentItem(filepath: filepath, name: name, type: type, charset: "UTF-32", content: content)
- 					loadedFiles.append(document)
- 				} else {
- 					print("Ignoring extension of \(filename)");
- 				}
- 			}
+					loadedFiles.append(document)
+				} else {
+					print("Ignoring extension of \(filename)");
+				}
+			}
 			return loadedFiles.sorted { $0.name < $1.name }
 		} catch {
 			print("Error loading files: \(error)")
@@ -321,5 +344,28 @@ class AppModel: ObservableObject {
 
 	func duplicate() -> DocumentItem {
 		DocumentItem(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
+	}
+}
+
+// TODO: This should be a wrapper around DocumentItem
+struct DocumentItemDocument: FileDocument {
+	var text: String
+
+	init(text: String = "") {
+		self.text = text
+	}
+
+	static var readableContentTypes: [UTType] { [.grammarsDoc] }
+
+	init(configuration: ReadConfiguration) throws {
+		guard let data = configuration.file.regularFileContents else {
+			throw CocoaError(.fileReadCorruptFile)
+		}
+		text = String(decoding: data, as: UTF8.self)
+	}
+
+	func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+		let data = Data(text.utf8)
+		return .init(regularFileWithContents: data)
 	}
 }
