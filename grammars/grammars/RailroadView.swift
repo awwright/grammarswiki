@@ -36,7 +36,11 @@ struct RRView: View {
 		case .Group(item: let seq, label: let label):
 			RRGroup(item: seq, label: label)
 		case .Optional(item: let item):
-				AnyView(self.render(.Choice(items: [.Skip, item])))
+			AnyView(self.render(.Choice(items: [.Skip, item])))
+		case .ZeroOrMore(item: let item, separator: let sep):
+			AnyView(self.render(.Choice(items: [.Skip, .OneOrMore(item: item, separator: nil, max: "")])))
+		case .OneOrMore(item: let item, separator: let sep, max: let maxi):
+			RROneOrMore(item: item)
 		case .Terminal(text: let text):
 			RRTerminal(text: text);
 		case .NonTerminal(text: let text):
@@ -254,6 +258,29 @@ struct RRGroup: View {
 	}
 }
 
+struct RROneOrMore: View {
+	let item: RailroadNode
+	var body: some View {
+		VStack {
+			AnyView(RRView.render(item))
+				.padding(.vertical, 5)
+				.padding(.horizontal, 20)
+		}
+		.overlayPreferenceValue(CGRectPreference.self) { preferences in
+			GeometryReader { geo in
+				let rects = preferences.map { geo[$0] };
+				Path { path in
+					// TODO: Make this a curve, but this proves the concept
+					path.move(to: CGPoint(x: rects[0].minX, y: rects[0].minY))
+					path.addLine(to: CGPoint(x: 15, y: 0))
+					path.addLine(to: CGPoint(x: geo.size.width-15, y: 0))
+					path.addLine(to: CGPoint(x: rects[0].maxX, y: rects[0].maxY))
+				}.stroke(lineWidth: 2)
+			}
+		}
+	}
+}
+
 struct RRTerminal: View {
 	let text: String
 	var body: some View {
@@ -436,8 +463,8 @@ struct RRShowTerminals<Content: View>: View {
 			]), label: "Choice"
 			)).showRRTerminals();
 		}
-		Section("Optional") {
-			RRView(diagram: .Optional(item: .Terminal(text: "foo"))).showRRTerminals();
+		Section("ZeroOrMore") {
+			RRView(diagram: .ZeroOrMore(item: .Terminal(text: "foo"), separator: nil)).showRRTerminals();
 		}
 		Section("Sequence of Choice") {
 			RRView(diagram: .Sequence(items: [
