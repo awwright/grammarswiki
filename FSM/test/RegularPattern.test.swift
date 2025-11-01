@@ -38,13 +38,11 @@ private struct RegularPatternBuilderTests {
 	// "Pattern Type"
 	struct PT: CustomDebugStringConvertible {
 		var type: any RegularPatternBuilderData.Type
-		var alpha: any RegularPatternBuilderData
-		var beta: any RegularPatternBuilderData
+		var symbols: Array<any RegularPatternBuilderData>
 		var debugDescription: String { "\(type)" }
-		init<T: RegularPatternBuilderData>(_ type: T.Type, _ alpha: T, _ beta: T) {
+		init<T: RegularPatternBuilderData>(_ type: T.Type, _ symbols: T...) {
 			self.type = type
-			self.alpha = alpha
-			self.beta = beta
+			self.symbols = symbols
 		}
 	}
 
@@ -61,8 +59,8 @@ private struct RegularPatternBuilderTests {
 	@Test(arguments: RegularPatternBuilderTests.allTests)
 	func toPattern_empty(_ helper: PT) {
 		func test<T: RegularPatternBuilderData>(_ type: T.Type) {
-			let alpha = helper.alpha as! T
-			let beta = helper.beta as! T
+			let alpha = helper.symbols[0] as! T
+			let beta = helper.symbols[1] as! T
 			#expect(T.empty == T.empty)
 			#expect(T.empty != T.epsilon)
 			#expect(T.empty != alpha)
@@ -78,8 +76,8 @@ private struct RegularPatternBuilderTests {
 	@Test(arguments: RegularPatternBuilderTests.allTests)
 	func test_epsilon(_ helper: PT) {
 		func test<T: RegularPatternBuilderData>(_ type: T.Type) {
-			let alpha = helper.alpha as! T
-			let beta = helper.beta as! T
+			let alpha = helper.symbols[0] as! T
+			let beta = helper.symbols[1] as! T
 			#expect(T.epsilon != T.empty)
 			#expect(T.epsilon == T.epsilon)
 			#expect(T.epsilon != alpha)
@@ -95,8 +93,8 @@ private struct RegularPatternBuilderTests {
 	@Test(arguments: RegularPatternBuilderTests.allTests)
 	func test_data(_ helper: PT) {
 		func test<T: RegularPatternBuilderData>(_ type: T.Type) {
-			let alpha = helper.alpha as! T
-			let beta = helper.beta as! T
+			let alpha = helper.symbols[0] as! T
+			let beta = helper.symbols[1] as! T
 			#expect(alpha != T.empty)
 			#expect(alpha != T.epsilon)
 			#expect(alpha == alpha)
@@ -120,8 +118,8 @@ private struct RegularPatternBuilderTests {
 	@Test(arguments: RegularPatternBuilderTests.allTests)
 	func test_union(_ helper: PT) {
 		func test<T: RegularPatternBuilderData>(_ type: T.Type) {
-			let alpha = helper.alpha as! T
-			let beta = helper.beta as! T
+			let alpha = helper.symbols[0] as! T
+			let beta = helper.symbols[1] as! T
 			#expect(T.empty.union(T.empty).fsm == T.empty.fsm)
 			#expect(T.empty.union(T.epsilon).fsm == T.epsilon.fsm)
 			#expect(T.epsilon.union(T.empty).fsm == T.epsilon.fsm)
@@ -136,8 +134,8 @@ private struct RegularPatternBuilderTests {
 	@Test(arguments: RegularPatternBuilderTests.allTests)
 	func test_concatenate(_ helper: PT) {
 		func test<T: RegularPatternBuilderData>(_ type: T.Type) {
-			let alpha = helper.alpha as! T
-			let beta = helper.beta as! T
+			let alpha = helper.symbols[0] as! T
+			let beta = helper.symbols[1] as! T
 			#expect(T.empty.concatenate(T.empty).fsm == T.empty.fsm)
 			#expect(T.empty.concatenate(T.epsilon).fsm == T.empty.fsm)
 			#expect(T.epsilon.concatenate(T.empty).fsm == T.empty.fsm)
@@ -153,8 +151,8 @@ private struct RegularPatternBuilderTests {
 	@Test(arguments: RegularPatternBuilderTests.allTests)
 	func test_star(_ helper: PT) {
 		func test<T: RegularPatternBuilderData>(_ type: T.Type) {
-			let alpha = helper.alpha as! T
-			let beta = helper.beta as! T
+			let alpha = helper.symbols[0] as! T
+			let beta = helper.symbols[1] as! T
 			#expect(T.empty.star().fsm == T.empty.fsm.star())
 			#expect(T.epsilon.star().fsm == T.epsilon.fsm.star())
 			#expect(alpha.star().fsm == alpha.fsm.star())
