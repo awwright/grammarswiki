@@ -36,7 +36,11 @@ struct ABNFEditorApp: App {
 		var openWindow
 		func applicationDidFinishLaunching(_ notification: Notification) {
 			DispatchQueue.main.async {
+				// This is the function that's run when someone clicks (launches) the application icon, even if it's already running
+				// Ensure that the Catalog is the first window open, if no other window is open.
+				// If this isn't done now, then macOS will use the first listed View, and the the file selection dialog will open up.
 				if let window = NSApp.windows.filter({ $0.identifier?.rawValue == "Catalog" }).first {
+					// Usually because there's windows restored from a previous session, or the app is already open
 					window.makeKeyAndOrderFront(self)
 				} else {
 					self.openWindow(id: "Catalog")
@@ -47,6 +51,7 @@ struct ABNFEditorApp: App {
 
 	@State private var model = AppModel()
 	var body: some Scene {
+		// The DocumentGroup is listed first so that it gets the keyboard shortcuts for New, Save, Open
 		DocumentGroup(newDocument: DocumentItemDocument()) { file in
 			DocumentEditor(document: .constant(file.document))
 		}
