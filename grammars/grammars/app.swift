@@ -52,10 +52,8 @@ struct ABNFEditorApp: App {
 	@State private var model = AppModel()
 	var body: some Scene {
 		// The DocumentGroup is listed first so that it gets the keyboard shortcuts for New, Save, Open
-		DocumentGroup(newDocument: DocumentItemDocument()) { file in
-			TextEditor(text: file.$document.text)
-				.padding()
-				.navigationTitle("Grammars Document")
+		DocumentGroup(newDocument: DocumentItem()) { file in
+			DocumentDetail(document: file.$document);
 		}
 		Window("Catalog", id: "Catalog") {
 			ContentView(model: model)
@@ -325,7 +323,7 @@ class AppModel: ObservableObject {
 }
 
 // Model to represent a text file
-@Observable class DocumentItem: Identifiable, Hashable, Equatable {
+@Observable final class DocumentItem: Identifiable, Hashable, Equatable, FileDocument {
 	let id = UUID()
 	var filepath: URL?
 	var name: String
@@ -333,12 +331,38 @@ class AppModel: ObservableObject {
 	var charset: String
 	var content: String
 
+	static var readableContentTypes: [UTType] { [.grammarsDoc] }
+
+	init() {
+		self.filepath = nil
+		self.name = ""
+		self.type = "ABNF"
+		self.content = ""
+		self.charset = "UTF-8"
+	}
+
 	init(filepath: URL?, name: String, type: String, charset: String, content: String) {
 		self.filepath = filepath
 		self.name = name
 		self.type = type
 		self.content = content
 		self.charset = charset
+	}
+
+	init(configuration: ReadConfiguration) throws {
+		guard let data = configuration.file.regularFileContents else {
+			throw CocoaError(.fileReadCorruptFile)
+		}
+		self.filepath = nil
+		self.name = "name"
+		self.type = "ABNF"
+		self.content = String(decoding: data, as: UTF8.self)
+		self.charset = "UTF-8"
+	}
+
+	func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+		let data = Data(content.utf8)
+		return .init(regularFileWithContents: data)
 	}
 
 	func hash(into hasher: inout Hasher) {
@@ -351,28 +375,5 @@ class AppModel: ObservableObject {
 
 	func duplicate() -> DocumentItem {
 		DocumentItem(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
-	}
-}
-
-// TODO: This should be a wrapper around DocumentItem
-struct DocumentItemDocument: FileDocument {
-	var text: String
-
-	init(text: String = "") {
-		self.text = text
-	}
-
-	static var readableContentTypes: [UTType] { [.grammarsDoc] }
-
-	init(configuration: ReadConfiguration) throws {
-		guard let data = configuration.file.regularFileContents else {
-			throw CocoaError(.fileReadCorruptFile)
-		}
-		text = String(decoding: data, as: UTF8.self)
-	}
-
-	func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-		let data = Data(text.utf8)
-		return .init(regularFileWithContents: data)
 	}
 }
