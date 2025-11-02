@@ -53,7 +53,9 @@ struct ABNFEditorApp: App {
 	var body: some Scene {
 		// The DocumentGroup is listed first so that it gets the keyboard shortcuts for New, Save, Open
 		DocumentGroup(newDocument: DocumentItemDocument()) { file in
-			DocumentEditor(document: .constant(file.document))
+			TextEditor(text: file.$document.text)
+				.padding()
+				.navigationTitle("Grammars Document")
 		}
 		Window("Catalog", id: "Catalog") {
 			ContentView(model: model)
