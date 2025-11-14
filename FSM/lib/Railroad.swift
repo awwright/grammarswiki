@@ -223,7 +223,7 @@ public protocol RailroadDiagramProtocol {
 	///
 	/// - Example: `OneOrMore(A, max: "3")` represents `A{1,3}`, equivalent to the regex `A{1,3}`.
 	///   Without max, it represents `A+`, equivalent to `A+`.
-	static func OneOrMore(item: Self, separator: Self?, max: String) -> Self
+	static func Loop(item: Self, separator: Self?, max: String) -> Self
 
 	/// Creates an element that may appear zero or more times.
 	///
@@ -436,7 +436,7 @@ extension RailroadDiagramProtocol {
 
 	/// An shorthand for ``OneOrMore(item:separator:max:)``
 	public static func OneOrMore(_ item: Self, separator: Self? = nil, max: String = "") -> Self {
-		OneOrMore(item: item, separator: separator, max: max)
+		Loop(item: item, separator: separator, max: max)
 	}
 }
 
@@ -452,7 +452,7 @@ public indirect enum RailroadNode: RailroadDiagramProtocol, Hashable {
 	case Group(item: RailroadNode, label: String)
 	case Optional(item: RailroadNode)
 	case ZeroOrMore(item: RailroadNode, separator: RailroadNode?)
-	case OneOrMore(item: RailroadNode, separator: RailroadNode?, max: String)
+	case Loop(item: RailroadNode, separator: RailroadNode?, max: String)
 	case Start(label: String?)
 	case End(label: String?)
 	case Terminal(text: String)

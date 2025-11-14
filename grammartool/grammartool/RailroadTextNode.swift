@@ -1,3 +1,5 @@
+import FSM;
+
 /// Generate text-art railroad diagrams using box-drawing characters
 /// Ported from <http://github.com/tabatkins/railroad-diagrams>
 public struct RailroadTextNode: RailroadDiagramProtocol {
@@ -710,7 +712,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return Choice(items: [Skip(), item])
 	}
 
-	public static func OneOrMore(item: Self, separator: Self?, max: String = "") -> Self {
+	public static func Loop(item: Self, separator: Self?, max: String = "") -> Self {
 		let line = Self.part_line
 		let repeat_top_left = Self.box_roundrect.top_left
 		let repeat_left = Self.box_roundrect.left

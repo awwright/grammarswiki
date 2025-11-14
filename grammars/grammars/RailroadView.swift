@@ -38,8 +38,8 @@ struct RRView: View {
 		case .Optional(item: let item):
 			AnyView(self.render(.Choice(items: [.Skip, item])))
 		case .ZeroOrMore(item: let item, separator: let sep):
-			AnyView(self.render(.Choice(items: [.Skip, .OneOrMore(item: item, separator: nil, max: "")])))
-		case .OneOrMore(item: let item, separator: let sep, max: let maxi):
+			AnyView(self.render(.Choice(items: [.Skip, .Loop(item: item, separator: nil, max: "")])))
+		case .Loop(item: let item, separator: let sep, max: let maxi):
 			RROneOrMore(item: item)
 		case .Terminal(text: let text):
 			RRTerminal(text: text);

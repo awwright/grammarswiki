@@ -1449,7 +1449,7 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		} else if min == 0 && max == nil {
 			return Diagram.ZeroOrMore(item: inner, separator: separator)
 		} else if min == 1 && max == nil {
-			return Diagram.OneOrMore(item: inner, separator: separator, max: "")
+			return Diagram.Loop(item: inner, separator: separator, max: "")
 		} else {
 			// FIXME: There should be a type of diagram that can do n...m loops
 			var sequence: Array<Diagram> = [];
