@@ -580,7 +580,7 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
-		Diagram.Diagram(start: Diagram.Start(label: rulename.label), sequence: [alternation.toRailroad(rules: rules)], end: Diagram.End(label: nil))
+		Diagram.Diagram(start: Diagram.Start(label: rulename.label, attributes: [:]), sequence: [alternation.toRailroad(rules: rules)], end: Diagram.End(label: nil, attributes: [:]), attributes: [:])
 	}
 
 	public func union(_ other: ABNFRule<Symbol>) -> ABNFRule<Symbol> {
@@ -742,9 +742,9 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		let definition = rules[label]
 		if let definition {
 			let filtered = Dictionary<String, ABNFAlternation<Symbol>>(uniqueKeysWithValues: rules.filter { $0.0 != label })
-			return Diagram.Group(item: definition.toRailroad(rules: filtered), label: label);
+			return Diagram.Group(item: definition.toRailroad(rules: filtered), label: label, attributes: [:]);
 		} else {
-			return Diagram.NonTerminal(text: label)
+			return Diagram.NonTerminal(text: label, attributes: [:])
 		}
 	}
 
@@ -899,7 +899,7 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RegularPatternBuilder, Cl
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		if matches.count == 1 { matches[0].toRailroad(rules: rules) }
-		else { Diagram.Choice(items: matches.map { $0.toRailroad(rules: rules) }) }
+		else { Diagram.Choice(items: matches.map { $0.toRailroad(rules: rules) }, attributes: [:]) }
 	}
 
 	public static func union(_ elements: [Self]) -> Self {
@@ -1140,7 +1140,7 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		if repetitions.count == 1 { repetitions[0].toRailroad(rules: rules) }
-		else { Diagram.Sequence(items: repetitions.map { $0.toRailroad(rules: rules) }) }
+		else { Diagram.Sequence(items: repetitions.map { $0.toRailroad(rules: rules) }, attributes: [:]) }
 	}
 
 	public static func concatenate(_ concatenations: [ABNFConcatenation<Symbol>]) -> ABNFConcatenation<Symbol> {
@@ -1438,18 +1438,18 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		let inner: Diagram = repeating.toRailroad(rules: rules)
 		let separator: Diagram? = switch(self.rangeop) {
-			case 0x2A: nil;
-			case 0x23: Diagram.Terminal(text: ",");
+			case 0x2A: Diagram?.none;
+			case 0x23: Diagram?.some(Diagram.Terminal(text: ",", attributes: [:]));
 			default: fatalError("Unsupported repetition range operator \(rangeop)");
 		}
 		if min == 1 && max == 1 {
 			return inner
 		} else if min == 0 && max == 1 {
-			return Diagram.Optional(item: inner)
+			return Diagram.Optional(inner)
 		} else if min == 0 && max == nil {
-			return Diagram.ZeroOrMore(item: inner, separator: separator)
+			return Diagram.ZeroOrMore(item: inner, separator: separator, attributes: [:])
 		} else if min == 1 && max == nil {
-			return Diagram.Loop(item: inner, separator: separator, max: "")
+			return Diagram.Loop(item: inner, separator: separator, max: "", attributes: [:])
 		} else {
 			// FIXME: There should be a type of diagram that can do n...m loops
 			var sequence: Array<Diagram> = [];
@@ -1458,13 +1458,13 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 				sequence.append(element)
 			}
 			if repetition.max == nil {
-				return Diagram.Sequence(items: sequence + [ Diagram.ZeroOrMore(item: element, separator: separator) ])
+				return Diagram.Sequence(items: sequence + [ Diagram.ZeroOrMore(item: element, separator: separator, attributes: [:]) ], attributes: [:])
 			} else if repetition.max! > repetition.min {
 				for _ in repetition.min..<repetition.max! {
-					sequence.append(Diagram.Optional(item: element));
+					sequence.append(Diagram.Optional(item: element, attributes: [:]));
 				}
 			}
-			return Diagram.Sequence(items: sequence);
+			return Diagram.Sequence(items: sequence, attributes: [:]);
 		}
 	}
 
@@ -1940,7 +1940,7 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
-		Diagram.Optional(item: optionalAlternation.toRailroad(rules: rules))
+		Diagram.Optional(item: optionalAlternation.toRailroad(rules: rules), attributes: [:])
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -2084,7 +2084,7 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		// FIXME: This is case-insensitive
-		Diagram.Terminal(text: CHAR_string(sequence.map{ UInt8($0) }))
+		Diagram.Terminal(text: CHAR_string(sequence.map{ UInt8($0) }), attributes: [:])
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -2290,7 +2290,7 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
-		Diagram.NonTerminal(text: description)
+		Diagram.NonTerminal(text: description, attributes: [:])
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
@@ -2475,7 +2475,7 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
-		Diagram.Comment(text: description)
+		Diagram.Comment(text: description, attributes: [:])
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {

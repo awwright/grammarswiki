@@ -26,7 +26,7 @@ public protocol RailroadDiagramProtocol {
 	///
 	/// - Example: A simple rule like `rule = start sequence end` corresponds to a regex pattern
 	///   where the sequence is concatenated: `startsequenceend`.
-	static func Diagram(start: Self, sequence: [Self], end: Self) -> Self
+	static func Diagram(start: Self, sequence: [Self], end: Self, attributes: RRAttributeDict) -> Self
 
 	/// Creates a sequence of elements that must appear in order.
 	///
@@ -42,7 +42,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the ordered sequence.
 	///
 	/// - Example: `Sequence([A, B, C])` represents the pattern `ABC`, equivalent to the regex `ABC`.
-	static func Sequence(items: [Self]) -> Self
+	static func Sequence(items: [Self], attributes: RRAttributeDict) -> Self
 
 	/// Creates a vertical stack of elements, typically representing parallel or layered constructs.
 	///
@@ -69,7 +69,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Example: `Stack([A, B])` might represent layered patterns, conceptually similar to
 	///   regex patterns that need to be combined in a non-linear fashion, though direct regex
 	///   equivalence is context-dependent.
-	static func Stack(items: [Self]) -> Self
+	static func Stack(items: [Self], attributes: RRAttributeDict) -> Self
 
 	/// A sequence of elements where at least one element must appear, and elements must appear in order.
 	///
@@ -85,7 +85,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the optional sequence.
 	///
 	/// - Example: `OptionalSequence([A, B])` represents `(AB)?`, equivalent to the regex `(AB)?`.
-	static func OptionalSequence(items: [Self]) -> Self
+	static func OptionalSequence(items: [Self], attributes: RRAttributeDict) -> Self
 
 	/// Creates a sequence where elements alternate or are mutually exclusive in a specific order.
 	///
@@ -110,7 +110,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the alternating sequence.
 	///
 	/// - Example: `AlternatingSequence([A, B, A, B])` might represent `ABAB`, equivalent to the regex `(AB)+`.
-	static func AlternatingSequence(items: [Self]) -> Self
+	static func AlternatingSequence(items: [Self], attributes: RRAttributeDict) -> Self
 
 	/// Creates a choice between multiple alternative elements.
 	///
@@ -132,7 +132,7 @@ public protocol RailroadDiagramProtocol {
 	/// ```
 	///
 	/// - Example: `Choice(items: [A, B, C])` represents to the regex `A|B|C`.
-	static func Choice(items: [Self]) -> Self
+	static func Choice(items: [Self], attributes: RRAttributeDict) -> Self
 
 	/// Creates a horizontal choice between multiple alternative elements.
 	///
@@ -151,7 +151,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the horizontal choice.
 	///
 	/// - Example: `HorizontalChoice(items: [A, B])` is equivalent to the regex `A|B`.
-	static func HorizontalChoice(items: [Self]) -> Self
+	static func HorizontalChoice(items: [Self], attributes: RRAttributeDict) -> Self
 
 	/// Creates a choice with a designated "normal" or default option among alternatives.
 	///
@@ -174,7 +174,7 @@ public protocol RailroadDiagramProtocol {
 	///
 	/// - Example: `MultipleChoice(normal: 0, items: [A, B])` represents a choice where `A` is normal,
 	///   equivalent to the regex `A|B` but with visual emphasis on `A`.
-	static func MultipleChoice(normal: Int, items: [Self]) -> Self
+	static func MultipleChoice(normal: Int, items: [Self], attributes: RRAttributeDict) -> Self
 
 	/// Creates an optional element that may or may not appear.
 	///
@@ -190,7 +190,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the optional item.
 	///
 	/// - Example: `Optional(A)` represents `A?`, equivalent to the regex `A?`.
-	static func Optional(item: Self) -> Self
+	static func Optional(item: Self, attributes: RRAttributeDict) -> Self
 
 	/// Creates an element that must appear one or more times, with an optional maximum.
 	///
@@ -223,7 +223,7 @@ public protocol RailroadDiagramProtocol {
 	///
 	/// - Example: `OneOrMore(A, max: "3")` represents `A{1,3}`, equivalent to the regex `A{1,3}`.
 	///   Without max, it represents `A+`, equivalent to `A+`.
-	static func Loop(item: Self, separator: Self?, max: String) -> Self
+	static func Loop(item: Self, separator: Self?, max: String, attributes: RRAttributeDict) -> Self
 
 	/// Creates an element that may appear zero or more times.
 	///
@@ -241,7 +241,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the zero-or-more repetition.
 	///
 	/// - Example: `ZeroOrMore(A)` represents `A*`, equivalent to the regex `A*`.
-	static func ZeroOrMore(item: Self, separator: Self?) -> Self
+	static func ZeroOrMore(item: Self, separator: Self?, attributes: RRAttributeDict) -> Self
 
 	/// Groups an element with a descriptive label for clarity in the diagram.
 	///
@@ -263,7 +263,7 @@ public protocol RailroadDiagramProtocol {
 	///
 	/// - Example: `Group(A, label: "identifier")` represents the same pattern as `A`, but labeled,
 	///   conceptually similar to named groups in regex like `(?<identifier>A)`.
-	static func Group(item: Self, label: String) -> Self
+	static func Group(item: Self, label: String, attributes: RRAttributeDict) -> Self
 
 	/// Creates the starting point of a railroad diagram.
 	///
@@ -279,7 +279,7 @@ public protocol RailroadDiagramProtocol {
 	///
 	/// - Example: `Start(label: "begin")` marks the beginning of a pattern, analogous to the start
 	///   of a regex string.
-	static func Start(label: String?) -> Self
+	static func Start(label: String?, attributes: RRAttributeDict) -> Self
 
 	/// Creates the ending point of a railroad diagram.
 	///
@@ -294,7 +294,7 @@ public protocol RailroadDiagramProtocol {
 	///
 	/// - Example: `End(label: "finish")` marks the end of a pattern, analogous to the end
 	///   of a regex string.
-	static func End(label: String?) -> Self
+	static func End(label: String?, attributes: RRAttributeDict) -> Self
 
 	/// Creates a terminal element representing literal text that must match exactly.
 	///
@@ -311,7 +311,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the terminal.
 	///
 	/// - Example: `Terminal("hello")` represents the literal string `"hello"`, equivalent to the regex `hello`.
-	static func Terminal(text: String) -> Self
+	static func Terminal(text: String, attributes: RRAttributeDict) -> Self
 
 	/// Creates a non-terminal element referencing another grammar rule.
 	///
@@ -329,7 +329,7 @@ public protocol RailroadDiagramProtocol {
 	///
 	/// - Example: `NonTerminal("identifier")` references a rule named `identifier`, similar to
 	///   calling a subroutine in regex patterns or using rule names in grammars.
-	static func NonTerminal(text: String) -> Self
+	static func NonTerminal(text: String, attributes: RRAttributeDict) -> Self
 
 	/// Creates a comment element for annotations in the diagram.
 	///
@@ -340,7 +340,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the comment.
 	///
 	/// - Example: `Comment("This matches a number")` adds a note, not part of the regex pattern.
-	static func Comment(text: String) -> Self
+	static func Comment(text: String, attributes: RRAttributeDict) -> Self
 
 	/// Creates a skip element representing an empty or null operation.
 	///
@@ -349,7 +349,7 @@ public protocol RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing a skip.
 	///
 	/// - Example: `Skip()` represents an empty match, equivalent to an empty string in regex `""`.
-	static func Skip() -> Self
+	static func Skip(attributes: RRAttributeDict) -> Self
 }
 
 extension RailroadDiagramProtocol {
@@ -359,9 +359,9 @@ extension RailroadDiagramProtocol {
 	/// - Parameter items: The elements to sequence.
 	/// - Returns: A diagram element representing the ordered sequence.
 	///
-	/// - SeeAlso: `Sequence(items:)`
-	static func Diagram(label: String = "",_ items: Self...) -> Self {
-		Self.Diagram(start: Self.Start(label: label), sequence: items, end: Self.End(label: ""))
+	/// - SeeAlso: ``Diagram(start:sequence:end:attributes:)``
+	static func Diagram(label: String = "",_ items: Self..., attributes: RRAttributeDict = [:]) -> Self {
+		Self.Diagram(start: Self.Start(label: label, attributes: [:]), sequence: items, end: Self.End(label: "", attributes: [:]), attributes: attributes)
 	}
 
 	/// Convenience method for creating a sequence with variadic arguments.
@@ -369,9 +369,9 @@ extension RailroadDiagramProtocol {
 	/// - Parameter items: The elements to sequence.
 	/// - Returns: A diagram element representing the ordered sequence.
 	///
-	/// - SeeAlso: `Sequence(items:)`
-	static func Sequence(_ items: Self...) -> Self {
-		Self.Sequence(items: items)
+	/// - SeeAlso: ``Sequence(items:attributes:)``
+	static func Sequence(_ items: Self..., attributes: RRAttributeDict = [:]) -> Self {
+		Self.Sequence(items: items, attributes: attributes)
 	}
 
 	/// Convenience method for creating a stack with variadic arguments.
@@ -379,9 +379,9 @@ extension RailroadDiagramProtocol {
 	/// - Parameter items: The elements to stack.
 	/// - Returns: A diagram element representing the vertical stack.
 	///
-	/// - SeeAlso: `Stack(items:)`
-	static func Stack(_ items: Self...) -> Self {
-		Self.Stack(items: items)
+	/// - SeeAlso: ``Stack(items:attributes:)``
+	static func Stack(_ items: Self..., attributes: RRAttributeDict = [:]) -> Self {
+		Self.Stack(items: items, attributes: attributes)
 	}
 
 	/// Convenience method for creating a stack with variadic arguments.
@@ -389,9 +389,9 @@ extension RailroadDiagramProtocol {
 	/// - Parameter items: The elements to stack.
 	/// - Returns: A diagram element representing the vertical stack.
 	///
-	/// - SeeAlso: `Stack(items:)`
-	static func OptionalSequence(_ items: Self...) -> Self {
-		Self.OptionalSequence(items: items);
+	/// - SeeAlso: `Stack(items:attributes:)`
+	static func OptionalSequence(_ items: Self..., attributes: RRAttributeDict = [:]) -> Self {
+		Self.OptionalSequence(items: items, attributes: attributes);
 	}
 
 	/// Convenience method for creating an AlternatingSequence with variadic arguments.
@@ -399,9 +399,9 @@ extension RailroadDiagramProtocol {
 	/// - Parameter items: The elements to stack.
 	/// - Returns: A diagram element representing the vertical stack.
 	///
-	/// - SeeAlso: `AlternatingSequence(items:)`
-	static func AlternatingSequence(_ items: Self...) -> Self {
-		Self.AlternatingSequence(items: items);
+	/// - SeeAlso: `AlternatingSequence(items:attributes:)`
+	static func AlternatingSequence(_ items: Self..., attributes: RRAttributeDict = [:]) -> Self {
+		Self.AlternatingSequence(items: items, attributes: attributes);
 	}
 
 	/// Convenience method for creating a stack with variadic arguments.
@@ -410,8 +410,8 @@ extension RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the vertical stack.
 	///
 	/// - SeeAlso: `Choice(items:)`
-	static func Choice(_ items: Self...) -> Self {
-		Self.Choice(items: items);
+	static func Choice(_ items: Self..., attributes: RRAttributeDict = [:]) -> Self {
+		Self.Choice(items: items, attributes: attributes);
 	}
 
 	/// Convenience method for creating a stack with variadic arguments.
@@ -420,8 +420,8 @@ extension RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the vertical stack.
 	///
 	/// - SeeAlso: `HorizontalChoice(items:)`
-	static func HorizontalChoice(_ items: Self...) -> Self {
-		Self.HorizontalChoice(items: items);
+	static func HorizontalChoice(_ items: Self..., attributes: RRAttributeDict = [:]) -> Self {
+		Self.HorizontalChoice(items: items, attributes: attributes);
 	}
 
 	/// Convenience method for creating a stack with variadic arguments.
@@ -430,34 +430,116 @@ extension RailroadDiagramProtocol {
 	/// - Returns: A diagram element representing the vertical stack.
 	///
 	/// - SeeAlso: `MultipleChoice(normal:items:)`
-	static func MultipleChoice(normal: Int = 0, _ items: Self...) -> Self {
-		Self.MultipleChoice(normal: normal, items: items);
+	static func MultipleChoice(normal: Int = 0, _ items: Self..., attributes: RRAttributeDict = [:]) -> Self {
+		Self.MultipleChoice(normal: normal, items: items, attributes: attributes);
+	}
+
+	/// An shorthand for ``Optional(item:attributes:)``
+	static func Optional(_ item: Self, attributes: RRAttributeDict = [:]) -> Self {
+		Self.Optional(item: item, attributes: attributes)
+	}
+
+	/// An shorthand for ``Loop(item:attributes:)``
+	static func Loop(_ item: Self, separator: Self?, attributes: RRAttributeDict = [:]) -> Self {
+		Self.Loop(item: item, separator: separator, max: "", attributes: attributes)
+	}
+
+	/// An shorthand for ``Group(item:attributes:)``
+	static func Group(_ item: Self, label: String = "", attributes: RRAttributeDict = [:]) -> Self {
+		Self.Group(item: item, label: label, attributes: attributes)
 	}
 
 	/// An shorthand for ``OneOrMore(item:separator:max:)``
-	public static func OneOrMore(_ item: Self, separator: Self? = nil, max: String = "") -> Self {
-		Loop(item: item, separator: separator, max: max)
+	public static func OneOrMore(_ item: Self, separator: Self? = nil, max: String = "", attributes: RRAttributeDict = [:]) -> Self {
+		Loop(item: item, separator: separator, max: max, attributes: attributes)
+	}
+
+	/// An shorthand for ``Start(label:attributes:)``
+	public static func Start(_ label: String, attributes: RRAttributeDict = [:]) -> Self {
+		Start(label: label, attributes: attributes)
+	}
+
+	/// An shorthand for ``End(label:attributes:)``
+	public static func End(_ label: String, attributes: RRAttributeDict = [:]) -> Self {
+		End(label: label, attributes: attributes)
+	}
+
+	/// An shorthand for ``Skip(text:attributes:)``
+	public static func Terminal(_ text: String, attributes: RRAttributeDict = [:]) -> Self {
+		Terminal(text: text, attributes: attributes)
+	}
+
+	/// An shorthand for ``NonTerminal(text:attributes:)``
+	public static func NonTerminal(_ text: String, attributes: RRAttributeDict = [:]) -> Self {
+		NonTerminal(text: text, attributes: attributes)
+	}
+
+	/// An shorthand for ``Skip(attributes:)``
+	public static func Skip() -> Self {
+		Skip(attributes: [:])
 	}
 }
 
+public typealias RRAttributeDict = Dictionary<ObjectIdentifier, AnyHashable>;
+
+//public func attribute<T: RailroadAttributeProtocol>(value: T) -> Self {
+//	self
+//}
+//
+//public subscript<T: RailroadAttributeProtocol>(_ key: T.Type) -> T {
+//	get { attrs[ObjectIdentifier(key.self)] as! T }
+//	set { attrs[ObjectIdentifier(key.self)] = newValue }
+//}
+
+protocol RailroadAttributeProtocol {}
+
 public indirect enum RailroadNode: RailroadDiagramProtocol, Hashable {
-	case Diagram(start: RailroadNode, sequence: [RailroadNode], end: RailroadNode)
-	case Sequence(items: [RailroadNode])
-	case Stack(items: [RailroadNode])
-	case OptionalSequence(items: [RailroadNode])
-	case AlternatingSequence(items: [RailroadNode])
-	case Choice(items: [RailroadNode])
-	case HorizontalChoice(items: [RailroadNode])
-	case MultipleChoice(normal: Int, items: [RailroadNode])
-	case Group(item: RailroadNode, label: String)
-	case Optional(item: RailroadNode)
-	case ZeroOrMore(item: RailroadNode, separator: RailroadNode?)
-	case Loop(item: RailroadNode, separator: RailroadNode?, max: String)
-	case Start(label: String?)
-	case End(label: String?)
-	case Terminal(text: String)
-	case NonTerminal(text: String)
-	case Comment(text: String)
-	case Skip
-	public static func Skip() -> RailroadNode { .Skip }
+	case Diagram(start: RailroadNode, sequence: [RailroadNode], end: RailroadNode, attributes: RRAttributeDict)
+	case Sequence(items: [RailroadNode], attributes: RRAttributeDict)
+	case Stack(items: [RailroadNode], attributes: RRAttributeDict)
+	case OptionalSequence(items: [RailroadNode], attributes: RRAttributeDict)
+	case AlternatingSequence(items: [RailroadNode], attributes: RRAttributeDict)
+	case Choice(items: [RailroadNode], attributes: RRAttributeDict)
+	case HorizontalChoice(items: [RailroadNode], attributes: RRAttributeDict)
+	case MultipleChoice(normal: Int, items: [RailroadNode], attributes: RRAttributeDict)
+	case Group(item: RailroadNode, label: String, attributes: RRAttributeDict)
+	case Optional(item: RailroadNode, attributes: RRAttributeDict)
+	case ZeroOrMore(item: RailroadNode, separator: RailroadNode?, attributes: RRAttributeDict)
+	case Loop(item: RailroadNode, separator: RailroadNode?, max: String, attributes: RRAttributeDict)
+	case Start(label: String?, attributes: RRAttributeDict)
+	case End(label: String?, attributes: RRAttributeDict)
+	case Terminal(text: String, attributes: RRAttributeDict)
+	case NonTerminal(text: String, attributes: RRAttributeDict)
+	case Comment(text: String, attributes: RRAttributeDict)
+	case Skip(attributes: RRAttributeDict)
+
+	var attributes: RRAttributeDict {
+		switch self {
+			case
+				.Diagram(_, _, _, let attribute),
+				.Sequence(_, let attribute),
+				.Stack(_, let attribute),
+				.OptionalSequence(_, let attribute),
+				.AlternatingSequence(_, let attribute),
+				.Choice(_, let attribute),
+				.HorizontalChoice(_, let attribute),
+				.MultipleChoice(_, _, let attribute),
+				.Group(_, _, let attribute),
+				.Optional(_, let attribute),
+				.ZeroOrMore(_, _, let attribute),
+				.Loop(_, _, _, let attribute),
+				.Start(_, let attribute),
+				.End(_, let attribute),
+				.Terminal(_, let attribute),
+				.NonTerminal(_, let attribute),
+				.Comment(_, let attribute),
+				.Skip(let attribute):
+				attribute;
+		}
+	}
+
+	public subscript<T: RailroadAttributeProtocol>(_ key: T.Type) -> T {
+		get { attributes[ObjectIdentifier(key.self)] as! T }
+//		set { attributes[ObjectIdentifier(key.self)] = newValue }
+	}
 }

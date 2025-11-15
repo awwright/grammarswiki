@@ -23,31 +23,31 @@ struct RRView: View {
 
 	static func render(_ node: RailroadNode) -> any View {
 		return switch node {
-		case .Diagram(start: let start, sequence: let seq, end: let end):
-			AnyView(render(.Sequence(items: [start] + seq + [end])));
-		case .Start(label: let text):
+		case .Diagram(start: let start, sequence: let seq, end: let end, attributes: let attributes):
+				AnyView(render(.Sequence(items: [start] + seq + [end], attributes: [:])));
+			case .Start(label: let text, attributes: let attributes):
 			RRStart(text: text ?? "")
-		case .End(label: let text):
+			case .End(label: let text, attributes: let attributes):
 			RREnd(text: text ?? "")
-		case .Sequence(items: let seq):
+			case .Sequence(items: let seq, attributes: let attributes):
 			RRSequence(items: seq)
-		case .Choice(items: let seq):
+			case .Choice(items: let seq, attributes: let attributes):
 			RRChoice(items: seq)
-		case .Group(item: let seq, label: let label):
+			case .Group(item: let seq, label: let label, attributes: let attributes):
 			RRGroup(item: seq, label: label)
-		case .Optional(item: let item):
-			AnyView(self.render(.Choice(items: [.Skip, item])))
-		case .ZeroOrMore(item: let item, separator: let sep):
-			AnyView(self.render(.Choice(items: [.Skip, .Loop(item: item, separator: nil, max: "")])))
-		case .Loop(item: let item, separator: let sep, max: let maxi):
+			case .Optional(item: let item, attributes: let attributes):
+				AnyView(self.render(.Choice(items: [.Skip(), item], attributes: [:])))
+			case .ZeroOrMore(item: let item, separator: let sep, attributes: let attributes):
+				AnyView(self.render(.Choice(items: [.Skip(), .Loop(item: item, separator: nil, max: "", attributes: [:])], attributes: [:])))
+			case .Loop(item: let item, separator: let sep, max: let maxi, attributes: let attributes):
 			RROneOrMore(item: item)
-		case .Terminal(text: let text):
+			case .Terminal(text: let text, attributes: let attributes):
 			RRTerminal(text: text);
-		case .NonTerminal(text: let text):
+			case .NonTerminal(text: let text, attributes: let attributes):
 			RRNonTerminal(text: text);
-		case .Comment(text: let text):
+			case .Comment(text: let text, attributes: let attributes):
 			RRComment(text: text);
-		case .Skip:
+			case .Skip(attributes: let attributes):
 			RRSkip();
 		default:
 			RRComment(text: "Unknown node type: \(node)");
@@ -448,66 +448,66 @@ struct RRShowTerminals<Content: View>: View {
 		}
 		Section("Sequence") {
 			RRView(diagram: .Sequence(items: [
-				.Start(label: "O"),
-				.Terminal(text: "1"),
-				.NonTerminal(text: "2"),
-				.Terminal(text: "3"),
-				.End(label: "X"),
-			])).showRRTerminals();
+				.Start(label: "O", attributes: [:]),
+				.Terminal(text: "1", attributes: [:]),
+				.NonTerminal(text: "2", attributes: [:]),
+				.Terminal(text: "3", attributes: [:]),
+				.End(label: "X", attributes: [:]),
+			], attributes: [:])).showRRTerminals();
 		}
 		Section("Choice") {
 			RRView(diagram: .Group(item: .Choice(items: [
-				.Terminal(text: "1"),
-				.Terminal(text: "2"),
-				.Terminal(text: "3"),
-			]), label: "Choice"
+				.Terminal("1"),
+				.Terminal("2"),
+				.Terminal("3"),
+			], attributes: [:]), label: "Choice", attributes: [:]
 			)).showRRTerminals();
 		}
 		Section("ZeroOrMore") {
-			RRView(diagram: .ZeroOrMore(item: .Terminal(text: "foo"), separator: nil)).showRRTerminals();
+			RRView(diagram: .ZeroOrMore(item: .Terminal("foo"), separator: nil, attributes: [:])).showRRTerminals();
 		}
 		Section("Sequence of Choice") {
 			RRView(diagram: .Sequence(items: [
 				.Group(item: .Choice(items: [
-					.Terminal(text: "1"),
-					.Terminal(text: "2"),
-					.Terminal(text: "3"),
-				]), label: "Alpha"),
+					.Terminal("1"),
+					.Terminal("2"),
+					.Terminal("3"),
+				], attributes: [:]), label: "Alpha", attributes: [:]),
 				.Group(item: .Choice(items: [
-					.NonTerminal(text: "A"),
-					.NonTerminal(text: "B"),
-					.NonTerminal(text: "C"),
-				]), label: "Bravo"),
-			])).showRRTerminals();
+					.NonTerminal("A"),
+					.NonTerminal("B"),
+					.NonTerminal("C"),
+				], attributes: [:]), label: "Bravo", attributes: [:]),
+			], attributes: [:])).showRRTerminals();
 		}
 		Section("Choice of Sequence Diagram") {
 			RRView(diagram: .Sequence(items: [
-				.Start(label: "Start"),
+				.Start("Start"),
 				.Choice(items: [
 					.Sequence(items: [
-						.Terminal(text: "1"),
-						.Terminal(text: "2"),
-						.Terminal(text: "3"),
-					]),
+						.Terminal("1"),
+						.Terminal("2"),
+						.Terminal("3"),
+					], attributes: [:]),
 					.Sequence(items: [
-						.NonTerminal(text: "A"),
+						.NonTerminal(text: "A", attributes: [:]),
 						.Sequence(items: [
 							.Group(item: .Choice(items: [
-								.Terminal(text: "1"),
-								.Terminal(text: "2"),
-								.Terminal(text: "3"),
-							]), label: "Alpha"),
+								.Terminal("1"),
+								.Terminal("2"),
+								.Terminal("3"),
+							], attributes: [:]), label: "Alpha", attributes: [:]),
 							.Group(item: .Choice(items: [
-								.NonTerminal(text: "A"),
-								.NonTerminal(text: "B"),
-								.NonTerminal(text: "C"),
-							]), label: "Bravo"),
-						]),
-						.NonTerminal(text: "C"),
-					]),
-				]),
-				.End(label: "End"),
-			])).showRRTerminals();
+								.NonTerminal("A"),
+								.NonTerminal("B"),
+								.NonTerminal("C"),
+							], attributes: [:]), label: "Bravo", attributes: [:]),
+						], attributes: [:]),
+						.NonTerminal("C"),
+					], attributes: [:]),
+				], attributes: [:]),
+				.End(label: "End", attributes: [:]),
+			], attributes: [:])).showRRTerminals();
 		}
 		Section("Arc") {
 			HStack(spacing: 10) {
