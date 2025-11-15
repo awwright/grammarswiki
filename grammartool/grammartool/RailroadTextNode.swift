@@ -262,11 +262,11 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 	}
 
 	// Protocol conformance
-	public static func Diagram(start: Self, sequence: [Self], end: Self) -> Self {
+	public static func Diagram(start: Self, sequence: [Self], end: Self, attributes: RRAttributeDict = [:]) -> Self {
 		let items = [start] + sequence + [end]
 		return Diagram(sequence: items)
 	}
-	public static func Diagram(sequence: [Self]) -> Self {
+	public static func Diagram(sequence: [Self], attributes: RRAttributeDict = [:]) -> Self {
 		precondition(sequence.count > 0)
 		let separator = Self.part_separator
 		var diagramTD = sequence[0]
@@ -280,7 +280,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func Sequence(items: [Self]) -> Self {
+	public static func Sequence(items: [Self], attributes: RRAttributeDict = [:]) -> Self {
 		let separator = Self.part_separator
 		var diagramTD = Self(entry: 0, exit: 0, lines: [""])
 		for item in items {
@@ -293,7 +293,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func Stack(items: [Self]) -> Self {
+	public static func Stack(items: [Self], attributes: RRAttributeDict = [:]) -> Self {
 		let corner_bot_left = Self.box_rect.bot_left
 		let corner_bot_right = Self.box_rect.bot_right
 		let corner_top_left = Self.box_rect.top_left
@@ -350,7 +350,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return resultTD
 	}
 
-	public static func OptionalSequence(items: [Self]) -> Self {
+	public static func OptionalSequence(items: [Self], attributes: RRAttributeDict = [:]) -> Self {
 		let line = Self.part_line
 		let line_vertical = Self.part_line_vertical
 		let roundcorner_bot_left = Self.box_roundrect.bot_left
@@ -443,7 +443,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func AlternatingSequence(items: [Self]) -> Self {
+	public static func AlternatingSequence(items: [Self], attributes: RRAttributeDict = [:]) -> Self {
 		precondition(!items.isEmpty)
 		precondition(items.count < 2, "AlternatingSequence must have 1-2 elements")
 		if items.count == 1 { return items[0] }
@@ -508,7 +508,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func Choice(items: [Self]) -> Self {
+	public static func Choice(items: [Self], attributes: RRAttributeDict = [:]) -> Self {
 		let cross = Self.part_cross
 		let line = Self.part_line
 		let line_vertical = Self.part_line_vertical
@@ -581,7 +581,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func HorizontalChoice(items: [Self]) -> Self {
+	public static func HorizontalChoice(items: [Self], attributes: RRAttributeDict = [:]) -> Self {
 		precondition(items.count > 0);
 		if items.count == 1 { return items[0] }
 		let line = Self.part_line;
@@ -698,7 +698,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func MultipleChoice(normal: Int, items: [Self]) -> Self {
+	public static func MultipleChoice(normal: Int, items: [Self], attributes: RRAttributeDict = [:]) -> Self {
 		let multi_repeat = Self.part_multi_repeat
 		let anyAll = Self.rect(Self.box_rect, "1+") // assume any
 		var diagramTD = Choice(items: items)
@@ -708,11 +708,11 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func Optional(item: Self) -> Self {
+	public static func Optional(item: Self, attributes: RRAttributeDict = [:]) -> Self {
 		return Choice(items: [Skip(), item])
 	}
 
-	public static func Loop(item: Self, separator: Self?, max: String = "") -> Self {
+	public static func Loop(item: Self, separator: Self?, max: String = "", attributes: RRAttributeDict = [:]) -> Self {
 		let line = Self.part_line
 		let repeat_top_left = Self.box_roundrect.top_left
 		let repeat_left = Self.box_roundrect.left
@@ -745,11 +745,11 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func ZeroOrMore(item: Self, separator: Self?) -> Self {
+	public static func ZeroOrMore(item: Self, separator: Self?, attributes: RRAttributeDict = [:]) -> Self {
 		return Optional(item: OneOrMore(item, separator: separator))
 	}
 
-	public static func Group(item: Self, label: String) -> Self {
+	public static func Group(item: Self, label: String, attributes: RRAttributeDict = [:]) -> Self {
 		var diagramTD = Self.rect(Self.box_roundrect_dashed, item)
 		if !label.isEmpty {
 			let labelTD = Comment(text: label)
@@ -758,7 +758,7 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		return diagramTD
 	}
 
-	public static func Start(label: String?) -> Self {
+	public static func Start(label: String?, attributes: RRAttributeDict = [:]) -> Self {
 		let cross = Self.part_cross
 		let line = Self.part_line
 		let tee_right = Self.part_tee_right
@@ -775,24 +775,24 @@ public struct RailroadTextNode: RailroadDiagramProtocol {
 		}
 	}
 
-	public static func End(label: String?) -> Self {
+	public static func End(label: String?, attributes: RRAttributeDict = [:]) -> Self {
 		let end = self.part_line + self.part_cross + self.part_tee_left
 		return Self(entry: 0, exit: 0, lines: [end])
 	}
 
-	public static func Terminal(text: String) -> Self {
+	public static func Terminal(text: String, attributes: RRAttributeDict = [:]) -> Self {
 		return Self.rect(Self.box_roundrect, text)
 	}
 
-	public static func NonTerminal(text: String) -> Self {
+	public static func NonTerminal(text: String, attributes: RRAttributeDict = [:]) -> Self {
 		return Self.rect(Self.box_rect, text)
 	}
 
-	public static func Comment(text: String) -> Self {
+	public static func Comment(text: String, attributes: RRAttributeDict = [:]) -> Self {
 		return Self(entry: 0, exit: 0, lines: [text])
 	}
 
-	public static func Skip() -> Self {
+	public static func Skip(attributes: RRAttributeDict = [:]) -> Self {
 		return Self(entry: 0, exit: 0, lines: [Self.part_line])
 	}
 }

@@ -491,7 +491,7 @@ public typealias RRAttributeDict = Dictionary<ObjectIdentifier, AnyHashable>;
 //	set { attrs[ObjectIdentifier(key.self)] = newValue }
 //}
 
-protocol RailroadAttributeProtocol {}
+public protocol RailroadAttributeProtocol {}
 
 public indirect enum RailroadNode: RailroadDiagramProtocol, Hashable {
 	case Diagram(start: RailroadNode, sequence: [RailroadNode], end: RailroadNode, attributes: RRAttributeDict)
