@@ -58,72 +58,8 @@ func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
 		print(stderr, "Error: No such rule: \(arguments[3])");
 		exit(1);
 	}
-	print(generateDiagram(rule));
+	print(generateDiagram(rule), terminator: "");
 	return 0
-}
-
-func abnf_to_railroad_svg_help(arguments: Array<String>) {
-	print("\(arguments[0]) \(bold("abnf-to-railroad-svg")) <filepath> <expression>");
-	print("\tReads <filepath> and converts <rulename> to a railroad script for railroad.js");
-}
-
-func abnf_to_railroad_svg_args(arguments: Array<String>) -> Int32 {
-	guard arguments.count == 4 else {
-		print(arguments.count);
-		abnf_to_railroad_svg_help(arguments: arguments);
-		return 1;
-	}
-	let imported: Data? = getInput(filename: arguments[2]);
-	guard let imported else { return 1 }
-	// builtins will be copied to the output
-	let dereferencedRulelist: ABNFRulelist<Symbol>
-	do {
-		let importedRulelist = try ABNFRulelist<Symbol>.parse(imported);
-		dereferencedRulelist = try dereferenceABNFRulelist(importedRulelist, {
-			filename in
-			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
-			let content = try String(contentsOfFile: filePath, encoding: .utf8)
-			return try ABNFRulelist<Symbol>.parse(content.utf8)
-		});
-	} catch {
-		print("Could not parse input")
-		print(error)
-		return 2;
-	}
-	let rule = dereferencedRulelist.dictionary[arguments[3]];
-	guard let rule else {
-		print(stderr, "Error: No such rule: \(arguments[3])");
-		exit(1);
-	}
-
-	// Create the second process: node bin/railroad.js
-	let node = Process()
-	node.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-	node.arguments = ["node", "bin/railroad.js", "svg"]
-
-	let inputPipe = Pipe()
-	let outputPipe = Pipe()
-	node.standardInput = inputPipe
-	node.standardOutput = outputPipe
-	node.standardError = FileHandle.standardError
-
-	do {
-		try node.run()
-		if let scriptData = generateDiagram(rule).data(using: .utf8) {
-			inputPipe.fileHandleForWriting.write(scriptData)
-		}
-		try! inputPipe.fileHandleForWriting.close()
-		node.waitUntilExit()
-		let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-		if let outputString = String(data: outputData, encoding: .utf8) {
-			print(outputString, terminator: "")
-		}
-	} catch {
-		print("Error running node: \(error)")
-		return 3
-	}
-
-	return node.terminationStatus
 }
 
 private func generateDiagram(_ rule: ABNFRule<Symbol>) -> String {
