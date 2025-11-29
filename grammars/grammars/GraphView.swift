@@ -2,11 +2,79 @@
 import FSM
 import SwiftUI
 
+/// If `s` is `nil`, that means that `t` is an initial state. (since the oblivion state cannot be a source)
+/// If `t` is `nil`, it refers to the oblivion state.
+struct Segment: Hashable {
+	let s: Int?;
+	let t: Int?;
+
+	init(_ s: Int?, _ t: Int?) {
+		self.s = s;
+		self.t = t;
+	}
+
+//	typealias ArrayLiteralElement = Int?
+//	init(arrayLiteral elements: ArrayLiteralElement...) {
+//		self.s = elements[0];
+//		self.t = elements[1];
+//	}
+}
+
+struct DFAGraphPageView: View {
+	typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<UInt32>>
+	// This comes in from ContentView normalized. If it's not normalized, paths will cross without reason and it'll look much worse.
+	@Binding var rule_fsm: DFA?
+	// How the symbols should be represented as strings
+	let charset: Charset;
+
+	@State var testInput: String = ""
+	@State var visitedNode: Set<Int> = []
+	@State var visitedPath: Set<Segment> = []
+
+	var body: some View {
+		VStack {
+			DisclosureGroup("Input") {
+				TabView {
+					Tab("Field", systemImage: "pencil") {
+						TextField("Enter test input", text: $testInput)
+							.font(.system(size: 14).monospaced())
+							.textFieldStyle(RoundedBorderTextFieldStyle())
+							.onChange(of: testInput) {
+								var visitedNode_: Set<Int> = []
+								var visitedPath_: Set<Segment> = []
+								let fsm = rule_fsm!
+								let input = Array(testInput.unicodeScalars.map(\.value))
+								var currentState = fsm.initial;
+								for symbol in input {
+									guard currentState < fsm.states.count,
+											let nextState = fsm.states[currentState][symbol: symbol]
+									else {
+										break
+									}
+									visitedPath_.insert(Segment(currentState, nextState))
+									visitedNode_.insert(nextState)
+									currentState = nextState
+								}
+								self.visitedNode = visitedNode_;
+								self.visitedPath = visitedPath_;
+							}
+					}
+				}
+			}
+			DFAGraphView(rule_fsm: $rule_fsm, charset: charset, visitedNode: $visitedNode, visitedPath: $visitedPath);
+		}
+	}
+}
+
 struct DFAGraphView: View {
 	typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<UInt32>>
 	// This comes in from ContentView normalized. If it's not normalized, paths will cross without reason and it'll look much worse.
 	@Binding var rule_fsm: DFA?
-	let charset: Charset
+	// How the symbols should be represented as strings
+	let charset: Charset;
+	// List of "visited" nodes
+	@Binding var visitedNode: Set<Int>;
+	@Binding var visitedPath: Set<Segment>;
 
 	var body: some View {
 		GeometryReader { geometry in
@@ -16,7 +84,8 @@ struct DFAGraphView: View {
 				EdgeView(
 					source: nodePosition(dfa.initial, in: geometry) - CGPoint(x: 0, y: +40),
 					target: nodePosition(dfa.initial, in: geometry),
-					label: ""
+					label: "",
+					isVisited: visitedPath.contains(Segment(Int?.none, rule_fsm?.initial)),
 				);
 
 				// Draw edges
@@ -27,13 +96,14 @@ struct DFAGraphView: View {
 						EdgeView(
 							source: nodePosition(i, in: geometry),
 							target: nodePosition(target, in: geometry),
-							label: describeCharacterSet(symbol, charset: charset)
+							label: describeCharacterSet(symbol, charset: charset),
+							isVisited: visitedNode.contains(target)
 						)
 					}
 				}
 				// Draw nodes on top
 				ForEach(0..<dfa.states.count, id: \.self) { i in
-					NodeView(position: nodePosition(i, in: geometry), index: i, isFinal: dfa.isFinal(i))
+					NodeView(position: nodePosition(i, in: geometry), index: i, isFinal: dfa.isFinal(i), isVisited: visitedNode.contains(i))
 				}
 			}
 		}
@@ -93,6 +163,7 @@ private struct NodeView: View {
 	let index: Int
 	let radius: CGFloat = 10
 	let isFinal: Bool
+	let isVisited: Bool
 
 	var body: some View {
 		ZStack {
@@ -107,7 +178,8 @@ private struct NodeView: View {
 				.stroke(.foreground)
 				.frame(width: 2 * radius, height: 2 * radius)
 			Text("\(index)")
-				.font(.caption)
+				.font(isVisited ? .caption.bold() : .caption)
+				.foregroundColor(isVisited ? .accentColor : .primary)
 		}
 		.position(position)
 	}
@@ -119,6 +191,7 @@ private struct EdgeView<Symbol: Hashable>: View {
 	let label: Symbol
 	let nodeRadius: CGFloat = 10
 	let arrowSize: CGFloat = 10
+	let isVisited: Bool
 
 	var body: some View {
 		ZStack {
@@ -127,7 +200,7 @@ private struct EdgeView<Symbol: Hashable>: View {
 				let center = source + CGPoint(x: 0, y: -nodeRadius - loopRadius)
 				Path { path in
 					path.addArc(center: center, radius: loopRadius, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: true)
-				}.stroke(.foreground)
+				}.stroke(.foreground, lineWidth: isVisited ? 3 : 0.4)
 				let arrowAngle = Angle(degrees: 45)
 				let arrowPos = center + CGPoint(x: loopRadius * cos(CGFloat(arrowAngle.radians)), y: loopRadius * sin(CGFloat(arrowAngle.radians)))
 				let tangent = CGPoint(x: -sin(arrowAngle.radians), y: cos(arrowAngle.radians))
@@ -136,7 +209,7 @@ private struct EdgeView<Symbol: Hashable>: View {
 					path.addLine(to: arrowPos - arrowSize * tangent.rotated(by: .pi / 6))
 					path.move(to: arrowPos)
 					path.addLine(to: arrowPos - arrowSize * tangent.rotated(by: -.pi / 6))
-				}.stroke(.foreground)
+				}.stroke(.foreground, lineWidth: isVisited ? 3 : 0.4)
 				Text(String(describing: label))
 					.font(.caption)
 					.position(center + CGPoint(x: 0, y: -20))
@@ -153,7 +226,7 @@ private struct EdgeView<Symbol: Hashable>: View {
 						path.move(to: start)
 						path.addQuadCurve(to: end, control: control)
 					}
-					.stroke(.foreground)
+					.stroke(.foreground, lineWidth: isVisited ? 3 : 0.4)
 					let arrowDirection = (end - control).normalized()
 					let arrowDirection1 = arrowDirection.rotated(by: .pi / 6)
 					let arrowDirection2 = arrowDirection.rotated(by: -.pi / 6)
@@ -163,13 +236,13 @@ private struct EdgeView<Symbol: Hashable>: View {
 						path.move(to: end)
 						path.addLine(to: end - arrowSize * arrowDirection2)
 					}
-					.stroke(.foreground)
+					.stroke(.foreground, lineWidth: isVisited ? 2 : 1)
 				} else {
 					Path { path in
 						path.move(to: start)
 						path.addLine(to: end)
 					}
-					.stroke(.foreground)
+					.stroke(.foreground, lineWidth: isVisited ? 2 : 1)
 					let arrowDirection1 = direction.rotated(by: .pi / 6)
 					let arrowDirection2 = direction.rotated(by: -.pi / 6)
 					Path { path in
@@ -178,7 +251,7 @@ private struct EdgeView<Symbol: Hashable>: View {
 						path.move(to: end)
 						path.addLine(to: end - arrowSize * arrowDirection2)
 					}
-					.stroke(.foreground)
+					.stroke(.foreground, lineWidth: isVisited ? 2 : 1)
 				}
 				let midpoint = CGPoint(x: (2*start.x + end.x) / 3, y: (2*start.y + end.y) / 3)
 				Text(String(describing: label))

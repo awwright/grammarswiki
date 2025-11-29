@@ -148,6 +148,7 @@ struct DocumentDetail: View {
 
 	// Computed variables
 	// TODO: There's probably a way to actually compute these reactive to the user input
+	// TODO: Cache computation results with <https://developer.apple.com/documentation/Foundation/NSCache>
 	@State private var content_rulelist: ABNFRulelist<UInt32>? = nil
 	@State private var content_rulelist_error: String? = nil
 
@@ -229,7 +230,7 @@ struct DocumentDetail: View {
 					}
 
 					Tab("Graph", systemImage: "photo") {
-						DFAGraphView(rule_fsm: $rule_fsm, charset: AppModel.charsetDict[selectedCharsetId]!)
+						DFAGraphPageView(rule_fsm: $rule_fsm, charset: AppModel.charsetDict[selectedCharsetId]!)
 					}
 
 					Tab("Railroad", systemImage: "train.side.front.car") {

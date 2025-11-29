@@ -17,6 +17,7 @@ func abnf_to_railroad_svg_args(arguments: Array<String>) -> Int32 {
 	// - Expand rule names with definitions
 	// - Expand core names with definitions
 	// - Place subexpressions in an outlined Group
+	// - Highlight paths for a certain input
 	guard arguments.count == 4 else {
 		print(arguments.count);
 		abnf_to_railroad_svg_help(arguments: arguments);
