@@ -44,6 +44,7 @@ async function main() {
 	switch(process.argv[2]){
 		case 'svg': console.log(result.toStandalone()); break;
 		case 'html': console.log(result.toString()); break;
+		default: console.error("Expected svg or html"); process.exitCode = 1; break;
 	}
 }
 
