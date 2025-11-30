@@ -70,6 +70,26 @@ class AppModel: ObservableObject {
 
 	static let fileTypes: [FileType] = [
 		FileType(
+			label: "Syntax/Formal Grammar Notebook",
+			fileExtension: ".sfgnb",
+			languageConfiguration: LanguageConfiguration(
+				name: "Plain",
+				supportsSquareBrackets: true,
+				supportsCurlyBrackets: false,
+				stringRegex: nil,
+				characterRegex: nil,
+				numberRegex: nil,
+				singleLineComment: "//",
+				nestedComment: nil,
+				identifierRegex: nil,
+				operatorRegex: nil,
+				reservedIdentifiers: [],
+				reservedOperators: [],
+			),
+			parser:  { _ in return ABNFRulelist<UInt32>.init() },
+			toRailroad: nil,
+		),
+		FileType(
 			label: "Plain text",
 			fileExtension: ".txt",
 			languageConfiguration: LanguageConfiguration(
