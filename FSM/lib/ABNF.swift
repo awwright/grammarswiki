@@ -1833,7 +1833,7 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
-		alternation.toRailroad(rules: rules)
+		Diagram.Group(alternation.toRailroad(rules: rules))
 	}
 
 	public func hasUnion(_ other: Self) -> Self? {
