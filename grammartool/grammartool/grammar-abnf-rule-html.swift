@@ -74,7 +74,9 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		return rule_to_html(rule, links: rule_links);
 	}.joined()
 
-	// TODO: Add railroad diagram
+	let rr: RailroadNode = expression.toRailroad()
+	let railroad_svg_html: String = toContainerNode(rr).toSVGNode(offset: .init(x: 0, y: 0)).toSVG();
+
 	// TODO: Add GraphViz diagram
 
 	// builtins will be copied to the output
@@ -149,8 +151,6 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		"\t\t\t<li><code>" + text_html($0) + "</code></li>\n"
 	}.joined(separator: "")
 
-	let railroad_svg_html: String = (try? grammar_abnf_rule_html_railroad_svg_pipeline(filePath, rulename)) ?? "Error"
-
 	// Used Builtins
 	let used_builtins_html = definition_dependencies.builtins.map {
 		"<a href=\"\(text_attr("../abnf-core/\($0).html"))\">" + text_html($0) + "</a>"
@@ -210,27 +210,4 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	""".replacingOccurrences(of: "\t", with: "  ");
 	res.status = .ok
 	respond_themed_html(res: &res, title: title, head_html: head_html, main_html: main_html);
-}
-
-func grammar_abnf_rule_html_railroad_svg_pipeline(_ arg1: String, _ arg2: String) throws -> String {
-	// Create the first process: bin/grammartool abnf-to-railroad-js arg1 arg2
-	let grammartool = Process()
-	grammartool.executableURL = URL(fileURLWithPath: "bin/grammartool")
-	grammartool.arguments = ["abnf-to-railroad-svg", arg1, arg2]
-
-	// Create a pipe to capture the final output
-	let outputPipe = Pipe()
-	grammartool.standardOutput = outputPipe
-
-	// Run the process
-	try grammartool.run()
-	grammartool.waitUntilExit()
-
-	// Read the output
-	let outputData = try outputPipe.fileHandleForReading.readToEnd()
-	guard let output = outputData,
-			let outputString = String(data: output, encoding: .utf8) else {
-		throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to read pipeline output"])
-	}
-	return outputString
 }
