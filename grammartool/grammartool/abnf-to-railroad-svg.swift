@@ -119,7 +119,7 @@ public struct RRContainerDiagram: RRContainerProtocol {
 			// Sum the widths of sequence together
 			width: 40 + self.sequence.size.width,
 			// Find the maximum height in sequence
-			height: 80 + self.sequence.size.height,
+			height: 40 + self.sequence.size.height,
 		);
 		self.inPoint = .init(x: 0, y: self.size.height/2);
 		self.outPoint = .init(x: self.size.width, y: self.size.height/2);
@@ -140,7 +140,7 @@ public struct RRContainerDiagram: RRContainerProtocol {
 					elementName: "g",
 					attributes: ["transform": "translate(.5 .5)"],
 					children: [
-						sequence.toSVGNode(offset: CGPoint(x: 20, y: 25)),
+						sequence.toSVGNode(offset: CGPoint(x: 20, y: 20)),
 					]
 				),
 				RailroadSVGNode(elementName: "style", cdata: RRContainerDiagram.css)
@@ -462,10 +462,10 @@ public struct RRContainerStart: RRContainerProtocol {
 	init(text: String) {
 		self.size = .init(
 			width: max(10 + 8.5 * Double(text.count), 20), // Varible by character count, but at least 20
-			height: 20,
+			height: text.isEmpty ? 20 : 30, // Add an extra 10 for text, if present
 		);
-		self.inPoint = .init(x: 0, y: 10);
-		self.outPoint = .init(x: self.size.width, y: 10);
+		self.inPoint = .init(x: 0, y: text.isEmpty ? 10 : 20);
+		self.outPoint = .init(x: self.size.width, y: text.isEmpty ? 10 : 20);
 
 		self.text = text
 	}
@@ -478,7 +478,7 @@ public struct RRContainerStart: RRContainerProtocol {
 				"data-type": "start",
 			],
 			children: [
-				SVGPath(.init(x: offset.x, y: offset.y))
+				SVGPath(offset + self.inPoint + CGPoint(x: 0, y: -10))
 					.down(20)
 					.m(10, -20)
 					.down(20)
@@ -489,7 +489,7 @@ public struct RRContainerStart: RRContainerProtocol {
 					elementName: "text",
 					attributes: [
 						"x": "\(offset.x)",
-						"y": "\(offset.y-5)",
+						"y": "\(offset.y+5)",
 						"style": "text-anchor:start",
 					],
 					cdata: text,
@@ -512,7 +512,7 @@ public struct RRContainerEnd: RRContainerProtocol {
 	}
 
 	public func toSVGNode(offset: CGPoint) -> RailroadSVGNode {
-		SVGPath(.init(x: offset.x, y: offset.y + 10))
+		SVGPath(offset + self.inPoint)
 			.right(20)
 			.m(-10, -10)
 			.down(20)
