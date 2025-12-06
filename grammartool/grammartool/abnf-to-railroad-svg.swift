@@ -615,6 +615,7 @@ public struct RRContainerNonTerminal: RRContainerProtocol {
 					],
 					cdata: text,
 				)
+				.link(href: text+".html")
 			],
 		);
 	}
@@ -677,7 +678,7 @@ public struct RailroadSVGNode: Hashable {
 	var cdata: String;
 	var children: [RailroadSVGNode];
 
-	static let attributeOrder = ["class", "data-updown", "data-type", "d", "x", "y", "width", "height", "rx", "ry", "stroke", "fill", "style", "viewBox", "transform", "xmlns", "xmlns:xlink", "data"];
+	static let attributeOrder = ["class", "data-updown", "data-type", "d", "x", "y", "width", "height", "rx", "ry", "stroke", "fill", "style", "viewBox", "transform", "xmlns", "xmlns:xlink", "data", "xlink:href"];
 
 	public init(elementName: String, id: String = "", className: Array<String> = [], attributes: Dictionary<String, String> = [:], comment: String = "", cdata: String = "", children: Array<RailroadSVGNode> = []) {
 		self.elementName = elementName;
@@ -709,6 +710,14 @@ public struct RailroadSVGNode: Hashable {
 		var attrs = attributes;
 		attrs[key] = value;
 		return Self(elementName: elementName, id: id, className: className, attributes: attrs, comment: comment, cdata: cdata, children: children);
+	}
+	public func link(href: String?) -> Self {
+		guard let href else { return self }
+		return Self(
+			elementName: "a",
+			attributes: [ "xlink:href": href ],
+			children: [ self ],
+		)
 	}
 }
 
