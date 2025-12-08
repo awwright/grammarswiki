@@ -1091,7 +1091,8 @@ import Testing;
 				]).alternation),
 			]);
 			let fsm: Dictionary<String, RangeDFA<UInt8>> = try expression.toClosedRangePattern(rules: [:]);
-			#expect(fsm["Top"]!.contains("CCC".utf8));
+			let rule = try #require(fsm["top"]);
+			#expect(rule.contains("CCC".utf8));
 		}
 
 		@Test("rulelist.toPattern with incremental rules")
@@ -1105,7 +1106,7 @@ import Testing;
 				]).alternation),
 			]);
 			let fsm: Dictionary<String, RangeDFA<UInt16>> = try expression.toClosedRangePattern(rules: [:]);
-			let rule = try #require(fsm["Top"]);
+			let rule = try #require(fsm["top"]);
 			#expect(rule.contains(" ".utf16));
 			#expect(rule.contains("0".utf16));
 			#expect(rule.contains("1".utf16) == false);

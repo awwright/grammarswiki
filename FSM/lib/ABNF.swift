@@ -160,8 +160,8 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 		self.rules = rules
 		var ruleNames: Array<String> = [];
 		for rule in rules {
-			if(!ruleNames.contains(rule.rulename.label)){
-				ruleNames.append(rule.rulename.label);
+			if(!ruleNames.contains(rule.rulename.id)){
+				ruleNames.append(rule.rulename.id);
 			}
 		}
 		self.ruleNames = ruleNames
@@ -207,7 +207,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 		var dict: Dictionary<String, ABNFRule<Symbol>> = [:];
 		rules.forEach {
 			rule in
-			let rulename = rule.rulename.label;
+			let rulename = rule.rulename.id;
 			// FIXME: Test with case-insensitive comparison
 			if let previousRule = dict[rulename] {
 				// If we've already seen this rule, and it's of the correct type, merge it with the previous definition
@@ -366,7 +366,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 					if rep.min == 1 && rep.max == 1 {
 						switch rep.repeating {
 						case .rulename(let rn):
-							prod.append(.variable(rn.label))
+							prod.append(.variable(rn.id))
 						case .charVal(let cv):
 							for sym in cv.sequence {
 								prod.append(.symbol(sym))
@@ -426,10 +426,10 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 		}
 		var cfgRules: [CFGType.Production] = []
 		for rule in self.rules {
-			let name = rule.rulename.label
+			let name = rule.rulename.id
 			try addRules(for: rule.alternation, withName: name, to: &cfgRules)
 		}
-		return CFGType(rules: cfgRules, start: rules.first?.rulename.label ?? "")
+		return CFGType(rules: cfgRules, start: rules.first?.rulename.id ?? "")
 	}
 
 	/// Parses an input string into a rulelist.
@@ -539,11 +539,11 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 	}
 
 	public func mapElements<Target>(_ transform: (ABNFElement<Symbol>) -> ABNFElement<Target>) -> ABNFRule<Target> {
-		ABNFRule<Target>(rulename: ABNFRulename(label: rulename.label), definedAs: definedAs, alternation: alternation.mapElements(transform))
+		ABNFRule<Target>(rulename: ABNFRulename(rulename), definedAs: definedAs, alternation: alternation.mapElements(transform))
 	}
 
 	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFRule<Target> {
-		ABNFRule<Target>(rulename: ABNFRulename(label: rulename.label), definedAs: definedAs, alternation: alternation.mapSymbols(transform))
+		ABNFRule<Target>(rulename: ABNFRulename(rulename), definedAs: definedAs, alternation: alternation.mapSymbols(transform))
 	}
 
 	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
@@ -552,7 +552,7 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 
 	// An alternative to the above that will automatically convert all the dependencies as needed
 	public func toPattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: ABNFRulelist<Symbol>, alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
-		let rulename = self.rulename.label;
+		let rulename = self.rulename.id;
 		let dependencies_list = rules.dependencies(rulename: rulename);
 		let dict = rules.dictionary;
 		let dependencies = dependencies_list.dependencies.compactMap { if let rule = dict[$0] { ($0, rule) } else { nil } }
@@ -644,6 +644,11 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	/// The name of the rule, as notated in the document
 	public let label: String;
 
+	public init<T>(_ rulename: ABNFRulename<T>) {
+		self.id = rulename.id;
+		self.label = rulename.label;
+	}
+
 	public init(label: String) {
 		self.id = label.lowercased();
 		self.label = label;
@@ -655,7 +660,7 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	}
 
 	public static func < (lhs: Self, rhs: Self) -> Bool {
-		return lhs.label < rhs.label;
+		return lhs.id < rhs.id;
 	}
 
 	public func alphabet(rulelist: Dictionary<String, Alphabet> = [:]) -> Alphabet {
@@ -702,7 +707,7 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	}
 
 	public var referencedRules: Set<String> {
-		return Set([label])
+		return Set([id])
 	}
 
 	public func mapElements<Target>(_ transform: (ABNFElement<Symbol>) -> ABNFElement<Target>) -> ABNFRulename<Target> {
@@ -716,8 +721,8 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
 	// This is also a clever way of preventing recursive loops
 	public func toPattern<PatternType: RegularPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
-		guard let pattern = rules[label] else{
-			throw ABNFExportError(message: "Expect rule `\(label)` to be in rules dictionary, only have: \(rules.keys.joined(separator: ", "))");
+		guard let pattern = rules[id] else {
+			throw ABNFExportError(message: "Expect rule `\(id)` to be in rules dictionary, only have: \(rules.keys.joined(separator: ", "))");
 		}
 		return pattern
 	}
@@ -725,15 +730,15 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
 	// This is also a clever way of preventing recursive loops
 	public func toSymbolClassPattern<PatternType: SymbolClassPatternBuilder>(as: PatternType.Type?, rules: Dictionary<String, PatternType> = [:], alphabet alphabetFilter: Set<Symbol>? = nil) throws -> PatternType where PatternType.Symbol == Symbol {
-		guard let pattern = rules[label] else{
-			throw ABNFExportError(message: "Expect rule `\(label)` to be in rules dictionary, only have: \(rules.keys.joined(separator: ", "))");
+		guard let pattern = rules[id] else{
+			throw ABNFExportError(message: "Expect rule `\(id)` to be in rules dictionary, only have: \(rules.keys.joined(separator: ", "))");
 		}
 		return pattern
 	}
 
 	public func toClosedRangePattern<PatternType: ClosedRangePatternBuilder>(as: PatternType.Type? = nil, rules: Dictionary<String, PatternType> = [:]) throws -> PatternType where PatternType.Symbol == Symbol {
-		guard let pattern = rules[label] else{
-			throw ABNFExportError(message: "Expect rule `\(label)` to be in rules dictionary, only have: \(rules.keys.joined(separator: ", "))");
+		guard let pattern = rules[id] else{
+			throw ABNFExportError(message: "Expect rule `\(id)` to be in rules dictionary, only have: \(rules.keys.joined(separator: ", "))");
 		}
 		return pattern
 	}
@@ -2688,7 +2693,9 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 				}
 
 				// Also (unlike the root file), mangle any rule names that are defined elsewhere in the file. (Other rules are builtin rules, or external references.)
-				rulelist_mangled = rulelist_dereferenced.mapRulenames { ABNFRulename(label: rulelist_dereferenced.ruleNames.contains($0.label) ? mangleRulename(filename: filename, rulename: $0.label) : $0.label) }
+				rulelist_mangled = rulelist_dereferenced.mapRulenames {
+					ABNFRulename(id: rulelist_dereferenced.ruleNames.contains($0.id) ? mangleRulename(filename: filename, rulename: $0.id) : $0.id, label: $0.label)
+				}
 				importDefinitions[filename] = rulelist_mangled;
 				for referenced in rulelist_mangled.ruleNames {
 					let referenced_mangled = mangleRulename(filename: filename, rulename: referenced);
@@ -2703,7 +2710,7 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 				continue;
 			}
 
-			rulelist_all += rulelist_mangled.rules.filter { $0.rulename.label == mangled }
+			rulelist_all += rulelist_mangled.rules.filter { $0.rulename.id == mangled }
 			insertedRulenames.insert(mangled);
 
 			for referenced_mangled in rule_definition.referencedRules {
