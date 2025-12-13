@@ -22,7 +22,7 @@ func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
 			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
 			let content = try String(contentsOfFile: filePath, encoding: .utf8)
 			return try ABNFRulelist<Symbol>.parse(content.utf8)
-		});
+		}).rules;
 	} catch {
 		print("Could not parse input")
 		print(error)

@@ -143,10 +143,12 @@ public protocol ABNFExpression: ABNFProduction {
 /// ```abnf
 /// rulelist       =  1*( rule / (*WSP c-nl) )
 /// ```
-public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
 	public typealias Alphabet = ClosedRangeAlphabet<Symbol>
 
 	public typealias Element = Array<Symbol>;
+
+	public typealias ArrayLiteralElement = ABNFRule<Symbol>
 
 	/// The array of rules comprising this rulelist.
 	public let rules: [ABNFRule<Symbol>]
@@ -165,6 +167,10 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 			}
 		}
 		self.ruleNames = ruleNames
+	}
+
+	public init(arrayLiteral elements: ABNFRule<Symbol>...) {
+		self.init(rules: elements)
 	}
 
 	public static func < (lhs: Self, rhs: Self) -> Bool {
@@ -301,6 +307,18 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 	/// - Returns: The transformed ABNFRulelist
 	public func mapRulenames(_ transform: (ABNFRulename<Symbol>) -> ABNFRulename<Symbol>) -> ABNFRulelist<Symbol> {
 		return ABNFRulelist<Symbol>(rules: rules.map{ $0.mapRulenames(transform) })
+	}
+
+	/// Append two rule lists together, ensuring that the names do not conflict.
+	///
+	/// If two rule lists do have conflicting names, use ``dereferenceABNFRulelist(_:_:)`` to mangle the names before combining them.
+	///
+	/// This is best used with `ABNFRulelist<Symbol>.builtins.appending(mylist)` to read a rule list with builtins.
+	public func appending( _ other: Self) -> Self {
+		let dfnOther = other.rules.filter{ $0.definedAs == .equal }.map(\.rulename.id)
+		// Filter out any rules from self that are defined in dfnOther
+		// TODO: Emit a warning that a rule was shadowed
+		return ABNFRulelist(rules: self.rules.filter{ !dfnOther.contains($0.rulename.id) } + other.rules);
 	}
 
 	/// Generates a dictionary of deterministic finite automata (DFAs) for each rule in the list.
@@ -455,6 +473,25 @@ public struct ABNFRulelist<Symbol>: ABNFProduction where Symbol: Comparable & Bi
 		}
 		return (ABNFRulelist(rules: rules), remainder);
 	}
+
+	public static var builtins: ABNFRulelist<Symbol> { [
+		ABNFRule(rulename: .init(label: "ALPHA") , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "BIT")   , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "CHAR")  , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "CR")    , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "CRLF")  , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "CTL")   , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "DIGIT") , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "DQUOTE"), definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "HEXDIG"), definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "HTAB")  , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "LF")    , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "LWSP")  , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "OCTET") , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "SP")    , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "VCHAR") , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+		ABNFRule(rulename: .init(label: "WSP")   , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).alternation),
+	] }
 }
 
 /// Specifies if the rule was defined using `=` or as an additional alternation `=/`
@@ -664,7 +701,7 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	}
 
 	public func alphabet(rulelist: Dictionary<String, Alphabet> = [:]) -> Alphabet {
-		guard let rule = rulelist[label] else { print("No alphabet provided for \(label)"); return [] }
+		guard let rule = rulelist[id] else { assertionFailure("No alphabet provided for \(label)"); return [] }
 		// Remove this rule from the rulelist to prevent recursion
 		return rule
 	}
@@ -711,11 +748,11 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	}
 
 	public func mapElements<Target>(_ transform: (ABNFElement<Symbol>) -> ABNFElement<Target>) -> ABNFRulename<Target> {
-		ABNFRulename<Target>(label: label)
+		ABNFRulename<Target>(id: id, label: label)
 	}
 
 	public func mapSymbols<Target>(_ transform: (Symbol) -> Target) -> ABNFRulename<Target> {
-		ABNFRulename<Target>(label: label)
+		ABNFRulename<Target>(id: id, label: label)
 	}
 
 	/// - rules: A dictionary defining a FSM to use when the given rule is encountered.
@@ -744,9 +781,9 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 	}
 
 	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
-		let definition = rules[label]
+		let definition = rules[id]
 		if let definition {
-			let filtered = Dictionary<String, ABNFAlternation<Symbol>>(uniqueKeysWithValues: rules.filter { $0.0 != label })
+			let filtered = Dictionary<String, ABNFAlternation<Symbol>>(uniqueKeysWithValues: rules.filter { $0.0 != id })
 			return Diagram.Group(item: definition.toRailroad(rules: filtered), label: label, attributes: [:]);
 		} else {
 			return Diagram.NonTerminal(text: label, attributes: [:])
@@ -2530,22 +2567,22 @@ public struct ABNFBuiltins<Dfn: ClosedRangePatternBuilder> where Dfn.Symbol: Bin
 
 	public static var dictionary: Dictionary<String, Dfn> {
 		[
-			"ALPHA" : ABNFBuiltins.ALPHA,
-			"BIT"   : ABNFBuiltins.BIT,
-			"CHAR"  : ABNFBuiltins.CHAR,
-			"CR"    : ABNFBuiltins.CR,
-			"CRLF"  : ABNFBuiltins.CRLF,
-			"CTL"   : ABNFBuiltins.CTL,
-			"DIGIT" : ABNFBuiltins.DIGIT,
-			"DQUOTE": ABNFBuiltins.DQUOTE,
-			"HEXDIG": ABNFBuiltins.HEXDIG,
-			"HTAB"  : ABNFBuiltins.HTAB,
-			"LF"    : ABNFBuiltins.LF,
-			"LWSP"  : ABNFBuiltins.LWSP,
-			"OCTET" : ABNFBuiltins.OCTET,
-			"SP"    : ABNFBuiltins.SP,
-			"VCHAR" : ABNFBuiltins.VCHAR,
-			"WSP"   : ABNFBuiltins.WSP,
+			"alpha" : ABNFBuiltins.ALPHA,
+			"bit"   : ABNFBuiltins.BIT,
+			"char"  : ABNFBuiltins.CHAR,
+			"cr"    : ABNFBuiltins.CR,
+			"crlf"  : ABNFBuiltins.CRLF,
+			"ctl"   : ABNFBuiltins.CTL,
+			"digit" : ABNFBuiltins.DIGIT,
+			"dquote": ABNFBuiltins.DQUOTE,
+			"hexdig": ABNFBuiltins.HEXDIG,
+			"htab"  : ABNFBuiltins.HTAB,
+			"lf"    : ABNFBuiltins.LF,
+			"lwsp"  : ABNFBuiltins.LWSP,
+			"octet" : ABNFBuiltins.OCTET,
+			"sp"    : ABNFBuiltins.SP,
+			"vchar" : ABNFBuiltins.VCHAR,
+			"wsp"   : ABNFBuiltins.WSP,
 		]
 	}
 }
@@ -2556,22 +2593,22 @@ public struct ABNFBuiltins<Dfn: ClosedRangePatternBuilder> where Dfn.Symbol: Bin
 struct Terminals {
 	typealias Rule = SymbolDFA<UInt8>;
 
-	static let ALPHA  = ABNFBuiltins<Rule>.ALPHA;
-	static let BIT    = ABNFBuiltins<Rule>.BIT;
-	static let CHAR   = ABNFBuiltins<Rule>.CHAR;
-	static let CR     = ABNFBuiltins<Rule>.CR;
-	static let CRLF   = ABNFBuiltins<Rule>.CRLF;
-	static let CTL    = ABNFBuiltins<Rule>.CTL;
-	static let DIGIT  = ABNFBuiltins<Rule>.DIGIT;
-	static let DQUOTE = ABNFBuiltins<Rule>.DQUOTE;
-	static let HEXDIG = ABNFBuiltins<Rule>.HEXDIG;
-	static let HTAB   = ABNFBuiltins<Rule>.HTAB;
-	static let LF     = ABNFBuiltins<Rule>.LF;
-	static let LWSP   = ABNFBuiltins<Rule>.LWSP;
-	static let OCTET  = ABNFBuiltins<Rule>.OCTET;
-	static let SP     = ABNFBuiltins<Rule>.SP;
-	static let VCHAR  = ABNFBuiltins<Rule>.VCHAR;
-	static let WSP    = ABNFBuiltins<Rule>.WSP;
+	static var ALPHA : Rule { Rule.range(0x41...0x5A) | Rule.range(0x61...0x7A) }; // %x41-5A / %x61-7A   ; A-Z / a-z
+	static var BIT   : Rule { Rule.symbol(0x30) |  Rule.symbol(0x31) }; // "0" / "1"
+	static var CHAR  : Rule { Rule.range(0x1...0x7F) }; // %x01-7F
+	static var CR    : Rule { Rule.symbol(0xD) }; // %x0D
+	static var CRLF  : Rule { Rule.symbol(0xD) ++ Rule.symbol(0xA) }; // CR LF
+	static var CTL   : Rule { Rule.range(0...0x1F) | Rule.symbol(0x7F) }; // %x00-1F / %x7F
+	static var DIGIT : Rule { Rule.range(0x30...0x39) }; // %x30-39
+	static var DQUOTE: Rule { Rule.symbol(0x22) }; // %x22
+	static var HEXDIG: Rule { DIGIT | Rule.range(0x41...0x46) | Rule.range(0x61...0x66) }; // DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+	static var HTAB  : Rule { Rule.symbol(0x9) }; // %x09
+	static var LF    : Rule { Rule.symbol(0xA) }; // %x0A
+	static var LWSP  : Rule { (WSP | (CRLF ++ WSP)).star() }; // *(WSP / CRLF WSP)
+	static var OCTET : Rule { Rule.range(0...0xFF) }; // %x00-FF
+	static var SP    : Rule { Rule.symbol(0x20) }; // %x20
+	static var VCHAR : Rule { Rule.range(0x21...0x7E) }; // %x21-7E
+	static var WSP   : Rule { SP | HTAB }; // SP / HTAB
 
 	// And now various other expressions used within the rules...
 	// c-wsp          =  WSP / (c-nl WSP)
@@ -2638,7 +2675,9 @@ func CHAR_string(_ bytes: any Collection<UInt8>) -> String {
 }
 
 /// A function that takes an ABNFRulelist and substitutes prose referencing an ABNF rule in another file, with the ABNF itself
-public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ dereference: ((String) throws -> ABNFRulelist<T>)) rethrows -> ABNFRulelist<T> {
+///
+/// Returns a mapping of rule ids to filenames they were found in (the argument that was passed to `dereference` to acquire this rule).
+public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ dereference: ((String) throws -> ABNFRulelist<T>)) rethrows -> (rules: ABNFRulelist<T>, filenames: Dictionary<String, String>) {
 	var importDefinitions: Dictionary<String, ABNFRulelist<T>> = [:];
 	do {
 		// Parse the document
@@ -2722,7 +2761,7 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 		}
 
 		// Mark it read-only so the actor can safely read it
-		return ABNFRulelist(rules: rulelist_all);
+		return (rules: ABNFRulelist(rules: rulelist_all), filenames: [:]);
 	}
 }
 

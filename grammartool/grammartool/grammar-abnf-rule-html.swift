@@ -54,7 +54,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
 		let content = try String(contentsOfFile: filePath, encoding: .utf8)
 		return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-	});
+	}).rules;
 	let rulelist_all_dict = rulelist_all_final.dictionary
 	let definition_dependencies = rulelist_all_final.dependencies(rulename: rulename)
 

@@ -91,6 +91,7 @@ import Testing;
 			#expect(expression.alphabet() == [[0x30...0x39]])
 		}
 
+		// Disabled: It may not be possible to put these two ranges in the same partition with this amount of information
 		@Test("builtins", .disabled())
 		func test_rulelist_builtins() async throws {
 			let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt8>>>.dictionary.mapValues { $0.minimized().alphabet };
@@ -98,7 +99,7 @@ import Testing;
 				ABNFRulename(label: "DIGIT").concatenation,
 				ABNFNumVal(base: .hex, value: .range(0x41...0x43)).concatenation,
 			]));
-			#expect(expression.alphabet() == [[UInt8(0x30)...UInt8(0x39), UInt8(0x41)...UInt8(0x43)]])
+			#expect(expression.alphabet(rulelist: builtins) == [[UInt8(0x30)...UInt8(0x39), UInt8(0x41)...UInt8(0x43)]])
 		}
 
 		@Test("builtins toAlphabet")
@@ -110,21 +111,21 @@ import Testing;
 		@Test("builtins: SymbolAlphabet")
 		func test_builtins_SymbolAlphabet() async throws {
 			let builtins = ABNFBuiltins<SymbolDFA<UInt8>>.dictionary.mapValues { $0.minimized().alphabet };
-			#expect(builtins["DIGIT"] == [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39])
+			#expect(builtins["digit"] == [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39])
 		}
 
-		@Test("builtins: SetAlphabet", .disabled())
+		@Test("builtins: SetAlphabet")
 		func test_builtins_SetAlphabet() async throws {
 			let builtins = ABNFBuiltins<SymbolClassDFA<SetAlphabet<Int>>>.dictionary.mapValues { $0.minimized().alphabet };
-			#expect(builtins["LWSP"] == [[0x09, 0x20], [0x0D], [0x0A]])
-			#expect(builtins["DIGIT"] == [[0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39]])
+			#expect(builtins["lwsp"] == [[0x09, 0x20], [0x0D], [0x0A]])
+			#expect(builtins["digit"] == [[0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39]])
 		}
 
-		@Test("builtins: ClosedRangeAlphabet", .disabled())
+		@Test("builtins: ClosedRangeAlphabet")
 		func test_builtins_ClosedRangeAlphabet() async throws {
 			let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<Int>>>.dictionary.mapValues { $0.minimized().alphabet };
-			#expect(builtins["LWSP"] == [[0x09...0x09, 0x20...0x20], [0x0D...0x0D], [0x0A...0x0A]])
-			#expect(builtins["DIGIT"] == [[0x30...0x39]])
+			#expect(builtins["lwsp"] == [[0x09...0x09, 0x20...0x20], [0x0D...0x0D], [0x0A...0x0A]])
+			#expect(builtins["digit"] == [[0x30...0x39]])
 		}
 	}
 	@Suite("match/parse") struct ABNFTest_match {
@@ -1498,8 +1499,9 @@ import Testing;
 			let providedDictionary = ABNFBuiltins<RangeDFA<UInt8>>.dictionary;
 			#expect(providedDictionary.keys.count == 16);
 
-			providedDictionary.forEach { key, value in
-				let difference = value.symmetricDifference(referenceDictionary[key]!)
+			try providedDictionary.forEach { key, value in
+				let referenceRule = try #require(referenceDictionary[key], "expected \(key)");
+				let difference = value.symmetricDifference(referenceRule)
 				#expect(difference.finals.isEmpty, "Builtin rule \(key) mismatches reference, have values \(difference.minimized().toViz())")
 			}
 		}

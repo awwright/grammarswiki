@@ -469,7 +469,7 @@ struct DocumentDetail: View {
 					let filePath = bundlePath + "/catalog/" + filename
 					let content = try String(contentsOfFile: filePath, encoding: .utf8)
 					return try parser(content)
-				});
+				}).rules;
 				await MainActor.run {
 					content_rulelist = rulelist_all_final
 					do {

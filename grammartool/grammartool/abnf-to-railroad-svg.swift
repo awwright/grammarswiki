@@ -34,13 +34,13 @@ func abnf_to_railroad_svg_args(arguments: Array<String>) -> Int32 {
 			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
 			let content = try String(contentsOfFile: filePath, encoding: .utf8)
 			return try ABNFRulelist<Symbol>.parse(content.utf8)
-		});
+		}).rules;
 	} catch {
 		print("Could not parse input")
 		print(error)
 		return 2;
 	}
-	let rule = dereferencedRulelist.dictionary[arguments[3]];
+	let rule = dereferencedRulelist.dictionary[arguments[3].lowercased()];
 	guard let rule else {
 		print(stderr, "Error: No such rule: \(arguments[3])");
 		exit(1);
