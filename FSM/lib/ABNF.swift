@@ -2760,8 +2760,7 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 			}
 		}
 
-		// Mark it read-only so the actor can safely read it
-		return (rules: ABNFRulelist(rules: rulelist_all), filenames: [:]);
+		return (rules: ABNFRulelist(rules: rulelist_all), filenames: filenameDependencies);
 	}
 }
 
