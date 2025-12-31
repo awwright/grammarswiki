@@ -1546,6 +1546,20 @@ import Testing;
 
 	@Suite("DereferenceABNFRulelist")
 	struct ABNFTests_dereferenceABNFRulelist {
+		@Test("collectImports")
+		func test_collectImports() async throws {
+			// Test that a rulelist with no imports works correctly
+			let rootRulelist = ABNFRulelist<UInt8>(rules: [
+				ABNFRule(rulename: ABNFRulename(label: "simpleRule"), definedAs: .equal, alternation: ABNFAlternation(matches: [
+					ABNFProseVal(remark: "import filename.abnf rule").concatenation
+				]))
+			])
+			let (_, _, backwards) = collectImports(from: rootRulelist)
+			let val = try #require(backwards.first).value
+			#expect(val.filename == "filename.abnf")
+			#expect(val.ruleid == "rule")
+		}
+
 		@Test("no imports")
 		func test_no_imports() async throws {
 			// Test that a rulelist with no imports works correctly
@@ -1558,8 +1572,7 @@ import Testing;
 			let dereferenceFunc: (String) throws -> ABNFRulelist<UInt8> = { _ in
 				throw ABNFParseError(message: "Should not be called", index: 0..<1)
 			}
-
-			let (result, filenames) = try dereferenceABNFRulelist(rootRulelist, dereferenceFunc)
+			let (result, filenames) = try dereferenceABNFRulelist(rootRulelist, dereference: dereferenceFunc)
 
 			// Verify the rule is unchanged
 			let ruleNames = result.ruleNames
@@ -1583,7 +1596,7 @@ import Testing;
 				ABNFRule(rulename: ABNFRulename(label: "main"), definedAs: .equal, alternation: ABNFAlternation(matches: [
 					ABNFConcatenation(repetitions: [
 						ABNFElement.proseVal(ABNFProseVal(remark: "import file1.abnf rule1")).repetition,
-						ABNFElement.proseVal(ABNFProseVal(remark: "import file1.abnf rule2")).repetition
+						ABNFElement.proseVal(ABNFProseVal(remark: "import file1.abnf rule2")).repetition,
 					])
 				]))
 			])
@@ -1595,17 +1608,21 @@ import Testing;
 					default: throw ABNFParseError(message: "File not found", index: 0..<1)
 				}
 			}
-			let (result, filenames) = try dereferenceABNFRulelist(rootRulelist, dereferenceFunc)
-
-			// Verify both rules from the same file are mapped correctly
-			#expect(filenames["{File: file1.abnf Rule: rule1}"] == "file1.abnf")
-			#expect(filenames["{File: file1.abnf Rule: rule2}"] == "file1.abnf")
-
+			let (result, filenames) = try dereferenceABNFRulelist(rootRulelist, dereference: dereferenceFunc)
 			// Verify the result contains all expected rules
 			let ruleNames = result.ruleNames
 			#expect(ruleNames.contains("main"))
 			#expect(ruleNames.contains("{File: file1.abnf Rule: rule1}"))
 			#expect(ruleNames.contains("{File: file1.abnf Rule: rule2}"))
+			#expect(ruleNames.count == 3)
+
+			print(filenames);
+			// Verify both rules from the same file are mapped correctly
+			#expect(filenames["{File: file1.abnf Rule: rule1}"]?.filename == "file1.abnf")
+			#expect(filenames["{File: file1.abnf Rule: rule1}"]?.ruleid == "rule1")
+			#expect(filenames["{File: file1.abnf Rule: rule2}"]?.filename == "file1.abnf")
+			#expect(filenames["{File: file1.abnf Rule: rule2}"]?.ruleid == "rule2")
+			#expect(filenames.count == 2)
 		}
 	}
 }

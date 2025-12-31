@@ -2674,27 +2674,37 @@ func CHAR_string(_ bytes: any Collection<UInt8>) -> String {
 	return String(decoding: bytes, as: UTF8.self)
 }
 
-/// A function that takes an ABNFRulelist and substitutes prose referencing an ABNF rule in another file, with the ABNF itself
+/// A function that takes an ABNFRulelist and substitutes prose referencing an ABNF rule in another file, with the ABNF itself.
 ///
-/// Returns a mapping of rule ids to filenames they were found in (the argument that was passed to `dereference` to acquire this rule).
-public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ dereference: ((String) throws -> ABNFRulelist<T>)) rethrows -> (rules: ABNFRulelist<T>, filenames: Dictionary<String, String>) {
+/// This function rewrites `root_parsed` to transform a prose-val referencing an external file, into a rulename pointing to the rule in that file, and importing those rules as necessary
+/// If it contains no rule references, it will be returned unmodified.
+/// It will be treated as if loaded from `base`
+/// Any prose-val that form a rule reference are substituted with a rulename that references the intended rule.
+/// Any rulenames that are defined only as prose-val will be substituted for their definition as the external-reference rulename.
+///
+/// - Parameter root_parsed: ABNFRulelist that contains external references that need to be imported.
+/// - Parameter base: The name of the root file
+/// - Parameter dereference: A function mapping a filename to an ABNFRulelist
+/// - Returns: Merged ABNFRulelist containing imported rules, and a dictionary mapping new rule ids to source filenames and rule ids
+public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, dereference: ((String) throws -> ABNFRulelist<T>)) rethrows
+-> (rules: ABNFRulelist<T>, backward: Dictionary<String, (filename: String, ruleid: String)>)
+{
 	var importDefinitions: Dictionary<String, ABNFRulelist<T>> = [:];
 	do {
 		// Parse the document
 		//let root_parsed = try ABNFRulelist<UInt32>.parse(input)
 		// Dereference external references, convert proseVal imports to mangled rule names
-		let (root_references, root_dereferenced) = collectImports(from: root_parsed);
+		let (root_references, root_dereferenced, references_backwards) = collectImports(from: root_parsed);
 		var rulelist_all = root_dereferenced.rules;
 
 		// Keep track of which rulenames map to which files
-		var filenameDependencies: Dictionary<String, String> = [:];
+		var filenameDependencies: Dictionary<String, (filename: String, ruleid: String)> = [:];
 
 		// Make a list of rules that are directly depended on by the root document, and iterate through to load them.
 		// All of the imports in the root document are required.
 		var requiredRules = root_references.map { mangleRulename(filename: $0.0, rulename: $0.1) };
-		for referenced in root_references {
-			let referenced_mangled = mangleRulename(filename: referenced.0, rulename: referenced.1);
-			filenameDependencies[referenced_mangled] = referenced.0;
+		for (referenced_mangled, referenced) in references_backwards {
+			filenameDependencies[referenced_mangled] = referenced;
 		}
 
 		// Keep track of the rules that have been imported
@@ -2712,8 +2722,9 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 
 			// If the rulename is already in the list, then no need to do anything
 			if insertedRulenames.contains(mangled) { continue }
-			let filename = filenameDependencies[mangled];
-			guard let filename else { continue }
+			let dependency = filenameDependencies[mangled];
+			guard let dependency else { continue }
+			let filename = dependency.filename;
 
 			// Load the file where the rule is defined
 			let rulelist_mangled_preloaded = importDefinitions[filename];
@@ -2723,22 +2734,20 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 			} else {
 				let rulelist_parsed = try dereference(filename)
 				// Dereference external references, convert proseVal imports to mangled rule names
-				let (rulelist_imports, rulelist_dereferenced) = collectImports(from: rulelist_parsed);
+				let (_, rulelist_dereferenced, references_backwards) = collectImports(from: rulelist_parsed);
 
 				// Keep track of where each mangled rule name is defined
-				for referenced in rulelist_imports {
-					let referenced_mangled = mangleRulename(filename: referenced.0, rulename: referenced.1);
-					filenameDependencies[referenced_mangled] = referenced.0;
+				for (referenced_mangled, referenced) in references_backwards {
+					filenameDependencies[referenced_mangled] = referenced;
 				}
 
 				// Also (unlike the root file), mangle any rule names that are defined elsewhere in the file. (Other rules are builtin rules, or external references.)
 				rulelist_mangled = rulelist_dereferenced.mapRulenames {
-					ABNFRulename(id: rulelist_dereferenced.ruleNames.contains($0.id) ? mangleRulename(filename: filename, rulename: $0.id) : $0.id, label: $0.label)
+					ABNFRulename<T>(id: rulelist_dereferenced.ruleNames.contains($0.id) ? mangleRulename(filename: filename, rulename: $0.id) : $0.id, label: $0.label)
 				}
 				importDefinitions[filename] = rulelist_mangled;
-				for referenced in rulelist_mangled.ruleNames {
-					let referenced_mangled = mangleRulename(filename: filename, rulename: referenced);
-					filenameDependencies[referenced] = filename;
+				for (referenced_mangled, referenced) in references_backwards {
+					filenameDependencies[referenced_mangled] = referenced;
 				}
 			}
 
@@ -2760,12 +2769,19 @@ public func dereferenceABNFRulelist<T>(_ root_parsed: ABNFRulelist<T>, _ derefer
 			}
 		}
 
-		return (rules: ABNFRulelist(rules: rulelist_all), filenames: filenameDependencies);
+		return (rules: ABNFRulelist(rules: rulelist_all), backward: filenameDependencies);
 	}
 }
 
-private func collectImports<T>(from: ABNFRulelist<T>) -> (Array<(String, String)>, ABNFRulelist<T>) {
+/// Make a list of all external references found in proseVal expressions
+/// And return a modified version of the ABNFRulelist that 
+/// - Parameter from: List of rules to search
+/// - Returns: Array of referenced rules (the filename they are found in and the rule label), and the rule list rewritten with rule names that identify that rule
+func collectImports<T>(from: ABNFRulelist<T>)
+	-> (Array<(String, String)>, ABNFRulelist<T>, Dictionary<String, (filename: String, ruleid: String)>)
+{
 	var references: Array<(String, String)> = []
+	var backwards: Dictionary<String, (filename: String, ruleid: String)> = [:]
 	let mangled: ABNFRulelist<T> = from.mapElements {
 		switch $0 {
 		case .proseVal(let proseVal):
@@ -2779,11 +2795,13 @@ private func collectImports<T>(from: ABNFRulelist<T>) -> (Array<(String, String)
 			if !references.contains(where: { $0.0 == filename && $0.1 == rulename }) {
 				references.append(tuple)
 			}
-			return ABNFElement.rulename(ABNFRulename(label: mangleRulename(filename: filename, rulename: rulename)))
+			let mangled = mangleRulename(filename: filename, rulename: rulename)
+			backwards[mangled] = (filename, rulename);
+			return ABNFElement.rulename(ABNFRulename(id: mangled, label: rulename))
 		default: return $0
 		}
 	}
-	return (references, mangled)
+	return (references, mangled, backwards)
 }
 
 private func mangleRulename(filename: String, rulename: String) -> String {

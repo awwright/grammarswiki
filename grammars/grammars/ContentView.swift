@@ -464,7 +464,7 @@ struct DocumentDetail: View {
 		Task.detached(priority: .utility) {
 			do {
 				let root_parsed = try parser(text);
-				let rulelist_all_final = try dereferenceABNFRulelist(root_parsed, {
+				let rulelist_all_final = try dereferenceABNFRulelist(root_parsed, dereference: {
 					filename in
 					let filePath = bundlePath + "/catalog/" + filename
 					let content = try String(contentsOfFile: filePath, encoding: .utf8)

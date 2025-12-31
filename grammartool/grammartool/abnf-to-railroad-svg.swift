@@ -29,12 +29,12 @@ func abnf_to_railroad_svg_args(arguments: Array<String>) -> Int32 {
 	let dereferencedRulelist: ABNFRulelist<Symbol>
 	do {
 		let importedRulelist = try ABNFRulelist<Symbol>.parse(imported);
-		dereferencedRulelist = try dereferenceABNFRulelist(importedRulelist, {
-			filename in
+		func dereference(filename: String) throws -> ABNFRulelist<Symbol> {
 			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
 			let content = try String(contentsOfFile: filePath, encoding: .utf8)
 			return try ABNFRulelist<Symbol>.parse(content.utf8)
-		}).rules;
+		}
+		dereferencedRulelist = try dereferenceABNFRulelist(importedRulelist, dereference: dereference).rules;
 	} catch {
 		print("Could not parse input")
 		print(error)
@@ -529,7 +529,9 @@ public struct RRContainerTerminal: RRContainerProtocol {
 	public var inPoint: CGPoint
 	public var outPoint: CGPoint
 	public let text: String;
-	init(text: String) {
+	public let href: String?;
+
+	init(text: String, href: String?) {
 		self.size = .init(
 			width: 20 + 8.5 * Double(text.count),
 			height: 22,
