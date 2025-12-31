@@ -49,7 +49,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
 
 	// Dereference rules referencing other files
-	let rulelist_all_final = try! dereferenceABNFRulelist(root_parsed, {
+	let rulelist_all_final = try! dereferenceABNFRulelist(root_parsed, dereference: {
 		filename in
 		let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
 		let content = try String(contentsOfFile: filePath, encoding: .utf8)

@@ -529,9 +529,8 @@ public struct RRContainerTerminal: RRContainerProtocol {
 	public var inPoint: CGPoint
 	public var outPoint: CGPoint
 	public let text: String;
-	public let href: String?;
 
-	init(text: String, href: String?) {
+	init(text: String) {
 		self.size = .init(
 			width: 20 + 8.5 * Double(text.count),
 			height: 22,
