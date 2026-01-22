@@ -16,14 +16,20 @@ func abnf_dereference_args(arguments: Array<String>) -> Int32 {
 	// TODO: resolve all references relative to the file location
 	let catalog = Catalog(root: directory);
 	let rulename: String? = arguments.count > 3 ? arguments[3] : nil;
-	print(filepath);
-	print(rulename);
+	print(bold("filepath"), filepath);
+	print(bold("rulename"), rulename);
+	print("");
 
 	let rules: ABNFRulelist<UInt32>;
 	do {
 		let (rules, mapping): (ABNFRulelist<UInt32>, [String: (String, String)]) = try catalog.load(path: filename, rulename: rulename);
+		print(bold("rules"));
 		print(rules);
-		print(mapping);
+
+		print(bold("mapping"));
+		for (k, v) in mapping {
+			print("\(k) -> \(v.0) -> \(v.1)")
+		}
 	} catch {
 		print("\(bold("ERROR")): \(error)")
 		return 1;
