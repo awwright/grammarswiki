@@ -23,67 +23,75 @@ public struct Catalog {
 	public func load<T>(path: String, rulename: String? = nil) throws
 		-> (rules: ABNFRulelist<T>, backward: Dictionary<String, (filename: String, ruleid: String)>)
 	{
-		// The list of files
+		// Keep a list of imported files
 		var importedFiles: Dictionary<String, ABNFRulelist<T>> = [:];
 
-		func dereference(filename: String) throws -> ABNFRulelist<T> {
-			let filePath = root + "/" + filename;
-			let content = try String(contentsOfFile: filePath, encoding: .utf8)
-				.replacingOccurrences(of: "\n", with: "\r\n")
-				.replacingOccurrences(of: "\r\r", with: "\r");
-			return try ABNFRulelist<T>.parse(content.utf8);
-		}
+		let (root_rulelist, root_backwards) = try dereference(source_filename: path)
 
-		// First let's get the root file
-		let root_parsed = try dereference(filename: path);
-		importedFiles[path] = root_parsed
-
-		// The list of rules to be included from the root file (ignore others
+		// Make the list of rules to be included in the resulting output
 		let root_rulenames: Array<String>;
 		if let rulename {
 			// If one rulename was specfied, find the dependencies for only that rule
 			root_rulenames = [rulename.lowercased()].map { "{File: \(path) Rule: \($0)}"; };
 		} else {
 			// Otherwise assume we want all the rules from the file
-			root_rulenames = root_parsed.ruleNames.map { "{File: \(path) Rule: \($0.lowercased())}"; }
+			root_rulenames = root_backwards.keys.sorted();
 		}
 
-		// Replace all of the rules and imports in the file with an unambiguous identifier
-		func collectImports(source_filename: String, rulelist: ABNFRulelist<T>)
+		func dereference(source_filename: String) throws
 			-> (ABNFRulelist<T>, Dictionary<String, (filename: String, ruleid: String)>)
 		{
+			let filePath = root + "/" + source_filename;
+			let content = try String(contentsOfFile: filePath, encoding: .utf8)
+				.replacingOccurrences(of: "\n", with: "\r\n")
+				.replacingOccurrences(of: "\r\r", with: "\r");
+			let rulelist = try ABNFRulelist<T>.parse(content.utf8);
+
 			var backwards: Dictionary<String, (filename: String, ruleid: String)> = [:]
 			let mangled: ABNFRulelist<T> =
-			rulelist
+				rulelist
 				.mapRulenames {
-					let mangled = "{File: \(source_filename) Rule: \($0)}";
+					let mangled = "{File: \(source_filename) Rule: \($0.label.lowercased())}";
 					return ABNFRulename<T>(id: mangled, label: mangled); // rulename.label
 				}
 				.mapElements {
 					switch $0 {
-					case .proseVal(let proseVal):
-						let parts = proseVal.remark.split(separator: " ", maxSplits: 3, omittingEmptySubsequences: false)
-						guard parts.count >= 3 else { return $0 }
-						guard parts[0] == "import" else { return $0 }
-						let target_filename = String(parts[1]);
-						let target_rulename = String(parts[2]);
-						let mangled = "{File: \(target_filename) Rule: \(target_rulename)}";
-						backwards[mangled] = (target_filename, target_rulename);
-						return ABNFRulename(id: mangled, label: mangled).element; // target_rulename
-					default:
-						return $0;
+						case .proseVal(let proseVal):
+							let parts = proseVal.remark.split(separator: " ", maxSplits: 3, omittingEmptySubsequences: false)
+							guard parts.count >= 3 else { return $0 }
+							guard parts[0] == "import" else { return $0 }
+							let target_filename = String(parts[1]);
+							let target_rulename = String(parts[2]);
+							let mangled = "{File: \(target_filename) Rule: \(target_rulename)}";
+							backwards[mangled] = (target_filename, target_rulename);
+							return ABNFRulename(id: mangled, label: mangled).element; // target_rulename
+						default:
+							return $0;
 					}
-				}
+				};
 			return (mangled, backwards);
 		}
 
-		let (root_dereferenced, root_references_backwards) = collectImports(source_filename: path, rulelist: root_parsed);
-		var rulelist_all = root_dereferenced.rules.filter { root_rulenames.contains($0.rulename.id) }
+		// Load only the desired rules
+		var required_rulelist = root_rulelist.rules.filter { root_rulenames.contains($0.rulename.id) };
+		var required_rulelist_set = Set(required_rulelist.map { $0.rulename.id });
 
-		// Keep track of the source filenames and rule id in those files
-		// The rule names to start will be the original names
-		var references_backwards = root_references_backwards;
+		// Iterate through the rulelist, appending required rules as needed
+		var i = 0;
+		while i < required_rulelist.count {
+			let r = required_rulelist[i];
+			for ref in r.referencedRules.sorted() {
+				if !required_rulelist_set.contains(ref) {
+					// Determine which file we find the reference in
+					for new_r in root_rulelist.rules.filter({ $0.rulename.id == ref }) {
+						required_rulelist.append(new_r);
+						required_rulelist_set.insert(new_r.rulename.id);
+					}
+				}
+			}
+			i += 1;
+		}
 
-		return (rules: ABNFRulelist<T>(rules: rulelist_all), backward: references_backwards)
+		return (rules: ABNFRulelist<T>(rules: required_rulelist), backward: root_backwards)
 	}
 }
