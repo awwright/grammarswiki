@@ -41,6 +41,10 @@ public struct Catalog {
 			root_rulenames = root_backwards.keys.sorted();
 		}
 
+		// Keep track of the used rulenames so they don't conflict when names from multiple files are merged together
+		var merged_rulenames_used: Set<String> = [];
+		var merged_rulenames_map: Dictionary<String, String> = [:];
+
 		func dereference(source_filename: String) throws
 			-> (ABNFRulelist<T>, Dictionary<String, (filename: String, ruleid: String)>)
 		{
@@ -65,7 +69,7 @@ public struct Catalog {
 							guard parts.count >= 3 else { return $0 }
 							guard parts[0] == "import" else { return $0 }
 							let target_filename = String(parts[1]);
-							let target_rulename = String(parts[2]);
+							let target_rulename = String(parts[2]).lowercased();
 							let mangled = "{File: \(target_filename) Rule: \(target_rulename)}";
 							backwards[mangled] = (target_filename, target_rulename);
 							return ABNFRulename(id: mangled, label: mangled).element; // target_rulename
@@ -85,6 +89,13 @@ public struct Catalog {
 		var i = 0;
 		while i < required_rulelist.count {
 			let r = required_rulelist[i];
+
+			// Generate a unique name for this rule
+			var candidate_rulename = all_backwards[r.rulename.id]!.ruleid;
+			while merged_rulenames_used.contains(candidate_rulename) { candidate_rulename += "-" }
+			merged_rulenames_map[r.rulename.id] = candidate_rulename;
+			merged_rulenames_used.insert(candidate_rulename);
+
 			// Get a list of the rules that this rule refers to, and add those to the list as necessary
 			for ref in r.referencedRules.sorted() {
 				// Skip rules we have already loaded
@@ -108,14 +119,13 @@ public struct Catalog {
 					required_rulelist.append(new_r);
 					required_rulelist_set.insert(new_r.rulename.id);
 				}
-
 			}
 			i += 1;
 		}
 
 		// Now the rulenames in required_rulelist and all_backwards are unique... but also illegal.
 		// Map them to their original rulenames, when they're unambiguous.
-		let rules = ABNFRulelist<T>(rules: required_rulelist).mapRulenames { ABNFRulename(label: all_backwards[$0.label]!.ruleid) };
+		let rules = ABNFRulelist<T>(rules: required_rulelist).mapRulenames { ABNFRulename(label: merged_rulenames_map[$0.id] ?? $0.id) };
 		let backward = all_backwards.filter { required_rulelist_set.contains($0.0) };
 
 		return (rules: rules, backward: backward)
