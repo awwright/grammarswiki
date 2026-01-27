@@ -28,7 +28,6 @@ public struct Catalog {
 		var all_dereferenced = [path: (root_rulelist, root_backwards)];
 		// Keep track of the order the files were loaded in
 		var all_path_priority = [path];
-		var all_mangled: Dictionary<String, ABNFRulelist<T>> = [path: root_rulelist];
 		var all_backwards = root_backwards;
 
 		// Make the list of rules to be included in the resulting output
@@ -53,12 +52,15 @@ public struct Catalog {
 				.replacingOccurrences(of: "\n", with: "\r\n")
 				.replacingOccurrences(of: "\r\r", with: "\r");
 			let rulelist = try ABNFRulelist<T>.parse(content.utf8);
+			let rulenames = rulelist.ruleNames;
 
 			var backwards: Dictionary<String, (filename: String, ruleid: String)> = [:]
 			let mangled: ABNFRulelist<T> =
 				rulelist
 				.mapRulenames {
-					let mangled = "{File: \(source_filename) Rule: \($0.label.lowercased())}";
+					// If the rule was undefined in the file, then it's likely a builtin ABNF rule, or other unconstrained variable, leave it as it is
+					guard rulenames.contains($0.id) else { return $0 }
+					let mangled = "{File: \(source_filename) Rule: \($0.id)}";
 					backwards[mangled] = (source_filename, $0.label.lowercased());
 					return ABNFRulename<T>(id: mangled, label: mangled); // rulename.label
 				}
@@ -108,7 +110,6 @@ public struct Catalog {
 				if all_dereferenced[required_filename] == nil {
 					let (ref_rulelist, ref_backwards) = try dereference(source_filename: required_filename);
 					all_dereferenced[required_filename] = (ref_rulelist, ref_backwards);
-					all_mangled[path] = ref_rulelist;
 					for (k, v) in ref_backwards { all_backwards[k] = v; }
 				}
 
@@ -125,9 +126,15 @@ public struct Catalog {
 
 		// Now the rulenames in required_rulelist and all_backwards are unique... but also illegal.
 		// Map them to their original rulenames, when they're unambiguous.
-		let rules = ABNFRulelist<T>(rules: required_rulelist).mapRulenames { ABNFRulename(label: merged_rulenames_map[$0.id] ?? $0.id) };
-		let backward = all_backwards.filter { required_rulelist_set.contains($0.0) };
-
+		let rules = ABNFRulelist<T>(rules: required_rulelist).mapRulenames {
+			if let mapped = merged_rulenames_map[$0.id] {
+				return ABNFRulename(label: mapped);
+			} else {
+				return $0;
+			}
+		};
+		// Filter out rules from all_backwards not used in the output, then map the keys from unique rulenames to mapped rulenames according to merged_rulenames_map
+		let backward = Dictionary(uniqueKeysWithValues: all_backwards.filter { required_rulelist_set.contains($0.0) }.map { (k, v) in (merged_rulenames_map[k] ?? k, v) });
 		return (rules: rules, backward: backward)
 	}
 }
