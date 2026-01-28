@@ -463,13 +463,8 @@ struct DocumentDetail: View {
 		guard let bundlePath = Bundle.main.resourcePath else { return }
 		Task.detached(priority: .utility) {
 			do {
-				let root_parsed = try parser(text);
-				let rulelist_all_final = try dereferenceABNFRulelist(root_parsed, dereference: {
-					filename in
-					let filePath = bundlePath + "/catalog/" + filename
-					let content = try String(contentsOfFile: filePath, encoding: .utf8)
-					return try parser(content)
-				}).rules;
+				let catalog = Catalog(root: bundlePath + "/catalog/")
+				let (rulelist_all_final, _): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: document.name, content: text)
 				await MainActor.run {
 					content_rulelist = rulelist_all_final
 					do {
