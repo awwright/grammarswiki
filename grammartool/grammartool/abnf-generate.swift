@@ -4,8 +4,8 @@ private typealias Symbol = UInt32;
 private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<Symbol>>;
 
 func abnf_generate_help(arguments: Array<String>) {
-	print("\(arguments[0]) \(bold("abnf-to-regex")) [<filepath>] <expression>");
-	print("\tConverts <expression> to a regular expression, optionally importing rules from <filepath>");
+	print("\(arguments[0]) \(bold("abnf-generate")) [<filepath>] <expression>");
+	print("\tGenerate instances of <expression> separated by a newline (importing rules from <filepath>)");
 }
 
 func abnf_generate_args(arguments: Array<String>) -> Int32 {
