@@ -17,13 +17,14 @@ public struct Catalog {
 	// - Rule id and label should include just enough file path to know which absolute file we're talking about (this probably means: filenames within an ABNF fiile should be resolved relative to that file, but all file paths should be displayed in the output relative to the catalog root)
 	/// Load the rules from an ABNF file, and all referenced rules.
 	/// - Parameters:
-	///   - path: File path to load, underneath ``root``
-	///   - rulename: If non-nil, only load the named rule from the file and its dependencies
+	///   - content: Assume the given string as the body for ``path``
+	///   - path: File path to load, relative to ``root``
+	///   - rulenames: If non-nil, only load the named rules from the file and its dependencies
 	/// - Returns: <#description#>
-	public func load<T>(path: String, rulename: String? = nil) throws
+	public func load<T>(path: String, content: String? = nil, rulenames: Array<String>? = nil) throws
 		-> (rules: ABNFRulelist<T>, backward: Dictionary<String, (filename: String, ruleid: String)>)
 	{
-		let (root_rulelist, root_backwards) = try dereference(source_filename: path)
+		let (root_rulelist, root_backwards) = if let content { try dereference_string(source_filename: path, content: content) } else { try dereference(source_filename: path) }
 		// Keep a list of imported files
 		var all_dereferenced = [path: (root_rulelist, root_backwards)];
 		// Keep track of the order the files were loaded in
@@ -32,9 +33,9 @@ public struct Catalog {
 
 		// Make the list of rules to be included in the resulting output
 		let root_rulenames: Array<String>;
-		if let rulename {
+		if let rulenames {
 			// If one rulename was specfied, find the dependencies for only that rule
-			root_rulenames = [rulename.lowercased()].map { "{File: \(path) Rule: \($0)}"; };
+			root_rulenames = rulenames.map { "{File: \(path) Rule: \($0.lowercased())}"; };
 		} else {
 			// Otherwise assume we want all the rules from the file
 			root_rulenames = root_backwards.keys.sorted();
@@ -51,6 +52,12 @@ public struct Catalog {
 			let content = try String(contentsOfFile: filePath, encoding: .utf8)
 				.replacingOccurrences(of: "\n", with: "\r\n")
 				.replacingOccurrences(of: "\r\r", with: "\r");
+			return try dereference_string(source_filename: source_filename, content: content);
+		}
+
+		func dereference_string(source_filename: String, content: String) throws
+			-> (ABNFRulelist<T>, Dictionary<String, (filename: String, ruleid: String)>)
+		{
 			let rulelist = try ABNFRulelist<T>.parse(content.utf8);
 			let rulenames = rulelist.ruleNames;
 
