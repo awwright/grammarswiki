@@ -8,7 +8,7 @@ local-part      =   dot-atom / quoted-string
 
 domain          =   dot-atom / domain-literal
 
-domain-literal  =   "[" *(dtext) "]"
+domain-literal  =   "[" *dtext "]"
 
 dtext           =   %d33-90 /          ; Printable US-ASCII
                     %d94-126 ;/         ;  characters not including
@@ -22,6 +22,3 @@ quoted-pair     =   "\" (VCHAR / WSP)
 dot-atom        =   1*atext *("." 1*atext)
 atext           =   ALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "/" /
                     "=" / "?" / "^" / "_" / "`" / "{" / "|" / "}" / "~"
-
-domain-literal  =   "[" *dtext "]"
-dtext           =   %d33-90 / %d94-126
