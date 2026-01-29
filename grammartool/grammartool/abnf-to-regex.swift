@@ -15,14 +15,14 @@ func abnf_to_regex_args(arguments: Array<String>) -> Int32 {
 		return 1;
 	}
 
-	let imported: Data?;
-	let expressionIndex: Array.Index
+	let filepath: String?
+	let expressionStr: String;
 	if(arguments.count == 4){
-		imported = getInput(filename: arguments[2]);
-		expressionIndex = 3;
+		filepath = arguments[2];
+		expressionStr = arguments[3];
 	} else {
-		imported = nil
-		expressionIndex = 2;
+		filepath = nil
+		expressionStr = arguments[2];
 	}
 
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
@@ -33,15 +33,17 @@ func abnf_to_regex_args(arguments: Array<String>) -> Int32 {
 	let expression: ABNFAlternation<Symbol>;
 	let fsm: DFA;
 	do {
-		let importedRulelist = try ABNFRulelist<Symbol>.parse(imported!);
-		func dereference(filename: String) throws -> ABNFRulelist<Symbol> {
-			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
-			let content = try String(contentsOfFile: filePath, encoding: .utf8)
-			return try ABNFRulelist<Symbol>.parse(content.utf8)
+		let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
+		// First parse the provided expression, to see if it references any rule names
+		let expression = try ABNFAlternation<Symbol>.parse(expressionStr.utf8);
+
+		if let filepath {
+			let (dereferencedRulelist, _): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: filepath, rulenames: Array(expression.referencedRules))
+			importedDict = try dereferencedRulelist.toClosedRangePattern(as: DFA.self, rules: builtins).mapValues { $0.minimized().normalized() }
+		} else {
+			importedDict = [:]
 		}
-		let dereferencedRulelist = try dereferenceABNFRulelist(importedRulelist, dereference: dereference).rules;
-		importedDict = try dereferencedRulelist.toClosedRangePattern(as: DFA.self, rules: builtins).mapValues { $0.minimized().normalized() }
-		expression = try ABNFAlternation<Symbol>.parse(arguments[expressionIndex].utf8);
+
 		fsm = try expression.toPattern(rules: importedDict)
 	} catch {
 		print("Could not parse input")

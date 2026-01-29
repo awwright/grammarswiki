@@ -13,16 +13,15 @@ func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
 		abnf_to_railroad_js_help(arguments: arguments);
 		return 1;
 	}
-	let imported = getInput(filename: arguments[2]);
+	let filepath = arguments[2];
+	let imported = getInput(filename: filepath);
+	guard let imported else { return 1 }
+	let expressionStr = arguments[3];
 	let dereferencedRulelist: ABNFRulelist<Symbol>
 	do {
-		let importedRulelist = try ABNFRulelist<Symbol>.parse(imported!);
-		func dereference(filename: String) throws -> ABNFRulelist<Symbol> {
-			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
-			let content = try String(contentsOfFile: filePath, encoding: .utf8)
-			return try ABNFRulelist<Symbol>.parse(content.utf8)
-		}
-		dereferencedRulelist = try dereferenceABNFRulelist(importedRulelist, dereference: dereference).rules;
+		let catalog = Catalog(root: FileManager.default.currentDirectoryPath)
+		var (_r, _): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: filepath, content: String(data: imported, encoding: .utf8))
+		dereferencedRulelist = _r
 	} catch {
 		print("Could not parse input")
 		print(error)
