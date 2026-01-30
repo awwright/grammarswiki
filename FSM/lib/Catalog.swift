@@ -144,4 +144,15 @@ public struct Catalog {
 		let backward = Dictionary(uniqueKeysWithValues: all_backwards.filter { required_rulelist_set.contains($0.0) }.map { (k, v) in (merged_rulenames_map[k] ?? k, v) });
 		return (rules: rules, backward: backward)
 	}
+
+	/// Parse an expression ``expression``, loading a file ``path`` to resolve rule names.
+	/// Returns an ABNFExpression representing the expression, and an ABNFRulelist of only the rules needed to evaluate the expression.
+	public func loadExpression<T>(path: String, content: String? = nil, expression: String) throws
+	-> (expression: ABNFAlternation<T>, rules: ABNFRulelist<T>, backward: Dictionary<String, (filename: String, ruleid: String)>)
+	{
+		let expr = try ABNFAlternation<T>.parse(expression.utf8);
+		let (rules, backwards): (rules: ABNFRulelist<T>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try self.load(path: path, rulenames: Array(expr.referencedRules));
+		return (expression: expr, rules: rules, backward: backwards);
+	}
+
 }

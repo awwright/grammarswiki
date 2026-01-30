@@ -20,7 +20,7 @@ func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
 	let dereferencedRulelist: ABNFRulelist<Symbol>
 	do {
 		let catalog = Catalog(root: FileManager.default.currentDirectoryPath)
-		var (_r, _): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: filepath, content: String(data: imported, encoding: .utf8))
+		let (_r, _): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: filepath, content: String(data: imported, encoding: .utf8))
 		dereferencedRulelist = _r
 	} catch {
 		print("Could not parse input")
