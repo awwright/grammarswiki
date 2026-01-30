@@ -30,26 +30,19 @@ func abnf_to_regex_args(arguments: Array<String>) -> Int32 {
 
 	// builtins will be copied to the output
 	let importedDict: [String : DFA];
-	let expression: ABNFAlternation<Symbol>;
 	let fsm: DFA;
 	do {
 		let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
-		// First parse the provided expression, to see if it references any rule names
-		let expression = try ABNFAlternation<Symbol>.parse(expressionStr.utf8);
-
-		if let filepath {
-			let (dereferencedRulelist, _): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: filepath, rulenames: Array(expression.referencedRules))
-			importedDict = try dereferencedRulelist.toClosedRangePattern(as: DFA.self, rules: builtins).mapValues { $0.minimized().normalized() }
-		} else {
-			importedDict = [:]
-		}
-
+		let (expression, dereferencedRulelist, _): (expression: ABNFAlternation<Symbol>, rules: ABNFRulelist<Symbol>, backward: Dictionary<String, (filename: String, ruleid: String)>)
+		= try catalog.loadExpression(path: filepath ?? "", expression: expressionStr);
+		importedDict = try dereferencedRulelist.toClosedRangePattern(as: DFA.self, rules: builtins).mapValues { $0.minimized().normalized() }
 		fsm = try expression.toPattern(rules: importedDict)
 	} catch {
 		print("Could not parse input")
 		print(error)
 		return 2;
 	}
+
 	let regex: REPattern<Symbol> = fsm.toPattern()
 	print(REDialectBuiltins.swift.encode(regex))
 	return 0
