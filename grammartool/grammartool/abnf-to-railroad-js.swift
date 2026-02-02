@@ -3,25 +3,32 @@ import Foundation;
 private typealias Symbol = UInt32;
 
 func abnf_to_railroad_js_help(arguments: Array<String>) {
-	print("\(arguments[0]) \(bold("abnf-to-railroad-js")) <filepath> <expression>");
-	print("\tReads <filepath> and converts <rulename> to a railroad script for railroad.js");
+	print("\(arguments[0]) \(bold("abnf-to-railroad-js")) [<filepath>] <expression>");
+	print("\tReads <filepath> and converts <expression> to a railroad script for railroad.js");
 }
 
 func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
-	guard arguments.count == 4 else {
-		print(arguments.count);
+	let filepath: String?
+	let expressionStr: String;
+	if arguments.count == 3 {
+		filepath = nil;
+		expressionStr = arguments[2];
+	} else if arguments.count == 4 {
+		filepath = arguments[2];
+		expressionStr = arguments[3];
+	} else {
 		abnf_to_railroad_js_help(arguments: arguments);
 		return 1;
 	}
-	let filepath = arguments[2];
-	let imported = getInput(filename: filepath);
-	guard let imported else { return 1 }
-	let expressionStr = arguments[3];
+
+	let userExpression: ABNFAlternation<Symbol>
 	let dereferencedRulelist: ABNFRulelist<Symbol>
 	do {
-		let catalog = Catalog(root: FileManager.default.currentDirectoryPath)
-		let (_r, _): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: filepath, content: String(data: imported, encoding: .utf8))
-		dereferencedRulelist = _r
+		let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
+		let (_e, _r, _): (expression: ABNFAlternation<Symbol>, rules: ABNFRulelist<Symbol>, backward: Dictionary<String, (filename: String, ruleid: String)>)
+		= try catalog.loadExpression(path: filepath, expression: expressionStr);
+		userExpression = _e;
+		dereferencedRulelist = _r;
 	} catch {
 		print("Could not parse input")
 		print(error)
@@ -52,12 +59,13 @@ func abnf_to_railroad_js_args(arguments: Array<String>) -> Int32 {
 	// class Block extends FakeSVG
 	// class TextDiagram
 
-	let rule = dereferencedRulelist.dictionary[arguments[3]];
-	guard let rule else {
-		print(stderr, "Error: No such rule: \(arguments[3])");
-		exit(1);
+	if let singleRule = dereferencedRulelist.rules.first,	singleRule.rulename.id == expressionStr.lowercased() {
+		// If expression matches a single rule, pull that rule directly
+		print(generateDiagram(singleRule), terminator: "");
+	} else {
+		// Otherwise, generate a diagram of the expression, and expand rule references within it
+		print(generateDiagram(ABNFRule(rulename: ABNFRulename(label: ""), definedAs: .equal, alternation: userExpression)), terminator: "");
 	}
-	print(generateDiagram(rule), terminator: "");
 	return 0
 }
 
