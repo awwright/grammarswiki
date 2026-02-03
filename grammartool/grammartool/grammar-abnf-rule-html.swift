@@ -20,10 +20,12 @@ func grammar_abnf_rule_html_args(arguments: Array<String>) -> Int32 {
 func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, filePath: String, rulename: String) {
 	res.contentType = "application/xhtml+xml"
 	let catalog = Catalog(root: FileManager.default.currentDirectoryPath + "");
-	let (rulelist_all_final, rulelist_backwards): (ABNFRulelist<UInt32>, [String: (filename: String, ruleid: String)]) = try! catalog.load(path: filePath, rulenames: [rulename])
+	let rule = ABNFRulename<UInt32>(label: rulename);
+	let ruleid = rule.id; // ABNFRulename automatically normalizes the rule label
+	let (rulelist_all_final, rulelist_backwards): (ABNFRulelist<UInt32>, [String: (filename: String, ruleid: String)]) = try! catalog.load(path: filePath, rulenames: [ruleid])
 	let rulelist = rulelist_all_final.ruleNames;
 
-	guard rulelist.contains(rulename) else {
+	guard rulelist.contains(ruleid) else {
 		res.status = .notFound
 		res.end()
 		return
@@ -31,7 +33,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 
 	let rules_dict = rulelist_all_final.dictionary
 	// rule should be guaranteed to exist due to `guard rulelist.contains(rulename)` above
-	let expression = rules_dict[rulename]!
+	let expression = rules_dict[ruleid]!
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
 	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
 	let rulelist_all_dict = rulelist_all_final.dictionary
@@ -41,7 +43,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	// This page includes only the rules necessary to define the top rule, including foreign rules.
 	// This means that we don't include comments for the time being (which comments are associated with each rule? Sometimes hard to say.)
 	var rule_links: Dictionary<String, String> = [:];
-	builtins.keys.forEach { rulename in rule_links[rulename] = "../abnf-core/\(rulename).html" };
+	builtins.keys.forEach { rulename in rule_links[ruleid] = "../abnf-core/\(rulename).html" };
 	rulelist_backwards.forEach { rulename in rule_links[rulename.key] = "../\(rulename.value.filename)/\(rulename.value.ruleid).html" };
 
 	let definition_list_html = definition_dependencies.dependencies.reversed().map {
