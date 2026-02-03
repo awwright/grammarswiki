@@ -39,12 +39,8 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
 
 	// Dereference rules referencing other files
-	let rulelist_all_final = try! dereferenceABNFRulelist(root_parsed, dereference: {
-		filename in
-		let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
-		let content = try String(contentsOfFile: filePath, encoding: .utf8)
-		return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-	});
+	let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
+	let (rulelist_all_final, rulelist_backwards): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: filePath);
 
 	// This page should include an entire single file, including comments, but not definitions of foreign references.
 	// TODO: Eventually, include the comments and whitespace in with the parsed ABNF elements, and use that here.

@@ -29,8 +29,9 @@ func abnf_list_rulenames_args(arguments: Array<String>) -> Int32 {
 		fatalError("Failed to parse imported ABNF: \(error)")
 	}
 
+	let dict = importedRulelist.dictionary;
 	for rulename in importedRulelist.ruleNames {
-		print(rulename);
+		print(dict[rulename]!.rulename.label);
 	}
 
 	return 0

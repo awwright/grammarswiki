@@ -19,22 +19,9 @@ func grammar_abnf_rule_html_args(arguments: Array<String>) -> Int32 {
 
 func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, filePath: String, rulename: String) {
 	res.contentType = "application/xhtml+xml"
-
-	let importedAbnf: Data? = getInput(filename: filePath);
-
-	guard let importedAbnf else {
-		res.status = .notFound
-		res.end()
-		return
-	}
-	guard let importedAbnfString = String(data: importedAbnf, encoding: .utf8) else {
-		res.status = .notFound
-		res.end()
-		return
-	}
-
-	let root_parsed = try! ABNFRulelist<UInt32>.parse(importedAbnfString.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-	let rulelist = root_parsed.ruleNames;
+	let catalog = Catalog(root: FileManager.default.currentDirectoryPath + "");
+	let (rulelist_all_final, rulelist_backwards): (ABNFRulelist<UInt32>, [String: (filename: String, ruleid: String)]) = try! catalog.load(path: filePath, rulenames: [rulename])
+	let rulelist = rulelist_all_final.ruleNames;
 
 	guard rulelist.contains(rulename) else {
 		res.status = .notFound
@@ -42,19 +29,11 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 		return
 	}
 
-	let rules_dict = root_parsed.dictionary
+	let rules_dict = rulelist_all_final.dictionary
 	// rule should be guaranteed to exist due to `guard rulelist.contains(rulename)` above
 	let expression = rules_dict[rulename]!
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
 	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
-
-	// Dereference rules referencing other files
-	let rulelist_all_final = try! dereferenceABNFRulelist(root_parsed, dereference: {
-		filename in
-		let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
-		let content = try String(contentsOfFile: filePath, encoding: .utf8)
-		return try ABNFRulelist<UInt32>.parse(content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-	}).rules;
 	let rulelist_all_dict = rulelist_all_final.dictionary
 	let definition_dependencies = rulelist_all_final.dependencies(rulename: rulename)
 
@@ -63,6 +42,8 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	// This means that we don't include comments for the time being (which comments are associated with each rule? Sometimes hard to say.)
 	var rule_links: Dictionary<String, String> = [:];
 	builtins.keys.forEach { rulename in rule_links[rulename] = "../abnf-core/\(rulename).html" };
+	rulelist_backwards.forEach { rulename in rule_links[rulename.key] = "../\(rulename.value.filename)/\(rulename.value.ruleid).html" };
+
 	let definition_list_html = definition_dependencies.dependencies.reversed().map {
 		let rule = rulelist_all_dict[$0]
 		guard let rule else {
