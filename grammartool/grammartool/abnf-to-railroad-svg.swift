@@ -18,32 +18,40 @@ func abnf_to_railroad_svg_args(arguments: Array<String>) -> Int32 {
 	// - Expand core names with definitions
 	// - Place subexpressions in an outlined Group
 	// - Highlight paths for a certain input
-	guard arguments.count == 4 else {
-		print(arguments.count);
+	let filepath: String?
+	let expressionStr: String;
+	if arguments.count == 3 {
+		filepath = nil;
+		expressionStr = arguments[2];
+	} else if arguments.count == 4 {
+		filepath = arguments[2];
+		expressionStr = arguments[3];
+	} else {
 		abnf_to_railroad_svg_help(arguments: arguments);
 		return 1;
 	}
-	let imported: Data? = getInput(filename: arguments[2]);
-	guard let imported else { return 1 }
-	// builtins will be copied to the output
+
+	let userExpression: ABNFAlternation<Symbol>
 	let dereferencedRulelist: ABNFRulelist<Symbol>
 	do {
-		let importedRulelist = try ABNFRulelist<Symbol>.parse(imported);
-		func dereference(filename: String) throws -> ABNFRulelist<Symbol> {
-			let filePath = FileManager.default.currentDirectoryPath + "/catalog/" + filename
-			let content = try String(contentsOfFile: filePath, encoding: .utf8)
-			return try ABNFRulelist<Symbol>.parse(content.utf8)
-		}
-		dereferencedRulelist = try dereferenceABNFRulelist(importedRulelist, dereference: dereference).rules;
+		let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
+		let (_e, _r, _): (expression: ABNFAlternation<Symbol>, rules: ABNFRulelist<Symbol>, backward: Dictionary<String, (filename: String, ruleid: String)>)
+			= try catalog.loadExpression(path: filepath, expression: expressionStr);
+		userExpression = _e;
+		dereferencedRulelist = _r;
 	} catch {
 		print("Could not parse input")
 		print(error)
 		return 2;
 	}
-	let rule = dereferencedRulelist.dictionary[arguments[3].lowercased()];
-	guard let rule else {
-		print(stderr, "Error: No such rule: \(arguments[3])");
-		exit(1);
+
+	let rule: ABNFRule<Symbol>;
+	if let singleRule = dereferencedRulelist.rules.first,	singleRule.rulename.id == expressionStr.lowercased() {
+		// If expression matches a single rule, pull that rule directly
+		rule = singleRule;
+	} else {
+		// Otherwise, generate a diagram of the expression, and expand rule references within it
+		rule = ABNFRule(rulename: ABNFRulename(label: ""), definedAs: .equal, alternation: userExpression);
 	}
 	let rr: RailroadNode = rule.toRailroad()
 	print(toContainerNode(rr).toSVGNode(offset: .init(x: 0, y: 0)).toSVG())
