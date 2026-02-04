@@ -22,7 +22,7 @@ func abnf_dereference_args(arguments: Array<String>) -> Int32 {
 
 	let rules: ABNFRulelist<UInt32>;
 	do {
-		let (rules, mapping): (ABNFRulelist<UInt32>, [String: (String, String)]) = try catalog.load(path: filename, rulenames: rulenames);
+		let (_, rules, mapping): (Dictionary<String, ABNFRulelist<UInt32>>, ABNFRulelist<UInt32>, [String: (String, String)]) = try catalog.load(path: filename, rulenames: rulenames);
 		print(bold("rules"));
 		print(rules);
 

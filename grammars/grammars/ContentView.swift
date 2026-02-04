@@ -464,7 +464,7 @@ struct DocumentDetail: View {
 		Task.detached(priority: .utility) {
 			do {
 				let catalog = Catalog(root: bundlePath + "/catalog/")
-				let (rulelist_all_final, _): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: document.name, content: text)
+				let (_, rulelist_all_final, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: document.name, content: text)
 				await MainActor.run {
 					content_rulelist = rulelist_all_final
 					do {

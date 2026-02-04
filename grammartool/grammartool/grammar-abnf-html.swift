@@ -34,13 +34,14 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 
 	let root_parsed = try! ABNFRulelist<UInt32>.parse(importedAbnfString.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 	let rulelist = root_parsed.ruleNames;
-	let firstRule = rulelist.first!;
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
 	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
 
 	// Dereference rules referencing other files
 	let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
-	let (rulelist_all_final, rulelist_backwards): (rules: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: filePath);
+	let (_, rulelist_all_final, rulelist_backwards): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: filePath);
+	print(rulelist_all_final);
+	let rules_labels: Dictionary<String, String> = Dictionary(uniqueKeysWithValues: rulelist_all_final.rules.filter{ $0.definedAs == .equal }.map { ($0.rulename.id, $0.rulename.label) })
 
 	// This page should include an entire single file, including comments, but not definitions of foreign references.
 	// TODO: Eventually, include the comments and whitespace in with the parsed ABNF elements, and use that here.

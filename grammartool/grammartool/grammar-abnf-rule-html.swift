@@ -22,7 +22,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	let catalog = Catalog(root: FileManager.default.currentDirectoryPath + "");
 	let rule = ABNFRulename<UInt32>(label: rulename);
 	let ruleid = rule.id; // ABNFRulename automatically normalizes the rule label
-	let (rulelist_all_final, rulelist_backwards): (ABNFRulelist<UInt32>, [String: (filename: String, ruleid: String)]) = try! catalog.load(path: filePath, rulenames: [ruleid])
+	let (_, rulelist_all_final, rulelist_backwards): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, [String: (filename: String, ruleid: String)]) = try! catalog.load(path: filePath, rulenames: [ruleid])
 	let rulelist = rulelist_all_final.ruleNames;
 
 	guard rulelist.contains(ruleid) else {

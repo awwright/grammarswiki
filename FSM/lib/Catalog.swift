@@ -15,6 +15,7 @@ public struct Catalog {
 	// - Return an ABNFRulelist of the collected rules (original plus dependencies)
 	// - Return a mapping of each collected rules back to its original file and original rule id/label
 	// - Rule id and label should include just enough file path to know which absolute file we're talking about (this probably means: filenames within an ABNF fiile should be resolved relative to that file, but all file paths should be displayed in the output relative to the catalog root)
+	// - Return the original (non-dereferenced) rule lists
 	/// Load the rules from an ABNF file, and all referenced rules.
 	/// - Parameters:
 	///   - content: Assume the given string as the body for ``path``
@@ -22,11 +23,11 @@ public struct Catalog {
 	///   - rulenames: If non-nil, only load the named rules from the file and its dependencies
 	/// - Returns: <#description#>
 	public func load<T>(path: String, content: String? = nil, rulenames: Array<String>? = nil) throws
-		-> (rules: ABNFRulelist<T>, backward: Dictionary<String, (filename: String, ruleid: String)>)
+		-> (source: Dictionary<String, ABNFRulelist<T>>, merged: ABNFRulelist<T>, backward: Dictionary<String, (filename: String, ruleid: String)>)
 	{
-		let (root_rulelist, root_backwards) = if let content { try dereference_string(source_filename: path, content: content) } else { try dereference(source_filename: path) }
+		let (root_rulelist, root_mangled, root_backwards) = if let content { try dereference_string(source_filename: path, content: content) } else { try dereference(source_filename: path) }
 		// Keep a list of imported files
-		var all_dereferenced = [path: (root_rulelist, root_backwards)];
+		var all_dereferenced = [path: (root_rulelist, root_mangled, root_backwards)];
 		// Keep track of the order the files were loaded in
 		var all_path_priority = [path];
 		var all_backwards = root_backwards;
@@ -43,10 +44,10 @@ public struct Catalog {
 
 		// Keep track of the used rulenames so they don't conflict when names from multiple files are merged together
 		var merged_rulenames_used: Set<String> = [];
-		var merged_rulenames_map: Dictionary<String, String> = [:];
+		var merged_rulenames_map: Dictionary<String, ABNFRulename<T>> = [:];
 
 		func dereference(source_filename: String) throws
-			-> (ABNFRulelist<T>, Dictionary<String, (filename: String, ruleid: String)>)
+			-> (ABNFRulelist<T>, ABNFRulelist<T>, Dictionary<String, (filename: String, ruleid: String)>)
 		{
 			let filePath = root + "/" + source_filename;
 			let content = try String(contentsOfFile: filePath, encoding: .utf8)
@@ -56,7 +57,7 @@ public struct Catalog {
 		}
 
 		func dereference_string(source_filename: String, content: String) throws
-			-> (ABNFRulelist<T>, Dictionary<String, (filename: String, ruleid: String)>)
+			-> (ABNFRulelist<T>, ABNFRulelist<T>, Dictionary<String, (filename: String, ruleid: String)>)
 		{
 			let rulelist = try ABNFRulelist<T>.parse(content.utf8);
 			let rulenames = rulelist.ruleNames;
@@ -86,11 +87,11 @@ public struct Catalog {
 							return $0;
 					}
 				};
-			return (mangled, backwards);
+			return (rulelist, mangled, backwards);
 		}
 
 		// Load only the desired rules
-		var required_rulelist = root_rulelist.rules.filter { root_rulenames.contains($0.rulename.id) };
+		var required_rulelist = root_mangled.rules.filter { root_rulenames.contains($0.rulename.id) };
 		// Keep track of rules that have been added to the list
 		var required_rulelist_set = Set(required_rulelist.map { $0.rulename.id });
 
@@ -100,10 +101,14 @@ public struct Catalog {
 			let r = required_rulelist[i];
 
 			// Generate a unique name for this rule
-			var candidate_rulename = all_backwards[r.rulename.id]!.ruleid;
-			while merged_rulenames_used.contains(candidate_rulename) { candidate_rulename += "-" }
-			merged_rulenames_map[r.rulename.id] = candidate_rulename;
-			merged_rulenames_used.insert(candidate_rulename);
+			var candidate_id = all_backwards[r.rulename.id]!.ruleid;
+			var candidate_label = all_backwards[r.rulename.id]!.ruleid;
+			while merged_rulenames_used.contains(candidate_id) {
+				candidate_id += "-";
+				candidate_label += "-";
+			}
+			merged_rulenames_map[r.rulename.id] = ABNFRulename(id: candidate_id, label: candidate_label);
+			merged_rulenames_used.insert(candidate_id);
 
 			// Get a list of the rules that this rule refers to, and add those to the list as necessary
 			for ref in r.referencedRules.sorted() {
@@ -115,12 +120,12 @@ public struct Catalog {
 				else { continue; }
 
 				if all_dereferenced[required_filename] == nil {
-					let (ref_rulelist, ref_backwards) = try dereference(source_filename: required_filename);
-					all_dereferenced[required_filename] = (ref_rulelist, ref_backwards);
+					let (ref_original, ref_mangled, ref_backwards) = try dereference(source_filename: required_filename);
+					all_dereferenced[required_filename] = (ref_original, ref_mangled, ref_backwards);
 					for (k, v) in ref_backwards { all_backwards[k] = v; }
 				}
 
-				let (rulelist, _) = all_dereferenced[required_filename]!;
+				let (_, rulelist, _) = all_dereferenced[required_filename]!;
 
 				// Determine which file we find the reference in
 				for new_r in rulelist.rules.filter({ $0.rulename.id == ref }) {
@@ -135,14 +140,14 @@ public struct Catalog {
 		// Map them to their original rulenames, when they're unambiguous.
 		let rules = ABNFRulelist<T>(rules: required_rulelist).mapRulenames {
 			if let mapped = merged_rulenames_map[$0.id] {
-				return ABNFRulename(label: mapped);
+				return mapped;
 			} else {
 				return $0;
 			}
 		};
 		// Filter out rules from all_backwards not used in the output, then map the keys from unique rulenames to mapped rulenames according to merged_rulenames_map
-		let backward = Dictionary(uniqueKeysWithValues: all_backwards.filter { required_rulelist_set.contains($0.0) }.map { (k, v) in (merged_rulenames_map[k] ?? k, v) });
-		return (rules: rules, backward: backward)
+		let backward = Dictionary(uniqueKeysWithValues: all_backwards.filter { required_rulelist_set.contains($0.0) }.map { (k, v) in (merged_rulenames_map[k]!.id, v) });
+		return (source: all_dereferenced.mapValues(\.0), merged: rules, backward: backward)
 	}
 
 	/// Parse an expression ``expression``, loading a file ``path`` to resolve rule names.
@@ -152,7 +157,7 @@ public struct Catalog {
 	{
 		let expr = try ABNFAlternation<T>.parse(expression.utf8);
 		if let path {
-			let (rules, backwards): (rules: ABNFRulelist<T>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try self.load(path: path, rulenames: Array(expr.referencedRules));
+			let (_, rules, backwards): (source: Dictionary<String, ABNFRulelist<T>>, merged: ABNFRulelist<T>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try self.load(path: path, rulenames: Array(expr.referencedRules));
 			return (expression: expr, rules: rules, backward: backwards);
 		} else {
 			return (expression: expr, rules: ABNFRulelist(), backward: [:]);
