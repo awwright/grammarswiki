@@ -27,7 +27,7 @@ public struct Catalog {
 	{
 		let (root_rulelist, root_mangled, root_backwards) = if let content { try dereference_string(source_filename: path, content: content) } else { try dereference(source_filename: path) }
 		// Keep a list of imported files
-		var all_dereferenced = [path: (root_rulelist, root_mangled, root_backwards)];
+		var all_imported = [path: (root_rulelist, root_mangled, root_backwards)];
 		// Keep track of the order the files were loaded in
 		var all_path_priority = [path];
 		var all_backwards = root_backwards;
@@ -101,8 +101,10 @@ public struct Catalog {
 			let r = required_rulelist[i];
 
 			// Generate a unique name for this rule
+			var candidate_filename = all_backwards[r.rulename.id]!.filename;
 			var candidate_id = all_backwards[r.rulename.id]!.ruleid;
-			var candidate_label = all_backwards[r.rulename.id]!.ruleid;
+			// TODO: This .dictionary call may be slightly inefficient
+			var candidate_label = all_imported[candidate_filename]!.0.dictionary[candidate_id]!.rulename.label;
 			while merged_rulenames_used.contains(candidate_id) {
 				candidate_id += "-";
 				candidate_label += "-";
@@ -119,13 +121,13 @@ public struct Catalog {
 				guard let (required_filename, required_rulename) = root_backwards[ref]
 				else { continue; }
 
-				if all_dereferenced[required_filename] == nil {
+				if all_imported[required_filename] == nil {
 					let (ref_original, ref_mangled, ref_backwards) = try dereference(source_filename: required_filename);
-					all_dereferenced[required_filename] = (ref_original, ref_mangled, ref_backwards);
+					all_imported[required_filename] = (ref_original, ref_mangled, ref_backwards);
 					for (k, v) in ref_backwards { all_backwards[k] = v; }
 				}
 
-				let (_, rulelist, _) = all_dereferenced[required_filename]!;
+				let (_, rulelist, _) = all_imported[required_filename]!;
 
 				// Determine which file we find the reference in
 				for new_r in rulelist.rules.filter({ $0.rulename.id == ref }) {
@@ -147,7 +149,7 @@ public struct Catalog {
 		};
 		// Filter out rules from all_backwards not used in the output, then map the keys from unique rulenames to mapped rulenames according to merged_rulenames_map
 		let backward = Dictionary(uniqueKeysWithValues: all_backwards.filter { required_rulelist_set.contains($0.0) }.map { (k, v) in (merged_rulenames_map[k]!.id, v) });
-		return (source: all_dereferenced.mapValues(\.0), merged: rules, backward: backward)
+		return (source: all_imported.mapValues(\.0), merged: rules, backward: backward)
 	}
 
 	/// Parse an expression ``expression``, loading a file ``path`` to resolve rule names.

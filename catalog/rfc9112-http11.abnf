@@ -56,8 +56,17 @@ Transfer-Encoding = #transfer-coding
                      ; defined in [HTTP], Section 10.1.4
 
 ; 7.1. Chunked Transfer Coding <https://www.rfc-editor.org/rfc/rfc9112.html#name-chunked-transfer-coding>
-Transfer-Encoding = #transfer-coding
-                     ; defined in [HTTP], Section 10.1.4
+chunked-body   = *chunk
+                 last-chunk
+                 trailer-section
+                 CRLF
+
+chunk          = chunk-size [ chunk-ext ] CRLF
+                 chunk-data CRLF
+chunk-size     = 1*HEXDIG
+last-chunk     = 1*("0") [ chunk-ext ] CRLF
+
+chunk-data     = 1*OCTET ; a sequence of chunk-size octets
 
 ; 7.1.1. Chunk Extensions <https://www.rfc-editor.org/rfc/rfc9112.html#name-chunk-extensions>
 
