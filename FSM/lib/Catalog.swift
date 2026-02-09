@@ -118,7 +118,7 @@ public struct Catalog {
 				guard !required_rulelist_set.contains(ref) else { continue }
 
 				// If the rule is from an external file, make sure it's loaded
-				guard let (required_filename, required_rulename) = root_backwards[ref]
+				guard let (required_filename, _) = all_backwards[ref]
 				else { continue; }
 
 				if all_imported[required_filename] == nil {
