@@ -89,11 +89,6 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 					<dd>\(used_builtins_html)</dd>
 				</dl>
 			</section>
-			<section id="alphabet">
-				<h2>Alphabet</h2>
-				<ul id="alphabet-list">
-				</ul>
-			</section>
 			<section id="cited-by">
 				<h2>Cited By</h2>
 				<ul>
