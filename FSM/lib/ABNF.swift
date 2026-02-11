@@ -262,7 +262,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 						dfs(rule: dep)
 					}
 				}
-			} else if builtinNames.contains(rule) {
+			} else if builtinNames.contains(rule.uppercased()) {
 				builtins.insert(rule)
 			} else {
 				undefined.insert(rule)

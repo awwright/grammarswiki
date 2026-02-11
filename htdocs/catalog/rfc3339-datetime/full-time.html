@@ -53,13 +53,13 @@
 
     <h2>Definition</h2>
     <pre id="source">
-<span class="hljs-attribute">full-time</span> <span class="hljs-operator">=</span> <span class="hljs-variable">partial-time</span> <span class="hljs-variable">time-offset</span>
+<span class="hljs-attribute">full-time</span> <span class="hljs-operator">=</span> <a href="../rfc3339-datetime/partial-time.html" class="hljs-variable">partial-time</a> <a href="../rfc3339-datetime/time-offset.html" class="hljs-variable">time-offset</a>
 
-<span class="hljs-attribute">time-offset</span> <span class="hljs-operator">=</span> <span class="hljs-string">"Z"</span> / <span class="hljs-variable">time-numoffset</span>
+<span class="hljs-attribute">time-offset</span> <span class="hljs-operator">=</span> <span class="hljs-string">"Z"</span> / <a href="../rfc3339-datetime/time-numoffset.html" class="hljs-variable">time-numoffset</a>
 
-<span class="hljs-attribute">time-numoffset</span> <span class="hljs-operator">=</span> ( <span class="hljs-string">"+"</span> / <span class="hljs-string">"-"</span> ) <span class="hljs-variable">time-hour</span> <span class="hljs-string">":"</span> <span class="hljs-variable">time-minute</span>
+<span class="hljs-attribute">time-numoffset</span> <span class="hljs-operator">=</span> ( <span class="hljs-string">"+"</span> / <span class="hljs-string">"-"</span> ) <a href="../rfc3339-datetime/time-hour.html" class="hljs-variable">time-hour</a> <span class="hljs-string">":"</span> <a href="../rfc3339-datetime/time-minute.html" class="hljs-variable">time-minute</a>
 
-<span class="hljs-attribute">partial-time</span> <span class="hljs-operator">=</span> <span class="hljs-variable">time-hour</span> <span class="hljs-string">":"</span> <span class="hljs-variable">time-minute</span> <span class="hljs-string">":"</span> <span class="hljs-variable">time-second</span> [ <span class="hljs-variable">time-secfrac</span> ]
+<span class="hljs-attribute">partial-time</span> <span class="hljs-operator">=</span> <a href="../rfc3339-datetime/time-hour.html" class="hljs-variable">time-hour</a> <span class="hljs-string">":"</span> <a href="../rfc3339-datetime/time-minute.html" class="hljs-variable">time-minute</a> <span class="hljs-string">":"</span> <a href="../rfc3339-datetime/time-second.html" class="hljs-variable">time-second</a> [ <a href="../rfc3339-datetime/time-secfrac.html" class="hljs-variable">time-secfrac</a> ]
 
 <span class="hljs-attribute">time-second</span> <span class="hljs-operator">=</span> 2<a href="../abnf-core/DIGIT.html" class="hljs-variable">DIGIT</a>
 
@@ -77,7 +77,7 @@
       <dt>Rulename</dt>
       <dd>full-time</dd>
       <dt>Dependencies</dt>
-      <dd>DIGIT, time-hour, time-minute, time-secfrac, time-second, partial-time, time-numoffset, time-offset, full-time</dd>
+      <dd><a href="../abnf-core/DIGIT.html">DIGIT</a>, <a href="time-hour.html">time-hour</a>, <a href="time-minute.html">time-minute</a>, <a href="time-secfrac.html">time-secfrac</a>, <a href="time-second.html">time-second</a>, <a href="partial-time.html">partial-time</a>, <a href="time-numoffset.html">time-numoffset</a>, <a href="time-offset.html">time-offset</a></dd>
       <dt>Used Builtins</dt>
       <dd><a href="../abnf-core/DIGIT.html">DIGIT</a></dd>
     </dl>

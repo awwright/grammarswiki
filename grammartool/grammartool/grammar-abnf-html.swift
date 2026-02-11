@@ -39,7 +39,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 
 	// Dereference rules referencing other files
 	let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
-	let (_, rulelist_all_final, rulelist_backwards): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: filePath);
+	let (_, rulelist_all_final, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: filePath);
 	let rules_labels: Dictionary<String, String> = Dictionary(uniqueKeysWithValues: rulelist_all_final.rules.filter{ $0.definedAs == .equal }.map { ($0.rulename.id, $0.rulename.label) })
 
 	// This page should include an entire single file, including comments, but not definitions of foreign references.
