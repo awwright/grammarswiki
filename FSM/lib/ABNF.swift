@@ -2270,8 +2270,8 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 
 		func toString(base: Int) -> String {
 			switch self {
-				case .sequence(let seq): seq.map{ String($0, radix: base) }.joined(separator: ".");
-				case .range(let range): String(range.lowerBound, radix: base) + "-" + String(range.upperBound, radix: base);
+				case .sequence(let seq): seq.map{ String($0, radix: base).uppercased() }.joined(separator: ".");
+				case .range(let range): String(range.lowerBound, radix: base).uppercased() + "-" + String(range.upperBound, radix: base).uppercased();
 			}
 		}
 	}
