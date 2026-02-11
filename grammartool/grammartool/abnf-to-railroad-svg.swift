@@ -217,16 +217,42 @@ public struct RRContainerSequence: RRContainerProtocol {
 	public let sequence: Array<RRContainerProtocol>;
 	static let padding: CGFloat = 10;
 	init(sequence: Array<RRContainerProtocol>) {
-		self.size = .init(
-			// Sum the widths of sequence together
-//			width: (sequence.reduce(0) { $0 + $1.size.width }) + 20,
-			width: (sequence.reduce(0) { $0 + $1.outPoint.x - $1.inPoint.x + Self.padding }) - Self.padding,
-			// Find the maximum height in sequence
-			height: (sequence.map(\.size.height).max() ?? 0),
-		);
-		self.inPoint = .init(x: 0, y: sequence.first!.inPoint.y);
-		self.outPoint = .init(x: self.size.width, y: sequence.last!.outPoint.y);
 		self.sequence = sequence
+		if sequence.isEmpty {
+			self.size = CGSize(width: 0, height: 0);
+			self.inPoint = CGPoint(x: 0, y: 0);
+			self.outPoint = CGPoint(x: 0, y: 0);
+			return
+		}
+		let maxInY = sequence.map { $0.inPoint.y }.max() ?? 0;
+		var previousOutY: CGFloat = maxInY
+		var minY: CGFloat = 0;
+		var maxY: CGFloat = 0;
+		var width: CGFloat = 0;
+		var firstInY: CGFloat = 0;
+		var lastOutY: CGFloat = 0;
+		for (index, item) in sequence.enumerated() {
+			let positionY = previousOutY - item.inPoint.y;
+			let itemMinY = positionY;
+			let itemMaxY = positionY + item.size.height;
+			minY = min(minY, itemMinY);
+			maxY = max(maxY, itemMaxY);
+			previousOutY = positionY + item.outPoint.y;
+			width += item.outPoint.x - item.inPoint.x;
+			if index < sequence.count - 1 {
+				width += Self.padding;
+			}
+			if index == 0 {
+				firstInY = positionY + item.inPoint.y;
+			}
+			if index == sequence.count - 1 {
+				lastOutY = positionY + item.outPoint.y;
+			}
+		}
+		let height = maxY - minY;
+		self.size = .init(width: width, height: height);
+		self.inPoint = .init(x: 0, y: firstInY - minY);
+		self.outPoint = .init(x: width, y: lastOutY - minY);
 	}
 	public func toSVGNode(offset: CGPoint) -> RailroadSVGNode {
 		var children: Array<RailroadSVGNode> = [];
