@@ -76,33 +76,35 @@
     <h2>Translations</h2>
     <section>
       <h3>Railroad Diagram</h3>
-      <div><svg class="railroad-diagram" width="232" height="92" viewBox="0 0 232 92" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <div><svg class="railroad-diagram" width="244.0" height="101.0" viewBox="0 0 244.0 101.0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g transform="translate(.5 .5)">
-<g>
-<path d="M20 21v20m10 -20v20m-10 -10h52.5"></path>
-<text x="20" y="16" style="text-anchor:start">ALPHA</text>
+<g data-updown="20.0 0.0 41.0" data-type="sequence">
+<g data-updown="20.0 0.0 10.0" data-type="start">
+<path d="M20.0 30.0v20.0m10.0 -20.0v20.0m-10.0 -10.0h52.5"></path>
+<text x="20.0" y="25.0" style="text-anchor:start">ALPHA</text>
 </g>
-<g>
-<path d="M72.5 31h0"></path>
-<path d="M192 31h0"></path>
-<path d="M72.5 31h20"></path>
-<g class="non-terminal ">
-<path d="M92.5 31h0"></path>
-<path d="M172 31h0"></path>
-<rect x="92.5" y="20" width="79.5" height="22"></rect>
-<text x="132.25" y="35">%x41-5a</text>
+<path d="M82.5 40.0h-10.0"></path>
+<g data-updown="11.0 0.0 41.0" data-type="choice">
+<path data-type="in" d="M82.5 40.0h16.0"></path>
+<path data-type="out" d="M178.0 40.0h0.0h16.0"></path>
+<g class="non-terminal" data-updown="11.0 0.0 11.0" data-type="nonterminal">
+<rect x="98.5" y="29.0" width="79.5" height="22.0"></rect>
+<a xlink:href="%x41-5A.html">
+<text x="138.25" y="44.0">%x41-5A</text>
+</a>
 </g>
-<path d="M172 31h20"></path>
-<path d="M72.5 31a10 10 0 0 1 10 10v10a10 10 0 0 0 10 10"></path>
-<g class="non-terminal ">
-<path d="M92.5 61h0"></path>
-<path d="M172 61h0"></path>
-<rect x="92.5" y="50" width="79.5" height="22"></rect>
-<text x="132.25" y="65">%x61-7a</text>
+<path data-type="in" d="M82.5 40.0a8.0 8.0 0 0 1 8.0 8.0v14.0a8.0 8.0 0 0 0 8.0 8.0"></path>
+<path data-type="out" d="M178.0 70.0h0.0a8.0 8.0 0 0 0 8.0 -8.0v-14.0a8.0 8.0 0 0 1 8.0 -8.0"></path>
+<g class="non-terminal" data-updown="11.0 0.0 11.0" data-type="nonterminal">
+<rect x="98.5" y="59.0" width="79.5" height="22.0"></rect>
+<a xlink:href="%x61-7A.html">
+<text x="138.25" y="74.0">%x61-7A</text>
+</a>
 </g>
-<path d="M172 61a10 10 0 0 0 10 -10v-10a10 10 0 0 1 10 -10"></path>
 </g>
-<path d="M 192 31 h 20 m -10 -10 v 20 m 10 -20 v 20"></path>
+<path d="M204.0 40.0h-10.0"></path>
+<path data-updown="10.0 0.0 10.0" data-type="end" d="M204.0 40.0h20.0m-10.0 -10.0v20.0m10.0 -20.0v20.0"></path>
+</g>
 </g>
 <style>
   svg {
@@ -131,7 +133,7 @@
     font: italic 12px monospace;
   }
   g.non-terminal text {
-    /&#42;font-style: italic;&#42;/
+    font-style: italic;
   }
   rect {
     stroke-width: 3;
@@ -152,9 +154,7 @@
   g.diagram-text:hover path.diagram-text {
     fill: #eee;
   }</style>
-</svg>
-
-</div>
+</svg></div>
     </section>
     <section>
       <h3>ECMAScript/JavaScript Regular Expression Literal</h3>
