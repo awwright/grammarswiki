@@ -2,7 +2,6 @@ import FSM;
 import Foundation
 
 private typealias Symbol = UInt32;
-private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<Symbol>>;
 
 func abnf_list_rulenames_help(arguments: Array<String>) {
 	print("\(arguments[0]) \(bold("abnf-list-rulenames")) [<filepath>]");

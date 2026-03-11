@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "AE691522-514B-4014-B112-CB0517A03B62",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "FSMPerformance",
+        "name" : "FSMPerformance"
+      }
+    }
+  ],
+  "version" : 1
+}

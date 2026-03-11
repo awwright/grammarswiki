@@ -36,7 +36,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 	// rule should be guaranteed to exist due to `guard rulelist.contains(rulename)` above
 	let expression = rules_dict[ruleid]!
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
-	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
+	let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
 	let definition_dependencies = rulelist_merged.dependencies(rulename: ruleid)
 
 	// First, print the rules as defined.
@@ -65,8 +65,8 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 
 	// builtins will be copied to the output
 	// TODO: Add Swift NSRegularExpression
-	let fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>;
-	var result_fsm_dict: Dictionary<String, SymbolClassDFA<ClosedRangeAlphabet<UInt32>>> = builtins;
+	let fsm: DFA<ClosedRangeAlphabet<UInt32>>;
+	var result_fsm_dict: Dictionary<String, DFA<ClosedRangeAlphabet<UInt32>>> = builtins;
 	let regex_es_str: String;
 	let regex_swift_str: String;
 	let regex_egrep_str: String;

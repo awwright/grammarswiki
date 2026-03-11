@@ -2,7 +2,7 @@ import FSM;
 import Foundation
 
 private typealias Symbol = UInt32;
-private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<Symbol>>;
+private typealias StringDFA = DFA<ClosedRangeAlphabet<Symbol>>;
 
 func abnf_to_regex_tests_help(arguments: Array<String>) {
 	print("\(arguments[0]) \(bold("abnf-to-regex-test")) [<filepath>] <expression>");
@@ -29,11 +29,11 @@ func abnf_to_regex_tests_args(arguments: Array<String>) -> Int32 {
 	}
 
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
-	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<Symbol>>>.dictionary;
+	let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<Symbol>>>.dictionary;
 	let importedRulelist = try! ABNFRulelist<Symbol>.parse(imported!);
 
 	// builtins will be copied to the output
-	let importedDict = try! importedRulelist.toPattern(as: SymbolClassDFA<ClosedRangeAlphabet<Symbol>>.self, rules: builtins).mapValues { $0.minimized() }
+	let importedDict = try! importedRulelist.toPattern(as: DFA<ClosedRangeAlphabet<Symbol>>.self, rules: builtins).mapValues { $0.minimized() }
 	let expression: ABNFAlternation<Symbol>;
 	do { expression = try ABNFAlternation<Symbol>.parse(arguments[expressionIndex].utf8); }
 	catch {
@@ -41,7 +41,7 @@ func abnf_to_regex_tests_args(arguments: Array<String>) -> Int32 {
 		return 2;
 	}
 
-	let fsm: SymbolClassDFA<ClosedRangeAlphabet<Symbol>> = try! expression.toPattern(rules: importedDict)
+	let fsm: DFA<ClosedRangeAlphabet<Symbol>> = try! expression.toPattern(rules: importedDict)
 
 	// Generate the regular expression
 	let regex: REPattern<Symbol> = fsm.toPattern()
@@ -49,7 +49,7 @@ func abnf_to_regex_tests_args(arguments: Array<String>) -> Int32 {
 	let regexStringQuoted = bashSingleQuote(regexString)
 
 	// Generate some instances
-	var iterator: DFA.Iterator = fsm.makeIterator();
+	var iterator: StringDFA.Iterator = fsm.makeIterator();
 	for i in 0..<1000 {
 		let instance: Array<Symbol>? = iterator.next();
 		guard let instance else { continue }

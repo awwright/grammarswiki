@@ -94,7 +94,7 @@ import Testing;
 		// Disabled: It may not be possible to put these two ranges in the same partition with this amount of information
 		@Test("builtins", .disabled())
 		func test_rulelist_builtins() async throws {
-			let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt8>>>.dictionary.mapValues { $0.minimized().alphabet };
+			let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt8>>>.dictionary.mapValues { $0.minimized().alphabet };
 			let expression = ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFAlternation(matches: [
 				ABNFRulename(label: "DIGIT").concatenation,
 				ABNFNumVal(base: .hex, value: .range(0x41...0x43)).concatenation,
@@ -104,7 +104,7 @@ import Testing;
 
 		@Test("builtins toAlphabet")
 		func test_rulelist_builtins_alphabet() async throws {
-			let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() };
+			let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() };
 			#expect(builtins.count == 16)
 		}
 
@@ -116,14 +116,14 @@ import Testing;
 
 		@Test("builtins: SetAlphabet")
 		func test_builtins_SetAlphabet() async throws {
-			let builtins = ABNFBuiltins<SymbolClassDFA<SetAlphabet<Int>>>.dictionary.mapValues { $0.minimized().alphabet };
+			let builtins = ABNFBuiltins<DFA<SetAlphabet<Int>>>.dictionary.mapValues { $0.minimized().alphabet };
 			#expect(builtins["lwsp"] == [[0x09, 0x20], [0x0D], [0x0A]])
 			#expect(builtins["digit"] == [[0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39]])
 		}
 
 		@Test("builtins: ClosedRangeAlphabet")
 		func test_builtins_ClosedRangeAlphabet() async throws {
-			let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<Int>>>.dictionary.mapValues { $0.minimized().alphabet };
+			let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<Int>>>.dictionary.mapValues { $0.minimized().alphabet };
 			#expect(builtins["lwsp"] == [[0x09...0x09, 0x20...0x20], [0x0D...0x0D], [0x0A...0x0A]])
 			#expect(builtins["digit"] == [[0x30...0x39]])
 		}
@@ -1200,10 +1200,10 @@ import Testing;
 	func test_fsm_abnf(_ abnf_lf: String) throws {
 		let abnf0 = abnf_lf.replacing("\n", with: "\r\n").replacing("\r\r", with: "\r")
 		let rulelist = try ABNFAlternation<UInt8>.parse(abnf0.utf8)
-		let fsm0: SymbolClassDFA<ClosedRangeAlphabet<UInt8>> = try rulelist.toPattern()
+		let fsm0: DFA<ClosedRangeAlphabet<UInt8>> = try rulelist.toPattern()
 		// If we convert this FSM to ABNF and back, will it be the same?
 		let abnf1: ABNFAlternation<UInt8> = fsm0.toPattern()
-		let fsm1: SymbolClassDFA<ClosedRangeAlphabet<UInt8>> = try abnf1.toPattern()
+		let fsm1: DFA<ClosedRangeAlphabet<UInt8>> = try abnf1.toPattern()
 		#expect(fsm0 == fsm1);
 		// In theory, this is the same as testing equivalence of the FSMs
 		#expect(fsm0.symmetricDifference(fsm1).finals.isEmpty)

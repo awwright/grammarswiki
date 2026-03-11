@@ -11,7 +11,7 @@ public protocol NFAProtocol: RegularLanguageProtocol, RegularLanguageSetAlgebra 
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
+public struct NFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 	// TODO: Implement BidirectionalCollection
 	public typealias Symbol = Alphabet.Symbol
 	public typealias SymbolClass = Alphabet.SymbolClass
@@ -141,11 +141,11 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 		return viz;
 	}
 
-	public func toDFA() -> (fsm: SymbolClassDFA<Alphabet>, forward: Dictionary<States, StateNo>, backward: Array<States>) {
+	public func toDFA() -> (fsm: DFA<Alphabet>, forward: Dictionary<States, StateNo>, backward: Array<States>) {
 		let translation = Self.parallel(fsms: [self], merge: { $0[0] });
 		assert(translation.fsm.statesSet.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
 		return (
-			fsm: SymbolClassDFA<Alphabet>(
+			fsm: DFA<Alphabet>(
 				states: translation.fsm.statesSet.map { Alphabet.DFATable(uniqueKeysWithValues: $0.map { ($0.0, $0.1.first!) }) },
 				initial: translation.fsm.initials.first!,
 				finals: translation.fsm.finals,
@@ -236,7 +236,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 
 	/// Get the ID of the state machine without any input
 	public struct ID {
-		public typealias OuterNFA = SymbolClassNFA<Alphabet>
+		public typealias OuterNFA = NFA<Alphabet>
 		public let fsm: OuterNFA
 		public let states: States
 
@@ -353,7 +353,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 		for symbol in input {
 			let nextState = self.nextStates(states: currentState, symbol: symbol)
 			if(nextState.count == 0){
-				return SymbolClassNFA(states: [[:]], initial: 0, finals: []);
+				return NFA(states: [[:]], initial: 0, finals: []);
 			}
 			currentState = nextState
 		}
@@ -508,7 +508,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 			}
 		}
 		// Create an NFA with the reversed transitions and swapped initial/finals
-		return SymbolClassNFA<Alphabet>(
+		return NFA<Alphabet>(
 			states: newStates,
 			epsilon: newEpsilon,
 			// Swap initials and finals too
@@ -517,7 +517,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 		)
 	}
 
-	public func homomorphism<Target: AlphabetProtocol>(mapping: [(some Collection<SymbolClass>, some Collection<Target.SymbolClass>)]) -> SymbolClassNFA<Target> where Target: Hashable {
+	public func homomorphism<Target: AlphabetProtocol>(mapping: [(some Collection<SymbolClass>, some Collection<Target.SymbolClass>)]) -> NFA<Target> where Target: Hashable {
 		var newStates: [Target.NFATable] = self.statesSet.map { _ in [:] }
 		var newEpsilon: [States] = self.statesSet.map { _ in [] }
 
@@ -560,7 +560,7 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 			}
 		}
 
-		return SymbolClassNFA<Target>(
+		return NFA<Target>(
 			states: newStates,
 			epsilon: newEpsilon,
 			initials: self.initials,
@@ -597,14 +597,13 @@ public struct SymbolClassNFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 }
 
 // Conditional protocol compliance
-extension SymbolClassNFA: Sendable where SymbolClass: Sendable {}
+extension NFA: Sendable where SymbolClass: Sendable {}
 
-extension SymbolClassNFA where Symbol == Character {
+extension NFA where Symbol == Character {
 //	typealias Element = String
 	init (_ val: Array<String>) {
 		self.init(val.map{ Array($0) })
 	}
 }
 
-public typealias NFA<Symbol: Hashable> = SymbolClassNFA<SymbolAlphabet<Symbol>>
-
+public typealias SymbolNFA<Symbol: Hashable> = NFA<SymbolAlphabet<Symbol>>

@@ -43,7 +43,7 @@ extension DFAProtocol {
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra {
+public struct DFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra {
 	// TODO: Implement BidirectionalCollection
 
 	/// A partition might contain more than one symbols, represented with a different type.
@@ -120,8 +120,8 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	///
 	/// - Parameter nfa: The NFA to convert.
 	/// - Precondition: The NFA must have at most one transition per symbol per state.
-	public init(nfa: SymbolClassNFA<Alphabet>){
-		let translation = SymbolClassNFA<Alphabet>.parallel(fsms: [nfa], merge: { $0[0] }).fsm;
+	public init(nfa: NFA<Alphabet>){
+		let translation = NFA<Alphabet>.parallel(fsms: [nfa], merge: { $0[0] }).fsm;
 		assert(translation.statesSet.allSatisfy { $0.allSatisfy { $0.value.count == 1 } })
 		self.states = translation.statesSet.map { Alphabet.DFATable(uniqueKeysWithValues: $0.map { ($0.0, $0.1.first!) }) }
 		self.initial = translation.initials.first!;
@@ -270,7 +270,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 	/// Instant Description (ID), describes a FSM and its specific state during execution
 	public struct ID {
-		public typealias OuterDFA = SymbolClassDFA<Alphabet>
+		public typealias OuterDFA = DFA<Alphabet>
 
 		public let fsm: OuterDFA
 		public let state: StateNo
@@ -609,7 +609,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	///
 	/// - Parameter transform: A function mapping each symbol to a new symbol type.
 	/// - Returns: A new DFA with transformed transitions.
-	public func mapSymbols<Target: AlphabetProtocol>(_ transform: (SymbolClass) -> Target.SymbolClass) -> SymbolClassDFA<Target> {
+	public func mapSymbols<Target: AlphabetProtocol>(_ transform: (SymbolClass) -> Target.SymbolClass) -> DFA<Target> {
 		let newStates: Array<Target.DFATable> = states.map {
 			// Map the key of the dictionary using `transform`
 			Target.DFATable(uniqueKeysWithValues: $0.map { (key, value) in
@@ -617,7 +617,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 			})
 		}
 		assert(newStates.count == states.count)
-		return SymbolClassDFA<Target>(
+		return DFA<Target>(
 			states: newStates,
 			initial: self.initial,
 			finals: self.finals
@@ -696,7 +696,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		} else if(languages.count == 1) {
 			return languages[0];
 		}
-		let nfa = SymbolClassNFA<Alphabet>.concatenate(languages.map { SymbolClassNFA<Alphabet>($0) });
+		let nfa = NFA<Alphabet>.concatenate(languages.map { NFA<Alphabet>($0) });
 		return Self(nfa: nfa);
 	}
 
@@ -736,7 +736,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 
 	/// Returns a DFA accepting one or more repetitions of its language.
 	public func plus() -> Self {
-		let nfa = SymbolClassNFA<Alphabet>(
+		let nfa = NFA<Alphabet>(
 			states: self.states.map { Alphabet.NFATable(uniqueKeysWithValues: $0.map { ($0.0, Set([$0.1])) }) },
 			// Add an epsilon transition from the final states to the initial state
 			epsilon: self.states.enumerated().map { stateNo, _ in isFinal(stateNo) ? [self.initial] : [] },
@@ -781,7 +781,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	/// Find the language of all strings with symbols in reverse order
 	/// - Returns: The reversed FSM
 	public func reversed() -> Self {
-		let nfa = SymbolClassNFA<Alphabet>(
+		let nfa = NFA<Alphabet>(
 			states: self.statesSet,
 			epsilon: Array(repeating: [], count: self.states.count),
 			initials: self.initials,
@@ -822,7 +822,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 		if newInitials.isEmpty {
 			return Self()
 		}
-		let nfa = SymbolClassNFA<Alphabet>(
+		let nfa = NFA<Alphabet>(
 			states: derived.statesSet,
 			epsilon: derived.epsilon,
 			initials: newInitials,
@@ -916,7 +916,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 	public struct PathIterator: IteratorProtocol {
 		public typealias Element = Path
 
-		public typealias OuterDFA = SymbolClassDFA<Alphabet>
+		public typealias OuterDFA = DFA<Alphabet>
 		public struct Segment: Equatable {
 			public var source: StateNo
 			public var index: Int
@@ -1242,7 +1242,7 @@ public struct SymbolClassDFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, D
 // Define a lexicographic ordering
 // (where one set is always less than the other when they are not equal;
 // the set with the smallest element not in both sets is the lesser set).
-extension SymbolClassDFA: Comparable, Sequence where SymbolClass: Comparable {
+extension DFA: Comparable, Sequence where SymbolClass: Comparable {
 	public static func < (lhs: Self, rhs: Self) -> Bool {
 		// Generate instances of each side, compare if lhs < rhs
 		// If they are the same, generate next instance (in alphabetical order)
@@ -1263,9 +1263,9 @@ extension SymbolClassDFA: Comparable, Sequence where SymbolClass: Comparable {
 }
 
 // Conditional protocol compliance
-extension SymbolClassDFA: Sendable where Symbol: Sendable {}
+extension DFA: Sendable where Symbol: Sendable {}
 
-extension SymbolClassDFA where Symbol == Character {
+extension DFA where Symbol == Character {
 //	typealias Element = String
 	init (_ val: Array<String>) {
 		self.init(val.map{ Array($0) })
@@ -1285,8 +1285,8 @@ extension SymbolClassDFA where Symbol == Character {
 	}
 }
 
-extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol, Symbol: Comparable, Symbol: Strideable, Symbol.Stride: SignedInteger {
-	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> SymbolClassDFA<Alphabet> {
+extension DFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol, Symbol: Comparable, Symbol: Strideable, Symbol.Stride: SignedInteger {
+	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> DFA<Alphabet> {
 		let range: Alphabet = Alphabet.range(symbol);
 		// Usually the ClosedRange can be mapped to a single partition,
 		// but sometimes (e.g. SymbolAlphabet) each symbol has to go into its own partition.
@@ -1302,8 +1302,8 @@ extension SymbolClassDFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeA
 	}
 }
 
-extension SymbolClassDFA: SymbolClassPatternBuilder where Symbol: Comparable {
+extension DFA: SymbolClassPatternBuilder where Symbol: Comparable {
 }
 
-public typealias SymbolDFA<Symbol: Hashable> = SymbolClassDFA<SymbolAlphabet<Symbol>>;
-public typealias RangeDFA<Symbol: BinaryInteger> = SymbolClassDFA<ClosedRangeAlphabet<Symbol>> where Symbol.Stride: SignedInteger;
+public typealias SymbolDFA<Symbol: Hashable> = DFA<SymbolAlphabet<Symbol>>;
+public typealias RangeDFA<Symbol: BinaryInteger> = DFA<ClosedRangeAlphabet<Symbol>> where Symbol.Stride: SignedInteger;

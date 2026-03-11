@@ -21,9 +21,9 @@ struct Segment: Hashable {
 }
 
 struct DFAGraphPageView: View {
-	typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<UInt32>>
+	typealias StringDFA = RangeDFA<UInt32>
 	// This comes in from ContentView normalized. If it's not normalized, paths will cross without reason and it'll look much worse.
-	@Binding var rule_fsm: DFA?
+	@Binding var rule_fsm: StringDFA?
 	// How the symbols should be represented as strings
 	let charset: Charset;
 
@@ -67,9 +67,9 @@ struct DFAGraphPageView: View {
 }
 
 struct DFAGraphView: View {
-	typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<UInt32>>
+	typealias StringDFA = RangeDFA<UInt32>
 	// This comes in from ContentView normalized. If it's not normalized, paths will cross without reason and it'll look much worse.
-	@Binding var rule_fsm: DFA?
+	@Binding var rule_fsm: StringDFA?
 	// How the symbols should be represented as strings
 	let charset: Charset;
 	// List of "visited" nodes
@@ -79,7 +79,7 @@ struct DFAGraphView: View {
 	var body: some View {
 		GeometryReader { geometry in
 			ZStack {
-				let dfa: DFA = rule_fsm ?? DFA()
+				let dfa: StringDFA = rule_fsm ?? StringDFA()
 				// Draw initial
 				EdgeView(
 					source: nodePosition(dfa.initial, in: geometry) - CGPoint(x: 0, y: +40),
@@ -110,7 +110,7 @@ struct DFAGraphView: View {
 	}
 
 	func nodePosition(_ i: Int, in geometry: GeometryProxy) -> CGPoint {
-		let dfa: DFA = rule_fsm ?? DFA()
+		let dfa: StringDFA = rule_fsm ?? StringDFA()
 		let n = dfa.states.count
 		if n == 0 { return .zero }
 		var levels: [Int: Int] = [:]

@@ -27,7 +27,7 @@ import Testing
 
 	@Test("Import from NFA")
 	func testDFAFromNFA() {
-		let nfa = NFA<Character>(
+		let nfa = SymbolNFA<Character>(
 			states: [
 				[:],
 				[:],
@@ -899,11 +899,10 @@ import Testing
 
 @Suite("SymbolClassDFA<ClosedRangeAlphabet>") struct SymbolClassDFA_ClosedRangeAlpuabet_Tests {
 	@Suite("SymbolClassDFA<ClosedRangeAlphabet>") struct DFATests {
-		typealias DFA<T: BinaryInteger> = SymbolClassDFA<ClosedRangeAlphabet<T>> where T.Stride: SignedInteger
 		@Test("union") func union() async throws {
-			let dfa1 = DFA<Int>(states: [[[0...4]: 1], [:]], initial: 0, finals: [1])
+			let dfa1 = RangeDFA<Int>(states: [[[0...4]: 1], [:]], initial: 0, finals: [1])
 			#expect(dfa1.contains([0]))
-			let dfa2 = DFA<Int>(states: [[[4...9]: 1], [:]], initial: 0, finals: [1])
+			let dfa2 = RangeDFA<Int>(states: [[[4...9]: 1], [:]], initial: 0, finals: [1])
 			#expect(dfa2.contains([9]))
 			let dfa = dfa1.union(dfa2)
 			#expect(dfa.contains([0]))
@@ -912,8 +911,8 @@ import Testing
 			#expect(!dfa.contains([0, 1]))
 		}
 		@Test("concatenation") func concatenation() async throws {
-			let dfa1 = DFA<Int>(states: [[[1...9]: 1], [:]], initial: 0, finals: [1])
-			let dfa2 = DFA<Int>(states: [[[0...9]: 0]], initial: 0, finals: [0])
+			let dfa1 = RangeDFA<Int>(states: [[[1...9]: 1], [:]], initial: 0, finals: [1])
+			let dfa2 = RangeDFA<Int>(states: [[[0...9]: 0]], initial: 0, finals: [0])
 			let dfa = dfa1.concatenate(dfa2)
 			#expect(!dfa.contains([]))
 			#expect(!dfa.contains([0]))
@@ -921,8 +920,8 @@ import Testing
 			#expect(dfa.contains([1,0]))
 		}
 		@Test("intersection") func intersection() async throws {
-			let dfa1 = DFA<Int>(states: [[[0...1]: 1], [:]], initial: 0, finals: [1])
-			let dfa2 = DFA<Int>(states: [[[1...2]: 1], [:]], initial: 0, finals: [1])
+			let dfa1 = RangeDFA<Int>(states: [[[0...1]: 1], [:]], initial: 0, finals: [1])
+			let dfa2 = RangeDFA<Int>(states: [[[1...2]: 1], [:]], initial: 0, finals: [1])
 			let dfa = dfa1.intersection(dfa2)
 			#expect(!dfa.contains([0]))
 			#expect(dfa.contains([1]))

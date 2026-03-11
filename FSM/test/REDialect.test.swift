@@ -4,7 +4,7 @@ import Testing
 // Shared test case structure
 struct PatternTestCase: CustomDebugStringConvertible {
 	let description: String
-	let pattern: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>
+	let pattern: DFA<ClosedRangeAlphabet<UInt32>>
 	let acceptingInputs: [String]
 	let rejectingInputs: [String]
 

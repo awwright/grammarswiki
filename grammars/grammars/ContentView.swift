@@ -157,7 +157,7 @@ struct DocumentDetail: View {
 
 	@State private var rule_error: String? = nil
 	@State private var rule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
-	@State private var rule_fsm: SymbolClassDFA<ClosedRangeAlphabet<UInt32>>? = nil
+	@State private var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
 	@State private var rule_fsm_error: String? = nil
 
 	// Code editor variables
@@ -186,7 +186,7 @@ struct DocumentDetail: View {
 	@State private var inspector_isPresented = true
 
 	// minimized() is necessary here otherwise it won't return a minimized alphabetPartitions
-	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() };
+	let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() };
 
 	var body: some View {
 		HStack(spacing: 20) {

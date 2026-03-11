@@ -35,7 +35,7 @@ func grammar_abnf_html_run(response res: inout some ResponseProtocol, filePath: 
 	let root_parsed = try! ABNFRulelist<UInt32>.parse(importedAbnfString.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
 	let rulelist = root_parsed.ruleNames;
 	// Prepare the list of builtin rules, which the imported dict and expression can refer to
-	let builtins = ABNFBuiltins<SymbolClassDFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
+	let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt32>>>.dictionary;
 
 	// Dereference rules referencing other files
 	let catalog = Catalog(root: FileManager.default.currentDirectoryPath);

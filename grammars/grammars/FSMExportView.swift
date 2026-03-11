@@ -3,11 +3,11 @@ import FSM
 import SwiftUI
 
 struct FSMExportView: View {
-	typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<UInt32>>
+	typealias StringDFA = RangeDFA<UInt32>
 	var export_format: String? = nil
 
 	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
-	@Binding var rule_fsm: DFA?
+	@Binding var rule_fsm: StringDFA?
 	@AppStorage("export_format_selected") private var exportFormatSelected: String = "graphviz"
 
 	@State private var vizSource: String? = nil

@@ -14,13 +14,13 @@ extension ABNFAlternation: RegularPatternBuilderData {
 	var fsm: SymbolDFA<Symbol> { try! self.toPattern() }
 }
 
-extension SymbolClassDFA: RegularPatternBuilderData where Alphabet.Symbol: BinaryInteger, Alphabet.Element == SymbolClass {
-	typealias FSM = SymbolClassDFA<Alphabet>;
+extension DFA: RegularPatternBuilderData where Alphabet.Symbol: BinaryInteger, Alphabet.Element == SymbolClass {
+	typealias FSM = DFA<Alphabet>;
 	var fsm: FSM { self.toPattern() }
 }
 
-extension SymbolClassNFA: RegularPatternBuilderData where Alphabet.Symbol: BinaryInteger {
-	typealias FSM = SymbolClassDFA<Alphabet>;
+extension NFA: RegularPatternBuilderData where Alphabet.Symbol: BinaryInteger {
+	typealias FSM = DFA<Alphabet>;
 	var fsm: FSM { self.toDFA().fsm }
 }
 
@@ -49,7 +49,7 @@ private struct RegularPatternBuilderTests {
 	static var allTests = [
 		PT(ABNFAlternation<UInt8>.self, .symbol(1), .symbol(2)),
 		PT(SymbolDFA<UInt8>.self, .symbol(1), .symbol(2)),
-		PT(SymbolClassNFA<SymbolAlphabet<UInt8>>.self, .symbol(1), .symbol(2)),
+		PT(NFA<SymbolAlphabet<UInt8>>.self, .symbol(1), .symbol(2)),
 		PT(RangeDFA<UInt8>.self, .symbol(1), .symbol(2)),
 		PT(RangeDFA<UInt8>.self, .symbol(range: [0...3, 8...9]), .symbol(range: [4...7])),
 		PT(REPattern<UInt8>.self, .symbol(1), .symbol(2)),

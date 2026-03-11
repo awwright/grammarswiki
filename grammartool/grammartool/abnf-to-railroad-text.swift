@@ -1,7 +1,6 @@
 import FSM;
 import Foundation;
 private typealias Symbol = UInt32;
-private typealias DFA = SymbolClassDFA<ClosedRangeAlphabet<Symbol>>;
 
 func abnf_to_railroad_text_help(arguments: Array<String>) {
 	print("\(arguments[0]) \(bold("abnf-to-railroad-text")) [<filepath>] <expression>");
