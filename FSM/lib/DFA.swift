@@ -43,7 +43,7 @@ extension DFAProtocol {
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra {
+public struct DFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra, RegularPatternBuilder {
 	// TODO: Implement BidirectionalCollection
 
 	/// A partition might contain more than one symbols, represented with a different type.
@@ -108,7 +108,7 @@ public struct DFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol,
 	///
 	/// You can also provide an array literal, e.g. `SymbolClassDFA([element])`
 	public init(verbatim: some Collection<Symbol>){
-		let states: Array<Alphabet.DFATable> = verbatim.enumerated().map { Alphabet.DFATable([ Alphabet.range($1): $0 + 1 ]) } + [[:]]
+		let states: Array<Alphabet.DFATable> = verbatim.enumerated().map { Alphabet.DFATable([ Alphabet.symbol($1): $0 + 1 ]) } + [[:]]
 		self.init(
 			states: states,
 			initial: 0,
@@ -710,7 +710,7 @@ public struct DFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol,
 
 	public static func symbol(_ element: Symbol) -> Self {
 		return Self(
-			states: [[Alphabet.range(element): 1], [:]],
+			states: [[Alphabet.symbol(element): 1], [:]],
 			initial: 0,
 			finals: [ 1 ]
 		)
@@ -1262,6 +1262,24 @@ extension DFA: Comparable, Sequence where SymbolClass: Comparable {
 	//}
 }
 
+extension DFA: RangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol {
+	/// Create a pattern that matches any single symbol within the given ClosedRange
+	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> Self
+	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
+	{
+		//fatalError("It works!")
+		let range: Alphabet = Alphabet.range(symbol);
+		// Usually the ClosedRange can be mapped to a single partition,
+		// but sometimes (e.g. SymbolAlphabet) each symbol has to go into its own partition.
+		let table = Alphabet.DFATable(uniqueKeysWithValues: range.map { ($0, 1) })
+		return Self(
+			states: [table, [:]],
+			initial: 0,
+			finals: [ 1 ]
+		)
+	}
+}
+
 // Conditional protocol compliance
 extension DFA: Sendable where Symbol: Sendable {}
 
@@ -1282,23 +1300,6 @@ extension DFA where Symbol == Character {
 	public mutating func remove(_ member: String) -> (String)? {
 		self.formSymmetricDifference(Self(verbatim: member));
 		return member;
-	}
-}
-
-extension DFA: ClosedRangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol, Symbol: Comparable, Symbol: Strideable, Symbol.Stride: SignedInteger {
-	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> DFA<Alphabet> {
-		let range: Alphabet = Alphabet.range(symbol);
-		// Usually the ClosedRange can be mapped to a single partition,
-		// but sometimes (e.g. SymbolAlphabet) each symbol has to go into its own partition.
-		let table = Alphabet.DFATable(uniqueKeysWithValues: range.map { ($0, 1) })
-		return Self(
-			states: [table, [:]],
-			initial: 0,
-			finals: [ 1 ]
-		)
-	}
-	public func toClosedRangePattern<T: ClosedRangePatternBuilder>() -> T {
-		fatalError()
 	}
 }
 

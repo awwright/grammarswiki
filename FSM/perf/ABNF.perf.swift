@@ -7,7 +7,7 @@ class ABNFtoPatternTests: XCTestCase {
 		let referenceRulelist: ABNFRulelist<UInt8> = try! ABNFRulelist<UInt8>.parse(test_source.replacing("\n", with: "\r\n").utf8);
 
 		measure {
-			let referenceDictionary = try! referenceRulelist.toClosedRangePattern(as: RangeDFA<UInt8>.self);
+			let referenceDictionary = try! referenceRulelist.toPattern(as: RangeDFA<UInt8>.self);
 			assert(referenceDictionary.keys.count == 1);
 		}
 	}
@@ -17,7 +17,7 @@ class ABNFtoPatternTests: XCTestCase {
 		let referenceRulelist: ABNFRulelist<UInt8> = try! ABNFRulelist<UInt8>.parse(test_source.replacing("\n", with: "\r\n").utf8);
 
 		measure {
-			let referenceDictionary = try! referenceRulelist.toClosedRangePattern(as: RangeDFA<UInt8>.self);
+			let referenceDictionary = try! referenceRulelist.toPattern(as: RangeDFA<UInt8>.self);
 			assert(referenceDictionary.keys.count == 1);
 		}
 	}
@@ -27,7 +27,7 @@ class ABNFtoPatternTests: XCTestCase {
 		let referenceRulelist: ABNFRulelist<UInt16> = try! ABNFRulelist<UInt16>.parse(test_source.replacing("\n", with: "\r\n").utf8);
 
 		measure {
-			let referenceDictionary = try! referenceRulelist.toClosedRangePattern(as: RangeDFA<UInt16>.self);
+			let referenceDictionary = try! referenceRulelist.toPattern(as: RangeDFA<UInt16>.self);
 			assert(referenceDictionary.keys.count == 1);
 		}
 	}
@@ -37,7 +37,7 @@ class ABNFtoPatternTests: XCTestCase {
 		let referenceRulelist: ABNFRulelist<UInt32> = try! ABNFRulelist<UInt32>.parse(test_source.replacing("\n", with: "\r\n").utf8);
 
 		measure {
-			let referenceDictionary = try! referenceRulelist.toClosedRangePattern(as: RangeDFA<UInt32>.self);
+			let referenceDictionary = try! referenceRulelist.toPattern(as: RangeDFA<UInt32>.self);
 			assert(referenceDictionary.keys.count == 1);
 		}
 	}
@@ -49,7 +49,7 @@ class ABNFAlternationToPattern: XCTestCase {
 		let referenceRulelist: ABNFRulelist<UInt8> = try! ABNFRulelist<UInt8>.parse(test_source.replacing("\n", with: "\r\n").utf8);
 
 		measure {
-			let referenceDictionary = try! referenceRulelist.toClosedRangePattern(as: RangeDFA<UInt8>.self);
+			let referenceDictionary = try! referenceRulelist.toPattern(as: RangeDFA<UInt8>.self);
 			assert(referenceDictionary.keys.count == 1);
 		}
 	}
@@ -59,7 +59,7 @@ class ABNFAlternationToPattern: XCTestCase {
 		let referenceRulelist: ABNFRulelist<UInt8> = try! ABNFRulelist<UInt8>.parse(test_source.replacing("\n", with: "\r\n").utf8);
 
 		measure {
-			let referenceDictionary = try! referenceRulelist.toClosedRangePattern(as: RangeDFA<UInt8>.self);
+			let referenceDictionary = try! referenceRulelist.toPattern(as: RangeDFA<UInt8>.self);
 			assert(referenceDictionary.keys.count == 1);
 		}
 	}
@@ -69,7 +69,7 @@ class ABNFAlternationToPattern: XCTestCase {
 		let referenceRulelist: ABNFRulelist<UInt16> = try! ABNFRulelist<UInt16>.parse(test_source.replacing("\n", with: "\r\n").utf8);
 
 		measure {
-			let referenceDictionary = try! referenceRulelist.toClosedRangePattern(as: RangeDFA<UInt16>.self);
+			let referenceDictionary = try! referenceRulelist.toPattern(as: RangeDFA<UInt16>.self);
 			assert(referenceDictionary.keys.count == 1);
 		}
 	}
@@ -79,7 +79,7 @@ class ABNFAlternationToPattern: XCTestCase {
 		let referenceRulelist: ABNFRulelist<UInt32> = try! ABNFRulelist<UInt32>.parse(test_source.replacing("\n", with: "\r\n").utf8);
 
 		measure {
-			let referenceDictionary = try! referenceRulelist.toClosedRangePattern(as: RangeDFA<UInt32>.self);
+			let referenceDictionary = try! referenceRulelist.toPattern(as: RangeDFA<UInt32>.self);
 			assert(referenceDictionary.keys.count == 1);
 		}
 	}

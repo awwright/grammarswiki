@@ -171,7 +171,9 @@ extension RegularPatternBuilder {
 	}
 }
 
-public protocol ClosedRangePatternBuilder: RegularPatternBuilder where Symbol: Strideable, Symbol.Stride: SignedInteger {
+public protocol RangePatternBuilder: RegularPatternBuilder
+where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedInteger {
+	/// Create a pattern that matches any single symbol within the given ClosedRange
 	static func range(_ range: ClosedRange<Symbol>) -> Self
 }
 

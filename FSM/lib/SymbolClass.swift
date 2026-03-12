@@ -33,7 +33,9 @@ public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatab
 	init<T: FiniteAlphabetProtocol>(alphabet: T) where T.Symbol == Symbol
 //	init<T: AlphabetProtocol>(range: T) where T: Collection, T.Element == Symbol
 	/// Generate a SymbolClass containing the given Symbol
-	static func range(_ symbol: Symbol) -> SymbolClass
+	static func symbol(_ symbol: Symbol) -> SymbolClass
+	/// Generate a SymbolClass containing all the symbols in the given range
+//	static func range(_ lower: Symbol, _ upper: Symbol) -> Self
 	/// Determine if the partitioned set contains the given value as a component
 	func contains(_ component: Symbol) -> Bool
 	/// Get the set of symbols from the partition of the given symbol
@@ -83,6 +85,12 @@ extension FiniteAlphabetProtocol {
 	}
 }
 
+// TODO: I'm not sure this should be necessary... just specify a SymbolClassLanguage where Alphabet==ClosedRangeAlphabet
+/// An AlphabetProtocol that supports generating a set from a ClosedRange of symbols
+public protocol ClosedRangeAlphabetProtocol: AlphabetProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+	static func range(_ range: ClosedRange<Symbol>) -> Self
+}
+
 // TODO: Define CharsetProtocol, a subset of AlphabetProtocol that has a guaranteed mapping to Character/String
 
 /// An Alphabet where every symbol is its own SymbolClass
@@ -109,7 +117,7 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 		self.symbols = Set(partitions)
 	}
 
-	public static func range(_ symbol: Symbol) -> SymbolClass {
+	public static func symbol(_ symbol: Symbol) -> SymbolClass {
 		return symbol
 	}
 
@@ -160,9 +168,11 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 	}
 }
 
-extension SymbolAlphabet: ClosedRangeAlphabetProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+extension SymbolAlphabet: ClosedRangeAlphabetProtocol
+where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
+{
 	public static func range(_ range: ClosedRange<Symbol>) -> Self {
-		.init(partitions: Set(range))
+		return .init(partitions: Set(range))
 	}
 }
 
@@ -193,7 +203,7 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 		self.partitions = Set(dict.values)
 	}
 
-	public static func range(_ symbol: Symbol) -> SymbolClass {
+	public static func symbol(_ symbol: Symbol) -> SymbolClass {
 		return [symbol]
 	}
 
@@ -366,16 +376,11 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 	}
 }
 
-extension SetAlphabet: ClosedRangeAlphabetProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
-	public static func range(_ range: ClosedRange<Symbol>) -> Self {
-		.init(partitions: [Set(range)])
+extension SetAlphabet: ClosedRangeAlphabetProtocol	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+	public static func range(_ range: ClosedRange<Symbol>) -> Self
+	{
+		return .init(partitions: [Set(range)])
 	}
-}
-
-// TODO: I'm not sure this should be necessary... just specify a SymbolClassLanguage where Alphabet==ClosedRangeAlphabet
-/// An AlphabetProtocol that supports generating a set from a ClosedRange of symbols
-public protocol ClosedRangeAlphabetProtocol: AlphabetProtocol where Symbol: Comparable {
-	static func range(_: ClosedRange<Symbol>) -> Self
 }
 
 /// A set of symbols, with tracking equivalency of elements (placing symbols with the same behavior in the same partition)
@@ -533,11 +538,14 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		self.resort()
 	}
 
-	public static func range(_ range: ClosedRange<Symbol>) -> ClosedRangeAlphabet<Symbol> {
-		.init(partitions: [[range]])
+	public static func range(_ range: ClosedRange<Symbol>) -> Self
+	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
+	{
+//		fatalError("AlphabetProtocol: It works!")
+		return .init(partitions: [[range]])
 	}
 
-	public static func range(_ symbol: Symbol) -> SymbolClass {
+	public static func symbol(_ symbol: Symbol) -> SymbolClass {
 		return [symbol...symbol]
 	}
 

@@ -55,7 +55,7 @@ public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 		}
 	}
 
-	public static func range(_ symbol: Symbol) -> SymbolClass {
+	public static func symbol(_ symbol: Symbol) -> SymbolClass {
 		SymbolClass([symbol]);
 	}
 

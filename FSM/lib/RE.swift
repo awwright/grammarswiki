@@ -5,7 +5,7 @@
 // - Collapse these into a single, repeated element. It's OK to use a naive algorithm for now, something is better than nothing.
 
 /// A parser for a common form of regular expressions
-public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPatternBuilder, Hashable where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
+public indirect enum REPattern<Symbol>: SymbolClassPatternBuilder, Hashable where Symbol: BinaryInteger & Strideable, Symbol.Stride: SignedInteger {
 	public static func range(_ range: ClosedRange<Symbol>) -> REPattern<Symbol> {
 		.range([range])
 	}
@@ -247,7 +247,7 @@ public indirect enum REPattern<Symbol>: ClosedRangePatternBuilder, SymbolClassPa
 
 	}
 
-	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: ClosedRangePatternBuilder, PatternType.Symbol == Symbol {
+	public func toPattern<PatternType>(as: PatternType.Type? = nil) -> PatternType where PatternType: RangePatternBuilder, PatternType.Symbol == Symbol {
 		switch self {
 			case .alternation(let array): return PatternType.union(array.map({ $0.toPattern(as: PatternType.self) }))
 			case .concatenation(let array): return PatternType.concatenate(array.map({ $0.toPattern(as: PatternType.self) }))

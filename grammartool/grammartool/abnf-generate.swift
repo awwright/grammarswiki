@@ -36,7 +36,7 @@ func abnf_generate_args(arguments: Array<String>) -> Int32 {
 		let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
 		let (expression, dereferencedRulelist, _): (expression: ABNFAlternation<Symbol>, rules: ABNFRulelist<Symbol>, backward: Dictionary<String, (filename: String, ruleid: String)>)
 			= try catalog.loadExpression(path: filepath ?? "", expression: expressionStr);
-		importedDict = try dereferencedRulelist.toClosedRangePattern(as: DFA.self, rules: builtins).mapValues { $0.minimized().normalized() }
+		importedDict = try dereferencedRulelist.toPattern(as: DFA.self, rules: builtins).mapValues { $0.minimized().normalized() }
 		fsm = try expression.toPattern(rules: importedDict)
 	} catch {
 		print("Could not parse input")

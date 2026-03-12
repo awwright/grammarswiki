@@ -87,7 +87,7 @@ public struct NFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 
 	public init(verbatim: some Sequence<Symbol>){
 		// Generate one state per symbol in Element, plus a final state
-		let states: Array<Alphabet.NFATable> = verbatim.enumerated().map { [ Alphabet.range($1): Set([$0 + 1]) ] } + [[:]]
+		let states: Array<Alphabet.NFATable> = verbatim.enumerated().map { [ Alphabet.symbol($1): Set([$0 + 1]) ] } + [[:]]
 		self.init(
 			states: states,
 			epsilon: Array(repeating: [], count: states.count),
@@ -435,7 +435,7 @@ public struct NFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 
 	public static func symbol(_ element: Symbol) -> Self {
 		return Self(
-			states: [[Alphabet.range(element): [1]], [:]],
+			states: [[Alphabet.symbol(element): [1]], [:]],
 			epsilon: [[], []],
 			initials: [ 0 ],
 			finals: [ 1 ]
@@ -593,6 +593,24 @@ public struct NFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 
 	public mutating func update(with newMember: __owned Element) -> (Element)? {
 		return insert(newMember).1
+	}
+}
+
+extension NFA: RangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol {
+	/// Create a pattern that matches any single symbol within the given ClosedRange
+	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> Self
+	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
+	{
+		//fatalError("It works!")
+		let range: Alphabet = Alphabet.range(symbol);
+		// Usually the ClosedRange can be mapped to a single partition,
+		// but sometimes (e.g. SymbolAlphabet) each symbol has to go into its own partition.
+		let table = Alphabet.NFATable(uniqueKeysWithValues: range.map { ($0, [1]) })
+		return Self(
+			states: [table, [:]],
+			initial: 0,
+			finals: [ 1 ]
+		)
 	}
 }
 

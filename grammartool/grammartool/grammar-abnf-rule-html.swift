@@ -77,7 +77,7 @@ func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, fileP
 			for depname in definition_dependencies.dependencies {
 				let definition = rules_dict[depname]
 				guard let definition else { continue }
-				let pat = try definition.toClosedRangePattern(rules: result_fsm_dict);
+				let pat = try definition.toPattern(rules: result_fsm_dict);
 				result_fsm_dict[depname] = pat.minimized()
 			}
 			if let rule_fsm = result_fsm_dict[ruleid] {

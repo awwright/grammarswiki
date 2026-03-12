@@ -796,7 +796,7 @@ import Testing;
 				ABNFCharVal(sequence: "C".utf8).element.repeating(3).concatenation,
 			])
 			let mapped = expression.mapSymbols({ UInt16($0) });
-			#expect(try mapped.toClosedRangePattern(as: RangeDFA<UInt16>.self).contains("A".utf16));
+			#expect(try mapped.toPattern(as: RangeDFA<UInt16>.self).contains("A".utf16));
 		}
 
 		@Test("To lowercase")
@@ -806,7 +806,7 @@ import Testing;
 			#expect(CHAR_string(remainder) == " ...")
 			// Make it lowercase
 			let mapped = expression.mapSymbols { (0x41...0x5A).contains($0) ? ($0 + 0x20) : $0 }
-			let fsm: RangeDFA<UInt8> = try mapped.toClosedRangePattern();
+			let fsm: RangeDFA<UInt8> = try mapped.toPattern();
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("c".utf8));
 			#expect(!fsm.contains("C".utf8));
@@ -828,7 +828,7 @@ import Testing;
 		func test_numVal_range() async throws {
 			let input = "%x30-39";
 			let expression = try! ABNFAlternation<UInt8>.parse(input.utf8)
-			let fsm: SymbolDFA<UInt8> = try expression.toClosedRangePattern();
+			let fsm: SymbolDFA<UInt8> = try expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
 
@@ -836,7 +836,7 @@ import Testing;
 		func test_numVal_sequence() async throws {
 			let input = "%x30.31.32";
 			let expression = try! ABNFAlternation<UInt8>.parse(input.utf8)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern();
+			let fsm: RangeDFA<UInt8> = try expression.toPattern();
 			#expect(fsm.contains([0x30, 0x31, 0x32]))
 		}
 	}
@@ -864,14 +864,14 @@ import Testing;
 		@Test("num-val range")
 		func test_numVal_range() async throws {
 			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).alternation
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern();
+			let fsm: RangeDFA<UInt8> = try expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
 
 		@Test("num-val sequence")
 		func test_numVal_sequence() async throws {
 			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).alternation
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern();
+			let fsm: RangeDFA<UInt8> = try expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
 
@@ -889,7 +889,7 @@ import Testing;
 				ABNFCharVal(sequence: "B".utf8).concatenation,
 				ABNFCharVal(sequence: "C".utf8).element.repeating(3).concatenation,
 			])
-			let fsm = try expression.toClosedRangePattern(as: RangeDFA<UInt8>.self);
+			let fsm = try expression.toPattern(as: RangeDFA<UInt8>.self);
 			#expect(fsm.contains("A".utf8));
 		}
 
@@ -897,7 +897,7 @@ import Testing;
 		func test_repetition_none_toPattern() async throws {
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 0, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
 			#expect(!fsm.contains("CC".utf8));
@@ -907,7 +907,7 @@ import Testing;
 		func test_repetition_optional_toPattern() async throws {
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(!fsm.contains("CC".utf8));
@@ -927,7 +927,7 @@ import Testing;
 		func test_repetition_star_toPattern() async throws {
 			// *"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
@@ -937,7 +937,7 @@ import Testing;
 		func test_repetition_min_toPattern() async throws {
 			// 2*"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
 			#expect(fsm.contains("CCC".utf8));
@@ -947,7 +947,7 @@ import Testing;
 		func test_repetition_max_toPattern() async throws {
 			// *2"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
@@ -958,7 +958,7 @@ import Testing;
 		func test_repetition_minmax_toPattern() async throws {
 			// 2*3"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
 			#expect(fsm.contains("CCC".utf8));
@@ -969,7 +969,7 @@ import Testing;
 		func test_separator_0_0_toPattern() async throws {
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 0, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
 			#expect(!fsm.contains("C,C".utf8));
@@ -979,7 +979,7 @@ import Testing;
 		func test_separator_0_1_toPattern() async throws {
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(!fsm.contains("C,C".utf8));
@@ -989,7 +989,7 @@ import Testing;
 		func test_separator_0_2_toPattern() async throws {
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("C,C".utf8));
@@ -1001,7 +1001,7 @@ import Testing;
 		func test_separator_0_any_toPattern() async throws {
 			// 1*"C"
 			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("C,C".utf8));
@@ -1011,7 +1011,7 @@ import Testing;
 		func test_separator_1_1_toPattern() async throws {
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 1, max: 1, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(!fsm.contains("C,C".utf8));
@@ -1021,7 +1021,7 @@ import Testing;
 		func test_separator_1_2_toPattern() async throws {
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 1, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("C,C".utf8));
@@ -1033,7 +1033,7 @@ import Testing;
 		func test_separator_1_any_toPattern() async throws {
 			// 1*"C"
 			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
 			#expect(fsm.contains("C,C".utf8));
@@ -1044,7 +1044,7 @@ import Testing;
 		func test_separator_2_2_toPattern() async throws {
 			// 0*1"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("C,C".utf8));
@@ -1056,7 +1056,7 @@ import Testing;
 		func test_separator_2_any_toPattern() async throws {
 			// 1*"C"
 			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("C,C".utf8));
@@ -1069,7 +1069,7 @@ import Testing;
 		func test_element_toPattern() async throws {
 			// "C"
 			let expression = ABNFElement.charVal(ABNFCharVal<UInt8>(sequence: "C".utf8))
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("C".utf8));
 		}
 
@@ -1077,7 +1077,7 @@ import Testing;
 		func test_char_val_toPattern() async throws {
 			// "C"
 			let expression = ABNFCharVal<UInt8>(sequence: "C".utf8)
-			let fsm: RangeDFA<UInt8> = expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = expression.toPattern(rules: [:]);
 			#expect(fsm.contains("C".utf8));
 		}
 
@@ -1091,7 +1091,7 @@ import Testing;
 					ABNFCharVal(sequence: [0x63]).repetition
 				]).alternation),
 			]);
-			let fsm: Dictionary<String, RangeDFA<UInt8>> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: Dictionary<String, RangeDFA<UInt8>> = try expression.toPattern(rules: [:]);
 			let rule = try #require(fsm["top"]);
 			#expect(rule.contains("CCC".utf8));
 		}
@@ -1106,7 +1106,7 @@ import Testing;
 					ABNFCharVal(sequence: [0x30]).repetition
 				]).alternation),
 			]);
-			let fsm: Dictionary<String, RangeDFA<UInt16>> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: Dictionary<String, RangeDFA<UInt16>> = try expression.toPattern(rules: [:]);
 			let rule = try #require(fsm["top"]);
 			#expect(rule.contains(" ".utf16));
 			#expect(rule.contains("0".utf16));
@@ -1116,14 +1116,14 @@ import Testing;
 		@Test("num-val")
 		func test_toPattern_numVal_range() async throws {
 			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39))
-			let fsm: RangeDFA<UInt8> = expression.toClosedRangePattern();
+			let fsm: RangeDFA<UInt8> = expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
 
 		@Test("LWSP")
 		func test_LWSP_toPattern() async throws {
 			let expression = try ABNFAlternation<UInt8>.parse("*((%x20 / %x09) / %x0D %x0A (%x20 / %x09))".utf8)
-			let fsm: RangeDFA<UInt8> = try expression.toClosedRangePattern(rules: [:]);
+			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.initial == 0)
 			// This can legitimately vary, but it should be consistent
 			#expect(fsm.states.count <= 7)
@@ -1493,7 +1493,7 @@ import Testing;
 			""";
 
 			let referenceRulelist: ABNFRulelist<UInt8> = try ABNFRulelist<UInt8>.parse(builtin_source.replacing("\n", with: "\r\n").utf8);
-			let referenceDictionary = try referenceRulelist.toClosedRangePattern(as: RangeDFA<UInt8>.self);
+			let referenceDictionary = try referenceRulelist.toPattern(as: RangeDFA<UInt8>.self);
 			assert(referenceDictionary.keys.count == 16);
 
 			let providedDictionary = ABNFBuiltins<RangeDFA<UInt8>>.dictionary;
