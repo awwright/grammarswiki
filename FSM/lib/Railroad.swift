@@ -6,7 +6,7 @@
 ///
 /// - Note: Implementations of this protocol provide concrete types for rendering or processing
 ///   these diagrams in different contexts (e.g., SVG generation, parsing).
-public protocol RailroadDiagramProtocol {
+public protocol RailroadBuilder {
 	/// Creates a complete railroad diagram with a start point, a sequence of elements, and an end point.
 	///
 	/// This represents the overall structure of a grammar rule, starting from an initial state,
@@ -352,7 +352,7 @@ public protocol RailroadDiagramProtocol {
 	static func Skip(attributes: RRAttributeDict) -> Self
 }
 
-extension RailroadDiagramProtocol {
+extension RailroadBuilder {
 	/// Convenience method for creating a sequence with variadic arguments.
 	///
 	/// - Parameter label: The label to use on the start element.
@@ -493,7 +493,7 @@ public typealias RRAttributeDict = Dictionary<ObjectIdentifier, AnyHashable>;
 
 public protocol RailroadAttributeProtocol {}
 
-public indirect enum RailroadNode: RailroadDiagramProtocol, Hashable {
+public indirect enum RailroadNode: RailroadBuilder, Hashable {
 	case Diagram(start: RailroadNode, sequence: [RailroadNode], end: RailroadNode, attributes: RRAttributeDict)
 	case Sequence(items: [RailroadNode], attributes: RRAttributeDict)
 	case Stack(items: [RailroadNode], attributes: RRAttributeDict)

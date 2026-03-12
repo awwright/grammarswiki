@@ -589,7 +589,7 @@ public struct ABNFRule<Symbol>: ABNFProduction where Symbol: Comparable & Binary
 		}
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		Diagram.Diagram(start: Diagram.Start(label: rulename.label, attributes: [:]), sequence: [alternation.toRailroad(rules: rules)], end: Diagram.End(label: nil, attributes: [:]), attributes: [:])
 	}
 
@@ -737,7 +737,7 @@ public struct ABNFRulename<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		return pattern
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		let definition = rules[id]
 		if let definition {
 			let filtered = Dictionary<String, ABNFAlternation<Symbol>>(uniqueKeysWithValues: rules.filter { $0.0 != id })
@@ -876,7 +876,7 @@ public struct ABNFAlternation<Symbol>: ABNFExpression, RangePatternBuilder where
 		PatternType.union(try matches.map({ try $0.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter) }))
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		if matches.count == 1 { matches[0].toRailroad(rules: rules) }
 		else { Diagram.Choice(items: matches.map { $0.toRailroad(rules: rules) }, attributes: [:]) }
 	}
@@ -1109,7 +1109,7 @@ public struct ABNFConcatenation<Symbol>: ABNFExpression where Symbol: Comparable
 		PatternType.concatenate(try repetitions.map({ try $0.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter) }))
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		if repetitions.count == 1 { repetitions[0].toRailroad(rules: rules) }
 		else { Diagram.Sequence(items: repetitions.map { $0.toRailroad(rules: rules) }, attributes: [:]) }
 	}
@@ -1340,7 +1340,7 @@ public struct ABNFRepetition<Symbol>: ABNFExpression where Symbol: Comparable & 
 		}
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		let inner: Diagram = repeating.toRailroad(rules: rules)
 		let separator: Diagram? = switch(self.rangeop) {
 			case 0x2A: Diagram?.none;
@@ -1548,7 +1548,7 @@ public enum ABNFElement<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		}
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		switch self {
 		case .rulename(let r): r.toRailroad(rules: rules);
 		case .charVal(let c): c.toRailroad(rules: rules);
@@ -1707,7 +1707,7 @@ public struct ABNFGroup<Symbol>: ABNFExpression where Symbol: Comparable & Binar
 		try alternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter)
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		Diagram.Group(alternation.toRailroad(rules: rules))
 	}
 
@@ -1806,7 +1806,7 @@ public struct ABNFOption<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		try optionalAlternation.toPattern(as: PatternType.self, rules: rules, alphabet: alphabetFilter).optional()
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		Diagram.Optional(item: optionalAlternation.toRailroad(rules: rules), attributes: [:])
 	}
 
@@ -1925,7 +1925,7 @@ public struct ABNFCharVal<Symbol>: ABNFExpression where Symbol: Comparable & Bin
 		})
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		// FIXME: This is case-insensitive
 		Diagram.Terminal(text: CHAR_string(sequence.map{ UInt8($0) }), attributes: [:])
 	}
@@ -2115,7 +2115,7 @@ public struct ABNFNumVal<Symbol>: ABNFExpression where Symbol: Comparable & Bina
 		}
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		Diagram.NonTerminal(text: description, attributes: [:])
 	}
 
@@ -2292,7 +2292,7 @@ public struct ABNFProseVal<Symbol>: ABNFExpression where Symbol: Comparable & Bi
 		throw ABNFExportError(message: "Cannot convert prose to FSM: <\(self.remark)>")
 	}
 
-	public func toRailroad<Diagram: RailroadDiagramProtocol>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
+	public func toRailroad<Diagram: RailroadBuilder>(rules: Dictionary<String, ABNFAlternation<Symbol>> = [:]) -> Diagram {
 		Diagram.Comment(text: description, attributes: [:])
 	}
 

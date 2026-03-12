@@ -2,7 +2,7 @@ import FSM;
 
 /// Generate text-art railroad diagrams using box-drawing characters
 /// Ported from <http://github.com/tabatkins/railroad-diagrams>
-public struct RailroadTextNode: RailroadDiagramProtocol {
+public struct RailroadTextNode: RailroadBuilder {
 	public let entry: Int;
 	public let exit: Int;
 	public let height: Int;
