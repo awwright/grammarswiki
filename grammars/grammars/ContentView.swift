@@ -236,7 +236,7 @@ struct DocumentDetail: View {
 					Tab("Railroad", systemImage: "train.side.front.car") {
 						ScrollView([.horizontal, .vertical]) {
 							if let content_rr {
-								RRView(diagram: content_rr)
+								content_rr.view
 							} else {
 								Text("Select a rule to view its railroad diagram")
 									.foregroundColor(.gray)

@@ -11,6 +11,12 @@ struct CGRectPreference: PreferenceKey {
 	}
 }
 
+extension RailroadNode {
+	public var view: some View {
+		AnyView(RRView.render(self))
+	}
+}
+
 struct RRView: View {
 	var diagram: RailroadNode
 
