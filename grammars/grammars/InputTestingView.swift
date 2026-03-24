@@ -15,36 +15,10 @@ struct InputTestingView: View {
 	@State private var fsm_test_result: Bool? = nil
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
 	@State private var fsm_test_error: String? = nil
-	@State private var selectedInputType: String? = nil
-	@State private var hexInput: String = ""
-	@State private var isUpdating = false
 
 	var body: some View {
 		Group {
-			let hexFont = Font.system(size: 14).monospaced()
-
-			TabView {
-				Tab("Field", systemImage: "pencil") {
-					TextField("Enter test input", text: $testInput)
-						.font(hexFont)
-						.textFieldStyle(RoundedBorderTextFieldStyle())
-				}
-				Tab("Document", systemImage: "pencil") {
-					TextEditor(text: $testInput)
-						.font(hexFont)
-				}
-				Tab("Binary", systemImage: "pencil") {
-					HStack {
-						TextEditor(text: $hexInput)
-							.font(hexFont)
-							.frame(width: 450)
-						// TODO: This should render special characters as the symbols from U+24xx
-						TextEditor(text: $testInput)
-							.font(hexFont)
-							.frame(width: 159)
-					}
-				}
-			}
+			OctetInputField(testInput: $testInput)
 
 			if let fsm_test_result {
 				// TODO: Show symbols that are valid to enter at given cursor position
@@ -63,8 +37,7 @@ struct InputTestingView: View {
 		.onChange(of: selectedRule) { updatedInput() }
 		.onChange(of: rule_fsm) { updatedInput() }
 		.onChange(of: rule_alphabet) { updatedInput() }
-		.onChange(of: testInput) { updateFromTestInput() }
-		.onChange(of: hexInput) { updateFromHex() }
+		.onChange(of: testInput) { updatedInput() }
 	}
 
 	private func updatedInput() {
@@ -98,6 +71,49 @@ struct InputTestingView: View {
 			}
 		}
 	}
+}
+
+struct OctetInputField: View {
+	@Binding var testInput: String
+	@State private var selectedInputType: String? = nil
+	@State private var hexInput: String = ""
+	@State private var isUpdating = false
+
+	var body: some View {
+		let hexFont = Font.system(size: 14).monospaced()
+		return TabView {
+			Tab("Field", systemImage: "pencil") {
+				TextField("Enter test input", text: $testInput)
+					.font(hexFont)
+					.textFieldStyle(RoundedBorderTextFieldStyle())
+			}
+			Tab("Document", systemImage: "pencil") {
+				TextEditor(text: $testInput)
+					.font(hexFont)
+			}
+			Tab("Binary", systemImage: "pencil") {
+				HStack {
+					TextEditor(text: $hexInput)
+						.font(hexFont)
+						.frame(width: 450)
+					// TODO: This should render special characters as the symbols from U+24xx
+					TextEditor(text: $testInput)
+						.font(hexFont)
+						.frame(width: 159)
+				}
+			}
+		}
+		.onChange(of: testInput) { updateFromTestInput() }
+		.onChange(of: hexInput) { updateFromHex() }
+	}
+
+	private func updateFromTestInput() {
+		guard !isUpdating else { return }
+		isUpdating = true
+		let bytes = Array(testInput.utf8)
+		hexInput = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
+		isUpdating = false
+	}
 
 	private func updateFromHex() {
 		guard !isUpdating else { return }
@@ -105,7 +121,6 @@ struct InputTestingView: View {
 		let cleanedHex = hexInput.replacingOccurrences(of: " ", with: "").uppercased()
 		guard cleanedHex.count % 2 == 0 else {
 			isUpdating = false
-			updatedInput()
 			return
 		}
 		var bytes: [UInt8] = []
@@ -117,7 +132,6 @@ struct InputTestingView: View {
 				bytes.append(byte)
 			} else {
 				isUpdating = false
-				updatedInput()
 				return
 			}
 		}
@@ -126,15 +140,5 @@ struct InputTestingView: View {
 			testInput = str
 		}
 		isUpdating = false
-		updatedInput()
-	}
-
-	private func updateFromTestInput() {
-		guard !isUpdating else { return }
-		isUpdating = true
-		let bytes = Array(testInput.utf8)
-		hexInput = bytes.map { String(format: "%02X", $0) }.joined(separator: " ")
-		isUpdating = false
-		updatedInput()
 	}
 }
