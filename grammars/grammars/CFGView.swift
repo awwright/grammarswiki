@@ -2,7 +2,7 @@ import SwiftUI;
 import FSM;
 
 struct CFGContentView: View {
-	public var grammar: SymbolCFG<UInt32>;
+	public var grammar: CFG<ClosedRangeAlphabet<UInt32>>;
 	public var charset: Charset;
 
 	@State private var selectedDialect: String = "bnf"
@@ -68,15 +68,14 @@ struct CFGContentView: View {
 					ForEach(rules, id: \.self) { rule in
 						HStack {
 							Text("\t\u{2192} ")
-							ForEach(rule.production, id: \.self) { (token: SymbolCFG<UInt32>.Term) in
+							ForEach(rule.body, id: \.self) { (token: CFG<ClosedRangeAlphabet<UInt32>>.BodyElement) in
 								switch token {
-								case .symbol(let sym): Text(charset.toQuoted(sym)).monospaced()
-//								case .range(let lower, let upper): Text(charset.toQuoted(lower) + "\u{22EF}" + charset.toQuoted(upper)).monospaced()
-								case .variable(let name): Text(name)
+								case .terminal(let sym): Text(describeCharacterSet(sym, charset: charset)).monospaced()
+								case .nonterminal(let name): Text(name)
 								default: Text(String(describing: token))
 								}
 							}
-							if rule.production.isEmpty {
+							if rule.body.isEmpty {
 								Text("\u{3B5}") // Epsilon
 							}
 						}

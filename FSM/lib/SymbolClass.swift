@@ -85,15 +85,17 @@ extension FiniteAlphabetProtocol {
 	}
 }
 
-// TODO: I'm not sure this should be necessary... just specify a SymbolClassLanguage where Alphabet==ClosedRangeAlphabet
+// TODO: define `static func symbolAlphabet(_:)` in a new Protocol, to indicate alphabets that only generate an entire Alphabet and not a single SymbolClass, e.g. SymbolAlphabet
 /// An AlphabetProtocol that supports generating a set from a ClosedRange of symbols
 public protocol ClosedRangeAlphabetProtocol: AlphabetProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
-	static func range(_ range: ClosedRange<Symbol>) -> Self
+	static func range(_ range: ClosedRange<Symbol>) -> SymbolClass
 }
 
 // TODO: Define CharsetProtocol, a subset of AlphabetProtocol that has a guaranteed mapping to Character/String
 
 /// An Alphabet where every symbol is its own SymbolClass
+///
+/// This means that SymbolAlphabet forgets equivalences!
 public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable {
 	public typealias Symbol = Symbol
 	public typealias SymbolClass = Symbol
@@ -168,13 +170,13 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 	}
 }
 
-extension SymbolAlphabet: ClosedRangeAlphabetProtocol
-where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
-{
-	public static func range(_ range: ClosedRange<Symbol>) -> Self {
-		return .init(partitions: Set(range))
-	}
-}
+//extension SymbolAlphabet: ClosedRangeAlphabetProtocol
+//where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
+//{
+//	public static func rangeAlphabet(_ range: ClosedRange<Symbol>) -> Self {
+//		return .init(partitions: Set(range))
+//	}
+//}
 
 public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol {
 	public typealias Symbol = Symbol
@@ -377,9 +379,8 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 }
 
 extension SetAlphabet: ClosedRangeAlphabetProtocol	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
-	public static func range(_ range: ClosedRange<Symbol>) -> Self
-	{
-		return .init(partitions: [Set(range)])
+	public static func range(_ range: ClosedRange<Symbol>) -> SymbolClass {
+		return Set(range)
 	}
 }
 
@@ -538,11 +539,9 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		self.resort()
 	}
 
-	public static func range(_ range: ClosedRange<Symbol>) -> Self
-	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
-	{
-//		fatalError("AlphabetProtocol: It works!")
-		return .init(partitions: [[range]])
+	/// Generate a SymbolClass representing a single range of characters
+	public static func range(_ range: ClosedRange<Symbol>) -> SymbolClass {
+		return [range]
 	}
 
 	public static func symbol(_ symbol: Symbol) -> SymbolClass {

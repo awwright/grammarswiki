@@ -152,7 +152,7 @@ struct DocumentDetail: View {
 	@State private var content_rulelist: ABNFRulelist<UInt32>? = nil
 	@State private var content_rulelist_error: String? = nil
 
-	@State private var content_cfg: SymbolCFG<UInt32> = SymbolCFG<UInt32>(start: "", rules: []);
+	@State private var content_cfg: CFG<ClosedRangeAlphabet<UInt32>> = CFG<ClosedRangeAlphabet<UInt32>>(start: "", rules: []);
 	@State private var content_rr: RailroadNode? = nil
 
 	@State private var rule_error: String? = nil
@@ -471,7 +471,7 @@ struct DocumentDetail: View {
 						content_cfg = try rulelist_all_final.toCFG()
 					} catch {
 						print(error);
-						content_cfg = SymbolCFG<UInt32>(start: "", rules: [])
+						content_cfg = CFG<ClosedRangeAlphabet<UInt32>>(start: "", rules: [])
 					}
 					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
 					// Select the first rule by default

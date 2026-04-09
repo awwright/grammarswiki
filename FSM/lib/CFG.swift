@@ -1,30 +1,31 @@
 /// A struct that represents a Context-Free Grammar
 public protocol CFGProtocol: GrammarProtocol {
-	associatedtype Symbol;
 }
 
-public struct SymbolCFG<Symbol: Hashable>: CFGProtocol, Hashable {
-	public typealias Symbol = Symbol;
+public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable {
+	public typealias Alphabet = Alphabet
+	public typealias Symbol = Alphabet.Symbol
+	public typealias SymbolClass = Alphabet.SymbolClass
+
 	public typealias Variable = String;
-	public typealias Term = GrammarTerm<Symbol, Variable>;
+	public typealias BodyElement = GrammarProductionBodyElement<SymbolClass, Variable>;
 	/// A rule in the Context-Free Grammar. Multiple rules with the same name
 	public struct Production: GrammarProductionProtocol, Hashable {
-		public typealias Symbol = SymbolCFG.Symbol;
-		public typealias Variable = SymbolCFG.Variable;
-
 		public let name: String;
-		public let production: Array<Term>;
-		public var lhs: Array<Term> { [Term.variable(name)] }
-		public var rhs: Array<Term> { production }
+		public let body: Array<BodyElement>;
 
-		public init(name: String, production: Array<Term>) {
+		// Generates the equivalent context-sensitive grammar
+		public var lhs: Array<BodyElement> { [.nonterminal(name)] }
+		public var rhs: Array<BodyElement> { body }
+
+		public init(name: String, production: Array<BodyElement>) {
 			self.name = name
-			self.production = production
+			self.body = production
 		}
-		public init(lhs: [Term], rhs: [Term]) {
+		public init(lhs: [BodyElement], rhs: [BodyElement]) {
 			precondition(lhs.count == 1)
-			self.name = lhs[0].asVariable!
-			self.production = rhs
+			self.name = lhs[0].asNonterminal!
+			self.body = rhs
 		}
 	}
 
@@ -48,8 +49,8 @@ public struct SymbolCFG<Symbol: Hashable>: CFGProtocol, Hashable {
 			referencedNames.append(current)
 			if let rulesForCurrent = rules[current] {
 				for rule in rulesForCurrent {
-					for symbol in rule.production {
-						if case .variable(let name) = symbol {
+					for symbol in rule.body {
+						if case .nonterminal(let name) = symbol {
 							if !visited.contains(name) && !queue.contains(name) {
 								queue.append(name);
 							}

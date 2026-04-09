@@ -179,6 +179,7 @@ where Symbol: Comparable & BinaryInteger & Hashable, Symbol.Stride: SignedIntege
 
 public protocol SymbolClassPatternBuilder: RegularPatternBuilder where Symbol: Comparable {
 	associatedtype SymbolClass
+	/// Construct an instance of the pattern that matches any symbol in ``range``
 	static func symbol(range: SymbolClass) -> Self
 }
 

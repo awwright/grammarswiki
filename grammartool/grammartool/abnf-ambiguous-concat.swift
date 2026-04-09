@@ -28,7 +28,7 @@ func abnf_ambiguous_concat_run(response r: inout some ResponseProtocol, lhs: Str
 		r.status = .error;
 		return
 	}
-	let fsm1: SymbolDFA<UInt32> = try! abnfTree1.toPattern(rules: ABNFBuiltins<SymbolDFA<UInt32>>.dictionary);
+	let fsm1: RangeDFA<UInt32> = try! abnfTree1.toPattern(rules: ABNFBuiltins<RangeDFA<UInt32>>.dictionary);
 
 	let abnfTree2: ABNFAlternation<UInt32>;
 	do { abnfTree2 = try ABNFAlternation<UInt32>.parse(rhs.utf8); }
@@ -38,7 +38,7 @@ func abnf_ambiguous_concat_run(response r: inout some ResponseProtocol, lhs: Str
 		r.status = .error;
 		return
 	}
-	let fsm2: SymbolDFA<UInt32> = try! abnfTree2.toPattern(rules: ABNFBuiltins<SymbolDFA<UInt32>>.dictionary);
+	let fsm2: RangeDFA<UInt32> = try! abnfTree2.toPattern(rules: ABNFBuiltins<RangeDFA<UInt32>>.dictionary);
 
 	let nonprefix1 = fsm1.derive(fsm1).minimized();
 	let nonprefix2 = fsm2.dock(fsm2).minimized();
@@ -46,7 +46,7 @@ func abnf_ambiguous_concat_run(response r: inout some ResponseProtocol, lhs: Str
 	let prefix1 = fsm1.dock(overlap);
 	let prefix2 = fsm2.derive(overlap);
 	// Verify that the language wasn't changed
-	assert(SymbolDFA.concatenate([prefix1, overlap, prefix2]) == SymbolDFA.concatenate([fsm1, fsm2]))
+	assert(RangeDFA.concatenate([prefix1, overlap, prefix2]) == RangeDFA.concatenate([fsm1, fsm2]))
 
 	r.status = .ok;
 	// TODO: Show a tuple of (prefix, overlap, sufix)

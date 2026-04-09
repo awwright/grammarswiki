@@ -1,15 +1,15 @@
 /// Defines how to read a grammar
 public protocol GrammarProtocol {
 	/// The type for symbols in the strings of the language of the grammar
-	associatedtype Symbol;
+	associatedtype Alphabet: AlphabetProtocol;
 	/// The type for non-terminals
 	associatedtype Variable;
 
 	/// A type (usually an enum) that can store either a Symbol or a Variable
-	associatedtype Term: GrammarTermProtocol where Term.Symbol == Symbol, Term.Variable == Variable;
+	associatedtype BodyElement: GrammarProductionBodyElementProtocol where BodyElement.Terminal == Alphabet.SymbolClass, BodyElement.Nonterminal == Variable;
 
 	/// An array of Terms
-	associatedtype Production: GrammarProductionProtocol where Production.Term == Term;
+	associatedtype Production: GrammarProductionProtocol where Production.BodyElement == BodyElement;
 
 	var start: Variable { get }
 	var rules: [Production] { get }
@@ -22,40 +22,40 @@ public protocol GrammarProtocol {
 
 /// Production for unrestricted grammars
 public protocol GrammarProductionProtocol {
-	associatedtype Symbol;
+	associatedtype SymbolClass;
 	associatedtype Variable;
-	associatedtype Term: GrammarTermProtocol where Term.Symbol == Symbol, Term.Variable == Variable;
+	associatedtype BodyElement: GrammarProductionBodyElementProtocol where BodyElement.Terminal == SymbolClass, BodyElement.Nonterminal == Variable;
 
 	/// The left-hand side of the production (the "in" side)
-	var lhs: [Term] { get };
+	var lhs: [BodyElement] { get };
 
 	/// The right-hand side of the production (the "out" side)
-	var rhs: [Term] { get };
+	var rhs: [BodyElement] { get };
 
-	init(lhs: [Term], rhs: [Term])
+	init(lhs: [BodyElement], rhs: [BodyElement])
 }
 
 extension GrammarProductionProtocol {
-	init(name: Variable, production: [Term]) {
-		self.init(lhs: [Term.variable(name)], rhs: production);
+	init(name: Variable, production: [BodyElement]) {
+		self.init(lhs: [BodyElement.nonterminal(name)], rhs: production);
 	}
 }
 
-public protocol GrammarTermProtocol {
-	associatedtype Symbol;
-	associatedtype Variable;
-	static func symbol(_ s: Symbol) -> Self;
-	static func variable(_ v: Variable) -> Self;
-	var asSymbol: Symbol? { get }
-	var asVariable: Variable? { get }
+public protocol GrammarProductionBodyElementProtocol {
+	associatedtype Terminal;
+	associatedtype Nonterminal;
+	static func terminal(_ s: Terminal) -> Self;
+	static func nonterminal(_ v: Nonterminal) -> Self;
+	var asTerminal: Terminal? { get }
+	var asNonterminal: Nonterminal? { get }
 }
 
-public enum GrammarTerm<Symbol: Hashable, Variable: Hashable>: GrammarTermProtocol, Hashable {
-	public typealias Symbol = Symbol;
-	public typealias Variable = Variable;
-	case symbol(Symbol)
-	case variable(Variable)
+public enum GrammarProductionBodyElement<Terminal: Hashable, Nonterminal: Hashable>: GrammarProductionBodyElementProtocol, Hashable {
+	public typealias Terminal = Terminal;
+	public typealias Nonterminal = Nonterminal;
+	case terminal(Terminal)
+	case nonterminal(Nonterminal)
 
-	public var asSymbol: Symbol? { switch self { case .symbol(let s): s; default: Symbol?.none } }
-	public var asVariable: Variable? { switch self { case .variable(let s): s; default: Variable?.none } }
+	public var asTerminal: Terminal? { switch self { case .terminal(let s): s; default: Terminal?.none } }
+	public var asNonterminal: Nonterminal? { switch self { case .nonterminal(let s): s; default: Nonterminal?.none } }
 }

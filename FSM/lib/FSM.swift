@@ -1,6 +1,7 @@
 /// An abstraction of a regular language
 public protocol RegularLanguageProtocol: ExpressibleByArrayLiteral, RegularPatternBuilder {
 	associatedtype Alphabet: AlphabetProtocol;
+	/// An Element is a list of symbols, so make each Element is itself a Collection
 	associatedtype Element: Collection
 
 	/// Checks if the DFA accepts a given sequence (element of the language)

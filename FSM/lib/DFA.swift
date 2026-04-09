@@ -1267,13 +1267,8 @@ extension DFA: RangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol {
 	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> Self
 	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
 	{
-		//fatalError("It works!")
-		let range: Alphabet = Alphabet.range(symbol);
-		// Usually the ClosedRange can be mapped to a single partition,
-		// but sometimes (e.g. SymbolAlphabet) each symbol has to go into its own partition.
-		let table = Alphabet.DFATable(uniqueKeysWithValues: range.map { ($0, 1) })
 		return Self(
-			states: [table, [:]],
+			states: [[Alphabet.range(symbol): 1], [:]],
 			initial: 0,
 			finals: [ 1 ]
 		)
