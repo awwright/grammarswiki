@@ -28,8 +28,8 @@ public struct SymbolCFG<Symbol: Hashable>: CFGProtocol, Hashable {
 		}
 	}
 
-	public var rules: Array<Production>
 	public var start: Variable
+	public var rules: Array<Production>
 
 	public var dictionary: Dictionary<String, Array<Production>> {
 		return Dictionary(grouping: self.rules, by: \.name);
@@ -66,9 +66,9 @@ public struct SymbolCFG<Symbol: Hashable>: CFGProtocol, Hashable {
 		self.rules = []
 		self.start = ""
 	}
-	public init(rules: [Production], start: String) {
-		self.rules = rules
+	public init(start: String, rules: [Production]) {
 		self.start = start
+		self.rules = rules
 	}
 
 	/// Eliminate rules that are never used

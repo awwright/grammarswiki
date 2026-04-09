@@ -424,7 +424,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 			let name = rule.rulename.id
 			try addRules(for: rule.alternation, withName: name, to: &cfgRules)
 		}
-		return CFGType(rules: cfgRules, start: rules.first?.rulename.id ?? "")
+		return CFGType(start: rules.first?.rulename.id ?? "", rules: cfgRules)
 	}
 
 	/// Parses an input string into a rulelist.
