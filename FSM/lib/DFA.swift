@@ -1267,8 +1267,8 @@ extension DFA: RangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol {
 	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> Self
 	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
 	{
-		return Self(
-			states: [[Alphabet.range(symbol): 1], [:]],
+		Self(
+			states: [Alphabet.DFATable(uniqueKeysWithValues: Alphabet.alphabet(range: symbol).map { ($0, 1) }), [:]],
 			initial: 0,
 			finals: [ 1 ]
 		)

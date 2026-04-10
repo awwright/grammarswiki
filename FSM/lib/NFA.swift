@@ -596,13 +596,13 @@ public struct NFA<Alphabet: AlphabetProtocol>: NFAProtocol {
 	}
 }
 
-extension NFA: RangePatternBuilder where Alphabet: ClosedRangeAlphabetProtocol {
+extension NFA: RangePatternBuilder where Alphabet: ClosedRangeSymbolClassProtocol {
 	/// Create a pattern that matches any single symbol within the given ClosedRange
 	public static func range(_ symbol: ClosedRange<Alphabet.Symbol>) -> Self
 	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
 	{
 		return Self(
-			states: [[Alphabet.range(symbol): [1]], [:]],
+			states: [[Alphabet.symbolClass(range: symbol): [1]], [:]],
 			initial: 0,
 			finals: [ 1 ]
 		)

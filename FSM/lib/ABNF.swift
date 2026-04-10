@@ -353,7 +353,10 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 		return resolvedRules;
 	}
 
-	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Alphabet.Symbol == Symbol, CFGType.Variable == String, CFGType.Alphabet: ClosedRangeAlphabetProtocol {
+	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Alphabet.Symbol == Symbol, CFGType.Variable == String, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
+		try toCFG(as: CFGType.self, rulename: rules.first?.rulename.id ?? "")
+	}
+	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil, rulename: String) throws -> CFGType where CFGType.Alphabet.Symbol == Symbol, CFGType.Variable == String, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
 		func addRules(for alternation: ABNFAlternation<Symbol>, withName ruleName: String, to cfgRules: inout [CFGType.Production]) throws {
 			for concat in alternation.matches {
 				var prod: Array<CFGType.Production.BodyElement> = []
@@ -376,8 +379,8 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 								case .range(let range):
 									let newName = ruleName + "_range\(cfgRules.count)";
 									// FIXME: The problem is that `alphabet` needs to be a SymbolClass, but there's no straightforward way to get just the CharacterClass of a range
-									let alphabet = CFGType.Alphabet.range(range);
-									cfgRules.append(CFGType.Production(name: newName, production: [CFGType.BodyElement.terminal(alphabet)]))
+									let range = CFGType.Alphabet.symbolClass(range: range);
+									cfgRules.append(CFGType.Production(name: newName, production: [CFGType.BodyElement.terminal(range)]))
 									prod.append(CFGType.Production.BodyElement.nonterminal(newName))
 							}
 						case .group(let g):
@@ -426,7 +429,7 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 			let name = rule.rulename.id
 			try addRules(for: rule.alternation, withName: name, to: &cfgRules)
 		}
-		return CFGType(start: rules.first?.rulename.id ?? "", rules: cfgRules)
+		return CFGType(start: rulename, rules: cfgRules)
 	}
 
 	/// Parses an input string into a rulelist.

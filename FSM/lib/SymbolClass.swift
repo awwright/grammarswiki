@@ -85,10 +85,14 @@ extension FiniteAlphabetProtocol {
 	}
 }
 
-// TODO: define `static func symbolAlphabet(_:)` in a new Protocol, to indicate alphabets that only generate an entire Alphabet and not a single SymbolClass, e.g. SymbolAlphabet
 /// An AlphabetProtocol that supports generating a set from a ClosedRange of symbols
 public protocol ClosedRangeAlphabetProtocol: AlphabetProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
-	static func range(_ range: ClosedRange<Symbol>) -> SymbolClass
+	static func alphabet(range: ClosedRange<Symbol>) -> Self
+}
+
+/// An AlphabetProtocol that supports generating a set from a ClosedRange of symbols
+public protocol ClosedRangeSymbolClassProtocol: ClosedRangeAlphabetProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+	static func symbolClass(range: ClosedRange<Symbol>) -> SymbolClass
 }
 
 // TODO: Define CharsetProtocol, a subset of AlphabetProtocol that has a guaranteed mapping to Character/String
@@ -170,13 +174,13 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 	}
 }
 
-//extension SymbolAlphabet: ClosedRangeAlphabetProtocol
-//where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
-//{
-//	public static func rangeAlphabet(_ range: ClosedRange<Symbol>) -> Self {
-//		return .init(partitions: Set(range))
-//	}
-//}
+extension SymbolAlphabet: ClosedRangeAlphabetProtocol
+where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger
+{
+	public static func alphabet(range: ClosedRange<Symbol>) -> Self {
+		return .init(partitions: Set(range))
+	}
+}
 
 public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol {
 	public typealias Symbol = Symbol
@@ -378,9 +382,15 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 	}
 }
 
-extension SetAlphabet: ClosedRangeAlphabetProtocol	where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
-	public static func range(_ range: ClosedRange<Symbol>) -> SymbolClass {
+extension SetAlphabet: ClosedRangeSymbolClassProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+	public static func symbolClass(range: ClosedRange<Symbol>) -> SymbolClass {
 		return Set(range)
+	}
+}
+
+extension SetAlphabet: ClosedRangeAlphabetProtocol where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+	public static func alphabet(range: ClosedRange<Symbol>) -> Self {
+		return Self(partitions: [symbolClass(range: range)])
 	}
 }
 
@@ -393,7 +403,7 @@ extension SetAlphabet: ClosedRangeAlphabetProtocol	where Symbol: Strideable & Bi
 /// Similarly, a regular grammar (a set of production rules) can be converted to an FSM, and then to a regex.
 /// SymbolClass enables a parallel idea: converting a grammar-like structure (or a set of rules about symbols) into a partitioned set, which can then be treated as a regular pattern.
 // TODO: Rename this to SymbolRangePartitionedSet or something
-public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabetProtocol, ClosedRangeAlphabetProtocol, Hashable, CustomStringConvertible where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
+public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabetProtocol, ClosedRangeSymbolClassProtocol, Hashable, CustomStringConvertible where Symbol: Strideable & BinaryInteger, Symbol.Stride: SignedInteger {
 	public typealias Symbol = Symbol
 	// MARK: Type definitions
 	/// Implements PartitionedSetProtocol
@@ -540,7 +550,12 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 	}
 
 	/// Generate a SymbolClass representing a single range of characters
-	public static func range(_ range: ClosedRange<Symbol>) -> SymbolClass {
+	public static func alphabet(range: ClosedRange<Symbol>) -> Self {
+		Self(partitions: [symbolClass(range: range)])
+	}
+
+	/// Generate a SymbolClass representing a single range of characters
+	public static func symbolClass(range: ClosedRange<Symbol>) -> SymbolClass {
 		return [range]
 	}
 
