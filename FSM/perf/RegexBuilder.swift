@@ -58,7 +58,7 @@ class RegexBuilderPerf: XCTestCase {
 		let dict = grammar.dictionary;
 		measure {
 			print("compute fsm...");
-			let fsm0: RangeDFA<UInt8> = try! dict["URI"]!.toPattern(rules: grammar)
+			let fsm0: RangeDFA<UInt8> = try! dict["uri"]!.toPattern(rules: grammar)
 			print("compute minimized...");
 			let fsm = fsm0.minimized()
 //			print("compute regex...");
@@ -121,7 +121,7 @@ class RegexBuilderPerf: XCTestCase {
 		let dict = grammar.dictionary;
 		measure {
 			print("compute fsm...");
-			let fsm0: SymbolDFA<UInt8> = try! dict["URI"]!.toPattern(rules: grammar)
+			let fsm0: SymbolDFA<UInt8> = try! dict["uri"]!.toPattern(rules: grammar)
 			print("compute minimized...");
 			let fsm = fsm0.minimized()
 //			print("compute regex...");
