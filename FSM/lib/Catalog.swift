@@ -82,7 +82,7 @@ public struct Catalog {
 							let target_rulename = String(parts[2]).lowercased();
 							let mangled = "{File: \(target_filename) Rule: \(target_rulename)}";
 							backwards[mangled] = (target_filename, target_rulename);
-							return ABNFRulename(id: mangled, label: mangled).element; // target_rulename
+							return ABNFRulename(id: mangled, label: mangled).asElement; // target_rulename
 						default:
 							return $0;
 					}

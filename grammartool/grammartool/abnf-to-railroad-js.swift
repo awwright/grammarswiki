@@ -119,7 +119,7 @@ private func generateDiagram(_ rule: ABNFRule<Symbol>) -> String {
 			case .rulename(let r):
 				return "NonTerminal(\(text_json(r.label)), {href: \(text_json(r.label+".html"))})";
 			case .group(let g):
-				return "Group(\(processAlternation(g.alternation)))";
+				return "Group(\(processAlternation(g.asAlternation)))";
 			case .option(let o):
 				return "Optional(\(processAlternation(o.optionalAlternation)))";
 			case .charVal(let c):

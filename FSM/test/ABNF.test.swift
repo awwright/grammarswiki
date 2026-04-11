@@ -7,9 +7,9 @@ import Testing;
 		func test_alphabet_alternation_0() async throws {
 			// "A" / "B" / "C"
 			let expression = ABNFAlternation(matches: [
-				ABNFCharVal(sequence: "A".utf8).concatenation,
-				ABNFCharVal(sequence: "B".utf8).concatenation,
-				ABNFCharVal(sequence: "C".utf8).concatenation,
+				ABNFCharVal(sequence: "A".utf8).asConcatenation,
+				ABNFCharVal(sequence: "B".utf8).asConcatenation,
+				ABNFCharVal(sequence: "C".utf8).asConcatenation,
 			])
 			#expect(expression.alphabet() == [[0x41...0x42, 0x61...0x62], [0x43...0x43, 0x63...0x63]])
 		}
@@ -18,10 +18,10 @@ import Testing;
 		func test_alphabet_alternation_1() async throws {
 			// "A" / "B" / 3"C" / 3"D"
 			let expression = ABNFAlternation(matches: [
-				ABNFCharVal(sequence: "A".utf8).concatenation,
-				ABNFCharVal(sequence: "B".utf8).concatenation,
-				ABNFCharVal(sequence: "C".utf8).element.repeating(3).concatenation,
-				ABNFCharVal(sequence: "D".utf8).element.repeating(3).concatenation,
+				ABNFCharVal(sequence: "A".utf8).asConcatenation,
+				ABNFCharVal(sequence: "B".utf8).asConcatenation,
+				ABNFCharVal(sequence: "C".utf8).asElement.repeating(3).asConcatenation,
+				ABNFCharVal(sequence: "D".utf8).asElement.repeating(3).asConcatenation,
 			])
 			#expect(expression.alphabet() == [[0x41...0x42, 0x61...0x62], [0x43...0x44, 0x63...0x64]])
 		}
@@ -29,42 +29,42 @@ import Testing;
 		@Test("repetition optional")
 		func test_alphabet_repetition_optional() async throws {
 			// 0*1%x41-43
-			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, element: ABNFNumVal(base: .hex, value: .range(0x41...0x43)).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, element: ABNFNumVal(base: .hex, value: .range(0x41...0x43)).asElement)
 			#expect(expression.alphabet() == [[0x41...0x43]])
 		}
 
 		@Test("repetition plus")
 		func test_repetition_plus() async throws {
 			// 1*"Ab"
-			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).asElement)
 			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
 		}
 
 		@Test("repetition star")
 		func test_repetition_star() async throws {
 			// *"AB"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).asElement)
 			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
 		}
 
 		@Test("repetition min")
 		func test_repetition_min() async throws {
 			// 2*"AB"
-			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).asElement)
 			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
 		}
 
 		@Test("repetition max")
 		func test_repetition_max() async throws {
 			// *2"AB"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "Ab".utf8).asElement)
 			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62]])
 		}
 
 		@Test("repetition min/max")
 		func test_repetition_minmax() async throws {
 			// 2*3"ABC"
-			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "Abc".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "Abc".utf8).asElement)
 			#expect(expression.alphabet() == [[0x41...0x41, 0x61...0x61], [0x42...0x42, 0x62...0x62], [0x43...0x43, 0x63...0x63]])
 		}
 
@@ -96,8 +96,8 @@ import Testing;
 		func test_rulelist_builtins() async throws {
 			let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt8>>>.dictionary.mapValues { $0.minimized().alphabet };
 			let expression = ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFAlternation(matches: [
-				ABNFRulename(label: "DIGIT").concatenation,
-				ABNFNumVal(base: .hex, value: .range(0x41...0x43)).concatenation,
+				ABNFRulename(label: "DIGIT").asConcatenation,
+				ABNFNumVal(base: .hex, value: .range(0x41...0x43)).asConcatenation,
 			]));
 			#expect(expression.alphabet(rulelist: builtins) == [[UInt8(0x30)...UInt8(0x39), UInt8(0x41)...UInt8(0x43)]])
 		}
@@ -146,13 +146,13 @@ import Testing;
 			let abnf = "rule = %x20\r\nrule =/ %x30\r\n..."
 			let (rulelist, remainder) = try ABNFRulelist<UInt8>.match(abnf.utf8)!
 			#expect(rulelist == ABNFRulelist<UInt8>(rules: [
-				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).alternation),
-				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .incremental, alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30])).alternation),
+				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).asAlternation),
+				ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .incremental, alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30])).asAlternation),
 			]));
 			let dict = rulelist.dictionary;
 			let expectedRule = ABNFRule(rulename: ABNFRulename<UInt8>(label: "rule"), definedAs: .equal, alternation: ABNFAlternation(matches: [
-				ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).concatenation,
-				ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30])).concatenation,
+				ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).asConcatenation,
+				ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30])).asConcatenation,
 			]));
 			#expect(dict == ["rule": expectedRule]);
 			#expect(CHAR_string(remainder) == "...");
@@ -173,11 +173,11 @@ import Testing;
 			let (rulename, remainder) = ABNFRulename<UInt8>.match(abnf.utf8)!
 			#expect(rulename == ABNFRulename<UInt8>(label: "foo"));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rulename.alternation == ABNFAlternation<UInt8>(matches: [rulename.concatenation]))
-			#expect(rulename.concatenation == ABNFConcatenation<UInt8>(repetitions: [rulename.repetition]))
-			#expect(rulename.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rulename.element))
-			#expect(rulename.element == ABNFElement<UInt8>.rulename(rulename))
-			#expect(rulename.group == ABNFGroup<UInt8>(alternation: rulename.alternation))
+			#expect(rulename.asAlternation == ABNFAlternation<UInt8>(matches: [rulename.asConcatenation]))
+			#expect(rulename.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rulename.asRepetition]))
+			#expect(rulename.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rulename.asElement))
+			#expect(rulename.asElement == ABNFElement<UInt8>.rulename(rulename))
+			#expect(rulename.asGroup == ABNFGroup<UInt8>(alternation: rulename.asAlternation))
 			#expect(rulename.isEmpty == false)
 			#expect(rulename.isOptional == false)
 		}
@@ -189,11 +189,11 @@ import Testing;
 			let inner = try! ABNFConcatenation<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFAlternation<UInt8>(matches: [inner]));
 			#expect(CHAR_string(remainder) == " )");
-			#expect(rule.alternation == rule)
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo"))) // Unwrap the alternation
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule))
+			#expect(rule.asAlternation == rule)
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo"))) // Unwrap the alternation
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -205,11 +205,11 @@ import Testing;
 			let inner = try! ABNFConcatenation<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFAlternation<UInt8>(matches: [inner, inner]));
 			#expect(CHAR_string(remainder) == " )");
-			#expect(rule.alternation == rule)
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule))
+			#expect(rule.asAlternation == rule)
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -221,11 +221,11 @@ import Testing;
 			let inner = try! ABNFRepetition<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFConcatenation<UInt8>(repetitions: [inner]));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == rule)
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo"))) // Unwrap the concatenation
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == rule)
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo"))) // Unwrap the concatenation
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -238,11 +238,11 @@ import Testing;
 			let inner2 = try! ABNFRepetition<UInt8>.parse("bar".utf8)
 			#expect(rule == ABNFConcatenation<UInt8>(repetitions: [inner1, inner2]));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == rule)
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == rule)
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 			#expect(rule.description == "foo bar")
@@ -252,13 +252,13 @@ import Testing;
 		func test_repetition_0() async throws {
 			let abnf = "0foo ...";
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
-			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: 0, element: ABNFRulename<UInt8>(label: "foo").element));
+			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: 0, element: ABNFRulename<UInt8>(label: "foo").asElement));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == rule)
-			#expect(rule.element == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.alternation))) // Unwrap the repetition instead of wrapping it
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == rule)
+			#expect(rule.asElement == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.asAlternation))) // Unwrap the repetition instead of wrapping it
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == true)
 			#expect(rule.isOptional == true)
 			#expect(rule.description == "0foo")
@@ -271,11 +271,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 1, max: 1, element: foo));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == rule)
-			#expect(rule.element == ABNFRulename<UInt8>(label: "foo").element) // Unwrap the repetition instead of wrapping it
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == rule)
+			#expect(rule.asElement == ABNFRulename<UInt8>(label: "foo").asElement) // Unwrap the repetition instead of wrapping it
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 			#expect(rule.description == "foo") // 1*1 is the default so it gets omitted
@@ -288,11 +288,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 1, max: nil, element: foo));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFRulename<UInt8>(label: "foo").element))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFRulename<UInt8>(label: "foo").asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 			#expect(rule.description == "1*foo")
@@ -305,11 +305,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: 4, element: foo));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 0, max: 4, element: ABNFRulename<UInt8>(label: "foo").element))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 0, max: 4, element: ABNFRulename<UInt8>(label: "foo").asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == true)
 			#expect(rule.description == "*4foo")
@@ -322,11 +322,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 2, max: 4, element: foo));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 2, max: 4, element: ABNFRulename<UInt8>(label: "foo").element))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 2, max: 4, element: ABNFRulename<UInt8>(label: "foo").asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 			#expect(rule.description == "2*4foo")
@@ -336,13 +336,13 @@ import Testing;
 		func test_repetition_any() async throws {
 			let abnf = "*foo ...";
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
-			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFRulename<UInt8>(label: "foo").element));
+			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFRulename<UInt8>(label: "foo").asElement));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == rule)
-			#expect(rule.element == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.alternation))) // Unwrap the repetition instead of wrapping it
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == rule)
+			#expect(rule.asElement == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.asAlternation))) // Unwrap the repetition instead of wrapping it
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == true)
 			#expect(rule.description == "*foo")
@@ -352,13 +352,13 @@ import Testing;
 		func test_list_0() async throws {
 			let abnf = "0#0foo ...";
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
-			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: 0, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").element));
+			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: 0, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").asElement));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == rule)
-			#expect(rule.element == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.alternation))) // Unwrap the repetition instead of wrapping it
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == rule)
+			#expect(rule.asElement == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.asAlternation))) // Unwrap the repetition instead of wrapping it
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == true)
 			#expect(rule.isOptional == true)
 			#expect(rule.description == "#0foo")
@@ -368,13 +368,13 @@ import Testing;
 		func test_list_0_up() async throws {
 			let abnf = "0#foo ...";
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
-			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: nil, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").element));
+			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: nil, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").asElement));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == rule)
-			#expect(rule.element == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.alternation))) // Unwrap the repetition instead of wrapping it
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == rule)
+			#expect(rule.asElement == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.asAlternation))) // Unwrap the repetition instead of wrapping it
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == true)
 			#expect(rule.description == "#foo")
@@ -387,11 +387,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 1, max: 1, rangeop: 0x23, element: foo));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == rule)
-			#expect(rule.element == ABNFRulename<UInt8>(label: "foo").element) // Unwrap the repetition instead of wrapping it
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == rule)
+			#expect(rule.asElement == ABNFRulename<UInt8>(label: "foo").asElement) // Unwrap the repetition instead of wrapping it
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 			#expect(rule.description == "foo")
@@ -403,11 +403,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: foo));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == rule)
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").element))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == rule)
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").asElement))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 			#expect(rule.description == "1#foo")
@@ -420,11 +420,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: 4, rangeop: 0x23, element: foo));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 0, max: 4, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").element))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 0, max: 4, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == true)
 			#expect(rule.description == "#4foo")
@@ -437,11 +437,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFRepetition<UInt8>(min: 2, max: 4, rangeop: 0x23, element: foo));
 			#expect(CHAR_string(remainder) == " ");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 2, max: 4, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").element))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 2, max: 4, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 			#expect(rule.description == "2#4foo")
@@ -451,13 +451,13 @@ import Testing;
 		func test_list_any() async throws {
 			let abnf = "#foo ...";
 			let (rule, remainder) = try! ABNFRepetition<UInt8>.match(abnf.utf8)!
-			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: nil, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").element));
+			#expect(rule == ABNFRepetition<UInt8>(min: 0, max: nil, rangeop: 0x23, element: ABNFRulename<UInt8>(label: "foo").asElement));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == rule)
-			#expect(rule.element == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.alternation))) // Unwrap the repetition instead of wrapping it
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == rule)
+			#expect(rule.asElement == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: rule.asAlternation))) // Unwrap the repetition instead of wrapping it
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == true)
 			#expect(rule.description == "#foo")
@@ -470,11 +470,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == rule)
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == rule)
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -490,11 +490,11 @@ import Testing;
 				concatenation2,
 			]))));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [concatenation1, concatenation2])) // unwrap the group
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition])) // alternation of two elements cannot be unwrapped
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == rule)
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [concatenation1, concatenation2])) // unwrap the group
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition])) // alternation of two elements cannot be unwrapped
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == rule)
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -507,11 +507,11 @@ import Testing;
 			let repetition2 = ABNFRepetition<UInt8>(min: 1, max: 1, element: ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "bar")));
 			#expect(rule == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: ABNFAlternation<UInt8>(matches: [ABNFConcatenation<UInt8>(repetitions: [repetition1, repetition2])]))));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [repetition1, repetition2]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == rule)
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [repetition1, repetition2]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == rule)
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -522,11 +522,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.group(ABNFGroup<UInt8>(alternation: ABNFAlternation<UInt8>(matches: [ABNFConcatenation<UInt8>(repetitions: [ABNFRepetition<UInt8>(min: 1, max: 1, element: ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")))])]))));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -537,11 +537,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.option(ABNFOption<UInt8>(optionalAlternation: ABNFAlternation<UInt8>(matches: [ABNFConcatenation<UInt8>(repetitions: [ABNFRepetition<UInt8>(min: 1, max: 1, element: ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo")))])]))));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == rule)
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == rule)
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == true)
 		}
@@ -552,11 +552,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.charVal(ABNFCharVal<UInt8>(sequence: [0x20])));
 			#expect(CHAR_string(remainder) == "-");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == rule)
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == rule)
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -567,11 +567,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.numVal(ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x31]))));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == rule)
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == rule)
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -582,11 +582,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFElement<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFElement<UInt8>.proseVal(ABNFProseVal<UInt8>(remark: "Plain text description")));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == rule)
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == rule)
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -599,11 +599,11 @@ import Testing;
 			let inner = try! ABNFAlternation<UInt8>.parse("0<>".utf8)
 			#expect(rule == ABNFGroup<UInt8>(alternation: inner));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == inner)
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 0, max: 0, element: ABNFElement<UInt8>.proseVal(ABNFProseVal<UInt8>(remark: ""))))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == inner)
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 0, max: 0, element: ABNFElement<UInt8>.proseVal(ABNFProseVal<UInt8>(remark: ""))))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == true)
 			#expect(rule.isOptional == true)
 		}
@@ -616,11 +616,11 @@ import Testing;
 			let inner = try! ABNFAlternation<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFGroup<UInt8>(alternation: inner));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == inner)
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo"))) // Unwrap the group
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == inner)
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.rulename(ABNFRulename<UInt8>(label: "foo"))) // Unwrap the group
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -633,11 +633,11 @@ import Testing;
 			let inner = try! ABNFAlternation<UInt8>.parse("foo / bar".utf8)
 			#expect(rule == ABNFGroup<UInt8>(alternation: inner));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == inner)
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: inner))
+			#expect(rule.asAlternation == inner)
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: inner))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -650,11 +650,11 @@ import Testing;
 			let inner = try! ABNFConcatenation<UInt8>.parse("foo bar".utf8)
 			#expect(rule == ABNFGroup<UInt8>(alternation: ABNFAlternation<UInt8>(matches: [inner])));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [inner]))
-			#expect(rule.concatenation == inner)
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.group(rule.group))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [inner]))
+			#expect(rule.asConcatenation == inner)
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.group(rule.asGroup))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -666,11 +666,11 @@ import Testing;
 			let inner = try! ABNFAlternation<UInt8>.parse("foo".utf8)
 			#expect(rule == ABNFOption<UInt8>(optionalAlternation: inner));
 			#expect(CHAR_string(remainder) == " ...");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.option(rule))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.option(rule))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == true)
 		}
@@ -684,11 +684,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFCharVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFCharVal<UInt8>(sequence: "foo".utf8));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.charVal(rule))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.charVal(rule))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -701,11 +701,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFCharVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFCharVal<UInt8>(sequence: "foo".utf8, caseSensitive: false));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.charVal(rule))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.charVal(rule))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -718,11 +718,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFCharVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFCharVal<UInt8>(sequence: "foo".utf8, caseSensitive: true));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.charVal(rule))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.charVal(rule))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -733,11 +733,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFNumVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFNumVal<UInt8>(base: .bin, value: .sequence([0x20, 0x20])));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.numVal(rule))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.numVal(rule))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -748,11 +748,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFNumVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFNumVal<UInt8>(base: .dec, value: .sequence([0x20, 0x20])));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.numVal(rule))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.numVal(rule))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -763,11 +763,11 @@ import Testing;
 			let (rule, remainder) = try! ABNFNumVal<UInt8>.match(abnf.utf8)!
 			#expect(rule == ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20, 0x20])));
 			#expect(CHAR_string(remainder) == "");
-			#expect(rule.alternation == ABNFAlternation<UInt8>(matches: [rule.concatenation]))
-			#expect(rule.concatenation == ABNFConcatenation<UInt8>(repetitions: [rule.repetition]))
-			#expect(rule.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.element))
-			#expect(rule.element == ABNFElement<UInt8>.numVal(rule))
-			#expect(rule.group == ABNFGroup<UInt8>(alternation: rule.alternation))
+			#expect(rule.asAlternation == ABNFAlternation<UInt8>(matches: [rule.asConcatenation]))
+			#expect(rule.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [rule.asRepetition]))
+			#expect(rule.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: rule.asElement))
+			#expect(rule.asElement == ABNFElement<UInt8>.numVal(rule))
+			#expect(rule.asGroup == ABNFGroup<UInt8>(alternation: rule.asAlternation))
 			#expect(rule.isEmpty == false)
 			#expect(rule.isOptional == false)
 		}
@@ -778,11 +778,11 @@ import Testing;
 			let (prose, remainder) = try! ABNFProseVal<UInt8>.match(input)!
 			#expect(prose == ABNFProseVal<UInt8>(remark: "Some message"));
 			#expect(CHAR_string(remainder) == " 123");
-			#expect(prose.alternation == ABNFAlternation<UInt8>(matches: [prose.concatenation]))
-			#expect(prose.concatenation == ABNFConcatenation<UInt8>(repetitions: [prose.repetition]))
-			#expect(prose.repetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: prose.element))
-			#expect(prose.element == ABNFElement<UInt8>.proseVal(prose))
-			#expect(prose.group == ABNFGroup<UInt8>(alternation: prose.alternation))
+			#expect(prose.asAlternation == ABNFAlternation<UInt8>(matches: [prose.asConcatenation]))
+			#expect(prose.asConcatenation == ABNFConcatenation<UInt8>(repetitions: [prose.asRepetition]))
+			#expect(prose.asRepetition == ABNFRepetition<UInt8>(min: 1, max: 1, element: prose.asElement))
+			#expect(prose.asElement == ABNFElement<UInt8>.proseVal(prose))
+			#expect(prose.asGroup == ABNFGroup<UInt8>(alternation: prose.asAlternation))
 			#expect(prose.isEmpty == false)
 			#expect(prose.isOptional == false)
 		}
@@ -791,9 +791,9 @@ import Testing;
 		@Test("UInt8->UInt16")
 		func test_rulelist() async throws {
 			let expression = ABNFAlternation(matches: [
-				ABNFCharVal(sequence: "A".utf8).concatenation,
-				ABNFCharVal(sequence: "B".utf8).concatenation,
-				ABNFCharVal(sequence: "C".utf8).element.repeating(3).concatenation,
+				ABNFCharVal(sequence: "A".utf8).asConcatenation,
+				ABNFCharVal(sequence: "B".utf8).asConcatenation,
+				ABNFCharVal(sequence: "C".utf8).asElement.repeating(3).asConcatenation,
 			])
 			let mapped = expression.mapSymbols({ UInt16($0) });
 			#expect(try mapped.toPattern(as: RangeDFA<UInt16>.self).contains("A".utf16));
@@ -863,14 +863,14 @@ import Testing;
 
 		@Test("num-val range")
 		func test_numVal_range() async throws {
-			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).alternation
+			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).asAlternation
 			let fsm: RangeDFA<UInt8> = try expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
 
 		@Test("num-val sequence")
 		func test_numVal_sequence() async throws {
-			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).alternation
+			let expression = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).asAlternation
 			let fsm: RangeDFA<UInt8> = try expression.toPattern();
 			#expect(fsm.contains([0x30]))
 		}
@@ -885,9 +885,9 @@ import Testing;
 		func test_alternation_toPattern() async throws {
 			// "A" / "B" / 3"C"
 			let expression = ABNFAlternation(matches: [
-				ABNFCharVal(sequence: "A".utf8).concatenation,
-				ABNFCharVal(sequence: "B".utf8).concatenation,
-				ABNFCharVal(sequence: "C".utf8).element.repeating(3).concatenation,
+				ABNFCharVal(sequence: "A".utf8).asConcatenation,
+				ABNFCharVal(sequence: "B".utf8).asConcatenation,
+				ABNFCharVal(sequence: "C".utf8).asElement.repeating(3).asConcatenation,
 			])
 			let fsm = try expression.toPattern(as: RangeDFA<UInt8>.self);
 			#expect(fsm.contains("A".utf8));
@@ -896,7 +896,7 @@ import Testing;
 		@Test("repetition none")
 		func test_repetition_none_toPattern() async throws {
 			// 0*1"C"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: 0, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 0, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
@@ -906,7 +906,7 @@ import Testing;
 		@Test("repetition optional")
 		func test_repetition_optional_toPattern() async throws {
 			// 0*1"C"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -916,7 +916,7 @@ import Testing;
 		@Test("repetition plus")
 		func test_repetition_plus_toPattern() async throws {
 			// 1*"C"
-			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: SymbolDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -926,7 +926,7 @@ import Testing;
 		@Test("repetition star")
 		func test_repetition_star_toPattern() async throws {
 			// *"C"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -936,7 +936,7 @@ import Testing;
 		@Test("repetition min")
 		func test_repetition_min_toPattern() async throws {
 			// 2*"C"
-			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
@@ -946,7 +946,7 @@ import Testing;
 		@Test("repetition max")
 		func test_repetition_max_toPattern() async throws {
 			// *2"C"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -957,7 +957,7 @@ import Testing;
 		@Test("repetition min/max")
 		func test_repetition_minmax_toPattern() async throws {
 			// 2*3"C"
-			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 2, max: 3, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("C".utf8));
 			#expect(fsm.contains("CC".utf8));
@@ -968,7 +968,7 @@ import Testing;
 		@Test("separator 0#0")
 		func test_separator_0_0_toPattern() async throws {
 			// 0*1"C"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: 0, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 0, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
@@ -978,7 +978,7 @@ import Testing;
 		@Test("separator 0#1")
 		func test_separator_0_1_toPattern() async throws {
 			// 0*1"C"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 1, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -988,7 +988,7 @@ import Testing;
 		@Test("separator 0#2")
 		func test_separator_0_2_toPattern() async throws {
 			// 0*1"C"
-			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 0, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -1000,7 +1000,7 @@ import Testing;
 		@Test("separator 0#")
 		func test_separator_0_any_toPattern() async throws {
 			// 1*"C"
-			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -1010,7 +1010,7 @@ import Testing;
 		@Test("separator 1#1")
 		func test_separator_1_1_toPattern() async throws {
 			// 0*1"C"
-			let expression = ABNFRepetition<UInt8>(min: 1, max: 1, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 1, max: 1, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -1020,7 +1020,7 @@ import Testing;
 		@Test("separator 1#2")
 		func test_separator_1_2_toPattern() async throws {
 			// 0*1"C"
-			let expression = ABNFRepetition<UInt8>(min: 1, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 1, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -1032,7 +1032,7 @@ import Testing;
 		@Test("separator 1#")
 		func test_separator_1_any_toPattern() async throws {
 			// 1*"C"
-			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 1, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(fsm.contains("C".utf8));
@@ -1043,7 +1043,7 @@ import Testing;
 		@Test("separator 2#2")
 		func test_separator_2_2_toPattern() async throws {
 			// 0*1"C"
-			let expression = ABNFRepetition<UInt8>(min: 2, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 2, max: 2, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
@@ -1055,7 +1055,7 @@ import Testing;
 		@Test("separator 2#")
 		func test_separator_2_any_toPattern() async throws {
 			// 1*"C"
-			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).element)
+			let expression = ABNFRepetition<UInt8>(min: 2, max: nil, rangeop: 0x23, element: ABNFCharVal<UInt8>(sequence: "C".utf8).asElement)
 			let fsm: RangeDFA<UInt8> = try expression.toPattern(rules: [:]);
 			#expect(!fsm.contains("".utf8));
 			#expect(!fsm.contains("C".utf8));
@@ -1085,11 +1085,11 @@ import Testing;
 		func test_rulelist_toPattern_2() async throws {
 			let expression = ABNFRulelist<UInt8>(rules: [
 				ABNFRule(rulename: ABNFRulename<UInt8>(label: "Top"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
-					ABNFRepetition(min: 3, max: 3, element: ABNFRulename(label: "Rule").element)
-				]).alternation),
+					ABNFRepetition(min: 3, max: 3, element: ABNFRulename(label: "Rule").asElement)
+				]).asAlternation),
 				ABNFRule(rulename: ABNFRulename<UInt8>(label: "Rule"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
-					ABNFCharVal(sequence: [0x63]).repetition
-				]).alternation),
+					ABNFCharVal(sequence: [0x63]).asRepetition
+				]).asAlternation),
 			]);
 			let fsm: Dictionary<String, RangeDFA<UInt8>> = try expression.toPattern(rules: [:]);
 			let rule = try #require(fsm["top"]);
@@ -1100,11 +1100,11 @@ import Testing;
 		func test_rulelist_toPattern_incremental() async throws {
 			let expression = ABNFRulelist<UInt16>(rules: [
 				ABNFRule(rulename: ABNFRulename<UInt16>(label: "Top"), definedAs: .equal, alternation: ABNFConcatenation(repetitions: [
-					ABNFNumVal<UInt16>(base: .hex, value: .sequence([0x20])).repetition
-				]).alternation),
+					ABNFNumVal<UInt16>(base: .hex, value: .sequence([0x20])).asRepetition
+				]).asAlternation),
 				ABNFRule(rulename: ABNFRulename<UInt16>(label: "Top"), definedAs: .incremental, alternation: ABNFConcatenation(repetitions: [
-					ABNFCharVal(sequence: [0x30]).repetition
-				]).alternation),
+					ABNFCharVal(sequence: [0x30]).asRepetition
+				]).asAlternation),
 			]);
 			let fsm: Dictionary<String, RangeDFA<UInt16>> = try expression.toPattern(rules: [:]);
 			let rule = try #require(fsm["top"]);
@@ -1212,76 +1212,76 @@ import Testing;
 	@Suite("union") struct ABNFTest_union {
 		@Test("rulename / rulename")
 		func test_union_rulename() async throws {
-			let expr1 = ABNFRulename<UInt8>(label: "foo").alternation;
-			let expr2 = ABNFRulename<UInt8>(label: "bar").alternation;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").asAlternation;
+			let expr2 = ABNFRulename<UInt8>(label: "bar").asAlternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "foo bar");
 		}
 		@Test("rulename / rulename")
 		func test_union_rulename_homogeneous() async throws {
-			let expr1 = ABNFRulename<UInt8>(label: "foo").alternation;
-			let expr2 = ABNFRulename<UInt8>(label: "foo").alternation;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").asAlternation;
+			let expr2 = ABNFRulename<UInt8>(label: "foo").asAlternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "foo");
 		}
 		@Test("alternation / alternation")
 		func test_union_alternation() async throws {
-			let expr1 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "foo").concatenation, ABNFRulename(label: "bar").concatenation]); // foo/bar
-			let expr2 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "alice").concatenation, ABNFRulename(label: "bob").concatenation]); // alice/bob
+			let expr1 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "foo").asConcatenation, ABNFRulename(label: "bar").asConcatenation]); // foo/bar
+			let expr2 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "alice").asConcatenation, ABNFRulename(label: "bob").asConcatenation]); // alice/bob
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "foo / bar / alice / bob");
 		}
 
 		@Test("concatenation / concatenation")
 		func test_union_concatenation() async throws {
-			let expr1 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "a").repetition, ABNFRulename(label: "b").repetition]).alternation; // a b
-			let expr2 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "c").repetition, ABNFRulename(label: "d").repetition]).alternation; // c d
+			let expr1 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "a").asRepetition, ABNFRulename(label: "b").asRepetition]).asAlternation; // a b
+			let expr2 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "c").asRepetition, ABNFRulename(label: "d").asRepetition]).asAlternation; // c d
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "a b / c d");
 		}
 
 		@Test("repetition / repetition (heterogeneous)")
 		func test_union_repetition_0() async throws {
-			let expr1 = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
-			let expr2 = ABNFRulename<UInt8>(label: "bar").element.repeating(2).alternation
+			let expr1 = ABNFRulename<UInt8>(label: "foo").asElement.repeating(2).asAlternation
+			let expr2 = ABNFRulename<UInt8>(label: "bar").asElement.repeating(2).asAlternation
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "2foo / 2bar");
 		}
 
 		@Test("repetition / repetition (homogeneous)")
 		func test_union_repetition_1() async throws {
-			let expr = ABNFRulename<UInt8>(label: "foo").alternation
+			let expr = ABNFRulename<UInt8>(label: "foo").asAlternation
 			let expression = expr.union(expr);
 			#expect(expression.description == "foo");
 		}
 
 		@Test("repetition / repetition (homogeneous)")
 		func test_union_repetition_2() async throws {
-			let expr = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
+			let expr = ABNFRulename<UInt8>(label: "foo").asElement.repeating(2).asAlternation
 			let expression = expr.union(expr);
 			#expect(expression.description == "2foo");
 		}
 
 		@Test("repetition / repetition (homogeneous 2)")
 		func test_union_repetition_3() async throws {
-			let expr1 = ABNFRulename<UInt8>(label: "foo").element.repeating(2...).alternation
-			let expr2 = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
+			let expr1 = ABNFRulename<UInt8>(label: "foo").asElement.repeating(2...).asAlternation
+			let expr2 = ABNFRulename<UInt8>(label: "foo").asElement.repeating(2).asAlternation
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "2*foo");
 		}
 
 		@Test("group / group (rulename)")
 		func test_union_group() async throws {
-			let expr1 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "foo").alternation).alternation;
-			let expr2 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "bar").alternation).alternation;
+			let expr1 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "foo").asAlternation).alternation;
+			let expr2 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "bar").asAlternation).alternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "foo / bar");
 		}
 
 		@Test("option / option (rulename)")
 		func test_union_option() async throws {
-			let expr1 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "foo").alternation).alternation;
-			let expr2 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "bar").alternation).alternation;
+			let expr1 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "foo").asAlternation).asAlternation;
+			let expr2 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "bar").asAlternation).asAlternation;
 			let expression = expr1.union(expr2);
 			 #expect(expression.description == "[foo] / [bar]");
 			// TODO: Should look like this:
@@ -1290,32 +1290,32 @@ import Testing;
 
 		@Test("charVal / charVal")
 		func test_union_charVal() async throws {
-			let expr1 = ABNFCharVal(sequence: "foo".utf8).alternation;
-			let expr2 = ABNFCharVal(sequence: "bar".utf8).alternation;
+			let expr1 = ABNFCharVal(sequence: "foo".utf8).asAlternation;
+			let expr2 = ABNFCharVal(sequence: "bar".utf8).asAlternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "\"foo\" / \"bar\"");
 		}
 
 		@Test("numVal / numVal (sequence 1)")
 		func test_union_numVal_sequence() async throws {
-			let expr1 = ABNFNumVal(base: .hex, value: .sequence([0x20])).alternation;
-			let expr2 = ABNFNumVal(base: .hex, value: .sequence([0x21])).alternation;
+			let expr1 = ABNFNumVal(base: .hex, value: .sequence([0x20])).asAlternation;
+			let expr2 = ABNFNumVal(base: .hex, value: .sequence([0x21])).asAlternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "%x20-21");
 		}
 
 		@Test("numVal / numVal (sequence 2)")
 		func test_union_numVal_sequence_2() async throws {
-			let expr1 = ABNFNumVal(base: .hex, value: .sequence([0x20])).alternation;
-			let expr2 = ABNFNumVal(base: .hex, value: .sequence([0x22])).alternation;
+			let expr1 = ABNFNumVal(base: .hex, value: .sequence([0x20])).asAlternation;
+			let expr2 = ABNFNumVal(base: .hex, value: .sequence([0x22])).asAlternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "%x20 / %x22");
 		}
 
 		@Test("numVal / numVal (range)")
 		func test_union_numVal_range() async throws {
-			let expr1 = ABNFNumVal(base: .hex, value: .range(0x20...0x21)).alternation;
-			let expr2 = ABNFNumVal(base: .hex, value: .range(0x30...0x39)).alternation;
+			let expr1 = ABNFNumVal(base: .hex, value: .range(0x20...0x21)).asAlternation;
+			let expr2 = ABNFNumVal(base: .hex, value: .range(0x30...0x39)).asAlternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "%x20-21 / %x30-39");
 		}
@@ -1324,7 +1324,7 @@ import Testing;
 		func test_union_numVal_2() async throws {
 			// Put it out of order just to see if it matches them
 			let matches = Array<UInt8>([0x20, 0x29, 0x22, 0x27, 0x24, 0x25, 0x26, 0x23, 0x28, 0x21]).map {
-				ABNFNumVal<UInt8>(base: .hex, value: .sequence([$0])).alternation
+				ABNFNumVal<UInt8>(base: .hex, value: .sequence([$0])).asAlternation
 			}
 			let expression = ABNFAlternation<UInt8>.union(matches)
 			#expect(expression.description == "%x20-29");
@@ -1341,8 +1341,8 @@ import Testing;
 
 		@Test("proseVal / proseVal")
 		func test_union_proseVal() async throws {
-			let expr1 = ABNFProseVal<UInt8>(remark: "foo").alternation;
-			let expr2 = ABNFProseVal<UInt8>(remark: "bar").alternation;
+			let expr1 = ABNFProseVal<UInt8>(remark: "foo").asAlternation;
+			let expr2 = ABNFProseVal<UInt8>(remark: "bar").asAlternation;
 			let expression = expr1.union(expr2);
 			#expect(expression.description == "<foo> / <bar>");
 		}
@@ -1350,111 +1350,111 @@ import Testing;
 	@Suite("concatenate") struct ABNFTest_concatenate {
 		@Test("rulename ++ rulename")
 		func test_concatenate_rulename() async throws {
-			let expr1 = ABNFRulename<UInt8>(label: "foo").alternation;
-			let expr2 = ABNFRulename<UInt8>(label: "bar").alternation;
+			let expr1 = ABNFRulename<UInt8>(label: "foo").asAlternation;
+			let expr2 = ABNFRulename<UInt8>(label: "bar").asAlternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "foo bar");
 		}
 		@Test("alternation ++ alternation")
 		func test_concatenate_alternation() async throws {
-			let expr1 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "foo").concatenation, ABNFRulename(label: "bar").concatenation]); // foo/bar
-			let expr2 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "alice").concatenation, ABNFRulename(label: "bob").concatenation]); // alice/bob
+			let expr1 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "foo").asConcatenation, ABNFRulename(label: "bar").asConcatenation]); // foo/bar
+			let expr2 = ABNFAlternation<UInt8>(matches: [ABNFRulename(label: "alice").asConcatenation, ABNFRulename(label: "bob").asConcatenation]); // alice/bob
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "(foo / bar) (alice / bob)");
 		}
 
 		@Test("concatenation ++ concatenation")
 		func test_concatenate_concatenation() async throws {
-			let expr1 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "a").repetition, ABNFRulename(label: "b").repetition]).alternation; // a b
-			let expr2 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "c").repetition, ABNFRulename(label: "d").repetition]).alternation; // c d
+			let expr1 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "a").asRepetition, ABNFRulename(label: "b").asRepetition]).asAlternation; // a b
+			let expr2 = ABNFConcatenation<UInt8>(repetitions: [ABNFRulename(label: "c").asRepetition, ABNFRulename(label: "d").asRepetition]).asAlternation; // c d
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "a b c d");
 		}
 
 		@Test("repetition ++ repetition (heterogeneous)")
 		func test_concatenate_repetition_0() async throws {
-			let expr1 = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
-			let expr2 = ABNFRulename<UInt8>(label: "bar").element.repeating(2).alternation
+			let expr1 = ABNFRulename<UInt8>(label: "foo").asElement.repeating(2).asAlternation
+			let expr2 = ABNFRulename<UInt8>(label: "bar").asElement.repeating(2).asAlternation
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "2foo 2bar");
 		}
 
 		@Test("repetition ++ repetition (homogeneous)")
 		func test_concatenate_repetition_1() async throws {
-			let expr = ABNFRulename<UInt8>(label: "foo").alternation
+			let expr = ABNFRulename<UInt8>(label: "foo").asAlternation
 			let expression = expr.concatenate(expr);
 			#expect(expression.description == "2foo");
 		}
 
 		@Test("repetition ++ repetition (homogeneous)")
 		func test_concatenate_repetition_2() async throws {
-			let expr = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
+			let expr = ABNFRulename<UInt8>(label: "foo").asElement.repeating(2).asAlternation
 			let expression = expr.concatenate(expr);
 			#expect(expression.description == "4foo");
 		}
 
 		@Test("repetition ++ repetition (homogeneous 2)")
 		func test_concatenate_repetition_3() async throws {
-			let expr1 = ABNFRulename<UInt8>(label: "foo").element.repeating(2...).alternation
-			let expr2 = ABNFRulename<UInt8>(label: "foo").element.repeating(2).alternation
+			let expr1 = ABNFRulename<UInt8>(label: "foo").asElement.repeating(2...).asAlternation
+			let expr2 = ABNFRulename<UInt8>(label: "foo").asElement.repeating(2).asAlternation
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "4*foo");
 		}
 
 		@Test("group ++ group (rulename)")
 		func test_concatenate_group() async throws {
-			let expr1 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "foo").alternation).alternation;
-			let expr2 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "bar").alternation).alternation;
+			let expr1 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "foo").asAlternation).alternation;
+			let expr2 = ABNFGroup(alternation: ABNFRulename<UInt8>(label: "bar").asAlternation).alternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "foo bar");
 		}
 
 		@Test("option ++ option (rulename)")
 		func test_concatenate_option() async throws {
-			let expr1 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "foo").alternation).alternation;
-			let expr2 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "bar").alternation).alternation;
+			let expr1 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "foo").asAlternation).asAlternation;
+			let expr2 = ABNFOption(optionalAlternation: ABNFRulename<UInt8>(label: "bar").asAlternation).asAlternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "[foo] [bar]");
 		}
 
 		@Test("charVal ++ charVal")
 		func test_concatenate_charVal() async throws {
-			let expr1 = ABNFCharVal(sequence: "foo".utf8).alternation;
-			let expr2 = ABNFCharVal(sequence: "bar".utf8).alternation;
+			let expr1 = ABNFCharVal(sequence: "foo".utf8).asAlternation;
+			let expr2 = ABNFCharVal(sequence: "bar".utf8).asAlternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "\"foobar\"");
 		}
 
 		@Test("numVal ++ numVal (sequence)")
 		func test_concatenate_numVal_sequence() async throws {
-			let expr1 = ABNFNumVal(base: .hex, value: .sequence([0x20])).alternation;
-			let expr2 = ABNFNumVal(base: .hex, value: .sequence([0x22])).alternation;
+			let expr1 = ABNFNumVal(base: .hex, value: .sequence([0x20])).asAlternation;
+			let expr2 = ABNFNumVal(base: .hex, value: .sequence([0x22])).asAlternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "%x20.22");
 		}
 
 		@Test("numVal ++ numVal ++ group ++ group (sequence)")
 		func test_concatenate_numVal_group() async throws {
-			let expr1 = ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).alternation; // %x20
-			let expr2 = ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x21])).alternation; // %x21
-			let expr3 = ABNFGroup<UInt8>(alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30, 0x32, 0x34])).alternation).alternation; // (%x30.32.34)
-			let expr4 = ABNFGroup<UInt8>(alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x36, 0x38])).alternation).alternation; // (%x36.38)
+			let expr1 = ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x20])).asAlternation; // %x20
+			let expr2 = ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x21])).asAlternation; // %x21
+			let expr3 = ABNFGroup<UInt8>(alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x30, 0x32, 0x34])).asAlternation).asAlternation; // (%x30.32.34)
+			let expr4 = ABNFGroup<UInt8>(alternation: ABNFNumVal<UInt8>(base: .hex, value: .sequence([0x36, 0x38])).asAlternation).asAlternation; // (%x36.38)
 			let expression = ABNFAlternation<UInt8>.concatenate([expr1, expr2, expr3, expr4])
 			#expect(expression.description == "%x20.21.30.32.34.36.38");
 		}
 
 		@Test("numVal ++ numVal (range)")
 		func test_concatenate_numVal_range() async throws {
-			let expr1 = ABNFNumVal<UInt8>(base: .hex, value: .range(0x20...0x21)).alternation;
-			let expr2 = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).alternation;
+			let expr1 = ABNFNumVal<UInt8>(base: .hex, value: .range(0x20...0x21)).asAlternation;
+			let expr2 = ABNFNumVal<UInt8>(base: .hex, value: .range(0x30...0x39)).asAlternation;
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "%x20-21 %x30-39");
 		}
 
 		@Test("proseVal ++ proseVal")
 		func test_concatenate_proseVal() async throws {
-			let expr1 = ABNFProseVal<UInt8>(remark: "foo").alternation
-			let expr2 = ABNFProseVal<UInt8>(remark: "bar").alternation
+			let expr1 = ABNFProseVal<UInt8>(remark: "foo").asAlternation
+			let expr2 = ABNFProseVal<UInt8>(remark: "bar").asAlternation
 			let expression = expr1.concatenate(expr2);
 			#expect(expression.description == "<foo> <bar>");
 		}
