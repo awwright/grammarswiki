@@ -39,8 +39,10 @@ extension GrammarProductionProtocol {
 	init(name: Variable, production: [BodyElement]) {
 		self.init(lhs: [BodyElement.nonterminal(name)], rhs: production);
 	}
+	// TODO: Offer an "invert" method that flips lhs <-> rhs, turning a "parse" operation into a "generate" operation and vice-versa
 }
 
+/// A protocol for symbols allowed in a sentential form (but not a final string, because it contains a variable/non-terminal)
 public protocol GrammarProductionBodyElementProtocol {
 	associatedtype Terminal;
 	associatedtype Nonterminal;
@@ -50,6 +52,10 @@ public protocol GrammarProductionBodyElementProtocol {
 	var asNonterminal: Nonterminal? { get }
 }
 
+/// A container for holding a disjoint union of terminal and nonterminal symbols, for use in sentential forms.
+///
+/// Straightforwardly, it's just a parameterized enum that can store either a Terminal or Nonterminal.
+/// It is Hashable, because symbols must be Hashable.
 public enum GrammarProductionBodyElement<Terminal: Hashable, Nonterminal: Hashable>: GrammarProductionBodyElementProtocol, Hashable {
 	public typealias Terminal = Terminal;
 	public typealias Nonterminal = Nonterminal;
@@ -58,4 +64,16 @@ public enum GrammarProductionBodyElement<Terminal: Hashable, Nonterminal: Hashab
 
 	public var asTerminal: Terminal? { switch self { case .terminal(let s): s; default: Terminal?.none } }
 	public var asNonterminal: Nonterminal? { switch self { case .nonterminal(let s): s; default: Nonterminal?.none } }
+}
+
+/// Defines a sorting order for the sentential form if its Terminal and Nonterminal types both are
+extension GrammarProductionBodyElement: Comparable where Terminal: Comparable, Nonterminal: Comparable {
+	public static func < (lhs: GrammarProductionBodyElement, rhs: GrammarProductionBodyElement) -> Bool {
+		switch (lhs, rhs) {
+			case (.terminal(let l), .terminal(let r)): return l < r;
+			case (.nonterminal(let l), .nonterminal(let r)): return l < r;
+			case (.terminal, .nonterminal): return true;
+			default: return false;
+		}
+	}
 }
