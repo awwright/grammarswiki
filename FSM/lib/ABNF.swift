@@ -378,7 +378,6 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 									}
 								case .range(let range):
 									let newName = ruleName + "_range\(cfgRules.count)";
-									// FIXME: The problem is that `alphabet` needs to be a SymbolClass, but there's no straightforward way to get just the CharacterClass of a range
 									let range = CFGType.Alphabet.symbolClass(range: range);
 									cfgRules.append(CFGType.Production(name: newName, production: [CFGType.BodyElement.terminal(range)]))
 									prod.append(CFGType.Production.BodyElement.nonterminal(newName))
