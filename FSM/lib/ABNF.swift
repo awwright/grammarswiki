@@ -456,22 +456,22 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 	}
 
 	public static var builtins: ABNFRulelist<Symbol> { [
-		ABNFRule(rulename: .init(label: "ALPHA") , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "BIT")   , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "CHAR")  , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "CR")    , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "CRLF")  , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "CTL")   , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "DIGIT") , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "DQUOTE"), definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "HEXDIG"), definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "HTAB")  , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "LF")    , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "LWSP")  , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "OCTET") , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "SP")    , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "VCHAR") , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
-		ABNFRule(rulename: .init(label: "WSP")   , definedAs: .equal, expression: ABNFCharVal(sequence: [0x20]).asAlternation),
+		ABNFRule(rulename: .init(label: "ALPHA") , definedAs: .equal, expression: ABNFAlternation(matches: [ABNFNumVal(base: .hex, value: .range(0x41...0x5A)).asConcatenation, ABNFNumVal(base: .hex, value: .range(0x61...0x7A)).asConcatenation])),
+		ABNFRule(rulename: .init(label: "BIT")   , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .range(0x30...0x31)).asAlternation),
+		ABNFRule(rulename: .init(label: "CHAR")  , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .range(0x01...0x7F)).asAlternation),
+		ABNFRule(rulename: .init(label: "CR")    , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .sequence([0x0D])).asAlternation),
+		ABNFRule(rulename: .init(label: "CRLF")  , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .sequence([0x0D, 0x0A])).asAlternation),
+		ABNFRule(rulename: .init(label: "CTL") , definedAs: .equal, expression: ABNFAlternation(matches: [ABNFNumVal(base: .hex, value: .range(0x00...0x1F)).asConcatenation, ABNFNumVal(base: .hex, value: .range(0x7F...0x7F)).asConcatenation])),
+		ABNFRule(rulename: .init(label: "DIGIT") , definedAs: .equal, expression: ABNFAlternation(matches: [ABNFNumVal(base: .hex, value: .range(0x30...0x39)).asConcatenation])),
+		ABNFRule(rulename: .init(label: "DQUOTE"), definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .sequence([0x22])).asAlternation),
+		ABNFRule(rulename: .init(label: "HEXDIG"), definedAs: .equal, expression: ABNFAlternation(matches: [ABNFNumVal(base: .hex, value: .range(0x30...0x39)).asConcatenation, ABNFNumVal(base: .hex, value: .range(0x41...0x46)).asConcatenation, ABNFNumVal(base: .hex, value: .range(0x61...0x66)).asConcatenation])),
+		ABNFRule(rulename: .init(label: "HTAB")  , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .sequence([0x09])).asAlternation),
+		ABNFRule(rulename: .init(label: "LF")    , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .sequence([0x0A])).asAlternation),
+		ABNFRule(rulename: .init(label: "LWSP") , definedAs: .equal, expression: ABNFAlternation(matches: [ABNFAlternation(matches: [ABNFNumVal(base: .hex, value: .sequence([0x20])).asConcatenation, ABNFNumVal(base: .hex, value: .sequence([0x09])).asConcatenation]).asConcatenation, ABNFConcatenation(repetitions: [ ABNFNumVal(base: .hex, value: .sequence([0x0D, 0x0A])).asRepetition, ABNFAlternation(matches: [ABNFNumVal(base: .hex, value: .sequence([0x20])).asConcatenation, ABNFNumVal(base: .hex, value: .sequence([0x09])).asConcatenation]).asRepetition ])]).repeating(0...).asAlternation),
+		ABNFRule(rulename: .init(label: "OCTET") , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .range(0x0...0xFF)).asAlternation),
+		ABNFRule(rulename: .init(label: "SP")    , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .sequence([0x20])).asAlternation),
+		ABNFRule(rulename: .init(label: "VCHAR") , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .range(0x21...0x7E)).asAlternation),
+		ABNFRule(rulename: .init(label: "WSP") , definedAs: .equal, expression: ABNFAlternation(matches: [ABNFNumVal(base: .hex, value: .sequence([0x20])).asConcatenation, ABNFNumVal(base: .hex, value: .sequence([0x09])).asConcatenation])),
 	] }
 }
 

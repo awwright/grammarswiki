@@ -1504,6 +1504,15 @@ import Testing;
 				let difference = value.symmetricDifference(referenceRule)
 				#expect(difference.finals.isEmpty, "Builtin rule \(key) mismatches reference, have values \(difference.minimized().toViz())")
 			}
+
+			let builtinGrammar = ABNFRulelist<UInt8>.builtins.dictionary;
+			try builtinGrammar.forEach { key, value in
+				let referenceRule = try #require(referenceDictionary[key], "expected \(key)");
+				let builtinDFA: RangeDFA<UInt8> = try value.toPattern();
+				let difference = builtinDFA.symmetricDifference(referenceRule)
+				#expect(difference.finals.isEmpty, "Builtin rule \(key) mismatches reference, have values \(difference.minimized().toViz())")
+			}
+
 		}
 
 		@Test("HEXDIG")
