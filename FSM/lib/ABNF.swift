@@ -353,9 +353,12 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 		return resolvedRules;
 	}
 
+	/// Convert the first ABNF rule to a CFG
 	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Alphabet.Symbol == Symbol, CFGType.Variable == String, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
 		try toCFG(as: CFGType.self, rulename: rules.first?.rulename.id ?? "")
 	}
+
+	/// Convert the named ABNF rule to a CFG
 	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil, rulename: String) throws -> CFGType where CFGType.Alphabet.Symbol == Symbol, CFGType.Variable == String, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
 		func addRules(for alternation: ABNFAlternation<Symbol>, withName ruleName: String, to cfgRules: inout [CFGType.Production]) throws {
 			for concat in alternation.matches {
