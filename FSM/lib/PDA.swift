@@ -1,8 +1,8 @@
 /// A protocol for any PDA and its subsets including DPDA and finite automata
 protocol PDAProtocol<Symbol> {
 	associatedtype Symbol: Hashable;
-	associatedtype TransitionKey: Hashable;
-	associatedtype TransitionEpsilon: Hashable;
+	associatedtype Key: Hashable;
+	associatedtype State: Hashable;
 	associatedtype TransitionTarget: Hashable;
 
 	// A PDA has:
@@ -11,13 +11,11 @@ protocol PDAProtocol<Symbol> {
 	// - A set of stack symbols (tracked as Int)
 	// - A transition function, tracked as a set of Transitions
 	/// A definition for the transition function
-	var transitionsSet: Dictionary<TransitionKey, Set<TransitionTarget>> {get};
+	var transitionsSet: Dictionary<Key, Set<Dictionary<Symbol, TransitionTarget>>> {get};
 	/// Epsilon transitions that must be performed after an input symbol is consumed
-	var transitionsEpsilon: Dictionary<TransitionEpsilon, Set<TransitionTarget>> {get};
-	// - A start state
-	var initials: Set<Int> {get};
-	// - A start stack symbol
-	var initialStack: Set<Int> {get};
+	var transitionsEpsilon: Dictionary<Key, Set<TransitionTarget>> {get};
+	// - A start state & stack symbol
+	var initialStack: Set<State> {get};
 	// - A set of accepting states
 	var finals: Set<Int> {get};
 
@@ -33,18 +31,17 @@ protocol PDAProtocol<Symbol> {
 struct PDA<Symbol: Hashable>: PDAProtocol {
 	typealias Symbol = Symbol;
 
-	public struct TransitionKey: Hashable {
+	public struct Key: Hashable {
 		let state: Int
 		let stack: Int
-		let input: Symbol
 	}
-	public struct TransitionEpsilon: Hashable {
+	public struct State: Hashable {
 		let state: Int
-		let stack: Symbol
+		let stack: [Int]
 	}
 	public struct TransitionTarget: Hashable {
 		let toState: Int
-		let pushSymbols: [Symbol]
+		let pushStack: [Int]
 	}
 
 	// A PDA has:
@@ -53,15 +50,59 @@ struct PDA<Symbol: Hashable>: PDAProtocol {
 	// - A set of stack symbols (tracked as Int)
 	// - A transition function, tracked as a set of Transitions
 	/// A definition for the transition function
-	public let transitionsSet: Dictionary<TransitionKey, Set<TransitionTarget>>;
+	public let transitionsSet: Dictionary<Key, Set<Dictionary<Symbol, TransitionTarget>>>;
 	/// Epsilon transitions that must be performed after an input symbol is consumed
-	public let transitionsEpsilon: Dictionary<TransitionEpsilon, Set<TransitionTarget>>;
-	// - A start state
-	public let initials: Set<Int>;
-	// - A start stack symbol
-	public let initialStack: Set<Int>;
+	public let transitionsEpsilon: Dictionary<Key, Set<TransitionTarget>>;
+	// - A start state & stack symbol
+	// FIXME: This must include all epsilon transitions, since they are only recomputed when consuming a symbol
+	public let initialStack: Set<State>;
 	// - A set of accepting states
 	public let finals: Set<Int>;
+
+	public func contains(_ input: some Sequence<Symbol>) -> Bool {
+		var currentState = initialStack;
+		for symbol in input {
+			let next = currentState.flatMap {
+				let state = $0;
+				let top = Key(state: $0.state, stack: $0.stack.last!);
+				let table = self.transitionsSet[top] ?? [];
+				return table.flatMap {
+					let v = $0[symbol];
+					if let v, state.stack.count > 0 {
+						let nextState = State(state: v.toState, stack: Array(state.stack[0..<state.stack.count-1]) + v.pushStack)
+						return [nextState]
+					} else {
+						return []
+					}
+				}
+			};
+			currentState = self.followε(states: Set(next))
+		}
+
+		return currentState.contains(where: { self.finals.contains($0.state) });
+	}
+
+	/// Get a list of states after following epsilon transitions,
+	/// i.e. get a list of all the states equivalent to any of the given
+	func followε(states: Set<State>) -> Set<State> {
+		var expanded = states;
+		var list = Array(states);
+		// Iterate over every state in states
+		var i = 0;
+		while i < list.count {
+			let state = list[i];
+			let transitions = self.transitionsEpsilon[Key(state: state.state, stack: state.stack.last!)] ?? [];
+			for next in transitions {
+				let nextState = State(state: next.toState, stack: Array(state.stack[0..<state.stack.count-1]) + next.pushStack)
+				if(!expanded.contains(nextState)){
+					expanded.insert(nextState);
+					list.append(nextState);
+				}
+			}
+			i += 1;
+		}
+		return expanded;
+	}
 
 	func get(states: Set<Int>, symbol: Symbol) -> [Symbol] {
 		// Placeholder implementation: return empty array
