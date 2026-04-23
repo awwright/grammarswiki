@@ -368,18 +368,63 @@ struct DocumentDetail: View {
 							})
 						}
 
-						if let rule_fsm {
-							if showStateCount {
-								DisclosureGroup("FSM Info", isExpanded: $fsm_expanded, content: {
-									Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
-										GridRow {
-											Text("States").font(.headline).gridColumnAlignment(.trailing)
+						if showStateCount {
+							DisclosureGroup("Language Info", isExpanded: $fsm_expanded, content: {
+								Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
+									GridRow(alignment: .top) {
+										Text("Complexity Class").font(.headline).gridColumnAlignment(.trailing)
+										// Higher numbers are more complicated:
+										DisclosureGroup("4: Context-free") {
+											VStack(alignment: .leading) {
+												Text("0: Finite")
+												Text("1: Regular")
+												Text("2: Deterministic Pushdown")
+												Text("3: Unambiguous Context-free")
+												Text("4: Context-Free").bold()
+											}.frame(maxWidth: .infinity, alignment: .leading)
+										}
+									}
+									GridRow(alignment: .top) {
+										Text("Chomsky Class").font(.headline).gridColumnAlignment(.trailing)
+										// Higher numbers have more limitations and more functionality:
+										DisclosureGroup("2: Context-free") {
+											VStack(alignment: .leading) {
+												Text("0: Unrestricted")
+												Text("1: Context-sensitive")
+												Text("2: Context-free").bold()
+												Text("3: Regular")
+												Text("4: Finite choice")
+											}.frame(maxWidth: .infinity, alignment: .leading)
+										}
+									}
+									GridRow(alignment: .top) {
+										Text("Memory Complexity").font(.headline).gridColumnAlignment(.trailing)
+										DisclosureGroup("O(1): Constant") {
+											VStack(alignment: .leading) {
+												Text("O(1): Constant").bold()
+												Text("O(log n): Logrimithic")
+												Text("O(n): Linear")
+												Text("O(n log n): Log-linear")
+												Text("O(n²): Quadratic")
+												Text("O(n³): Cubic")
+											}.frame(maxWidth: .infinity, alignment: .leading)
+										}
+									}
+									GridRow(alignment: .top) {
+										Text("CPU Complexity").font(.headline).gridColumnAlignment(.trailing)
+										Text("(Undetermined)")
+									}
+									if let rule_fsm {
+										GridRow(alignment: .top) {
+											Text("FSM States").font(.headline).gridColumnAlignment(.trailing)
 											Text(String(rule_fsm.states.count))
 										}
 									}
-								})
-							}
+								}
+							})
+						}
 
+						if rule_fsm != nil {
 							if showRegex {
 								DisclosureGroup("Regex", isExpanded: $regex_expanded, content: {
 									RegexContentView(rule_fsm: $rule_fsm)
