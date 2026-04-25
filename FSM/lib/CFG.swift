@@ -72,6 +72,22 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		self.rules = rules
 	}
 
+	/// Compute the complexity of the automaton
+	///
+	/// This will return a number representing the complexity class:
+	/// - 0: Constant
+	/// - 1: Log
+	/// - 2: Linear
+	/// - 3: Log-linear
+	/// - 4: Quadratic
+	/// - 5: Cubic
+	public func memoryRequirements() -> Int {
+		// TODO: Fill out several tests here that test if the grammar is constant-space, etc, and return the
+
+		// Failing any of the above tests, there is no known way to reduce the memory complexity below cubic
+		return 5;
+	}
+
 	/// Eliminate rules that are never used
 	public func eliminateUseless() -> Self {
 		fatalError()

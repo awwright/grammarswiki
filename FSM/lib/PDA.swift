@@ -57,6 +57,7 @@ struct PDA<Symbol: Hashable>: PDAProtocol {
 	// FIXME: This must include all epsilon transitions, since they are only recomputed when consuming a symbol
 	public let initialStack: Set<State>;
 	// - A set of accepting states
+	/// States (from the common state) that signals acceptance
 	public let finals: Set<Int>;
 
 	public func contains(_ input: some Sequence<Symbol>) -> Bool {

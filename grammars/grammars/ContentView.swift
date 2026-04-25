@@ -397,17 +397,28 @@ struct DocumentDetail: View {
 											}.frame(maxWidth: .infinity, alignment: .leading)
 										}
 									}
-									GridRow(alignment: .top) {
-										Text("Memory Complexity").font(.headline).gridColumnAlignment(.trailing)
-										DisclosureGroup("O(1): Constant") {
-											VStack(alignment: .leading) {
-												Text("O(1): Constant").bold()
-												Text("O(log n): Logrimithic")
-												Text("O(n): Linear")
-												Text("O(n log n): Log-linear")
-												Text("O(n²): Quadratic")
-												Text("O(n³): Cubic")
-											}.frame(maxWidth: .infinity, alignment: .leading)
+									if let content_cfg_memoryRequirements {
+										GridRow(alignment: .top) {
+											Text("Memory Complexity").font(.headline).gridColumnAlignment(.trailing)
+											let label = switch content_cfg_memoryRequirements {
+												case 0: "O(1): Constant"
+												case 1: "O(log n): Logrimithic"
+												case 2: "O(n): Linear"
+												case 3: "O(n log n): Log-linear"
+												case 4: "O(n²): Quadratic"
+												case 5: "O(n³): Cubic"
+												default: "(Unknown)"
+											};
+											DisclosureGroup(label) {
+												VStack(alignment: .leading) {
+													Text("O(1): Constant").bold(content_cfg_memoryRequirements == 0)
+													Text("O(log n): Logrimithic").bold(content_cfg_memoryRequirements == 1)
+													Text("O(n): Linear").bold(content_cfg_memoryRequirements == 2)
+													Text("O(n log n): Log-linear").bold(content_cfg_memoryRequirements == 3)
+													Text("O(n²): Quadratic").bold(content_cfg_memoryRequirements == 4)
+													Text("O(n³): Cubic").bold(content_cfg_memoryRequirements == 5)
+												}.frame(maxWidth: .infinity, alignment: .leading)
+											}
 										}
 									}
 									GridRow(alignment: .top) {
