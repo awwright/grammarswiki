@@ -11,6 +11,8 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 	public typealias BodyElement = GrammarProductionBodyElement<SymbolClass, Variable>;
 	/// A rule in the Context-Free Grammar. Multiple rules with the same name
 	public struct Production: GrammarProductionProtocol, Hashable {
+		// TODO: name can be anything as long as it's Equatable and Hashable (usable as a Dictionary key)
+		// This would be useful for using Int or tuples as production names, for example, representing parse forests.
 		public let name: String;
 		public let body: Array<BodyElement>;
 
