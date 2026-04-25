@@ -152,7 +152,7 @@ struct DocumentDetail: View {
 	@State private var content_rulelist: ABNFRulelist<UInt32>? = nil
 	@State private var content_rulelist_error: String? = nil
 
-	@State private var content_cfg: CFG<ClosedRangeAlphabet<UInt32>> = CFG<ClosedRangeAlphabet<UInt32>>(start: "", rules: []);
+	@State private var content_cfg: CFG<ClosedRangeAlphabet<UInt32>> = CFG<ClosedRangeAlphabet<UInt32>>();
 	@State private var content_rr: RailroadNode? = nil
 
 	@State private var content_cfg_memoryRequirements: Int? = nil
@@ -182,7 +182,7 @@ struct DocumentDetail: View {
 	@AppStorage("expandedRule_undefined") private var rule_undefined_expanded = true
 	@AppStorage("expandedRule_recursive") private var rule_recursive_expanded = true
 	@AppStorage("expandedAlphabet") private var alphabet_expanded = true
-	@State private var fsm_expanded = false
+	@State private var fsm_expanded = true
 	@State private var regex_expanded = false
 	@State private var test_expanded = false
 	@State private var inspector_isPresented = true
@@ -376,6 +376,7 @@ struct DocumentDetail: View {
 									GridRow(alignment: .top) {
 										Text("Complexity Class").font(.headline).gridColumnAlignment(.trailing)
 										// Higher numbers are more complicated:
+										// TODO: Read this from the CFG or PDA
 										DisclosureGroup("4: Context-free") {
 											VStack(alignment: .leading) {
 												Text("0: Finite")
@@ -389,6 +390,7 @@ struct DocumentDetail: View {
 									GridRow(alignment: .top) {
 										Text("Chomsky Class").font(.headline).gridColumnAlignment(.trailing)
 										// Higher numbers have more limitations and more functionality:
+										// TODO: Read this from the CFG or PDA
 										DisclosureGroup("2: Context-free") {
 											VStack(alignment: .leading) {
 												Text("0: Unrestricted")
@@ -402,6 +404,7 @@ struct DocumentDetail: View {
 									if let content_cfg_memoryRequirements {
 										GridRow(alignment: .top) {
 											Text("Memory Complexity").font(.headline).gridColumnAlignment(.trailing)
+											// TODO: Can I deduplicate these labels somehow?
 											let label = switch content_cfg_memoryRequirements {
 												case 0: "O(1): Constant"
 												case 1: "O(log n): Logrimithic"
@@ -433,6 +436,7 @@ struct DocumentDetail: View {
 											Text(String(rule_fsm.states.count))
 										}
 									}
+									// TODO: Estimate entropy by measuring selection of states per byte
 								}
 							})
 						}

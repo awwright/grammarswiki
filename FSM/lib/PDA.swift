@@ -54,7 +54,8 @@ struct PDA<Symbol: Hashable>: PDAProtocol {
 	/// Epsilon transitions that must be performed after an input symbol is consumed
 	public let transitionsEpsilon: Dictionary<Key, Set<TransitionTarget>>;
 	// - A start state & stack symbol
-	// FIXME: This must include all epsilon transitions, since they are only recomputed when consuming a symbol
+	/// The initial set of states (including stack symbols)
+	/// This must include all epsilon transitions, since they are only recomputed when consuming a symbol
 	public let initialStack: Set<State>;
 	// - A set of accepting states
 	/// States (from the common state) that signals acceptance
