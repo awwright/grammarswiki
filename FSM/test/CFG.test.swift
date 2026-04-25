@@ -25,16 +25,21 @@ import Testing
 
 		@Test("Equatable")
 		func test_equatable() async throws {
-			let cfg1 = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: []);
-			let cfg2 = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: []);
-			let cfg3 = CFG<ClosedRangeAlphabet<UInt8>>(start: "A", rules: []);
-			#expect(cfg1 == cfg2)
-			#expect(cfg1 != cfg3)
+			let cfg1 = CFG<ClosedRangeAlphabet<UInt8>>();
+			let cfg2 = CFG<ClosedRangeAlphabet<UInt8>>(start: "A", rules: [ .init(name: "A", production: []) ]);
+			let cfg3 = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [ .init(name: "S", production: []) ]);
+			let cfg4 = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [ .init(name: "S", production: []) ]);
+			#expect(cfg1 != cfg2)
+			#expect(cfg2 != cfg3)
+			#expect(cfg3 == cfg4)
 			// Test Hashable
 			var set: Set<CFG<ClosedRangeAlphabet<UInt8>>> = [];
 			set.insert(cfg1);
 			set.insert(cfg2);
-			#expect(set.count == 1)
+			set.insert(cfg3);
+			set.insert(cfg4);
+			// Since 3 and 4 are the same, 4 won't change the set
+			#expect(set.count == 3)
 		}
 	}
 }

@@ -65,13 +65,21 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		return rules.keys.sorted { (ordering[$0] ?? Int.max) < (ordering[$1] ?? Int.max) }
 	}
 
+	/// Produce the empty language
 	public init() {
-		self.rules = []
+		// If no rule exists for the starting nonterminal, that's not an error, that just means the language is the empty set.
 		self.start = ""
+		self.rules = []
 	}
+
+	/// Createa a context-free grammar with the given rules and starting rule
+	///
+	/// This checks that the grammar will produce at least one string; if this is undesired, use ``init()``
 	public init(start: String, rules: [Production]) {
 		self.start = start
 		self.rules = rules
+		// For the sake of bug catching, we usually want the starting rule to have at least one production when using this constructor.
+		assert(rules.contains(where: { $0.name == start }))
 	}
 
 	/// Compute the complexity of the automaton
