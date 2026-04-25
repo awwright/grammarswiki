@@ -155,6 +155,8 @@ struct DocumentDetail: View {
 	@State private var content_cfg: CFG<ClosedRangeAlphabet<UInt32>> = CFG<ClosedRangeAlphabet<UInt32>>(start: "", rules: []);
 	@State private var content_rr: RailroadNode? = nil
 
+	@State private var content_cfg_memoryRequirements: Int? = nil
+
 	@State private var rule_error: String? = nil
 	@State private var rule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
 	@State private var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
@@ -483,6 +485,7 @@ struct DocumentDetail: View {
 		.onChange(of: selectedDocumentLanguage) { document.type = selectedDocumentLanguage }
 		.onChange(of: selectedCharsetId) { document.charset = selectedCharsetId; }
 		.onChange(of: document.id) { switchDocument(); }
+		.onChange(of: content_cfg) { content_cfg_memoryRequirements = content_cfg.memoryRequirements() }
 		.onAppear { switchDocument(); }
 		.toolbar {
 			Button {
