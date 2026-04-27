@@ -79,9 +79,45 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		self.start = start
 		self.rules = rules
 		// For the sake of bug catching, we usually want the starting rule to have at least one production when using this constructor.
-		assert(rules.contains(where: { $0.name == start }))
+		// FIXME: actually maybe this is too aggressive, lots of code likes creating empty languages for some reason
+		//assert(rules.contains(where: { $0.name == start }))
 	}
 
+	/// Compute the complexity class of the automaton, measuring the restrictions placed relative to an unrestricted grammar
+	///
+	/// This will return a number representing the complexity class:
+	/// - 0: Unrestricted (Turing-complete)
+	/// - 1: Context-sensitive (Linear bounded Turing machine)
+	/// - 2: Context-free
+	/// - 3: Regular
+	/// - 4: Finite
+	public func chomskyClass() -> Int {
+		// If the CFG has no cycles, then it is finite
+		let dict = self.dictionary;
+		var all = Set([self.start]);
+		var queue = [self.start];
+		// FIXME: Need to detect and eliminate epsilon-productions and unit productions, which will false-negative a finite grammar
+		while let current = queue.popLast() {
+			let previous_seen = all;
+			if let prods = dict[current] {
+				for prod in prods {
+					for sym in prod.body {
+						if case .nonterminal(let name) = sym {
+							if previous_seen.contains(name) {
+								return 2;
+							} else {
+								queue.append(name)
+								all.insert(name)
+							}
+						}
+					}
+				}
+			}
+		}
+		return 4;
+	}
+
+	
 	/// Compute the complexity of the automaton
 	///
 	/// This will return a number representing the complexity class:

@@ -42,4 +42,118 @@ import Testing
 			#expect(set.count == 3)
 		}
 	}
+
+	@Suite("dictionary and ruleNames") struct CFGTests_dictionary {
+		@Test("dictionary groups by name")
+		func testDictionary() async throws {
+			let rules: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
+				.init(name: "S", production: [.nonterminal("A")]),
+				.init(name: "A", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
+				.init(name: "S", production: [.nonterminal("B")])
+			]
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: rules)
+			let dict = cfg.dictionary
+			#expect(dict["S"]?.count == 2)
+			#expect(dict["A"]?.count == 1)
+			#expect(dict["B"] == nil)
+		}
+
+		@Test("ruleNames")
+		func test_ruleNames() async throws {
+			let rules: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
+				.init(name: "S", production: [.nonterminal("A")]),
+				.init(name: "A", production: [.nonterminal("B")]),
+				.init(name: "B", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))])
+			]
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: rules)
+			let names = cfg.ruleNames
+			#expect(names == ["S", "A", "B"])
+		}
+
+		@Test("ruleNames with multiple rules per name")
+		func test_ruleNames_alternates() async throws {
+			let rules: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
+				.init(name: "S", production: [.nonterminal("A")]),
+				.init(name: "S", production: [.nonterminal("B")]),
+				.init(name: "A", production: []),
+				.init(name: "B", production: [])
+			]
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: rules)
+			let names = cfg.ruleNames
+			#expect(names == ["S", "A", "B"])
+		}
+	}
+
+	@Suite("chomskyClass") struct CFGTests_chomskyClass {
+		@Test("empty language -> finite")
+		func test_empty() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>()
+			#expect(cfg.chomskyClass() == 4)
+		}
+
+		@Test("set of empty string -> finite")
+		func test_epsilon_finite() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
+				.init(name: "S", production: []),
+				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
+			]);
+			#expect(cfg.chomskyClass() == 4)
+		}
+
+		@Test("non-productive grammar", .disabled("not implemented"))
+		func test_nonproductive() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
+				.init(name: "S", production: [.nonterminal("A"), .nonterminal("B")]),
+				.init(name: "A", production: [.nonterminal("B")]),
+				.init(name: "B", production: [.nonterminal("A")]),
+			]);
+			#expect(cfg.chomskyClass() == 4)
+		}
+
+		@Test("set of empty string -> finite")
+		func test_epsilon() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
+				.init(name: "S", production: []),
+				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
+			]);
+			#expect(cfg.chomskyClass() == 4)
+		}
+
+		@Test("self-referential start symbol")
+		func test_strings() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
+				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x61...0x7A))]),
+				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x30...0x39)), .nonterminal("S")]),
+			]);
+			#expect(cfg.chomskyClass() == 2);
+		}
+
+		@Test("linear whitespace")
+		func test_lwsp() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "LWSP", rules: [
+				.init(name: "LWSP", production: []),
+				.init(name: "LWSP", production: [.nonterminal("element"), .nonterminal("LWSP")]),
+				.init(name: "element", production: [.nonterminal("WSP")]),
+				.init(name: "element", production: [.nonterminal("CRLF"), .nonterminal("WSP")]),
+				.init(name: "CRLF", production: [.nonterminal("CR"), .nonterminal("LF")]),
+				.init(name: "WSP", production: [.nonterminal("SP")]),
+				.init(name: "WSP", production: [.nonterminal("HTAB")]),
+				.init(name: "HTAB", production: [.terminal([0x09...0x09])]),
+				.init(name: "CR", production: [.terminal([0x0D...0x0D])]),
+				.init(name: "LF", production: [.terminal([0x0A...0x0A])]),
+				.init(name: "SP", production: [.terminal([0x20...0x20])]),
+			]);
+			#expect(cfg.chomskyClass() == 2);
+		}
+
+		@Test("balanced parenthesies")
+		func test_parens() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
+				.init(name: "S", production: []),
+				.init(name: "S", production: [.nonterminal("S"), .nonterminal("S")]),
+				.init(name: "S", production: [.terminal([0x5D...0x5D]), .nonterminal("S"), .terminal([0x5D...0x5D])]),
+			]);
+			#expect(cfg.chomskyClass() == 2)
+		}
+	}
 }

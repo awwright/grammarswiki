@@ -155,6 +155,8 @@ struct DocumentDetail: View {
 	@State private var content_cfg: CFG<ClosedRangeAlphabet<UInt32>> = CFG<ClosedRangeAlphabet<UInt32>>();
 	@State private var content_rr: RailroadNode? = nil
 
+	@State private var content_cfg_complexityClass: Int? = nil
+	@State private var content_cfg_chomskyClass: Int? = nil
 	@State private var content_cfg_memoryRequirements: Int? = nil
 
 	@State private var rule_error: String? = nil
@@ -387,18 +389,27 @@ struct DocumentDetail: View {
 											}.frame(maxWidth: .infinity, alignment: .leading)
 										}
 									}
-									GridRow(alignment: .top) {
-										Text("Chomsky Class").font(.headline).gridColumnAlignment(.trailing)
-										// Higher numbers have more limitations and more functionality:
-										// TODO: Read this from the CFG or PDA
-										DisclosureGroup("2: Context-free") {
-											VStack(alignment: .leading) {
-												Text("0: Unrestricted")
-												Text("1: Context-sensitive")
-												Text("2: Context-free").bold()
-												Text("3: Regular")
-												Text("4: Finite choice")
-											}.frame(maxWidth: .infinity, alignment: .leading)
+									if let content_cfg_chomskyClass {
+										GridRow(alignment: .top) {
+											Text("Chomsky Class").font(.headline).gridColumnAlignment(.trailing)
+											// Higher numbers have more limitations and more functionality:
+											let label = switch content_cfg_chomskyClass {
+												case 0: "0: Unrestricted"
+												case 1: "1: Context-sensitive"
+												case 2: "2: Context-free"
+												case 3: "3: Regular"
+												case 4: "4: Finite choice"
+												default: "(Unknown)"
+											};
+											DisclosureGroup(label) {
+												VStack(alignment: .leading) {
+													Text("0: Unrestricted").bold(content_cfg_chomskyClass == 0)
+													Text("1: Context-sensitive").bold(content_cfg_chomskyClass == 1)
+													Text("2: Context-free").bold(content_cfg_chomskyClass == 2)
+													Text("3: Regular").bold(content_cfg_chomskyClass == 3)
+													Text("4: Finite choice").bold(content_cfg_chomskyClass == 4)
+												}.frame(maxWidth: .infinity, alignment: .leading)
+											}
 										}
 									}
 									if let content_cfg_memoryRequirements {
@@ -489,7 +500,7 @@ struct DocumentDetail: View {
 		.onChange(of: selectedDocumentLanguage) { document.type = selectedDocumentLanguage }
 		.onChange(of: selectedCharsetId) { document.charset = selectedCharsetId; }
 		.onChange(of: document.id) { switchDocument(); }
-		.onChange(of: content_cfg) { content_cfg_memoryRequirements = content_cfg.memoryRequirements() }
+		.onChange(of: content_cfg) { updatedCFG(); }
 		.onAppear { switchDocument(); }
 		.toolbar {
 			Button {
@@ -531,10 +542,14 @@ struct DocumentDetail: View {
 				await MainActor.run {
 					content_rulelist = rulelist_all_final
 					do {
-						content_cfg = try rulelist_all_final.toCFG()
+						if let selectedRule {
+							content_cfg = try rulelist_all_final.toCFG(rulename: selectedRule)
+						} else {
+							content_cfg = CFG<ClosedRangeAlphabet<UInt32>>()
+						}
 					} catch {
 						print(error);
-						content_cfg = CFG<ClosedRangeAlphabet<UInt32>>(start: "", rules: [])
+						content_cfg = CFG<ClosedRangeAlphabet<UInt32>>()
 					}
 					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
 					// Select the first rule by default
@@ -617,6 +632,11 @@ struct DocumentDetail: View {
 				}
 			}
 		}
+	}
+
+	private func updatedCFG() {
+		content_cfg_chomskyClass = content_cfg.chomskyClass();
+		content_cfg_memoryRequirements = content_cfg.memoryRequirements();
 	}
 
 	// Language configuration
