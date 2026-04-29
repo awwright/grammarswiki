@@ -42,6 +42,8 @@ public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatab
 	func siblings(of: Symbol) -> SymbolClass
 	/// Determine if the given two components exist in the same partition
 	func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool
+	/// Return the number of symbols in the SymbolClass (nil if infinite)
+	static func cardinality(_ symbolClass: SymbolClass) -> Int?
 //	/// Create an Alphabet that contains the same (or some related) set of symbols, in a different shaped symbol class.
 //	/// The partitions can legally be split apart, but cannot be merged together.
 //	func mapSymbolClass<Target: AlphabetProtocol>(_ transform: (Self.SymbolClass) -> Target.SymbolClass) -> Target where Target.Symbol == Symbol
@@ -140,6 +142,10 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 		lhs == rhs
 	}
 
+	public static func cardinality(_ symbolClass: Symbol) -> Int? {
+		1
+	}
+
 	public static func label(of: Symbol) -> Symbol {
 		of
 	}
@@ -223,6 +229,10 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 
 	public func isEquivalent(_ lhs: Symbol, _ rhs: Symbol) -> Bool {
 		siblings(of: lhs).contains(rhs)
+	}
+
+	public static func cardinality(_ symbolClass: Set<Symbol>) -> Int? {
+		symbolClass.count
 	}
 
 	/// This may be somewhat inefficent! But it's the best one can do as a stable identifier when Symbol is not Comparable.
@@ -588,6 +598,10 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 			return index
 		}
 		return find(lhs) == find(rhs)
+	}
+
+	public static func cardinality(_ symbolClass: Array<ClosedRange<Symbol>>) -> Int? {
+		symbolClass.reduce(0) { $0 + $1.count }
 	}
 
 	public func getPartitionLabel(_ symbol: Symbol) -> Symbol {

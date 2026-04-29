@@ -71,6 +71,11 @@ public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 		siblings(of: lhs).contains(rhs)
 	}
 
+	public static func cardinality(_ symbolClass: SymbolDFA<Component>) -> Int? {
+		// FIXME: This isn't always nil, just usually
+		nil
+	}
+
 	public static func label(of: SymbolClass) -> Symbol {
 		fatalError()
 	}
