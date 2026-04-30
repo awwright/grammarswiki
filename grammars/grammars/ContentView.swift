@@ -285,56 +285,60 @@ struct DocumentDetail: View {
 						}
 					}
 
-					// First, show information true about the whole grammar file
-					// If there's no rulelist, then the grammar file isn't parsed at all.
-					Picker("Parse as", selection: $selectedDocumentLanguage) {
-						ForEach(AppModel.fileTypes, id: \.label) { type in
-							Text(type.label).tag(type.label)
+					Form {
+						// First, show information true about the whole grammar file
+						// If there's no rulelist, then the grammar file isn't parsed at all.
+						Picker("Parse as", selection: $selectedDocumentLanguage) {
+							ForEach(AppModel.fileTypes, id: \.label) { type in
+								Text(type.label).tag(type.label)
+							}
 						}
-					}
-					.pickerStyle(MenuPickerStyle())
-
-					// Determine how to display the numbers described by this language
-					// This does not change the definition of the symbols within the language!
-					// Not that that matters in most all cases.
-					Picker("Charset", selection: $selectedCharsetId) {
-						ForEach(AppModel.charsets, id: \.id) { type in
-							Text(type.label).tag(type.id)
-						}
-					}
-					.pickerStyle(MenuPickerStyle())
-
-					// TODO: Add a sheet/dialog that actually transforms the language from one to another
-					//Button("Convert\u{2026}", systemImage: "arrow.trianglehead.swap", action: {});
-
-					if let content_rulelist {
-						Divider();
+						.pickerStyle(MenuPickerStyle())
 
 						// TODO: Order this in the same order as in the grammar
-						let (first, orphanGroup, subGroup) = computeGroupedRules(for: content_rulelist)
-						Picker("Select Starting Rule", selection: $selectedRule) {
-							if let first {
-								Text(first).tag(String?.some(first))
-							} else {
-								Text("No rules defined").disabled(true)
-							}
-							if !orphanGroup.isEmpty {
-								Section("Orphan Rules") {
-									ForEach(orphanGroup, id: \.self) { rule in
-										Text(rule).tag(String?.some(rule))
+						Picker("Starting rule", selection: $selectedRule) {
+							if let content_rulelist {
+								let (first, orphanGroup, subGroup) = computeGroupedRules(for: content_rulelist)
+								if let first {
+									Text(first).tag(String?.some(first))
+								} else {
+									Text("No rules defined").disabled(true)
+								}
+								if !orphanGroup.isEmpty {
+									Section("Orphan Rules") {
+										ForEach(orphanGroup, id: \.self) { rule in
+											Text(rule).tag(String?.some(rule))
+										}
 									}
 								}
-							}
-							if !subGroup.isEmpty {
-								Section("Sub-rules") {
-									ForEach(subGroup, id: \.self) { rule in
-										Text(rule).tag(String?.some(rule))
+								if !subGroup.isEmpty {
+									Section("Sub-rules") {
+										ForEach(subGroup, id: \.self) { rule in
+											Text(rule).tag(String?.some(rule))
+										}
 									}
 								}
 							}
 						}
 						.pickerStyle(MenuPickerStyle())
 
+						// Specifies how to interpert the meaning of a number in the language
+						// This is only used when something needs to intrepert the symbols in the context of a charset
+						//	UTF-32 is preferred
+						// Integer ensures they are always opaque
+						//
+						Picker("Charset", selection: $selectedCharsetId) {
+							ForEach(AppModel.charsets, id: \.id) { type in
+								Text(type.label).tag(type.id)
+							}
+						}
+						.pickerStyle(MenuPickerStyle())
+					}.formStyle(.grouped)
+
+					// TODO: Add a sheet/dialog that actually transforms the language from one to another
+					//Button("Convert\u{2026}", systemImage: "arrow.trianglehead.swap", action: {});
+
+					if let content_rulelist {
 						if let selectedRule {
 							let deps = content_rulelist.dependencies(rulename: selectedRule)
 							DisclosureGroup("Rule Dependencies", isExpanded: $rule_deps_expanded, content: {
