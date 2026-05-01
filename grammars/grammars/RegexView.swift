@@ -97,11 +97,7 @@ struct RegexContentView: View {
 							// Constructor or engine specific options
 							let selectedConstructor = filteredConstructors.first(where: { $0.id == selectedConstructorId });
 							if(selectedConstructor?.language == "Swift"){
-								GroupBox(content: {
-									Toggle("Case-insensitive flag when possible", isOn: $caseInsensitive)
-								}, label: {
-									Text("Swift options")
-								}).frame(maxWidth: .infinity, alignment: .leading)
+								Toggle("Prefer case-insensitive flag", isOn: $caseInsensitive)
 							}
 
 							// TODO: Offer ability to match start of string, end of string, etc.
