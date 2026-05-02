@@ -83,6 +83,67 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		//assert(rules.contains(where: { $0.name == start }))
 	}
 
+	/// Computes an upper bound on the possible cardinality of the language
+	///
+	/// Returns `nil` if the cardinality is infinite.
+	/// It may double-count some strings in the language, but reliably determines if a finite cardinality is in fact finite.
+	public func maxCardinality() -> Int? {
+		// TODO: Add this feature to DFA and RE
+		let dict = self.dictionary
+
+		// Build dependency ordering (like toPattern); detect cycles during computation
+		var ordering = [start]
+		var i = 0
+		while i < ordering.count {
+			let current = ordering[i];
+			guard let prods = dict[current], !prods.isEmpty else {
+				i += 1;
+				continue;
+			}
+			for prod in prods {
+				for sym in prod.body {
+					if case .nonterminal(let name) = sym, !ordering.contains(name) {
+						ordering.append(name);
+					}
+				}
+			}
+			i += 1;
+		}
+
+		// Compute cardinalities bottom-up
+		var intermediate: [String: Int] = [:];
+		let definitions = dict;
+		for name in ordering.reversed() {
+			guard let prods = definitions[name], !prods.isEmpty else {
+				intermediate[name] = 0;
+				continue;
+			}
+			var total = 0;
+			for prod in prods {
+				// Start with the multiplicative identity
+				var prodCard = 1;
+				for elem in prod.body {
+					switch elem {
+					case .nonterminal(let nt):
+						guard let p = intermediate[nt] else {
+							return nil; // cycle
+						}
+						prodCard *= p;
+						if p == 0 { break; }
+					case .terminal(let t):
+						let c = Alphabet.cardinality(t)!
+						prodCard *= c;
+						if c == 0 { break; }
+					}
+					if prodCard == 0 { break }
+				}
+				total += prodCard;
+			}
+			intermediate[name] = total;
+		}
+		return intermediate[start] ?? 0
+	}
+
 	/// Compute the complexity class of the automaton, measuring the restrictions placed relative to an unrestricted grammar
 	///
 	/// This will return a number representing the complexity class:

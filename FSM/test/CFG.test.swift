@@ -45,7 +45,7 @@ import Testing
 
 	@Suite("dictionary and ruleNames") struct CFGTests_dictionary {
 		@Test("dictionary groups by name")
-		func testDictionary() async throws {
+		func test_dictionary() async throws {
 			let rules: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
 				.init(name: "S", production: [.nonterminal("A")]),
 				.init(name: "A", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
@@ -88,6 +88,7 @@ import Testing
 		@Test("empty language -> finite")
 		func test_empty() async throws {
 			let cfg = CFG<ClosedRangeAlphabet<UInt8>>()
+			#expect(cfg.maxCardinality() == 0)
 			#expect(cfg.chomskyClass() == 4)
 		}
 
@@ -97,6 +98,7 @@ import Testing
 				.init(name: "S", production: []),
 				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
 			]);
+			#expect(cfg.maxCardinality() == 27) // 26 lowercase letters and epsilon
 			#expect(cfg.chomskyClass() == 4)
 		}
 
@@ -110,21 +112,14 @@ import Testing
 			#expect(cfg.chomskyClass() == 4)
 		}
 
-		@Test("set of empty string -> finite")
-		func test_epsilon() async throws {
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
-				.init(name: "S", production: []),
-				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
-			]);
-			#expect(cfg.chomskyClass() == 4)
-		}
-
 		@Test("self-referential start symbol")
 		func test_strings() async throws {
 			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
 				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x61...0x7A))]),
 				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x30...0x39)), .nonterminal("S")]),
 			]);
+			// FIXME: Maybe it's possible to detect non-productive unit productions and count those as zero... but currently it doesn't
+			//#expect(cfg.maxCardinality() == 0)
 			#expect(cfg.chomskyClass() == 2);
 		}
 
@@ -143,6 +138,7 @@ import Testing
 				.init(name: "LF", production: [.terminal([0x0A...0x0A])]),
 				.init(name: "SP", production: [.terminal([0x20...0x20])]),
 			]);
+			#expect(cfg.maxCardinality() == nil)
 			#expect(cfg.chomskyClass() == 2);
 		}
 
