@@ -13,14 +13,14 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 	public struct Production: GrammarProductionProtocol, Hashable {
 		// TODO: name can be anything as long as it's Equatable and Hashable (usable as a Dictionary key)
 		// This would be useful for using Int or tuples as production names, for example, representing parse forests.
-		public let name: String;
+		public let name: Variable;
 		public let body: Array<BodyElement>;
 
 		// Generates the equivalent context-sensitive grammar
 		public var lhs: Array<BodyElement> { [.nonterminal(name)] }
 		public var rhs: Array<BodyElement> { body }
 
-		public init(name: String, production: Array<BodyElement>) {
+		public init(name: Variable, production: Array<BodyElement>) {
 			self.name = name
 			self.body = production
 		}
@@ -29,21 +29,27 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 			self.name = lhs[0].asNonterminal!
 			self.body = rhs
 		}
+		public init<T: GrammarProductionProtocol>(_ from: T) throws where T.Variable == Variable, T.BodyElement == BodyElement {
+			precondition(from.lhs.count == 1)
+			self.name = from.lhs[0].asNonterminal!
+			self.body = from.rhs
+		}
 	}
 
+	// TODO: Have this be an Array<Production> and then most of the time it's just a single item
 	public var start: Variable
 	public var rules: Array<Production>
 
-	public var dictionary: Dictionary<String, Array<Production>> {
+	public var dictionary: Dictionary<Variable, Array<Production>> {
 		return Dictionary(grouping: self.rules, by: \.name);
 	}
 
 	/// Get the list of used rule names in breadth-first order from the start symbol
-	public var ruleNames: Array<String> {
+	public var ruleNames: Array<Variable> {
 		let rules = self.dictionary;
-		var visited = Set<String>()
+		var visited = Set<Variable>()
 		var queue = [start]
-		var referencedNames = [String]()
+		var referencedNames = [Variable]()
 		while let current = queue.first {
 			queue.removeFirst()
 			if visited.contains(current) { continue }
@@ -75,7 +81,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 	/// Createa a context-free grammar with the given rules and starting rule
 	///
 	/// This checks that the grammar will produce at least one string; if this is undesired, use ``init()``
-	public init(start: String, rules: [Production]) {
+	public init(start: Variable, rules: [Production]) {
 		self.start = start
 		self.rules = rules
 		// For the sake of bug catching, we usually want the starting rule to have at least one production when using this constructor.
@@ -111,7 +117,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		}
 
 		// Compute cardinalities bottom-up
-		var intermediate: [String: Int] = [:];
+		var intermediate: [Variable: Int] = [:];
 		let definitions = dict;
 		for name in ordering.reversed() {
 			guard let prods = definitions[name], !prods.isEmpty else {
