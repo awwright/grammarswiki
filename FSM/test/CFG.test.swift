@@ -84,6 +84,43 @@ import Testing
 		}
 	}
 
+	@Suite("contains") struct CFGTests_contains {
+		@Test("empty language")
+		func test_empty() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>()
+			#expect(!cfg.contains([]))
+			#expect(!cfg.contains([0]))
+			#expect(!cfg.contains([1]))
+		}
+
+		@Test("epsilon language")
+		func test_epsilon() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "ep", rules: [
+				.init(name: "ep", production: []),
+			])
+			#expect(cfg.contains([]))
+			#expect(!cfg.contains([0]))
+			#expect(!cfg.contains([1]))
+		}
+
+		@Test("single space")
+		func test_sp() async throws {
+			let cfg: CFG<ClosedRangeAlphabet<UInt8>> = try! ABNFRulelist.builtins.toCFG(rulename: "sp")
+			#expect(!cfg.contains([]))
+			#expect(!cfg.contains([0]))
+			#expect(cfg.contains([0x20]))
+		}
+
+		@Test("LWSP")
+		func test_lwsp() async throws {
+			let cfg: CFG<ClosedRangeAlphabet<UInt8>> = try! ABNFRulelist.builtins.toCFG(rulename: "lwsp")
+			// TODO: Only up to one character of recognition is implemented
+			//#expect(cfg.contains([]));
+			//#expect(!cfg.contains([0]));
+			//#expect(cfg.contains([0x20]));
+		}
+	}
+
 	@Suite("chomskyClass") struct CFGTests_chomskyClass {
 		@Test("empty language -> finite")
 		func test_empty() async throws {

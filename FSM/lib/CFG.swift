@@ -89,6 +89,51 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		//assert(rules.contains(where: { $0.name == start }))
 	}
 
+	private struct ParseStateItem {
+		let production: Production
+		/// How many body elements have been parsed (zero through the element count inclusive)
+		let progress: Int
+		/// The offset of this production's first symbol from the string's first symbol
+		let offset: Int
+		// Computed properties
+		var isComplete: Bool { progress == production.body.count }
+		var expecting: Production.BodyElement { production.body[progress] }
+		func next() -> Self { ParseStateItem(production: production, progress: progress + 1, offset: offset) }
+	}
+
+	/// Recognise (accept or reject) the given string as being in the grammar
+	public func contains(_ string: Array<Alphabet.Symbol>) -> Bool {
+		let dict = self.dictionary;
+		let start = dict[self.start] ?? [];
+		// Active and predicted both form the "item set" (or "state set")
+		var active = start.map { ParseStateItem(production: $0, progress: 0, offset: 0) }.filter{ $0.isComplete == false };
+		var predicted: Array<ParseStateItem> = [];
+		// Completed tracks which substrings are matched by a production
+		var completed = start.map { ParseStateItem(production: $0, progress: 0, offset: 0) }.filter{ $0.isComplete == true };
+		var consumedCount = 0;
+
+		// Go through each state in the state set and find states where the cursor is at the current symbol
+		if let currentSymbol = string.first {
+			let match = active.filter {
+				// TODO: There's got to be a better way to see if a symbol is within a SymbolClass
+				if let symbolClass = $0.expecting.asTerminal {
+					let expectingSymbols = Alphabet(partitions: [$0.expecting.asTerminal!]);
+					return expectingSymbols.contains(currentSymbol);
+				} else {
+					return false;
+				}
+			}.map{ $0.next() }
+			consumedCount += 1;
+			completed = match.filter{ $0.isComplete };
+			active = match.compactMap{ $0.isComplete ? nil : $0 };
+		}
+
+		return completed.filter { $0.offset == 0 && $0.progress == consumedCount }.isEmpty == false;
+	}
+
+	// TODO: Implement a simple tree parser (returns a parse tree)
+	// TODO: Implement a simple forest parser (returns a parse forest)
+
 	/// Computes an upper bound on the possible cardinality of the language
 	///
 	/// Returns `nil` if the cardinality is infinite.
