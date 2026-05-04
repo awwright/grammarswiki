@@ -89,7 +89,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		//assert(rules.contains(where: { $0.name == start }))
 	}
 
-	private struct ParseStateItem {
+	private struct ParseStateItem: Hashable {
 		let production: Production
 		/// How many body elements have been parsed (zero through the element count inclusive)
 		let progress: Int
@@ -97,38 +97,71 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		let offset: Int
 		// Computed properties
 		var isComplete: Bool { progress == production.body.count }
-		var expecting: Production.BodyElement { production.body[progress] }
+		var expecting: Production.BodyElement? { progress < production.body.count ? production.body[progress] : nil }
 		func next() -> Self { ParseStateItem(production: production, progress: progress + 1, offset: offset) }
 	}
 
 	/// Recognise (accept or reject) the given string as being in the grammar
 	public func contains(_ string: Array<Alphabet.Symbol>) -> Bool {
 		let dict = self.dictionary;
-		let start = dict[self.start] ?? [];
-		// Active and predicted both form the "item set" (or "state set")
-		var active = start.map { ParseStateItem(production: $0, progress: 0, offset: 0) }.filter{ $0.isComplete == false };
-		var predicted: Array<ParseStateItem> = [];
-		// Completed tracks which substrings are matched by a production
-		var completed = start.map { ParseStateItem(production: $0, progress: 0, offset: 0) }.filter{ $0.isComplete == true };
-		var consumedCount = 0;
+		let len = string.count;
 
-		// Go through each state in the state set and find states where the cursor is at the current symbol
-		if let currentSymbol = string.first {
-			let match = active.filter {
-				// TODO: There's got to be a better way to see if a symbol is within a SymbolClass
-				if let symbolClass = $0.expecting.asTerminal {
-					let expectingSymbols = Alphabet(partitions: [$0.expecting.asTerminal!]);
-					return expectingSymbols.contains(currentSymbol);
-				} else {
-					return false;
-				}
-			}.map{ $0.next() }
-			consumedCount += 1;
-			completed = match.filter{ $0.isComplete };
-			active = match.compactMap{ $0.isComplete ? nil : $0 };
+		// Chart: one set of items per input position (0..n)
+		var chart: [Set<ParseStateItem>] = Array(repeating: [], count: len + 1)
+
+		// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
+		if let startProds = dict[start] {
+			for prod in startProds {
+				chart[0].insert(ParseStateItem(production: prod, progress: 0, offset: 0))
+			}
 		}
 
-		return completed.filter { $0.offset == 0 && $0.progress == consumedCount }.isEmpty == false;
+		// Process each chart position
+		for i in 0...len {
+			var added = true;
+			while added {
+				added = false;
+				let items = chart[i];
+				for item in items {
+					if item.isComplete {
+						// Completer
+						let nt = item.production.name;
+						for prevItem in chart[item.offset] {
+							if let expecting = prevItem.expecting, case .nonterminal(let name) = expecting, name == nt {
+								let advanced = prevItem.next();
+								added = added || chart[i].insert(advanced).inserted;
+							}
+						}
+					} else if let expecting = item.expecting, case .nonterminal(let name) = expecting {
+						// Predictor
+						if let prods = dict[name] {
+							for prod in prods {
+								let predicted = ParseStateItem(production: prod, progress: 0, offset: i);
+								added = added || chart[i].insert(predicted).inserted;
+							}
+						}
+					}
+				}
+			}
+
+			// Scanner: advance items expecting the current terminal (if i < n)
+			if i < len {
+				let currentSymbol = string[i];
+				for item in chart[i] {
+					if let expecting = item.expecting, case .terminal(let symClass) = expecting {
+						// TODO: Use a dedicated SymbolClass.contains function
+						let tempAlphabet = Alphabet(partitions: [symClass]);
+						if tempAlphabet.contains(currentSymbol) {
+							let advanced = item.next();
+							chart[i + 1].insert(advanced);
+						}
+					}
+				}
+			}
+		}
+
+		// Accept if any completed start item spans the entire input from origin 0
+		return chart[len].contains { $0.production.name == start && $0.isComplete && $0.offset == 0 };
 	}
 
 	// TODO: Implement a simple tree parser (returns a parse tree)

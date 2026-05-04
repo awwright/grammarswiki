@@ -115,9 +115,18 @@ import Testing
 		func test_lwsp() async throws {
 			let cfg: CFG<ClosedRangeAlphabet<UInt8>> = try! ABNFRulelist.builtins.toCFG(rulename: "lwsp")
 			// TODO: Only up to one character of recognition is implemented
-			//#expect(cfg.contains([]));
-			//#expect(!cfg.contains([0]));
-			//#expect(cfg.contains([0x20]));
+			#expect(cfg.contains([]));
+			#expect(!cfg.contains([0]));
+			#expect(cfg.contains([0x09]));
+			#expect(cfg.contains([0x20]));
+			#expect(cfg.contains([0x09, 0x09, 0x09]));
+			#expect(cfg.contains([0x20, 0x20, 0x20]));
+			#expect(!cfg.contains([0x20, 0x0D]));
+			#expect(!cfg.contains([0x20, 0x0A]));
+			#expect(!cfg.contains([0x20, 0x0D, 0x0A]));
+			#expect(!cfg.contains([0x20, 0x0D, 0x09]));
+			#expect(!cfg.contains([0x20, 0x0A, 0x09]));
+			#expect(cfg.contains([0x20, 0x0D, 0x0A, 0x09]));
 		}
 	}
 
@@ -184,7 +193,7 @@ import Testing
 			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
 				.init(name: "S", production: []),
 				.init(name: "S", production: [.nonterminal("S"), .nonterminal("S")]),
-				.init(name: "S", production: [.terminal([0x5D...0x5D]), .nonterminal("S"), .terminal([0x5D...0x5D])]),
+				.init(name: "S", production: [.terminal([0x5B...0x5B]), .nonterminal("S"), .terminal([0x5D...0x5D])]),
 			]);
 			#expect(cfg.chomskyClass() == 2)
 		}
