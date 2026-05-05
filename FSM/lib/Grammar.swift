@@ -11,7 +11,7 @@ public protocol GrammarProtocol {
 	/// An array of Terms
 	associatedtype Production: GrammarProductionProtocol where Production.BodyElement == BodyElement;
 
-	var start: Variable { get }
+	var start: [Variable] { get }
 	var rules: [Production] { get }
 	// Alternatively
 	//var initials: Array<Array<Symbol>> { get }

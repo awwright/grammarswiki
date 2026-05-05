@@ -36,8 +36,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		}
 	}
 
-	// TODO: Have this be an Array<Production> and then most of the time it's just a single item
-	public var start: Variable
+	public var start: Array<Variable>
 	public var rules: Array<Production>
 
 	public var dictionary: Dictionary<Variable, Array<Production>> {
@@ -48,7 +47,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 	public var ruleNames: Array<Variable> {
 		let rules = self.dictionary;
 		var visited = Set<Variable>()
-		var queue = [start]
+		var queue = start;
 		var referencedNames = [Variable]()
 		while let current = queue.first {
 			queue.removeFirst()
@@ -74,7 +73,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 	/// Produce the empty language
 	public init() {
 		// If no rule exists for the starting nonterminal, that's not an error, that just means the language is the empty set.
-		self.start = ""
+		self.start = [];
 		self.rules = []
 	}
 
@@ -82,7 +81,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 	///
 	/// This checks that the grammar will produce at least one string; if this is undesired, use ``init()``
 	public init(start: Variable, rules: [Production]) {
-		self.start = start
+		self.start = [start]
 		self.rules = rules
 		// For the sake of bug catching, we usually want the starting rule to have at least one production when using this constructor.
 		// FIXME: actually maybe this is too aggressive, lots of code likes creating empty languages for some reason
@@ -110,10 +109,8 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		var chart: [Set<ParseStateItem>] = Array(repeating: [], count: len + 1)
 
 		// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
-		if let startProds = dict[start] {
-			for prod in startProds {
-				chart[0].insert(ParseStateItem(production: prod, progress: 0, offset: 0))
-			}
+		for prod in (start.flatMap{ dict[$0] ?? [] }) {
+			chart[0].insert(ParseStateItem(production: prod, progress: 0, offset: 0))
 		}
 
 		// Process each chart position
@@ -161,7 +158,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		}
 
 		// Accept if any completed start item spans the entire input from origin 0
-		return chart[len].contains { $0.production.name == start && $0.isComplete && $0.offset == 0 };
+		return chart[len].contains { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 };
 	}
 
 	// TODO: Implement a simple tree parser (returns a parse tree)
@@ -176,7 +173,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 		let dict = self.dictionary
 
 		// Build dependency ordering (like toPattern); detect cycles during computation
-		var ordering = [start]
+		var ordering = start;
 		var i = 0
 		while i < ordering.count {
 			let current = ordering[i];
@@ -225,7 +222,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 			}
 			intermediate[name] = total;
 		}
-		return intermediate[start] ?? 0
+		return start.reduce(0) { $0 + (intermediate[$1] ?? 0) };
 	}
 
 	/// Compute the complexity class of the automaton, measuring the restrictions placed relative to an unrestricted grammar
@@ -239,8 +236,8 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 	public func chomskyClass() -> Int {
 		// If the CFG has no cycles, then it is finite
 		let dict = self.dictionary;
-		var all = Set([self.start]);
-		var queue = [self.start];
+		var all = Set(self.start);
+		var queue = self.start;
 		// FIXME: Need to detect and eliminate epsilon-productions and unit productions, which will false-negative a finite grammar
 		while let current = queue.popLast() {
 			let previous_seen = all;
