@@ -6,7 +6,7 @@ import Testing
 		@Test("empty")
 		func test_init_empty() async throws {
 			let cfg = CFG<ClosedRangeAlphabet<UInt8>>()
-			#expect(cfg.start == "")
+			#expect(cfg.start == [])
 			#expect(cfg.rules.isEmpty)
 			#expect(cfg.dictionary.isEmpty)
 		}
@@ -18,7 +18,7 @@ import Testing
 				.init(name: "A", production: [.nonterminal("S")])
 			];
 			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: rules);
-			#expect(cfg.start == "S")
+			#expect(cfg.start == ["S"])
 			#expect(cfg.rules.count == 2)
 			#expect(cfg.dictionary.keys.sorted() == ["A", "S"])
 		}
