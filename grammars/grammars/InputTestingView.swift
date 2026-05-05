@@ -10,11 +10,13 @@ struct InputTestingView: View {
 	@Binding var selectedRule: String?
 	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
 	@Binding var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>?
+	@Binding var content_cfg: CFG<ClosedRangeAlphabet<UInt32>>?
 	let charset: Charset
 	@State private var testInput: String = ""
 	@State private var fsm_test_result: Bool? = nil
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
 	@State private var fsm_test_error: String? = nil
+	@State private var cfg_test_result: Bool? = nil
 
 	var body: some View {
 		Group {
@@ -29,6 +31,9 @@ struct InputTestingView: View {
 				} else {
 					Text("Next symbols: Oblivion")
 				}
+			} else if let cfg_test_result {
+				Text("Result: " + (cfg_test_result ? "Accepted" : "Rejected"))
+					.foregroundColor(cfg_test_result == true ? .green : .red)
 			} else if let fsm_test_error {
 				Text(fsm_test_error).foregroundColor(.red)
 			}
@@ -44,6 +49,7 @@ struct InputTestingView: View {
 		fsm_test_result = nil
 		fsm_test_error = nil
 		fsm_test_next = nil
+		cfg_test_result = nil
 
 		guard let content_rulelist = content_rulelist,
 				let selectedRule = selectedRule,
@@ -53,22 +59,23 @@ struct InputTestingView: View {
 			return
 		}
 		let input = Array(testInput.unicodeScalars.map(\.value))
-		guard let selected_fsm = rule_fsm else {
-			fsm_test_error = "Rule `\(selectedRule)` is recursive or missing rules"
-			return
-		}
-
-		let fsm_test_state = selected_fsm.nextState(state: selected_fsm.initial, input: input)
-		fsm_test_result = selected_fsm.isFinal(fsm_test_state)
-		if let fsm_test_state {
-			fsm_test_next = selected_fsm.states[fsm_test_state].alphabet.flatMap { $0 }
-		}
-		if fsm_test_result == false {
-			if fsm_test_state != nil {
-				fsm_test_error = "unexpected EOF"
-			} else {
-				fsm_test_error = "oblivion"
+		if let selected_fsm = rule_fsm {
+			let fsm_test_state = selected_fsm.nextState(state: selected_fsm.initial, input: input)
+			fsm_test_result = selected_fsm.isFinal(fsm_test_state)
+			if let fsm_test_state {
+				fsm_test_next = selected_fsm.states[fsm_test_state].alphabet.flatMap { $0 }
 			}
+			if fsm_test_result == false {
+				if fsm_test_state != nil {
+					fsm_test_error = "unexpected EOF"
+				} else {
+					fsm_test_error = "oblivion"
+				}
+			}
+		} else if let cfg = content_cfg {
+			cfg_test_result = cfg.contains(input)
+		} else {
+			fsm_test_error = "Rule `\(selectedRule)` is recursive or missing rules"
 		}
 	}
 }

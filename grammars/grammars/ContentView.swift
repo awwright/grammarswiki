@@ -1,12 +1,10 @@
 // TODO:
 // - Auto-completion of rule names
 // - Show tab of alternative forms of the document
-// - Import rules from other documents
 // - Limit text field to accepted characters, use a multi-line field if \n is permitted; use \r\n for newlines when \r is permitted
 // - Search feature for catalog
 // - Rendered graph view
 // - Selection of symbol type/preview (e.g. show decimal, hex, or glyph)
-// - Open files from any path, as a document view
 
 import SwiftUI
 import FSM
@@ -152,7 +150,7 @@ struct DocumentDetail: View {
 	@State private var content_rulelist: ABNFRulelist<UInt32>? = nil
 	@State private var content_rulelist_error: String? = nil
 
-	@State private var content_cfg: CFG<ClosedRangeAlphabet<UInt32>> = CFG<ClosedRangeAlphabet<UInt32>>();
+	@State private var content_cfg: CFG<ClosedRangeAlphabet<UInt32>>? = nil;
 	@State private var content_rr: RailroadNode? = nil
 
 	@State private var content_cfg_complexityClass: Int? = nil
@@ -214,7 +212,9 @@ struct DocumentDetail: View {
 					}
 
 					Tab("Translate", systemImage: "translate") {
-						CFGContentView(grammar: content_cfg, charset: AppModel.charsetDict[selectedCharsetId]!);
+						if let content_cfg {
+							CFGContentView(grammar: content_cfg, charset: AppModel.charsetDict[selectedCharsetId]!);
+						}
 					}
 
 					if showRegex {
@@ -262,6 +262,7 @@ struct DocumentDetail: View {
 									selectedRule: $selectedRule,
 									rule_alphabet: $rule_alphabet,
 									rule_fsm: $rule_fsm,
+									content_cfg: $content_cfg,
 									charset: AppModel.charsetDict[selectedCharsetId]!,
 								)
 								Spacer()
@@ -472,6 +473,7 @@ struct DocumentDetail: View {
 										selectedRule: $selectedRule,
 										rule_alphabet: $rule_alphabet,
 										rule_fsm: $rule_fsm,
+										content_cfg: $content_cfg,
 										charset: AppModel.charsetDict[selectedCharsetId]!,
 									)
 								})
@@ -528,7 +530,7 @@ struct DocumentDetail: View {
 		let text = document.content;
 		content_rulelist = nil
 		content_rulelist_error = nil
-		//content_cfg = nil
+		content_cfg = nil
 		// invalidate updatedRule
 		rule_alphabet = nil
 		rule_fsm = nil
@@ -553,7 +555,7 @@ struct DocumentDetail: View {
 						}
 					} catch {
 						print(error);
-						content_cfg = CFG<ClosedRangeAlphabet<UInt32>>()
+						content_cfg = nil
 					}
 					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
 					// Select the first rule by default
@@ -639,6 +641,7 @@ struct DocumentDetail: View {
 	}
 
 	private func updatedCFG() {
+		guard let content_cfg else { return }
 		content_cfg_chomskyClass = content_cfg.chomskyClass();
 		content_cfg_memoryRequirements = content_cfg.memoryRequirements();
 	}
