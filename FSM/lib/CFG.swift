@@ -80,14 +80,18 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	}
 
 	/// Createa a context-free grammar with the given rules and starting rule
-	///
-	/// This checks that the grammar will produce at least one string; if this is undesired, use ``init()``
 	public init(start: Variable, rules: [Production]) {
 		self.start = [start]
 		self.rules = rules
 		// For the sake of bug catching, we usually want the starting rule to have at least one production when using this constructor.
 		// FIXME: actually maybe this is too aggressive, lots of code likes creating empty languages for some reason
 		//assert(rules.contains(where: { $0.name == start }))
+	}
+
+	/// Createa a context-free grammar with the given rules and starting rules
+	public init(startSet: [Variable], rules: [Production]) {
+		self.start = startSet;
+		self.rules = rules;
 	}
 
 	private struct ParseStateItem: Hashable {
