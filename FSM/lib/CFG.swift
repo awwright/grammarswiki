@@ -2,12 +2,14 @@
 public protocol CFGProtocol: GrammarProtocol {
 }
 
-public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable {
+public typealias CFG<Alphabet: AlphabetProtocol> = CFGNamed<String, Alphabet>;
+
+public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable {
 	public typealias Alphabet = Alphabet
 	public typealias Symbol = Alphabet.Symbol
 	public typealias SymbolClass = Alphabet.SymbolClass
 
-	public typealias Variable = String;
+	public typealias Variable = Variable;
 	public typealias BodyElement = GrammarProductionBodyElement<SymbolClass, Variable>;
 	/// A rule in the Context-Free Grammar. Multiple rules with the same name
 	public struct Production: GrammarProductionProtocol, Hashable {
@@ -102,6 +104,13 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 
 	/// Recognise (accept or reject) the given string as being in the grammar
 	public func contains(_ string: Array<Alphabet.Symbol>) -> Bool {
+		let chart = parse(string);
+		// Accept if any completed start item spans the entire input from origin 0
+		return chart.last!.contains { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 };
+	}
+
+	/// Recognise (accept or reject) the given string as being in the grammar
+	private func parse(_ string: Array<Alphabet.Symbol>) -> Array<Set<ParseStateItem>> {
 		let dict = self.dictionary;
 		let len = string.count;
 
@@ -156,9 +165,7 @@ public struct CFG<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable 
 				}
 			}
 		}
-
-		// Accept if any completed start item spans the entire input from origin 0
-		return chart[len].contains { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 };
+		return chart;
 	}
 
 	// TODO: Implement a simple tree parser (returns a parse tree)
