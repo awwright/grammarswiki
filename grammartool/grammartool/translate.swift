@@ -8,9 +8,13 @@ func translate_help(arguments: Array<String>) {
 }
 
 func translate_args(arguments: Array<String>) -> Int32 {
+	let graph = HomomorphismGraph<UInt32>.builtin;
 	guard arguments.count == 4 else {
-		print(arguments.count);
 		translate_help(arguments: arguments);
+		print("Available charsets:");
+		for name in graph.nodes {
+			print("\t\(name)");
+		}
 		return 1;
 	}
 
