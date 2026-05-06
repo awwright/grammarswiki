@@ -1,3 +1,165 @@
+/// Declare an equivalency between two sets of strings
+///
+/// There are two rules that the `tr` and `inv` functions must implement:
+/// - tr(x) == tr(inv(tr(x))) (tr.inv is idempotent)
+/// - tr(x) + tr(y) = tr(x + y) (tr is distributive; strings can be concatenated together)
+public struct ComputedHomomorphism<Symbol: Hashable> {
+	public let source: String
+	public let target: String
+	public let tr: (Array<Symbol>) -> Array<Symbol>?
+	public let inv: (Array<Symbol>) -> Array<Symbol>?
+
+	public var inverse: ComputedHomomorphism<Symbol> {
+		.init(source: target, target: source, forward: inv, backward: tr)
+	}
+
+	// Private init so only the factory can create properly linked pairs
+	public init(
+		source: String,
+		target: String,
+		forward: @escaping (Array<Symbol>) -> Array<Symbol>?,
+		backward: @escaping (Array<Symbol>) -> Array<Symbol>?,
+	) {
+		self.source = source
+		self.target = target
+		self.tr = forward
+		self.inv = backward
+	}
+
+	/// Normalize an input (translate a string then invert it again)
+	public func norm(_ string: Array<Symbol>) -> Array<Symbol>? {
+		guard let there = tr(string) else { return nil }
+		// Briefly check that the normalization of the inverse is idempotent
+		guard let colder = tr(there) else { return nil }
+		guard let warmer = inv(colder) else { return nil }
+		assert(there == warmer);
+		return inv(there);
+	}
+
+	/// Compose two homomorphisms together
+	public static func compose(_ list: Array<Self>) -> ComputedHomomorphism {
+		let start = list.first!.source;
+		let end = list.last!.target;
+		let tr: (Array<Symbol>) -> Array<Symbol>? = {
+			var value: Array<Symbol>? = $0;
+			for f in list {
+				guard let v = value else { return nil; }
+				value = f.tr(v);
+			}
+			return value;
+		};
+		let reverse = list.reversed();
+		let inv: (Array<Symbol>) -> Array<Symbol>? = {
+			var value: Array<Symbol>? = $0;
+			for f in reverse {
+				guard let v = value else { return nil; }
+				value = f.inv(v);
+			}
+			return value;
+		};
+		return ComputedHomomorphism(source: start, target: end, forward: tr, backward: inv);
+	}
+}
+
+/// Stores any number of homomorphisms and finds a path between any two
+public struct HomomorphismGraph<Symbol: Hashable> {
+	var edges: [String: [String: ComputedHomomorphism<Symbol>]] = [:]
+
+	public var nodes: Set<String> { Set(edges.keys) }
+
+	public init(_ edgesSet: some Collection<ComputedHomomorphism<Symbol>>) {
+		for edge in edgesSet { insert(edge); }
+	}
+
+	mutating public func insert(_ edge: ComputedHomomorphism<Symbol>) {
+		self.edges[edge.source, default: [:]][edge.target] = edge;
+		self.edges[edge.target, default: [:]][edge.source] = edge.inverse;
+	}
+
+	/// Compute a homomorphism that goes from ``source`` to ``target``, taking up to one intermediate step if necessary
+	/// (which is generally always going to be UTF-32)
+	public func find(source: String, target: String) -> ComputedHomomorphism<Symbol>? {
+		if let edge = edges[source]?[target] {
+			return edge;
+		}
+		let sourceIntermediate = Set(edges[source, default: [:]].keys);
+		let targetIntermediate = Set(edges[target, default: [:]].keys);
+		let shared = sourceIntermediate.intersection(targetIntermediate).sorted().first;
+		guard let shared else { return nil; }
+		return ComputedHomomorphism<Symbol>.compose([
+			edges[source]![shared]!,
+			edges[shared]![target]!,
+		]);
+	}
+}
+
+extension HomomorphismGraph where Symbol: BinaryInteger {
+	public static var builtin: Self { .init([
+		.init(source: "UTF-32", target: "UTF-8", forward: { string in
+			return string.flatMap { i in
+				if i < 0x80 { return [i]; }
+				else if i < 0x800 { return [0xC0 | (i >> 6), 0x80 | (i & 0x3F)]; }
+				else if i < 0x10000 { return [0xE0 | (i >> 12), 0x80 | ((i >> 6) & 0x3F), 0x80 | (i & 0x3F)]; }
+				else if i <= 0x10FFFF { return [0xF0 | (i >> 18), 0x80 | ((i >> 12) & 0x3F), 0x80 | ((i >> 6) & 0x3F), 0x80 | (i & 0x3F)]; }
+				fatalError("Didn't catch \(i)");
+			}
+		}, backward: { string in
+			var res: Array<Symbol> = [];
+			var i = 0;
+			while i < string.count {
+				let b0: Symbol = string[i];
+				if b0 < 0x80 { res.append(b0); i += 1; }
+				else if b0 >= 0xF0 {
+					guard i + 3 < string.count else { return nil; }
+					let code: Symbol = (b0 & 0x07) << 18 | (string[i + 1] & 0x3F) << 12 | (string[i + 2] & 0x3F) << 6 | (string[i + 3] & 0x3F);
+					res.append(code);
+					i += 4;
+				}
+				else if b0 >= 0xE0 {
+					guard i + 2 < string.count else { return nil; }
+					let code: Symbol = (b0 & 0x0F) << 12 | (string[i + 1] & 0x3F) << 6 | (string[i + 2] & 0x3F);
+					res.append(code);
+					i += 3;
+				}
+				else if b0 >= 0xC0 {
+					guard i + 1 < string.count else { return nil; }
+					let code: Symbol = (b0 & 0x1F) << 6 | (string[i + 1] & 0x3F);
+					res.append(code);
+					i += 2;
+				}
+				else { return nil; } // Invalid UTF-8 sequence
+			}
+			return res;
+		}),
+		.init(source: "UTF-32", target: "UTF-16", forward: { string in
+			return string.flatMap { i in
+				if i < 0x010000 { return [i]; }
+				else { let shifted = i - 0x010000; return [(0xD800 | (shifted >> 10)), (0xDC00 | (shifted & 0x3FF))]; }
+			}
+		}, backward: { string in
+			var res: Array<Symbol> = [];
+			var i = 0;
+			while i < string.count {
+				let b0 = string[i];
+				if b0 >= 0xD800 && b0 <= 0xDFFF {
+					// High surrogate: must be followed by a low surrogate
+					if b0 >= 0xDC00 { return nil; }  // Lone low surrogate is invalid
+					guard i + 1 < string.count else { return nil; }  // Bounds check
+					let b1 = string[i + 1];
+					if b1 < 0xDC00 || b1 > 0xDFFF { return nil; }  // Invalid low surrogate
+					let code = 0x10000 + ((b0 & 0x03FF) << 10) | (b1 & 0x3FF);
+					res.append(code);
+					i += 2;  // Skip both surrogates
+				} else {
+					res.append(b0);
+					i += 1;
+				}
+			}
+			return res;
+		}),
+	]); }
+}
+
 public struct ComputedCollection<T>: Collection {
 	// Type of elements (can be anything)
 	public typealias Element = T // Example: Change to your desired type
