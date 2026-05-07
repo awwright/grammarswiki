@@ -131,6 +131,31 @@ extension HomomorphismGraph where Symbol: BinaryInteger {
 			}
 			return res;
 		}),
+		.init(source: "UTF-8", target: "UTF-8-hex", forward: { string in
+			return string.flatMap { i in
+				let i0 = i >> 4;
+				let i1 = i & 0xF;
+				return [i0, i1].map{ $0 + ($0 >= 10 ? 0x37 : 0x30) };
+			}
+		}, backward: { string in
+			var res: Array<Symbol> = [];
+			func hexDigitValue(_ codePoint: Symbol) -> Symbol? {
+				switch codePoint {
+					case 0x30...0x39: (codePoint - 0x30); // '0' - '9'
+					case 0x41...0x46: (codePoint - 0x41 + 10);  // 'A' - 'F'
+					case 0x61...0x66: (codePoint - 0x61 + 10);  // 'a' - 'f'
+					default: nil;
+				}
+			}
+			guard string.count % 2 == 0 else { return nil; }
+			res.reserveCapacity(string.count / 2);
+			for i in stride(from: 0, to: string.count, by: 2) {
+				guard let high = hexDigitValue(string[i]), let low = hexDigitValue(string[i + 1]) else { return nil; };
+				let byteValue = (high << 4) | low;
+				res.append(byteValue);
+			}
+			return res;
+		}),
 		.init(source: "UTF-32", target: "UTF-16", forward: { string in
 			return string.flatMap { i in
 				if i < 0x010000 { return [i]; }

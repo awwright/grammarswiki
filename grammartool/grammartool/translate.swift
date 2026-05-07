@@ -19,23 +19,48 @@ func translate_args(arguments: Array<String>) -> Int32 {
 	}
 
 	// TODO: This only works over stdin for now, maybe later pass a filename
+	let source = arguments[2];
+	let target = arguments[3];
 	let imported: Data? = FileHandle.standardInput.availableData
 	guard let imported else {
 		fatalError("Failed to read input")
 	}
 
-	// Load the input as ASCII, I guess
-	// TODO: In the future, we will need to convert between UTF-8, UTF-16, and UTF-32
-	let bytes = Array<UInt8>(imported);
-	let pattern: SymbolDFA<UInt8> = [ bytes ];
-	// TODO: Apply homomorphism here, that converts <from> -> <to>
-	let fsm1 = pattern
-	// The first string that the transformed FSM outputs is the normal form
-	let string = fsm1.makeIterator().next()
+	let string = graph.find(source: source, target: target)!.tr(imported.map {UInt32($0)});
 	guard let string else {
 		fatalError("No equivalent form in specified format")
 	}
-	// Print the raw bytes from `string` to stdout
-	FileHandle.standardOutput.write(Data(string))
+
+	// Convert to the expected
+	// Assume little-endian
+	switch target {
+		case "UTF-8", "UTF-8-hex", "UTF-16-hex", "UTF-32-hex":
+			var data = Data();
+			data.reserveCapacity(string.count * MemoryLayout<UInt8>.size)
+			for value in string {
+				withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0.map{UInt8($0 & 0xFF)}) }
+			}
+			FileHandle.standardOutput.write(data);
+
+		case "UTF-16":
+			var data = Data();
+			data.reserveCapacity(string.count * MemoryLayout<UInt16>.size)
+			for value in string {
+				data.append(UInt8(truncatingIfNeeded: value));
+				data.append(UInt8(truncatingIfNeeded: value >> 8));
+			}
+			FileHandle.standardOutput.write(data);
+
+		case "UTF-32":
+			var data = Data();
+			data.reserveCapacity(string.count * MemoryLayout<UInt32>.size)
+			for value in string {
+				withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+			}
+			FileHandle.standardOutput.write(data);
+
+		default:
+			print();
+	}
 	return 0
 }

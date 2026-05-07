@@ -101,6 +101,21 @@ struct HomomorphismGraphBuiltinTests {
 		}
 	}
 
+	@Test("UTF-8-hex")
+	func test_UTF_8_hex() async throws {
+		let builtin = try #require(HomomorphismGraph<UInt32>.builtin.find(source: "UTF-32", target: "UTF-8-hex"));
+		//for i in [0x0000...0xD7FF, 0xE000...0x10FFFF].lazy.joined() {
+		for i in [0x00, 0x01, 0x7F, 0x80, 0x81, 0x100, 0x400, 0x7FF, 0x800, 0x1111, 0x4444, 0x8888, 0xAAAA, 0xCCCC, 0xD7FF, 0xE000, 0xFFFF, 0x10000, 0x10, 0x104444, 0x107777, 0x10AAAA, 0x10FFFF].lazy {
+			// create a string from codepoint i
+			let string = String(UnicodeScalar(i)!);
+
+			let ours32 = builtin.tr([UInt32(i)])!;
+			let ours8 = ours32.map { UInt8($0); };
+			#expect(builtin.inv(ours32)! == string.unicodeScalars.map(\.value));
+			#expect(builtin.tr(builtin.inv(ours32)!)! == ours32);
+		}
+	}
+
 	@Test("UTF-16")
 	func test_UTF_16() async throws {
 		let builtin = try #require(HomomorphismGraph<UInt32>.builtin.find(source: "UTF-32", target: "UTF-16"));
