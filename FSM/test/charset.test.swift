@@ -54,6 +54,18 @@ struct HomomorphismGraphTests {
 
 @Suite("HomomorphismGraph.builtin")
 struct HomomorphismGraphBuiltinTests {
+	static var cornerCodepoints = [
+		0x00, 0x10FFFF, // Lower and upper range of Unicode scalars
+		0x01, 0x10FFFE, // First non-reserved codepoints
+		0x7F, 0x80, 0x81, // ASCII & two-byte UTF-8 boundary
+		0x7FF, 0x800, // Two- to Three-byte UTF-8 boundary
+		0xFFFF, 0x1000, // Three- to Four-byte UTF-8 boundary
+		0xD7FF, 0xE000, // Surrogate codepoint neighbors
+		0x1F432, 0x1F600, // Some emoji
+		// Other arbritrary numbers
+		0x11, 0x44, 0x111, 0x444, 0x1111, 0x4444, 0x8888, 0xAAAA, 0xCCCC, 0x104444, 0x107777, 0x10AAAA,
+	];
+
 	@Test("All")
 	func test_all() async throws {
 		let builtin = HomomorphismGraph<UInt32>.builtin;
@@ -86,7 +98,7 @@ struct HomomorphismGraphBuiltinTests {
 	func test_UTF_8() async throws {
 		let builtin = try #require(HomomorphismGraph<UInt32>.builtin.find(source: "UTF-32", target: "UTF-8"));
 		//for i in [0x0000...0xD7FF, 0xE000...0x10FFFF].lazy.joined() {
-		for i in [0x00, 0x01, 0x7F, 0x80, 0x81, 0x100, 0x400, 0x7FF, 0x800, 0x1111, 0x4444, 0x8888, 0xAAAA, 0xCCCC, 0xD7FF, 0xE000, 0xFFFF, 0x10000, 0x10, 0x104444, 0x107777, 0x10AAAA, 0x10FFFF].lazy {
+		for i in HomomorphismGraphBuiltinTests.cornerCodepoints {
 			// create a string from codepoint i
 			let string = String(UnicodeScalar(i)!);
 			let reference = Array<UInt8>(string.utf8);
@@ -105,7 +117,7 @@ struct HomomorphismGraphBuiltinTests {
 	func test_UTF_8_hex() async throws {
 		let builtin = try #require(HomomorphismGraph<UInt32>.builtin.find(source: "UTF-32", target: "UTF-8-hex"));
 		//for i in [0x0000...0xD7FF, 0xE000...0x10FFFF].lazy.joined() {
-		for i in [0x00, 0x01, 0x7F, 0x80, 0x81, 0x100, 0x400, 0x7FF, 0x800, 0x1111, 0x4444, 0x8888, 0xAAAA, 0xCCCC, 0xD7FF, 0xE000, 0xFFFF, 0x10000, 0x10, 0x104444, 0x107777, 0x10AAAA, 0x10FFFF].lazy {
+		for i in HomomorphismGraphBuiltinTests.cornerCodepoints {
 			// create a string from codepoint i
 			let string = String(UnicodeScalar(i)!);
 
@@ -120,8 +132,7 @@ struct HomomorphismGraphBuiltinTests {
 	func test_UTF_16() async throws {
 		let builtin = try #require(HomomorphismGraph<UInt32>.builtin.find(source: "UTF-32", target: "UTF-16"));
 		//for i in [0x0000...0xD7FF, 0xE000...0x10FFFF].lazy.joined() {
-		for i in [0x00, 0x01, 0x7F, 0x80, 0x81, 0x100, 0x400, 0x7FF, 0x800, 0x1111, 0x4444, 0x8888, 0xAAAA, 0xCCCC, 0xD7FF, 0xE000, 0xFFFF, 0x10000, 0x10, 0x104444, 0x107777, 0x10AAAA, 0x10FFFF].lazy {
-			print(i);
+		for i in HomomorphismGraphBuiltinTests.cornerCodepoints {
 			// create a string from codepoint i
 			let string = String(UnicodeScalar(i)!);
 			let reference = Array<UInt16>(string.utf16);
