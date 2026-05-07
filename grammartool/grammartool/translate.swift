@@ -12,7 +12,7 @@ func translate_args(arguments: Array<String>) -> Int32 {
 	guard arguments.count == 4 else {
 		translate_help(arguments: arguments);
 		print("Available charsets:");
-		for name in graph.nodes {
+		for name in graph.nodes.sorted() {
 			print("\t\(name)");
 		}
 		return 1;
@@ -26,22 +26,19 @@ func translate_args(arguments: Array<String>) -> Int32 {
 		fatalError("Failed to read input")
 	}
 
-	let string = graph.find(source: source, target: target)!.tr(imported.map {UInt32($0)});
+	let tr = graph.find(source: source, target: target);
+	guard let tr else {
+		print("Could not find a homomorphism from \(source) to \(target)");
+		exit(1);
+	}
+	let string = tr.tr(imported.map {UInt32($0)});
 	guard let string else {
 		fatalError("No equivalent form in specified format")
 	}
 
-	// Convert to the expected
-	// Assume little-endian
+	// Convert multibyte character sets to little-endian
+	// Which is not network order, but typically expected by operatin systems
 	switch target {
-		case "UTF-8", "UTF-8-hex", "UTF-16-hex", "UTF-32-hex":
-			var data = Data();
-			data.reserveCapacity(string.count * MemoryLayout<UInt8>.size)
-			for value in string {
-				withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0.map{UInt8($0 & 0xFF)}) }
-			}
-			FileHandle.standardOutput.write(data);
-
 		case "UTF-16":
 			var data = Data();
 			data.reserveCapacity(string.count * MemoryLayout<UInt16>.size)
@@ -60,7 +57,13 @@ func translate_args(arguments: Array<String>) -> Int32 {
 			FileHandle.standardOutput.write(data);
 
 		default:
-			print();
+			// Most charsets are 8-bit
+			var data = Data();
+			data.reserveCapacity(string.count * MemoryLayout<UInt8>.size)
+			for value in string {
+				withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0.map{UInt8($0 & 0xFF)}) }
+			}
+			FileHandle.standardOutput.write(data);
 	}
 	return 0
 }
