@@ -13,6 +13,8 @@ public struct ComputedHomomorphism<Symbol: Hashable> {
 		.init(source: target, target: source, forward: inv, backward: tr)
 	}
 
+	public static var identity: Self { .init(source: "", target: "", forward: \.self, backward: \.self) }
+
 	// Private init so only the factory can create properly linked pairs
 	public init(
 		source: String,
@@ -79,17 +81,55 @@ public struct HomomorphismGraph<Symbol: Hashable> {
 	/// Compute a homomorphism that goes from ``source`` to ``target``, taking up to one intermediate step if necessary
 	/// (which is generally always going to be UTF-32)
 	public func find(source: String, target: String) -> ComputedHomomorphism<Symbol>? {
+		if source == target {
+			// FIXME: Figure out how to remove the source/target properties, since these are not applicable to identity transform
+			return ComputedHomomorphism<Symbol>.identity;
+		}
 		if let edge = edges[source]?[target] {
 			return edge;
 		}
-		let sourceIntermediate = Set(edges[source, default: [:]].keys);
-		let targetIntermediate = Set(edges[target, default: [:]].keys);
-		let shared = sourceIntermediate.intersection(targetIntermediate).sorted().first;
-		guard let shared else { return nil; }
-		return ComputedHomomorphism<Symbol>.compose([
-			edges[source]![shared]!,
-			edges[shared]![target]!,
-		]);
+		// Keep a dictionary of the shortest path from the source to the listed intermediate
+		var sourceIntermediate = edges[source, default: [:]].mapValues { [$0] };
+		// Keep a dictionary of the shortest path from the listed intermediate to the targer
+		var targetIntermediate = edges[target, default: [:]].mapValues { [$0.inverse] };
+		if let shared = Set(sourceIntermediate.keys).intersection(Set(targetIntermediate.keys)).sorted().first {
+			return ComputedHomomorphism<Symbol>.compose([ edges[source]![shared]!, edges[shared]![target]! ]);
+		}
+		// If no match, try expanding the search
+		while true {
+			var inserted = false;
+			// See if any of the intermediate nodes have paths not also in the sourceIntermediate list, and if so, add it
+			for (oldIntermediate, path) in sourceIntermediate {
+				for (newIntermediate, transition) in edges[oldIntermediate, default: [:]] {
+					if sourceIntermediate[newIntermediate] == nil {
+						sourceIntermediate[newIntermediate] = path + [transition];
+						inserted = true;
+					}
+				}
+			}
+
+			if let shared = Set(sourceIntermediate.keys).intersection(Set(targetIntermediate.keys)).sorted().first {
+				return ComputedHomomorphism<Symbol>.compose(sourceIntermediate[shared]! + targetIntermediate[shared]!);
+			}
+
+			// Also work backwards from the target
+			for (oldIntermediate, path) in targetIntermediate {
+				for (newIntermediate, transition) in edges[oldIntermediate, default: [:]] {
+					if targetIntermediate[newIntermediate] == nil {
+						targetIntermediate[newIntermediate] = [transition.inverse] + path;
+						inserted = true;
+					}
+				}
+			}
+
+			if let shared = Set(sourceIntermediate.keys).intersection(Set(targetIntermediate.keys)).sorted().first {
+				return ComputedHomomorphism<Symbol>.compose(sourceIntermediate[shared]! + targetIntermediate[shared]!);
+			}
+
+			if inserted { continue; }
+			else { break; }
+		}
+		return nil;
 	}
 }
 
@@ -179,6 +219,40 @@ extension HomomorphismGraph where Symbol: BinaryInteger {
 					res.append(b0);
 					i += 1;
 				}
+			}
+			return res;
+		}),
+		.init(source: "UTF-16", target: "UTF-16BE", forward: { string in
+			return string.flatMap { i in
+				return [i >> 8, i & 0xFF];
+			}
+		}, backward: { string in
+			guard string.count % 2 == 0 else { return nil; }
+			var res: Array<Symbol> = [];
+			res.reserveCapacity(string.count / 2);
+			var i = 0;
+			while i < string.count {
+				let b0 = string[i];
+				let b1 = string[i + 1];
+				res.append((b0 << 8) | b1);
+				i += 2;
+			}
+			return res;
+		}),
+		.init(source: "UTF-16", target: "UTF-16LE", forward: { string in
+			return string.flatMap { i in
+				return [i & 0xFF, i >> 8];
+			}
+		}, backward: { string in
+			var res: Array<Symbol> = [];
+			guard string.count % 2 == 0 else { return nil; }
+			res.reserveCapacity(string.count / 2);
+			var i = 0;
+			while i < string.count {
+				let b0 = string[i + 1];
+				let b1 = string[i];
+				res.append((b0 << 8) | b1);
+				i += 2;
 			}
 			return res;
 		}),

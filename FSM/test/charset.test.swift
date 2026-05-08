@@ -146,5 +146,39 @@ struct HomomorphismGraphBuiltinTests {
 			#expect(builtin.tr(builtin.inv(ours32)!)! == ours32);
 		}
 	}
+
+	@Test("UTF-16BE")
+	func test_UTF_16BE() async throws {
+		let builtin = try #require(HomomorphismGraph<UInt32>.builtin.find(source: "UTF-32", target: "UTF-16BE"));
+		//for i in [0x0000...0xD7FF, 0xE000...0x10FFFF].lazy.joined() {
+		for i in HomomorphismGraphBuiltinTests.cornerCodepoints {
+			// create a string from codepoint i
+			let string = String(UnicodeScalar(i)!);
+			let reference = Array<UInt8>(string.data(using: .utf16BigEndian)!);
+
+			let ours32 = builtin.tr([UInt32(i)])!;
+			let ours8 = ours32.map { UInt8($0); };
+			// Build a string from the array
+			#expect(ours8 == reference)
+			#expect(builtin.tr(builtin.inv(ours32)!)! == ours32);
+		}
+	}
+
+	@Test("UTF-16LE")
+	func test_UTF_16LE() async throws {
+		let builtin = try #require(HomomorphismGraph<UInt32>.builtin.find(source: "UTF-32", target: "UTF-16LE"));
+		//for i in [0x0000...0xD7FF, 0xE000...0x10FFFF].lazy.joined() {
+		for i in HomomorphismGraphBuiltinTests.cornerCodepoints {
+			// create a string from codepoint i
+			let string = String(UnicodeScalar(i)!);
+			let reference = Array<UInt8>(string.data(using: .utf16LittleEndian)!);
+
+			let ours32 = builtin.tr([UInt32(i)])!;
+			let ours8 = ours32.map { UInt8($0); };
+			// Build a string from the array
+			#expect(ours8 == reference)
+			#expect(builtin.tr(builtin.inv(ours32)!)! == ours32);
+		}
+	}
 }
 

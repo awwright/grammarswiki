@@ -60,9 +60,7 @@ func translate_args(arguments: Array<String>) -> Int32 {
 			// Most charsets are 8-bit
 			var data = Data();
 			data.reserveCapacity(string.count * MemoryLayout<UInt8>.size)
-			for value in string {
-				withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0.map{UInt8($0 & 0xFF)}) }
-			}
+			data.append(contentsOf: string.map{UInt8($0 & 0xFF)})
 			FileHandle.standardOutput.write(data);
 	}
 	return 0
