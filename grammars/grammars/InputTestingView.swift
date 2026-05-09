@@ -37,6 +37,12 @@ struct InputTestingView: View {
 			} else if let fsm_test_error {
 				Text(fsm_test_error).foregroundColor(.red)
 			}
+
+			if let cfg_test_tree, let start = cfg_test_tree.start.first {
+				ScrollView([.horizontal, .vertical]) {
+					ParseTreeResult(result: cfg_test_tree, rule: start, charset: charset)
+				}
+			}
 		}
 		.onAppear { updatedInput() }
 		.onChange(of: selectedRule) { updatedInput() }
@@ -50,6 +56,7 @@ struct InputTestingView: View {
 		fsm_test_error = nil
 		fsm_test_next = nil
 		cfg_test_result = nil
+		cfg_test_tree = nil
 
 		guard let content_rulelist = content_rulelist,
 				let selectedRule = selectedRule,
@@ -71,9 +78,14 @@ struct InputTestingView: View {
 				} else {
 					fsm_test_error = "oblivion"
 				}
+			} else if let cfg = content_cfg {
+				// Also attempt a CFG parse to display the parse tree
+				cfg_test_result = cfg.contains(input);
+				cfg_test_tree = cfg.parseTree(input);
 			}
 		} else if let cfg = content_cfg {
-			cfg_test_result = cfg.contains(input)
+			cfg_test_result = cfg.contains(input);
+			cfg_test_tree = cfg.parseTree(input);
 		} else {
 			fsm_test_error = "Rule `\(selectedRule)` is recursive or missing rules"
 		}
@@ -147,5 +159,26 @@ struct OctetInputField: View {
 			testInput = str
 		}
 		isUpdating = false
+	}
+}
+
+struct ParseTreeResult: View {
+	let result: CFG<ClosedRangeAlphabet<UInt32>>.ParseTree;
+	let rule: CFG<ClosedRangeAlphabet<UInt32>>.ParseTreeKey;
+	let charset: Charset;
+	var body: some View {
+		let production: CFG<ClosedRangeAlphabet<UInt32>>.ParseTree.Production = result.dictionary[rule]![0];
+		Branch {
+			BranchLabel(rule.name)
+			ForEach(Array(production.body), id: \.self) {
+				switch $0 {
+					case .terminal(let t):
+						Text(describeCharacterSet(t, charset: charset));
+					case .nonterminal(let t):
+						// TODO: Make this condition configurable
+						if t.length > 0 { ParseTreeResult(result: result, rule: t, charset: charset); }
+				}
+			}
+		}
 	}
 }

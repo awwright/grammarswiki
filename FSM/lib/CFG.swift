@@ -172,7 +172,98 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		return chart;
 	}
 
-	// TODO: Implement a simple tree parser (returns a parse tree)
+	/// A representation of a parse tree for the current CFG.
+	public typealias ParseTree = CFGNamed<ParseTreeKey, Alphabet>;
+
+	///The production name in a ParseTree is the name of the production combined with substring slice information
+	public struct ParseTreeKey: Hashable {
+		public let name: Variable;
+		public let offset: Int;
+		public let length: Int;
+	}
+
+	/// Parse the given string as being in the grammar
+	///
+	/// This will return a new CFG, with at most one production per rule.
+	public func parseTree(_ string: Array<Alphabet.Symbol>) -> ParseTree {
+		let chart = parse(string);
+		let len = string.count;
+
+		// Construct the parse tree as a CFGNamed<TreeKey, Alphabet> with exactly one production per TreeKey
+		guard let rootItem = chart[len].first(where: { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 }) else {
+			return ParseTree(); // empty language if no parse
+		}
+
+		var treeProductions: [ParseTree.Production] = [];
+		var seenKeys = Set<ParseTreeKey>();
+		// rootItem is going to be one of the matches for a start symbol that spans the entire input
+		//
+		return ParseTree(start: build(item: rootItem, end: len), rules: treeProductions);
+
+		func build(item: ParseStateItem, end: Int) -> ParseTreeKey {
+			let key = ParseTreeKey(name: item.production.name, offset: item.offset, length: end - item.offset);
+			if seenKeys.contains(key) { return key; }
+			seenKeys.insert(key);
+
+			// Reconstruct body by walking the advances for this item
+			var body: [GrammarProductionBodyElement<SymbolClass, ParseTreeKey>] = [];
+			var pos = item.offset;
+			var prog = 0;
+			while prog < item.production.body.count {
+				let elem = item.production.body[prog];
+				switch elem {
+					case .terminal(let symClass):
+						// Must be a scanner advance of exactly one symbol
+						if pos < end {
+							let sym = string[pos];
+							// Verify it belongs to the class (as done in scanner)
+							let tempAlphabet = Alphabet(partitions: [symClass]);
+							if tempAlphabet.contains(sym) {
+								body.append(.terminal(symClass));
+								pos += 1;
+								prog += 1;
+							} else {
+								// fallback (should not happen on a valid parse)
+								break;
+							}
+						}
+					case .nonterminal(let childName):
+						// Find a completed child item that advanced this step
+						// Search chart for a completer that produced an item expecting this nonterminal at pos
+						var foundChild: ParseStateItem? = nil;
+						var childEnd = pos;
+						for j in (pos...end).reversed() {
+							for prev in chart[pos] {
+								if let exp = prev.expecting,
+									case .nonterminal(let nm) = exp,
+									nm == childName,
+									let completed = chart[j].first(where: { $0.production.name == childName && $0.isComplete && $0.offset == pos })
+								{
+									foundChild = completed;
+									childEnd = j;
+									break;
+								}
+							}
+							if foundChild != nil { break; }
+						}
+						if let child = foundChild {
+							let childKey = build(item: child, end: childEnd);
+							body.append(.nonterminal(childKey));
+							pos = childEnd;
+							prog += 1;
+						} else {
+							// fallback
+							break;
+						}
+				}
+			}
+
+			let treeProd = ParseTree.Production(name: key, production: body);
+			treeProductions.append(treeProd);
+			return key;
+		}
+	}
+
 	// TODO: Implement a simple forest parser (returns a parse forest)
 
 	/// Computes an upper bound on the possible cardinality of the language
