@@ -13,7 +13,9 @@ public struct ComputedHomomorphism<Symbol: Hashable> {
 		.init(source: target, target: source, forward: inv, backward: tr)
 	}
 
-	public static var identity: Self { .init(source: "", target: "", forward: \.self, backward: \.self) }
+	public static func identity(name: String) -> Self {
+		.init(source: name, target: name, forward: \.self, backward: \.self)
+	}
 
 	// Private init so only the factory can create properly linked pairs
 	public init(
@@ -82,8 +84,7 @@ public struct HomomorphismGraph<Symbol: Hashable> {
 	/// (which is generally always going to be UTF-32)
 	public func find(source: String, target: String) -> ComputedHomomorphism<Symbol>? {
 		if source == target {
-			// FIXME: Figure out how to remove the source/target properties, since these are not applicable to identity transform
-			return ComputedHomomorphism<Symbol>.identity;
+			return ComputedHomomorphism<Symbol>.identity(name: source);
 		}
 		if let edge = edges[source]?[target] {
 			return edge;
