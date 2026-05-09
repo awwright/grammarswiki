@@ -1209,6 +1209,23 @@ import Testing;
 		#expect(fsm0.symmetricDifference(fsm1).finals.isEmpty)
 	}
 
+	// Test converting from ABNF to a CFG
+	@Test("ABNF->CFG", arguments: [
+		("number = %x31-39 *DIGIT\r\n", ["1", "12", "123"], ["", "0", "01"]),
+		("parens = *parens / \"(\" *parens \")\"\r\n", ["", "()", "(())", "()()"], ["(", ")", ")("]),
+	])
+	func test_abnf_cfg(abnf_lf: String, positive_tests: Array<String>, negative_tests: Array<String>) throws {
+		let abnf = abnf_lf.replacing("\n", with: "\r\n").replacing("\r\r", with: "\r");
+		let abnfRules = try ABNFRulelist<UInt8>.parse(abnf.utf8) + ABNFRulelist<UInt8>.builtins;
+		let cfg: CFG<ClosedRangeAlphabet<UInt8>> = try abnfRules.toCFG();
+		for test in positive_tests {
+			#expect(cfg.contains(Array(test.utf8)));
+		}
+		for test in negative_tests {
+			#expect(!cfg.contains(Array(test.utf8)));
+		}
+	}
+
 	@Suite("union") struct ABNFTest_union {
 		@Test("rulename / rulename")
 		func test_union_rulename() async throws {

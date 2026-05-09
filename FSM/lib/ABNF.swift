@@ -476,6 +476,16 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 		ABNFRule(rulename: .init(label: "VCHAR") , definedAs: .equal, expression: ABNFNumVal(base: .hex, value: .range(0x21...0x7E)).asAlternation),
 		ABNFRule(rulename: .init(label: "WSP") , definedAs: .equal, expression: ABNFAlternation(matches: [ABNFNumVal(base: .hex, value: .sequence([0x20])).asConcatenation, ABNFNumVal(base: .hex, value: .sequence([0x09])).asConcatenation])),
 	] }
+
+	/// Concatenate two ABNF documents together
+	///
+	/// This is useful for providing builtin ABNF values, e.g.:
+	/// ```
+	/// try ABNFRulelist<UInt8>.parse(abnf) + ABNFRulelist<UInt8>.builtins
+	/// ```
+	public static func + (lhs: ABNFRulelist, rhs: ABNFRulelist) -> ABNFRulelist {
+		Self(rules: lhs.rules + rhs.rules)
+	}
 }
 
 /// Specifies if the rule was defined using `=` or as an additional alternation `=/`

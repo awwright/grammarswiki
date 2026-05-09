@@ -549,10 +549,10 @@ struct DocumentDetail: View {
 				let catalog = Catalog(root: bundlePath + "/catalog/")
 				let (_, rulelist_all_final, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: document.name, content: text)
 				await MainActor.run {
-					content_rulelist = rulelist_all_final
+					content_rulelist = rulelist_all_final + ABNFRulelist<UInt32>.builtins;
 					do {
-						if let selectedRule {
-							content_cfg = try rulelist_all_final.toCFG(rulename: selectedRule)
+						if let selectedRule, let content_rulelist {
+							content_cfg = try content_rulelist.toCFG(rulename: selectedRule)
 						} else {
 							content_cfg = CFG<ClosedRangeAlphabet<UInt32>>()
 						}
