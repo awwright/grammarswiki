@@ -55,7 +55,12 @@ struct CFGContentView: View {
 			.formStyle(.grouped)
 
 			VStack(alignment: .leading) {
-				Text("\u{2192} \(grammar.start)")
+				ForEach(grammar.start, id: \.self) { rulename in
+					Text("\u{2192} \(rulename)")
+				}
+				if grammar.start.isEmpty {
+					Text("\u{2192} \u{2205}")
+				}
 				Spacer()
 				let dictionary = grammar.dictionary
 				let ruleNames = grammar.ruleNames;

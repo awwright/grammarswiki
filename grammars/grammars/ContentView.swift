@@ -274,6 +274,7 @@ struct DocumentDetail: View {
 			} // VStack
 			.padding()
 			.inspector(isPresented: $inspector_isPresented) {
+				// MARK: Inspector sidebar
 				ScrollView {
 					if let filepath = document.filepath {
 						HStack {
@@ -334,6 +335,8 @@ struct DocumentDetail: View {
 							}
 						}
 						.pickerStyle(MenuPickerStyle())
+
+						// TODO: Add an option to translate and re-interpret symbols, e.g. hex or URL encode the input string
 					}.formStyle(.grouped)
 
 					// TODO: Add a sheet/dialog that actually transforms the language from one to another
