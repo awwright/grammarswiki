@@ -98,6 +98,9 @@ struct OctetInputField: View {
 	@State private var selectedInputType: String? = nil
 	@State private var hexInput: String = ""
 	@State private var isUpdating = false
+	@State private var isTargeted: Bool = false
+	@State private var isImporting = false
+	@State private var selectedFileURL: URL?
 
 	var body: some View {
 		let hexFont = Font.system(size: 14).monospaced()
@@ -107,9 +110,45 @@ struct OctetInputField: View {
 					.font(hexFont)
 					.textFieldStyle(RoundedBorderTextFieldStyle())
 			}
-			Tab("Document", systemImage: "pencil") {
+			Tab("Multiline", systemImage: "pencil") {
 				TextEditor(text: $testInput)
 					.font(hexFont)
+			}
+			Tab("File", systemImage: "pencil") {
+				ZStack {
+					RoundedRectangle(cornerRadius: 12)
+						.stroke(isTargeted ? Color.blue : Color.gray, style: .init(lineWidth: 2, dash: [4, 4]))
+						.background(isTargeted ? Color.blue.opacity(0.1) : Color.clear)
+					VStack {
+						Text(selectedFileURL?.absoluteString ?? "Select file")
+						Button("Open File...") { isImporting = true }
+					}
+				}
+				.frame(width: 300, height: 100)
+				// Makes the frame a drop area
+				.dropDestination(for: URL.self) { urls, location in
+					// Handle the dropped files (URLs)
+					selectedFileURL = urls.first
+					updateFromFile(url: urls.first!);
+					return (selectedFileURL != nil);
+				} isTargeted: { targeted in
+					// Optional: update UI state when a file is hovered over the area
+					isTargeted = targeted
+				}
+				// Presents the file picker dialog
+				.fileImporter(
+					isPresented: $isImporting,
+					allowedContentTypes: [.text, .data], // Use .pdf, .plainText, etc. for specific types
+					allowsMultipleSelection: false
+				) { result in
+					switch result {
+					case .success(let urls):
+						selectedFileURL = urls.first
+						updateFromFile(url: selectedFileURL!);
+					case .failure(let error):
+						print("Error selecting file: \(error.localizedDescription)")
+					}
+				}
 			}
 			Tab("Binary", systemImage: "pencil") {
 				HStack {
@@ -160,6 +199,10 @@ struct OctetInputField: View {
 			testInput = str
 		}
 		isUpdating = false
+	}
+
+	private func updateFromFile(url: URL) {
+		testInput = (try? String(contentsOf: url, encoding: .utf8)) ?? "";
 	}
 }
 
