@@ -17,6 +17,7 @@ struct InputTestingView: View {
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
 	@State private var fsm_test_error: String? = nil
 	@State private var cfg_test_result: Bool? = nil
+	@State private var cfg_test_tree: CFG<ClosedRangeAlphabet<UInt32>>.ParseTree? = nil
 
 	var body: some View {
 		Group {
