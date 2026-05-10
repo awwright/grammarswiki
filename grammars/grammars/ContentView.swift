@@ -302,12 +302,14 @@ struct DocumentDetail: View {
 							if let content_rulelist {
 								let (first, orphanGroup, subGroup) = computeGroupedRules(for: content_rulelist)
 								if let first {
-									Text(first).tag(String?.some(first))
+									Section("First rule") {
+										Text(first).tag(String?.some(first))
+									}
 								} else {
 									Text("No rules defined").disabled(true)
 								}
 								if !orphanGroup.isEmpty {
-									Section("Orphan Rules") {
+									Section("Orphan rules") {
 										ForEach(orphanGroup, id: \.self) { rule in
 											Text(rule).tag(String?.some(rule))
 										}
@@ -657,22 +659,12 @@ struct DocumentDetail: View {
 	private func computeGroupedRules(for rulelist: ABNFRulelist<UInt32>) -> (first: String?, orphanGroup: [String], subGroup: [String]) {
 		let orderedRules = rulelist.ruleNames
 		guard !orderedRules.isEmpty else { return (nil, [], []) }
-
 		let allReferenced = rulelist.referencedRules
 		let orphans = orderedRules.filter { !allReferenced.contains($0) }
-
 		let first = orderedRules[0]
-		var orphanGroup: [String] = []
-
-		for orphan in orphans {
-			if orphan != first {
-				orphanGroup.append(orphan)
-			}
-		}
-
-		let subGroup = orderedRules.filter { !orphanGroup.contains($0) }
-
-		return (first, orphanGroup, subGroup)
+		let orphanGroup = orphans.filter { $0 != first }
+		let subGroup = orderedRules.filter { !orphanGroup.contains($0) && $0 != first }
+		return (first, orphanGroup, subGroup);
 	}
 }
 
