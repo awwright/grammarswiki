@@ -477,6 +477,15 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 		ABNFRule(rulename: .init(label: "WSP") , definedAs: .equal, expression: ABNFAlternation(matches: [ABNFNumVal(base: .hex, value: .sequence([0x20])).asConcatenation, ABNFNumVal(base: .hex, value: .sequence([0x09])).asConcatenation])),
 	] }
 
+	/// Search for referenced but undefined rules and append any matching builtin rules
+	public func addingBuiltins() -> Self {
+		let builtinRules = Self.builtins;
+		let referencedRules = self.referencedRules;
+		let definedRules = self.ruleNames;
+		// Append just those builtin rules referenced by the current rule list
+		return .init(rules: self.rules + builtinRules.rules.filter { referencedRules.contains($0.rulename.id) && !definedRules.contains($0.rulename.id) })
+	}
+
 	/// Concatenate two ABNF documents together
 	///
 	/// This is useful for providing builtin ABNF values, e.g.:
