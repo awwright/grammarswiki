@@ -2,7 +2,7 @@ import SwiftUI;
 import FSM;
 
 struct CFGContentView: View {
-	public var grammar: CFG<ClosedRangeAlphabet<UInt32>>;
+	public var grammar: ABNFRulelist<UInt32>.CFG;
 	public var charset: Charset;
 
 	@State private var selectedDialect: String = "bnf"
@@ -64,7 +64,7 @@ struct CFGContentView: View {
 				Spacer()
 				let dictionary = grammar.dictionary
 				let ruleNames = grammar.ruleNames;
-				ForEach(ruleNames, id: \.self) { (ruleName: String) in
+				ForEach(ruleNames, id: \.self) { (ruleName: ABNFRulelist<UInt32>.CFG.Variable) in
 					let rules = dictionary[ruleName] ?? []
 					Text("\(ruleName)").font(.headline);
 					if rules.isEmpty {
@@ -73,10 +73,10 @@ struct CFGContentView: View {
 					ForEach(rules, id: \.self) { rule in
 						HStack {
 							Text("\t\u{2192} ")
-							ForEach(rule.body, id: \.self) { (token: CFG<ClosedRangeAlphabet<UInt32>>.BodyElement) in
+							ForEach(rule.body, id: \.self) { (token: ABNFRulelist<UInt32>.CFG.BodyElement) in
 								switch token {
 								case .terminal(let sym): Text(describeCharacterSet(sym, charset: charset)).monospaced()
-								case .nonterminal(let name): Text(name)
+								case .nonterminal(let name): Text(name.description)
 								default: Text(String(describing: token))
 								}
 							}

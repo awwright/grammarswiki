@@ -18,6 +18,7 @@ public protocol GrammarProtocol {
 
 	init()
 	init(start: Variable, rules: [Production])
+	init(startSet: [Variable], rules: [Production])
 }
 
 /// Production for unrestricted grammars

@@ -1217,7 +1217,7 @@ import Testing;
 	func test_abnf_cfg(abnf_lf: String, positive_tests: Array<String>, negative_tests: Array<String>) throws {
 		let abnf = abnf_lf.replacing("\n", with: "\r\n").replacing("\r\r", with: "\r");
 		let abnfRules = try ABNFRulelist<UInt8>.parse(abnf.utf8) + ABNFRulelist<UInt8>.builtins;
-		let cfg: CFG<ClosedRangeAlphabet<UInt8>> = try abnfRules.toCFG();
+		let cfg: ABNFRulelist<UInt8>.CFG = try abnfRules.toCFG();
 		for test in positive_tests {
 			#expect(cfg.contains(Array(test.utf8)));
 		}

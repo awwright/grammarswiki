@@ -1,5 +1,11 @@
 /// A struct that represents a Context-Free Grammar
-public protocol CFGProtocol: GrammarProtocol {
+public protocol CFGProtocol: GrammarProtocol where Production: CFGProductionProtocol {
+}
+
+/// A CFG production must have exactly one variable on the left-hand side
+public protocol CFGProductionProtocol: GrammarProductionProtocol {
+	var name: Variable {get};
+	var body: Array<BodyElement> {get};
 }
 
 public typealias CFG<Alphabet: AlphabetProtocol> = CFGNamed<String, Alphabet>;
@@ -12,7 +18,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	public typealias Variable = Variable;
 	public typealias BodyElement = GrammarProductionBodyElement<SymbolClass, Variable>;
 	/// A rule in the Context-Free Grammar. Multiple rules with the same name
-	public struct Production: GrammarProductionProtocol, Hashable {
+	public struct Production: CFGProductionProtocol, Hashable {
 		// TODO: name can be anything as long as it's Equatable and Hashable (usable as a Dictionary key)
 		// This would be useful for using Int or tuples as production names, for example, representing parse forests.
 		public let name: Variable;

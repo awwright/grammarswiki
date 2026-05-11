@@ -10,14 +10,14 @@ struct InputTestingView: View {
 	@Binding var selectedRule: String?
 	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
 	@Binding var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>?
-	@Binding var content_cfg: CFG<ClosedRangeAlphabet<UInt32>>?
+	@Binding var content_cfg: ABNFRulelist<UInt32>.CFG?
 	let charset: Charset
 	@State private var testInput: String = ""
 	@State private var fsm_test_result: Bool? = nil
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
 	@State private var fsm_test_error: String? = nil
 	@State private var cfg_test_result: Bool? = nil
-	@State private var cfg_test_tree: CFG<ClosedRangeAlphabet<UInt32>>.ParseTree? = nil
+	@State private var cfg_test_tree: ABNFRulelist<UInt32>.CFG.ParseTree? = nil
 
 	var body: some View {
 		Group {
@@ -207,21 +207,45 @@ struct OctetInputField: View {
 }
 
 struct ParseTreeResult: View {
-	let result: CFG<ClosedRangeAlphabet<UInt32>>.ParseTree;
-	let rule: CFG<ClosedRangeAlphabet<UInt32>>.ParseTreeKey;
+	let result: ABNFRulelist<UInt32>.CFG.ParseTree;
+	let rule: ABNFRulelist<UInt32>.CFG.ParseTreeKey;
 	let charset: Charset;
 	var body: some View {
-		let production: CFG<ClosedRangeAlphabet<UInt32>>.ParseTree.Production = result.dictionary[rule]![0];
+		let production: ABNFRulelist<UInt32>.CFG.ParseTree.Production = result.dictionary[rule]![0];
 		Branch {
-			BranchLabel(rule.name)
+			BranchLabel(rule.name[0].description)
 			ForEach(Array(production.body), id: \.self) {
 				switch $0 {
 					case .terminal(let t):
 						Text(describeCharacterSet(t, charset: charset));
 					case .nonterminal(let t):
 						// TODO: Make this condition configurable
-						if t.length > 0 { ParseTreeResult(result: result, rule: t, charset: charset); }
+						if t.length > 0 {
+							if t.name.count == 1 { ParseTreeResult(result: result, rule: t, charset: charset); }
+							else { ParseTreeFlatten(result: result, rule: t, charset: charset); }
+						}
 				}
+			}
+		}
+	}
+}
+
+struct ParseTreeFlatten: View {
+	let result: ABNFRulelist<UInt32>.CFG.ParseTree;
+	let rule: ABNFRulelist<UInt32>.CFG.ParseTreeKey;
+	let charset: Charset;
+	var body: some View {
+		let production: ABNFRulelist<UInt32>.CFG.ParseTree.Production = result.dictionary[rule]![0];
+		ForEach(Array(production.body), id: \.self) {
+			switch $0 {
+				case .terminal(let t):
+					Text(describeCharacterSet(t, charset: charset));
+				case .nonterminal(let t):
+					// TODO: Make this condition configurable
+					if t.length > 0 {
+						if t.name.count == 1 { ParseTreeResult(result: result, rule: t, charset: charset); }
+						else { ParseTreeFlatten(result: result, rule: t, charset: charset); }
+					}
 			}
 		}
 	}

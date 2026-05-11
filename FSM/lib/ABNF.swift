@@ -353,21 +353,43 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 		return resolvedRules;
 	}
 
+	public typealias CFG = CFGNamed<Array<CFGRuleName>, Alphabet>;
+
+	public enum CFGRuleName: Hashable, Comparable, CustomStringConvertible {
+		case rule(String);
+		case alternate(Int);
+		case concat(Int);
+		case repetition(Int);
+		case star;
+		case optional;
+
+		public var description: String {
+			switch self {
+				case .rule(let str): return "\(str)"
+				case .alternate(let i): return ".alternate\(i)"
+				case .concat(let i): return ".concat\(i)"
+				case .repetition(let i): return ".repetition\(i)"
+				case .star: return ".star"
+				case .optional: return ".opt"
+			}
+		}
+	}
+
 	/// Convert the first ABNF rule to a CFG
-	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Alphabet.Symbol == Symbol, CFGType.Variable == String, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
+	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Variable == Array<CFGRuleName>, CFGType.Alphabet.Symbol == Symbol, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
 		try toCFG(as: CFGType.self, rulename: rules.first?.rulename.id ?? "")
 	}
 
 	/// Convert the named ABNF rule to a CFG
-	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil, rulename: String) throws -> CFGType where CFGType.Alphabet.Symbol == Symbol, CFGType.Variable == String, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
-		func addRules(for alternation: ABNFAlternation<Symbol>, withName ruleName: String, to cfgRules: inout [CFGType.Production]) throws {
+	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil, rulename: String) throws -> CFGType where CFGType.Variable == Array<CFGRuleName>, CFGType.Alphabet.Symbol == Symbol, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
+		func addRules(for alternation: ABNFAlternation<Symbol>, withName ruleName: Array<CFGRuleName>, to cfgRules: inout [CFGType.Production]) throws {
 			for concat in alternation.matches {
 				var prod: Array<CFGType.Production.BodyElement> = []
 				for rep in concat.repetitions {
 					if rep.min == 1 && rep.max == 1 {
 						switch rep.repeating {
 						case .rulename(let rn):
-								prod.append(CFGType.BodyElement.nonterminal(rn.id))
+								prod.append(CFGType.BodyElement.nonterminal([.rule(rn.id)]))
 						case .charVal(let cv):
 							for sym in cv.sequence {
 								prod.append(CFGType.BodyElement.terminal(CFGType.Alphabet.symbol(sym)))
@@ -380,17 +402,17 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 										prod.append(CFGType.BodyElement.terminal(symbol))
 									}
 								case .range(let range):
-									let newName = ruleName + "_range\(cfgRules.count)";
+									let newName = ruleName + [.alternate(cfgRules.count)];
 									let range = CFGType.Alphabet.symbolClass(range: range);
 									cfgRules.append(CFGType.Production(name: newName, production: [CFGType.BodyElement.terminal(range)]))
 									prod.append(CFGType.Production.BodyElement.nonterminal(newName))
 							}
 						case .group(let g):
-							let newName = ruleName + "_group\(cfgRules.count)"
+							let newName = ruleName + [.alternate(0)];
 							try addRules(for: g.alternation, withName: newName, to: &cfgRules)
 							prod.append(.nonterminal(newName))
 						case .option(let o):
-							let newName = ruleName + "_opt\(cfgRules.count)"
+							let newName = ruleName + [.optional];
 							try addRules(for: o.optionalAlternation, withName: newName, to: &cfgRules)
 							cfgRules.append(CFGType.Production(name: newName, production: []))
 							prod.append(.nonterminal(newName))
@@ -398,22 +420,22 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 							throw ABNFExportError(message: "ProseVal not supported in CFG")
 						}
 					} else if rep.min == 0 && rep.max == 1 {
-						let newName = ruleName + "_opt\(cfgRules.count)"
+						let newName = ruleName + [.optional];
 						try addRules(for: rep.repeating.asAlternation, withName: newName, to: &cfgRules)
 						cfgRules.append(CFGType.Production(name: newName, production: []))
 						prod.append(.nonterminal(newName))
 					} else {
-						let elementName = ruleName + "_elem\(cfgRules.count)"
+						let elementName = ruleName + [.alternate(cfgRules.count)];
 						try addRules(for: rep.repeating.asAlternation, withName: elementName, to: &cfgRules)
 						let elementSymbol = CFGType.BodyElement.nonterminal(elementName)
-						let repName = ruleName + "_rep\(cfgRules.count)"
+						let repName = ruleName + [.repetition(cfgRules.count)];
 						if let max = rep.max {
 							for i in Int(rep.min)...Int(max) {
 								let prod = Array(repeating: elementSymbol, count: i)
 								cfgRules.append(CFGType.Production(name: repName, production: prod))
 							}
 						} else {
-							let starName = ruleName + "_star\(cfgRules.count)"
+							let starName = ruleName + [.star];
 							cfgRules.append(CFGType.Production(name: starName, production: [])) // epsilon
 							cfgRules.append(CFGType.Production(name: starName, production: [elementSymbol, .nonterminal(starName)])) // element star
 							var prod = Array(repeating: elementSymbol, count: Int(rep.min))
@@ -429,9 +451,9 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 		var cfgRules: [CFGType.Production] = []
 		for rule in self.rules {
 			let name = rule.rulename.id
-			try addRules(for: rule.alternation, withName: name, to: &cfgRules)
+			try addRules(for: rule.alternation, withName: [.rule(name)], to: &cfgRules)
 		}
-		return CFGType(start: rulename, rules: cfgRules)
+		return CFGType(start: [.rule(rulename)], rules: cfgRules)
 	}
 
 	/// Parses an input string into a rulelist.

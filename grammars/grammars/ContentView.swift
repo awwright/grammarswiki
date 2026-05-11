@@ -150,7 +150,7 @@ struct DocumentDetail: View {
 	@State private var content_rulelist: ABNFRulelist<UInt32>? = nil
 	@State private var content_rulelist_error: String? = nil
 
-	@State private var content_cfg: CFG<ClosedRangeAlphabet<UInt32>>? = nil;
+	@State private var content_cfg: ABNFRulelist<UInt32>.CFG? = nil;
 	@State private var content_rr: RailroadNode? = nil
 
 	@State private var content_cfg_complexityClass: Int? = nil
@@ -556,7 +556,7 @@ struct DocumentDetail: View {
 						if let selectedRule, let content_rulelist {
 							content_cfg = try content_rulelist.toCFG(rulename: selectedRule)
 						} else {
-							content_cfg = CFG<ClosedRangeAlphabet<UInt32>>()
+							content_cfg = .init()
 						}
 					} catch {
 						print(error);

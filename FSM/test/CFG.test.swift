@@ -105,7 +105,7 @@ import Testing
 
 		@Test("single space")
 		func test_sp() async throws {
-			let cfg: CFG<ClosedRangeAlphabet<UInt8>> = try! ABNFRulelist.builtins.toCFG(rulename: "sp")
+			let cfg: ABNFRulelist<UInt8>.CFG = try! ABNFRulelist.builtins.toCFG(rulename: "sp")
 			#expect(!cfg.contains([]))
 			#expect(!cfg.contains([0]))
 			#expect(cfg.contains([0x20]))
@@ -113,7 +113,7 @@ import Testing
 
 		@Test("LWSP")
 		func test_lwsp() async throws {
-			let cfg: CFG<ClosedRangeAlphabet<UInt8>> = try! ABNFRulelist.builtins.toCFG(rulename: "lwsp")
+			let cfg: ABNFRulelist<UInt8>.CFG = try! ABNFRulelist.builtins.toCFG(rulename: "lwsp")
 			// TODO: Only up to one character of recognition is implemented
 			#expect(cfg.contains([]));
 			#expect(!cfg.contains([0]));
