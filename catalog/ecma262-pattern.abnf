@@ -25,9 +25,8 @@ Atom =
 
 SyntaxCharacter = "^" / "$" / "\" / "." / "*" / "+" / "?" / "(" / ")" / "[" / "]" / "{" / "}" / "|"
 
-PatternCharacter = %x0000-0024 / %x0026-002B / %x002D-002E / %x0030-0039 / %x003B-004F /
-                   %x0051-005A / %x005C / %x005E-007A / %x007C / %x007E-10FFFF
-; Any Unicode code point except ^ $ \ . * + ? ( ) [ ] { } |
+; Any Unicode code point except SyntaxCharacter
+PatternCharacter = %x0000-0023 / %x0024-0027 / %x002C-002D / %x002F-003E / %x0040-005A / %x005F-007A / %x007E-10FFFF
 
 AtomEscape = DecimalEscape / CharacterClassEscape / CharacterEscape
 
