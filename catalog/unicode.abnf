@@ -1,0 +1,24 @@
+; A list of Unicode character classes, imported from the Unicode CLDR
+
+; Definitions from RFC 9839 <https://www.rfc-editor.org/rfc/rfc9839.html>
+
+xml-character =
+   %x9 / %xA / %xD /   ; useful controls
+   %x20-D7FF /         ; exclude surrogates
+   %xE000-FFFD /       ; exclude FFFE and FFFF nonchars
+   %x10000-10FFFF
+
+unicode-assignable =
+   %x9 / %xA / %xD /               ; useful controls
+   %x20-7E /                       ; exclude C1 controls and DEL
+   %xA0-D7FF /                     ; exclude surrogates
+   %xE000-FDCF /                   ; exclude FDD0 nonchars
+   %xFDF0-FFFD /                   ; exclude FFFE and FFFF nonchars
+   %x10000-1FFFD / %x20000-2FFFD / ; (repeat per plane)
+   %x30000-3FFFD / %x40000-4FFFD /
+   %x50000-5FFFD / %x60000-6FFFD /
+   %x70000-7FFFD / %x80000-8FFFD /
+   %x90000-9FFFD / %xA0000-AFFFD /
+   %xB0000-BFFFD / %xC0000-CFFFD /
+   %xD0000-DFFFD / %xE0000-EFFFD /
+   %xF0000-FFFFD / %x100000-10FFFD

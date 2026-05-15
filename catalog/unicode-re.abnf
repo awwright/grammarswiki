@@ -1,0 +1,55 @@
+; A hand-written translation of Unicode Regular Expressions from <https://www.unicode.org/reports/tr18/>
+; Used by several Unicode specification documents
+
+CHARACTER-CLASS	= "[" [COMPLEMENT] SEQUENCE "]"
+
+SEQUENCE = 1*ITEM
+
+ITEM	= LITERAL ["-" LITERAL]
+     / CHARACTER-CLASS
+
+LITERAL = ESCAPE (SYNTAX-CHAR / SPECIAL-CHAR)
+        / NON-SYNTAX-CHAR
+
+COMPLEMENT = "^"
+
+ESCAPE = "\"
+
+SYNTAX-CHAR = "-" / "[" / "]" / "{" / "}" / "\" / "^" / "|"
+
+SPECIAL-CHAR = "a" / "b" / "c" / "e" / "f" / "n" / "r" / "t" / "u"
+
+SP = 1*" "
+
+LITERAL	=/ HEX
+
+HEX	= "\u" 4HEXDIG
+    / "\u{" CODEPOINT *(SP CODEPOINT) "}"
+
+CODEPOINT	= 1*5HEXDIG
+          / "10" 4HEXDIG
+
+; the "p" is case-insensitive
+CHARACTER-CLASS	=/ "\p{" PROP-SPEC "}"
+                / "[:" [COMPLEMENT] PROP-SPEC ":]"
+
+PROP-SPEC	= PROP-NAME [RELATION  PROP-VALUE]
+
+PROP-NAME	= 1*ID-CHAR
+
+ID-CHAR	= ALPHA / DIGIT / SP / "-" / "_"
+
+; U+2260 NOT EQUAL TO
+RELATION	= "=" / %x2260 / "!="
+
+PROP-VALUE	= *LITERAL
+
+SEQUENCE	= ITEM *SEQ-EXTEND
+
+ITEM	=/ %s"\q{" *LITERAL *("|" *LITERAL) "}"
+
+LITERAL	= %s"\N{" 1*ID-CHAR "}"
+
+ITEM	= "[" FULL-COMPLEMENT CHARACTER-CLASS "]"
+
+FULL-COMPLEMENT	= "!!"
