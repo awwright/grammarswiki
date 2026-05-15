@@ -151,6 +151,7 @@ struct DocumentDetail: View {
 	@State private var content_rulelist_error: String? = nil
 
 	@State private var content_cfg: ABNFRulelist<UInt32>.CFG? = nil;
+	@State private var content_cfg_err: String? = nil;
 	@State private var content_rr: RailroadNode? = nil
 
 	@State private var content_cfg_complexityClass: Int? = nil
@@ -214,6 +215,10 @@ struct DocumentDetail: View {
 					Tab("Translate", systemImage: "translate") {
 						if let content_cfg {
 							CFGContentView(grammar: content_cfg, charset: AppModel.charsetDict[selectedCharsetId]!);
+						} else if let content_cfg_err {
+							Text(content_cfg_err)
+						} else {
+							Text("CFG is generating...")
 						}
 					}
 
@@ -536,6 +541,7 @@ struct DocumentDetail: View {
 		content_rulelist = nil
 		content_rulelist_error = nil
 		content_cfg = nil
+		content_cfg_err = nil;
 		// invalidate updatedRule
 		rule_alphabet = nil
 		rule_fsm = nil
@@ -559,7 +565,11 @@ struct DocumentDetail: View {
 							content_cfg = .init()
 						}
 					} catch {
-						print(error);
+						if let err = error as? ABNFExportError {
+							content_cfg_err = err.message;
+						} else {
+							content_cfg_err = error.localizedDescription;
+						}
 						content_cfg = nil
 					}
 					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })

@@ -65,8 +65,8 @@ public struct ABNFParseError<T>: Error where T: Comparable {
 }
 
 public struct ABNFExportError: Error {
-	let message: String;
-	var localizedDescription: String {
+	public let message: String;
+	public var localizedDescription: String {
 		message
 	}
 }
@@ -416,8 +416,8 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 							try addRules(for: o.optionalAlternation, withName: newName, to: &cfgRules)
 							cfgRules.append(CFGType.Production(name: newName, production: []))
 							prod.append(.nonterminal(newName))
-						case .proseVal:
-							throw ABNFExportError(message: "ProseVal not supported in CFG")
+						case .proseVal(let v):
+							throw ABNFExportError(message: "ProseVal not supported in CFG: <\(v.remark)>")
 						}
 					} else if rep.min == 0 && rep.max == 1 {
 						let newName = ruleName + [.optional];
