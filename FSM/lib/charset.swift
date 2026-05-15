@@ -257,6 +257,44 @@ extension HomomorphismGraph where Symbol: BinaryInteger {
 			}
 			return res;
 		}),
+		.init(source: "UTF-32", target: "UTF-32BE", forward: { string in
+			return string.flatMap { i in
+				return [(i >> 24) & 0xFF, (i >> 16) & 0xFF, (i >> 8) & 0xFF, i & 0xFF];
+			}
+		}, backward: { string in
+			var res: Array<Symbol> = [];
+			guard string.count % 4 == 0 else { return nil; }
+			res.reserveCapacity(string.count / 2);
+			var i = 0;
+			while i < string.count {
+				let b0 = string[i];
+				let b1 = string[i + 1];
+				let b2 = string[i + 2];
+				let b3 = string[i + 3];
+				res.append((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
+				i += 4;
+			}
+			return res;
+		}),
+		.init(source: "UTF-32", target: "UTF-32LE", forward: { string in
+			return string.flatMap { i in
+				return [i & 0xFF, (i >> 8) & 0xFF, (i >> 16) & 0xFF, (i >> 24) & 0xFF];
+			}
+		}, backward: { string in
+			var res: Array<Symbol> = [];
+			guard string.count % 4 == 0 else { return nil; }
+			res.reserveCapacity(string.count / 2);
+			var i = 0;
+			while i < string.count {
+				let b0 = string[i + 3];
+				let b1 = string[i + 2];
+				let b2 = string[i + 1];
+				let b3 = string[i];
+				res.append((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
+				i += 4;
+			}
+			return res;
+		}),
 	]); }
 }
 

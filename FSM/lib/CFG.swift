@@ -121,6 +121,8 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 
 	/// Recognise (accept or reject) the given string as being in the grammar
 	private func parse(_ string: Array<Alphabet.Symbol>) -> Array<Set<ParseStateItem>> {
+		// TODO: Add a filter for which rule names will be saved and returned (and when non-matching attempts can be released).
+		// For example, only save the rules that match an actual ABNF production, or a regular expression capturing group, and not the intermediate matches.
 		let dict = self.dictionary;
 		let len = string.count;
 
