@@ -63,6 +63,10 @@ public struct PartitionedDFA<Component: Hashable>: AlphabetProtocol {
 		partitions.contains(where: { $0.contains(symbol) })
 	}
 
+	public static func contains(_ set: SymbolClass, _ symbol: Symbol) -> Bool {
+		set.contains(symbol)
+	}
+
 	public func siblings(of: Symbol) -> SymbolClass {
 		partitions.filter { $0.contains(of) }.first ?? []
 	}

@@ -38,6 +38,7 @@ public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatab
 //	static func range(_ lower: Symbol, _ upper: Symbol) -> Self
 	/// Determine if the partitioned set contains the given value as a component
 	func contains(_ component: Symbol) -> Bool
+	static func contains(_ set: SymbolClass, _ component: Symbol) -> Bool
 	/// Get the set of symbols from the partition of the given symbol
 	func siblings(of: Symbol) -> SymbolClass
 	/// Determine if the given two components exist in the same partition
@@ -133,6 +134,10 @@ public struct SymbolAlphabet<Symbol: Hashable>: FiniteAlphabetProtocol, Hashable
 		symbols.contains(symbol)
 	}
 
+	public static func contains(_ symbols: SymbolClass, _ symbol: Symbol) -> Bool{
+		symbols == symbol
+	}
+
 	public func siblings(of: Symbol) -> SymbolClass {
 		guard contains(of) else { fatalError() }
 		return of
@@ -221,6 +226,10 @@ public struct SetAlphabet<Symbol: Hashable & Comparable>: FiniteAlphabetProtocol
 
 	public func contains(_ symbol: Symbol) -> Bool{
 		partitions.contains(where: { $0.contains(symbol) })
+	}
+
+	public static func contains(_ set: SymbolClass, _ symbol: Symbol) -> Bool{
+		set.contains(symbol)
 	}
 
 	public func siblings(of: Symbol) -> Set<Symbol> {
@@ -626,6 +635,24 @@ public struct ClosedRangeAlphabet<Symbol: Comparable & Hashable>: FiniteAlphabet
 		while lower != upper {
 			let middle = (lower + upper) / 2
 			let node = self.symbols[middle]
+			if node.upperBound < member {
+				lower = middle + 1
+			} else if member < node.lowerBound {
+				upper = middle
+			} else if node.lowerBound <= member && member <= node.upperBound {
+				return true
+			}
+		}
+		return false
+	}
+
+	public static func contains(_ set: SymbolClass, _ member: Symbol) -> Bool{
+		// Binary search `symbols` for a matching symbol
+		var lower = set.startIndex
+		var upper = set.endIndex
+		while lower != upper {
+			let middle = (lower + upper) / 2
+			let node = set[middle]
 			if node.upperBound < member {
 				lower = middle + 1
 			} else if member < node.lowerBound {

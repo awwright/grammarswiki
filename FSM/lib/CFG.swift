@@ -120,47 +120,48 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	}
 
 	/// Recognise (accept or reject) the given string as being in the grammar
-	private func parse(_ string: Array<Alphabet.Symbol>) -> Array<Set<ParseStateItem>> {
+	private func parse(_ string: Array<Alphabet.Symbol>) -> Array<Array<ParseStateItem>> {
 		// TODO: Add a filter for which rule names will be saved and returned (and when non-matching attempts can be released).
 		// For example, only save the rules that match an actual ABNF production, or a regular expression capturing group, and not the intermediate matches.
 		let dict = self.dictionary;
 		let len = string.count;
 
 		// Chart: one set of items per input position (0..n)
-		var chart: [Set<ParseStateItem>] = Array(repeating: [], count: len + 1)
+		var chart: Array<Array<ParseStateItem>> = Array(repeating: [], count: len + 1);
+		var currentSet: Set<ParseStateItem> = [];
 
 		// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
 		for prod in (start.flatMap{ dict[$0] ?? [] }) {
-			chart[0].insert(ParseStateItem(production: prod, progress: 0, offset: 0))
+			var startRule = ParseStateItem(production: prod, progress: 0, offset: 0);
+			if currentSet.insert(startRule).inserted { chart[0].append(startRule); }
 		}
 
 		// Process each chart position
 		for i in 0...len {
-			var added = true;
-			while added {
-				added = false;
-				let items = chart[i];
-				for item in items {
-					if item.isComplete {
-						// Completer
-						let nt = item.production.name;
-						for prevItem in chart[item.offset] {
-							if let expecting = prevItem.expecting, case .nonterminal(let name) = expecting, name == nt {
-								let advanced = prevItem.next();
-								added = added || chart[i].insert(advanced).inserted;
-							}
+			var j = 0;
+			while j < chart[i].count {
+				let item = chart[i][j];
+				if item.isComplete {
+					// Completer
+					let nt = item.production.name;
+					for prevItem in chart[item.offset] {
+						if let expecting = prevItem.expecting, case .nonterminal(let name) = expecting, name == nt {
+							let advanced = prevItem.next();
+							if currentSet.insert(advanced).inserted { chart[i].append(advanced) }
 						}
-					} else if let expecting = item.expecting, case .nonterminal(let name) = expecting {
-						// Predictor
-						if let prods = dict[name] {
-							for prod in prods {
-								let predicted = ParseStateItem(production: prod, progress: 0, offset: i);
-								added = added || chart[i].insert(predicted).inserted;
-							}
+					}
+				} else if let expecting = item.expecting, case .nonterminal(let name) = expecting {
+					// Predictor
+					if let prods = dict[name] {
+						for prod in prods {
+							let predicted = ParseStateItem(production: prod, progress: 0, offset: i);
+							if currentSet.insert(predicted).inserted { chart[i].append(predicted) }
 						}
 					}
 				}
+				j += 1;
 			}
+			currentSet = [];
 
 			// Scanner: advance items expecting the current terminal (if i < n)
 			if i < len {
@@ -168,13 +169,13 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				for item in chart[i] {
 					if let expecting = item.expecting, case .terminal(let symClass) = expecting {
 						// TODO: Use a dedicated SymbolClass.contains function
-						let tempAlphabet = Alphabet(partitions: [symClass]);
-						if tempAlphabet.contains(currentSymbol) {
+						if Alphabet.contains(symClass, currentSymbol) {
 							let advanced = item.next();
-							chart[i + 1].insert(advanced);
+							if currentSet.insert(advanced).inserted { chart[i + 1].append(advanced); }
 						}
 					}
 				}
+				currentSet = [];
 			}
 		}
 		return chart;
@@ -225,8 +226,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 						if pos < end {
 							let sym = string[pos];
 							// Verify it belongs to the class (as done in scanner)
-							let tempAlphabet = Alphabet(partitions: [symClass]);
-							if tempAlphabet.contains(sym) {
+							if Alphabet.contains(symClass, sym) {
 								body.append(.terminal(symClass));
 								pos += 1;
 								prog += 1;
