@@ -167,6 +167,24 @@ import Testing
 			#expect(!cfg.contains([0x20, 0x0A, 0x09]));
 			#expect(cfg.contains([0x20, 0x0D, 0x0A, 0x09]));
 		}
+
+		@Test("star / repetition with epsilon")
+		func test_star_epsilon() async throws {
+			// Equivalent to a simple "a*" grammar as emitted by ABNFRulelist.toCFG
+			let cfg = CFG<SymbolAlphabet<UInt8>>(start: "S", rules: [
+				.init(name: "S", production: [.nonterminal("star")]),
+				.init(name: "star", production: []), // epsilon
+				.init(name: "star", production: [.nonterminal("A"), .nonterminal("star")]),
+				.init(name: "A", production: [.terminal(0x61)]), // "a"
+			])
+
+			#expect(cfg.contains([]))
+			#expect(cfg.contains([0x61]))
+			#expect(cfg.contains([0x61, 0x61]))
+			#expect(cfg.contains([0x61, 0x61, 0x61]))
+			#expect(!cfg.contains([0x62]))
+			#expect(!cfg.contains([0x61, 0x62]))
+		}
 	}
 
 	@Suite("chomskyClass") struct CFGTests_chomskyClass {

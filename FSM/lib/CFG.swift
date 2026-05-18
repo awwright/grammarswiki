@@ -114,71 +114,103 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 
 	/// Recognise (accept or reject) the given string as being in the grammar
 	public func contains(_ string: Array<Alphabet.Symbol>) -> Bool {
-		let chart = parse(string);
+		let (chart, _, _) = parse(string);
 		// Accept if any completed start item spans the entire input from origin 0
 		return chart.last!.contains { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 };
 	}
 
 	/// Recognise (accept or reject) the given string as being in the grammar
-	private func parse(_ string: Array<Alphabet.Symbol>) -> Array<Array<ParseStateItem>> {
-		// TODO: Add a filter for which rule names will be saved and returned (and when non-matching attempts can be released).
-		// For example, only save the rules that match an actual ABNF production, or a regular expression capturing group, and not the intermediate matches.
+	private func parse(_ string: Array<Alphabet.Symbol>) -> (Array<Array<ParseStateItem>>, Array<Array<ParseStateItem>>, Array<Array<ParseStateItem>>) {
 		let dict = self.dictionary;
 		let len = string.count;
 
-		// Chart: one set of items per input position (0..n)
-		var chart: Array<Array<ParseStateItem>> = Array(repeating: [], count: len + 1);
-		var currentSet: Set<ParseStateItem> = [];
+		var expectedVariables: Array<Array<ParseStateItem>> = Array(repeating: [], count: len + 1);
+		var expectedVariablesDict: Array<Dictionary<Variable, Array<ParseStateItem>>> = Array(repeating: [:], count: len + 1);
+		var expectedSymbols: Array<Array<ParseStateItem>> = Array(repeating: [], count: len + 1);
+		var completed: Array<Array<ParseStateItem>> = Array(repeating: [], count: len + 1);
+
+		func addChart(i: Int, item: ParseStateItem) -> Bool {
+			let expecting = item.expecting;
+			if let expecting {
+				switch expecting {
+					case .nonterminal(let variable):
+						if !expectedVariables[i].contains(item) {
+							expectedVariables[i].append(item);
+							expectedVariablesDict[i][variable, default: []].append(item);
+							return true;
+						}
+					case .terminal(let symbol):
+						if !expectedSymbols[i].contains(item) {
+							expectedSymbols[i].append(item);
+							return true;
+						}
+				}
+			} else {
+				if !completed[i].contains(item) {
+					completed[i].append(item);
+					return true;
+				}
+			}
+			return false;
+		}
 
 		// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
 		for prod in (start.flatMap{ dict[$0] ?? [] }) {
-			var startRule = ParseStateItem(production: prod, progress: 0, offset: 0);
-			if currentSet.insert(startRule).inserted { chart[0].append(startRule); }
+			let startRule = ParseStateItem(production: prod, progress: 0, offset: 0);
+			addChart(i: 0, item: startRule);
 		}
 
 		// Process each chart position
 		for i in 0...len {
+			var added = true;
 			var j = 0;
-			while j < chart[i].count {
-				let item = chart[i][j];
-				if item.isComplete {
-					// Completer
-					let nt = item.production.name;
-					for prevItem in chart[item.offset] {
-						if let expecting = prevItem.expecting, case .nonterminal(let name) = expecting, name == nt {
-							let advanced = prevItem.next();
-							if currentSet.insert(advanced).inserted { chart[i].append(advanced) }
-						}
-					}
-				} else if let expecting = item.expecting, case .nonterminal(let name) = expecting {
-					// Predictor
-					if let prods = dict[name] {
-						for prod in prods {
-							let predicted = ParseStateItem(production: prod, progress: 0, offset: i);
-							if currentSet.insert(predicted).inserted { chart[i].append(predicted) }
-						}
-					}
-				}
-				j += 1;
-			}
-			currentSet = [];
+			while added {
+				added = false;
 
-			// Scanner: advance items expecting the current terminal (if i < n)
-			if i < len {
-				let currentSymbol = string[i];
-				for item in chart[i] {
-					if let expecting = item.expecting, case .terminal(let symClass) = expecting {
-						// TODO: Use a dedicated SymbolClass.contains function
-						if Alphabet.contains(symClass, currentSymbol) {
-							let advanced = item.next();
-							if currentSet.insert(advanced).inserted { chart[i + 1].append(advanced); }
+				// Predictor
+				j = 0;
+				while j < expectedVariables[i].count {
+					let item = expectedVariables[i][j];
+					guard let expecting = item.expecting, case .nonterminal(let name) = expecting else { fatalError() }
+					for prod in dict[name, default: []] {
+						let predicted = ParseStateItem(production: prod, progress: 0, offset: i);
+						if addChart(i: i, item: predicted) { added = true; }
+					}
+					j += 1;
+				}
+
+				// Completer
+				j = 0;
+				while j < completed[i].count {
+					let item = completed[i][j];
+					assert(item.isComplete);
+					let nt = item.production.name;
+					for prevItem in expectedVariablesDict[item.offset][nt, default: []] {
+						if let exp = prevItem.expecting,
+							case .nonterminal(let name) = exp,
+							name == nt {
+							let advanced = prevItem.next();
+							if addChart(i: i, item: advanced) { added = true; }
+						}
+					}
+					j += 1;
+				}
+
+				// Scanner
+				if i < len {
+					let currentSymbol = string[i];
+					for item in expectedSymbols[i] {
+						if let expecting = item.expecting, case .terminal(let symClass) = expecting {
+							if Alphabet.contains(symClass, currentSymbol) {
+								let advanced = item.next();
+								if addChart(i: i+1, item: advanced) { added = true; }
+							}
 						}
 					}
 				}
-				currentSet = [];
 			}
 		}
-		return chart;
+		return (completed, expectedSymbols, expectedVariables);
 	}
 
 	/// A representation of a parse tree for the current CFG.
@@ -195,14 +227,15 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	///
 	/// This will return a new CFG, with at most one production per rule.
 	public func parseTree(_ string: Array<Alphabet.Symbol>) -> ParseTree {
-		let chart = parse(string);
+		let (complete, b, c) = parse(string);
 		let len = string.count;
 
 		// Construct the parse tree as a CFGNamed<TreeKey, Alphabet> with exactly one production per TreeKey
-		guard let rootItem = chart[len].first(where: { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 }) else {
+		guard let rootItem = complete[len].first(where: { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 }) else {
 			return ParseTree(); // empty language if no parse
 		}
 
+		let chart = (0...string.count).map { complete[$0] + b[$0] + c[$0] };
 		var treeProductions: [ParseTree.Production] = [];
 		var seenKeys = Set<ParseTreeKey>();
 		// rootItem is going to be one of the matches for a start symbol that spans the entire input
