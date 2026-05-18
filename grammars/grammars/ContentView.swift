@@ -11,6 +11,7 @@ import FSM
 import CodeEditorView
 import LanguageSupport
 
+/// Forms the body of the Catalog window
 struct ContentView: View {
 	@ObservedObject var model: AppModel
 	@State private var selectionId: UUID? = nil
@@ -41,30 +42,30 @@ struct ContentView: View {
 					}
 				}
 			}
-			} detail: {
-				if let id = selectionId {
-					if let document = model.user[id] {
-						let binding = Binding(get: { document }, set: { model.addDocument($0) })
-						DocumentDetail(document: binding)
-							.navigationTitle(document.name)
-					} else if let document = model.catalog.first(where: { $0.id == id }) {
-						let binding = Binding(
-							get: { document },
-							set: {
-								let newDocument = $0.duplicate();
-								model.addDocument(newDocument)
-								selectionId = newDocument.id
-							}
-						)
-						DocumentDetail(document: binding)
-							.navigationTitle(document.name)
-					} else {
-						StartView()
-					}
+		} detail: {
+			if let id = selectionId {
+				if let document = model.user[id] {
+					let binding = Binding(get: { document }, set: { model.addDocument($0) })
+					DocumentDetail(document: binding)
+						.navigationTitle(document.name)
+				} else if let document = model.catalog.first(where: { $0.id == id }) {
+					let binding = Binding(
+						get: { document },
+						set: {
+							let newDocument = $0.duplicate();
+							model.addDocument(newDocument)
+							selectionId = newDocument.id
+						}
+					)
+					DocumentDetail(document: binding)
+						.navigationTitle(document.name)
 				} else {
 					StartView()
 				}
+			} else {
+				StartView()
 			}
+		}
 	}
 
  	func addDocument(){
@@ -82,6 +83,7 @@ struct ContentView: View {
  	}
 }
 
+/// Item in the sidebar for selecting, renaming, or deleting a grammar from the Catalog
 struct DocumentItemView: View {
 	@Binding var document: DocumentItem
 	let onDelete: () -> Void
@@ -101,7 +103,6 @@ struct DocumentItemView: View {
 						}
 						isRenaming = false
 						isFocused = false
-//						NotificationCenter.default.post(name: .didRenameDocument, object: document)
 						// Save the changes, trigger a binding set operation
 						document = document;
 					}).focused($isFocused)
@@ -135,6 +136,7 @@ struct DocumentItemView: View {
 	}
 }
 
+/// The main viewer for a single grammar
 struct DocumentDetail: View {
 	@Binding var document: DocumentItem
 
@@ -678,6 +680,7 @@ struct DocumentDetail: View {
 	}
 }
 
+/// DIsplay ranges of symbols as characters or ranges of characters
 func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>, charset: Charset) -> String {
 	// Handle empty set case
 	guard !rangeSet.isEmpty else { return "∅" }
@@ -704,6 +707,8 @@ func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>, charset: Chars
 	}
 
 	return merged
+		// U+22EF Midline Horizontal Ellipsis
 		.map { charset.toQuoted($0.lowerBound) + ($0.lowerBound==$0.upperBound ? "" : ("⋯" + charset.toQuoted($0.upperBound)) ) }
+		// U+2001 EM QUAD, a space that is an em-dash wide, for increased separation
 		.joined(separator: "\u{2001}")
 }
