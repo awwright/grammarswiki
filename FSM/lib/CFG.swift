@@ -17,18 +17,20 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 
 	public typealias Variable = Variable;
 	public typealias BodyElement = GrammarProductionBodyElement<SymbolClass, Variable>;
+	/// A sequence of body elements, concatenated together
+	public typealias Alternative = Array<BodyElement>;
 	/// A rule in the Context-Free Grammar. Multiple rules with the same name
 	public struct Production: CFGProductionProtocol, Hashable {
 		// TODO: name can be anything as long as it's Equatable and Hashable (usable as a Dictionary key)
 		// This would be useful for using Int or tuples as production names, for example, representing parse forests.
 		public let name: Variable;
-		public let body: Array<BodyElement>;
+		public let body: Alternative;
 
 		// Generates the equivalent context-sensitive grammar
-		public var lhs: Array<BodyElement> { [.nonterminal(name)] }
-		public var rhs: Array<BodyElement> { body }
+		public var lhs: Alternative { [.nonterminal(name)] }
+		public var rhs: Alternative { body }
 
-		public init(name: Variable, production: Array<BodyElement>) {
+		public init(name: Variable, production: Alternative) {
 			self.name = name
 			self.body = production
 		}
