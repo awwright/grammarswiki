@@ -81,12 +81,14 @@ struct InputTestingView: View {
 				}
 			} else if let cfg = content_cfg {
 				// Also attempt a CFG parse to display the parse tree
-				cfg_test_result = cfg.contains(input);
-				cfg_test_tree = cfg.parseTree(input);
+				let cfg_parse = cfg.parse(input);
+				cfg_test_result = cfg_parse.isCompleted;
+				cfg_test_tree = cfg_parse.parseTree;
 			}
 		} else if let cfg = content_cfg {
-			cfg_test_result = cfg.contains(input);
-			cfg_test_tree = cfg.parseTree(input);
+			let cfg_parse = cfg.parse(input);
+			cfg_test_result = cfg_parse.isCompleted;
+			cfg_test_tree = cfg_parse.parseTree;
 		} else {
 			fsm_test_error = "Rule `\(selectedRule)` is recursive or missing rules"
 		}
