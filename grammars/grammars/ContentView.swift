@@ -577,9 +577,9 @@ struct DocumentDetail: View {
 					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
 					// Select the first rule by default
 					if selectedRule == nil, let firstRule = content_rulelist?.rules.first {
-						selectedRule = firstRule.rulename.label
+						selectedRule = firstRule.rulename.id
 					} else if let s = selectedRule, let content_rulelist, content_rulelist.dictionary[s] == nil, let firstRule = content_rulelist.rules.first {
-						selectedRule = firstRule.rulename.label
+						selectedRule = firstRule.rulename.id
 					}
 					messages = [];
 				}
