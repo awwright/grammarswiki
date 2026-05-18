@@ -100,7 +100,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		self.rules = rules;
 	}
 
-	private struct ParseStateItem: Hashable {
+	struct ParseStateItem: Hashable {
 		let production: Production
 		/// How many body elements have been parsed (zero through the element count inclusive)
 		let progress: Int
@@ -114,22 +114,60 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 
 	/// Recognise (accept or reject) the given string as being in the grammar
 	public func contains(_ string: Array<Alphabet.Symbol>) -> Bool {
-		let (chart, _, _) = parse(string);
-		// Accept if any completed start item spans the entire input from origin 0
-		return chart.last!.contains { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 };
+		Parser(grammar: self, string: string).isCompleted;
 	}
 
-	/// Recognise (accept or reject) the given string as being in the grammar
-	private func parse(_ string: Array<Alphabet.Symbol>) -> (Array<Array<ParseStateItem>>, Array<Array<ParseStateItem>>, Array<Array<ParseStateItem>>) {
-		let dict = self.dictionary;
-		let len = string.count;
+	public func parse(_ string: Array<Alphabet.Symbol>) -> Parser {
+		Parser(grammar: self, string: string)
+	}
 
-		var expectedVariables: Array<Array<ParseStateItem>> = Array(repeating: [], count: len + 1);
-		var expectedVariablesDict: Array<Dictionary<Variable, Array<ParseStateItem>>> = Array(repeating: [:], count: len + 1);
-		var expectedSymbols: Array<Array<ParseStateItem>> = Array(repeating: [], count: len + 1);
-		var completed: Array<Array<ParseStateItem>> = Array(repeating: [], count: len + 1);
+	/// A streaming parser
+	///
+	/// In a more prefect world, this could just be a subclass of CFG (where the properties of CFG are copied to CFG.Parser)
+	public struct Parser {
+		let grammar: CFGNamed<Variable, Alphabet>;
+		let start: Array<Variable>;
+		var len: Int
+		var i: Int = 0
+		var dict: Dictionary<Variable, Array<Production>>
+		var expectedVariables: Array<Array<ParseStateItem>>
+		var expectedVariablesDict: Array<Dictionary<Variable, Array<ParseStateItem>>>
+		var expectedSymbols: Array<Array<ParseStateItem>>
+		var completed: Array<Array<ParseStateItem>>
 
-		func addChart(i: Int, item: ParseStateItem) -> Bool {
+		init() {
+			grammar = .init();
+			len = 0;
+			expectedVariables = [];
+			expectedVariablesDict = [];
+			expectedSymbols = [];
+			completed = [];
+			dict = [:];
+			start = [];
+		}
+
+		init(grammar: CFGNamed, string: Array<Symbol>) {
+			self.grammar = grammar;
+			len = string.count;
+			expectedVariables = Array(repeating: [], count: len + 1);
+			expectedVariablesDict = Array(repeating: [:], count: len + 1);
+			expectedSymbols = Array(repeating: [], count: len + 1);
+			completed = Array(repeating: [], count: len + 1);
+			dict = grammar.dictionary;
+			start = grammar.start;
+			// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
+			for prod in (grammar.start.flatMap{ dict[$0] ?? [] }) {
+				let startRule = ParseStateItem(production: prod, progress: 0, offset: 0);
+				// Can ignore the return result of this, the completer will get re-run at least once
+				addChart(i: 0, item: startRule);
+			}
+			for chr in string {
+				parseSymbol(chr);
+			}
+			parseSymbol(nil);
+		}
+
+		mutating func addChart(i: Int, item: ParseStateItem) -> Bool {
 			let expecting = item.expecting;
 			if let expecting {
 				switch expecting {
@@ -154,14 +192,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			return false;
 		}
 
-		// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
-		for prod in (start.flatMap{ dict[$0] ?? [] }) {
-			let startRule = ParseStateItem(production: prod, progress: 0, offset: 0);
-			addChart(i: 0, item: startRule);
-		}
-
-		// Process each chart position
-		for i in 0...len {
+		mutating func parseSymbol(_ currentSymbol: Symbol?) {
 			var added = true;
 			var j = 0;
 			while added {
@@ -197,8 +228,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				}
 
 				// Scanner
-				if i < len {
-					let currentSymbol = string[i];
+				if let currentSymbol {
 					for item in expectedSymbols[i] {
 						if let expecting = item.expecting, case .terminal(let symClass) = expecting {
 							if Alphabet.contains(symClass, currentSymbol) {
@@ -209,8 +239,22 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 					}
 				}
 			}
+			i += 1;
 		}
-		return (completed, expectedSymbols, expectedVariables);
+
+		var isCompleted: Bool {
+			// Accept if any completed start item spans the entire input from origin 0
+			completed.last!.contains { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 }
+		}
+
+		var rootItem: ParseStateItem? {
+			// Accept if any completed start item spans the entire input from origin 0
+			completed.last!.first(where: { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 })
+		}
+
+		var allItems: Array<Array<ParseStateItem>> {
+			(0...len).map { completed[$0] + expectedVariables[$0] + expectedSymbols[$0] }
+		}
 	}
 
 	/// A representation of a parse tree for the current CFG.
@@ -227,15 +271,15 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	///
 	/// This will return a new CFG, with at most one production per rule.
 	public func parseTree(_ string: Array<Alphabet.Symbol>) -> ParseTree {
-		let (complete, b, c) = parse(string);
+		let parsed = Parser(grammar: self, string: string);
 		let len = string.count;
 
 		// Construct the parse tree as a CFGNamed<TreeKey, Alphabet> with exactly one production per TreeKey
-		guard let rootItem = complete[len].first(where: { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 }) else {
+		guard let rootItem = parsed.rootItem else {
 			return ParseTree(); // empty language if no parse
 		}
 
-		let chart = (0...string.count).map { complete[$0] + b[$0] + c[$0] };
+		let chart = parsed.allItems;
 		var treeProductions: [ParseTree.Production] = [];
 		var seenKeys = Set<ParseTreeKey>();
 		// rootItem is going to be one of the matches for a start symbol that spans the entire input
