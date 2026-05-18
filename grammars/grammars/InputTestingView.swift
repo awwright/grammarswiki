@@ -27,16 +27,17 @@ struct InputTestingView: View {
 				// TODO: Show symbols that are valid to enter at given cursor position
 				Text("Result: " + (fsm_test_result ? "Accepted" : fsm_test_error ?? "Rejected"))
 					.foregroundColor(fsm_test_result == true ? .green : .red)
-				if let fsm_test_next {
-					Text("Next symbols: " + describeCharacterSet(fsm_test_next, charset: charset))
-				} else {
-					Text("Next symbols: Oblivion")
-				}
 			} else if let cfg_test_result {
 				Text("Result: " + (cfg_test_result ? "Accepted" : "Rejected"))
 					.foregroundColor(cfg_test_result == true ? .green : .red)
 			} else if let fsm_test_error {
 				Text(fsm_test_error).foregroundColor(.red)
+			}
+
+			if let fsm_test_next {
+				Text("Next symbols: " + describeCharacterSet(fsm_test_next, charset: charset))
+			} else {
+				Text("Next symbols: Oblivion")
 			}
 
 			if let cfg_test_tree, let start = cfg_test_tree.start.first {
@@ -84,11 +85,13 @@ struct InputTestingView: View {
 				let cfg_parse = cfg.parse(input);
 				cfg_test_result = cfg_parse.isCompleted;
 				cfg_test_tree = cfg_parse.parseTree;
+				fsm_test_next = cfg_parse.nextSymbols.flatMap { $0 };
 			}
 		} else if let cfg = content_cfg {
 			let cfg_parse = cfg.parse(input);
 			cfg_test_result = cfg_parse.isCompleted;
 			cfg_test_tree = cfg_parse.parseTree;
+			fsm_test_next = cfg_parse.nextSymbols.flatMap { $0 };
 		} else {
 			fsm_test_error = "Rule `\(selectedRule)` is recursive or missing rules"
 		}

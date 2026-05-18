@@ -327,6 +327,16 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				return key;
 			}
 		}
+
+		/// List the symbols
+		/// The partitions of the alphabet represent the different branches that the input will send the parser
+		public var nextSymbols: Alphabet {
+			var symbols: Array<SymbolClass> = expectedSymbols.last!.map {
+				guard case .terminal(let symbolClass) = $0.expecting else { fatalError(); }
+				return symbolClass;
+			}
+			return Alphabet(partitions: symbols);
+		}
 	}
 
 	/// A representation of a parse tree for the current CFG.

@@ -7,6 +7,9 @@
 public protocol AlphabetProtocol: Collection, ExpressibleByArrayLiteral, Equatable, Hashable where Element == SymbolClass {
 	// TODO: Add an interface exposing the binary relation tuples, so you can go: set.tuples ~= (a, b)
 
+	// TODO: May need a SymbolSet type, to collect a set of symbols without partitioning them.
+	// It would sometimes re-use SymbolSet (e.g. ClosedRangeAlphabet) and sometimes use a container (e.g. SymbolAlphabet).
+
 	/// A partition in the alphabet, which is a set of symbols (or can be converted to a set, or operated on as a set)
 	/// This type may be any type that can compute intersections, etc.
 	associatedtype SymbolClass: Equatable & Hashable;
