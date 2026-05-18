@@ -111,10 +111,49 @@ import Testing
 			#expect(cfg.contains([0x20]))
 		}
 
+		@Test("single space 2")
+		func test_sp2() async throws {
+			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
+				.init(name: "S", production: [.nonterminal("X"), .nonterminal("X"), .terminal(0x20)]),
+				.init(name: "X", production: []),
+			]);
+			#expect(!cfg.contains([]))
+			#expect(!cfg.contains([0]))
+			#expect(cfg.contains([0x20]))
+			#expect(!cfg.contains([0x20, 0x20]))
+		}
+
+		@Test("left-recursive space")
+		func test_sp3() async throws {
+			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
+				.init(name: "S", production: [.nonterminal("S"), .terminal(0x20)]),
+				.init(name: "S", production: []),
+			]);
+			#expect(cfg.contains([]))
+			#expect(!cfg.contains([0]))
+			#expect(cfg.contains([0x20]))
+			#expect(cfg.contains([0x20, 0x20]))
+			#expect(!cfg.contains([0x20, 0]))
+			#expect(cfg.contains([0x20, 0x20, 0x20, 0x20, 0x20, 0x20]))
+		}
+
+		@Test("right-recursive space")
+		func test_sp4() async throws {
+			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
+				.init(name: "S", production: [.terminal(0x20), .nonterminal("S")]),
+				.init(name: "S", production: []),
+			]);
+			#expect(cfg.contains([]))
+			#expect(!cfg.contains([0]))
+			#expect(cfg.contains([0x20]))
+			#expect(cfg.contains([0x20, 0x20]))
+			#expect(!cfg.contains([0x20, 0]))
+			#expect(cfg.contains([0x20, 0x20, 0x20, 0x20, 0x20, 0x20]))
+		}
+
 		@Test("LWSP")
 		func test_lwsp() async throws {
 			let cfg: ABNFRulelist<UInt8>.CFG = try! ABNFRulelist.builtins.toCFG(rulename: "lwsp")
-			// TODO: Only up to one character of recognition is implemented
 			#expect(cfg.contains([]));
 			#expect(!cfg.contains([0]));
 			#expect(cfg.contains([0x09]));
