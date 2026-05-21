@@ -17,6 +17,7 @@ struct InputTestingView: View {
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
 	@State private var fsm_test_error: String? = nil
 	@State private var cfg_test_result: Bool? = nil
+	@State private var cfg_test_parse: ABNFRulelist<UInt32>.CFG.Parser? = nil
 	@State private var cfg_test_tree: ABNFRulelist<UInt32>.CFG.ParseTree? = nil
 
 	var body: some View {
@@ -45,6 +46,30 @@ struct InputTestingView: View {
 					ParseTreeResult(result: cfg_test_tree, rule: start, charset: charset)
 				}
 			}
+
+			if let cfg_test_parse {
+				DisclosureGroup("Parse chart") {
+					VStack(alignment: .leading) {
+						// TODO: The Array() wrapper can be removed in later versions of Swift
+						ForEach(Array(cfg_test_parse.allItems.enumerated()), id: \.offset) { offset, chart_position in
+							VStack(alignment: .leading) {
+								ForEach(chart_position, id: \.self) { item in
+									let body = item.production.rhs.enumerated().map { (element_i, element) in
+										let c = (item.progress == element_i ? "● " : "")
+										let x = switch element {
+											case .nonterminal(let x): String(describing: x);
+											case .terminal(let x): describeCharacterSet(x, charset: charset)
+										};
+										return  "\(c)\(x)";
+									}.joined(separator: " ") + (item.isComplete ? " ■" : "")
+									Text("\(item.offset)...\(offset) \(item.production.name) → \(body)")
+								}
+							}
+							Divider()
+						}
+					}
+				}
+			}
 		}
 		.onAppear { updatedInput() }
 		.onChange(of: selectedRule) { updatedInput() }
@@ -58,6 +83,7 @@ struct InputTestingView: View {
 		fsm_test_error = nil
 		fsm_test_next = nil
 		cfg_test_result = nil
+		cfg_test_parse = nil
 		cfg_test_tree = nil
 
 		guard let content_rulelist = content_rulelist,
@@ -83,12 +109,14 @@ struct InputTestingView: View {
 			} else if let cfg = content_cfg {
 				// Also attempt a CFG parse to display the parse tree
 				let cfg_parse = cfg.parse(input);
+				cfg_test_parse = cfg_parse;
 				cfg_test_result = cfg_parse.isCompleted;
 				cfg_test_tree = cfg_parse.parseTree;
 				fsm_test_next = cfg_parse.nextSymbols.flatMap { $0 };
 			}
 		} else if let cfg = content_cfg {
 			let cfg_parse = cfg.parse(input);
+			cfg_test_parse = cfg_parse;
 			cfg_test_result = cfg_parse.isCompleted;
 			cfg_test_tree = cfg_parse.parseTree;
 			fsm_test_next = cfg_parse.nextSymbols.flatMap { $0 };

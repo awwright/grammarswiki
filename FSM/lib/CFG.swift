@@ -102,15 +102,15 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		self.rules = rules;
 	}
 
-	struct ParseStateItem: Hashable {
-		let production: Production
+	public struct ParseStateItem: Hashable {
+		public let production: Production
 		/// How many body elements have been parsed (zero through the element count inclusive)
-		let progress: Int
+		public let progress: Int
 		/// The offset of this production's first symbol from the string's first symbol
-		let offset: Int
+		public let offset: Int
 		// Computed properties
-		var isComplete: Bool { progress == production.body.count }
-		var expecting: Production.BodyElement? { progress < production.body.count ? production.body[progress] : nil }
+		public var isComplete: Bool { progress == production.body.count }
+		public var expecting: Production.BodyElement? { progress < production.body.count ? production.body[progress] : nil }
 		func next() -> Self { ParseStateItem(production: production, progress: progress + 1, offset: offset) }
 	}
 
@@ -249,12 +249,19 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			completed.last!.contains { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 }
 		}
 
+		/// Get all of the rules that matches an input to a start symbol
+		var rootItems: Array<ParseStateItem> {
+			// Accept if any completed start item spans the entire input from origin 0
+			completed.last!.filter { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 }
+		}
+
+		/// Get the first (highest priority) rule that matches an input to a start symbol
 		var rootItem: ParseStateItem? {
 			// Accept if any completed start item spans the entire input from origin 0
 			completed.last!.first(where: { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 })
 		}
 
-		var allItems: Array<Array<ParseStateItem>> {
+		public var allItems: Array<Array<ParseStateItem>> {
 			(0...len).map { completed[$0] + expectedVariables[$0] + expectedSymbols[$0] }
 		}
 
