@@ -102,28 +102,6 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		self.rules = rules;
 	}
 
-	public struct ParseStateItem: Hashable, CustomStringConvertible {
-		public let production: Production
-		/// How many body elements have been parsed (zero through the element count inclusive)
-		public let progress: Int
-		/// The offset of this production's first symbol from the string's first symbol
-		public let offset: Int
-		// Computed properties
-		public var isComplete: Bool { progress == production.body.count }
-		public var expecting: Production.BodyElement? { progress < production.body.count ? production.body[progress] : nil }
-		func next() -> Self { ParseStateItem(production: production, progress: progress + 1, offset: offset) }
-		public var description: String {
-			"\(self.production.name) @\(offset) →" + self.production.rhs.enumerated().map { (element_i, element) in
-				let c = (self.progress == element_i ? "● " : "")
-				let x = switch element {
-					case .nonterminal(let x): String(describing: x);
-					case .terminal(let x): String(describing: x);
-				};
-				return  " \(c)\(x)";
-			}.joined(separator: "") + (isComplete ? " ■" : "")
-		}
-	}
-
 	/// Recognise (accept or reject) the given string as being in the grammar
 	public func contains(_ string: Array<Alphabet.Symbol>) -> Bool {
 		Parser(grammar: self, string: string).isCompleted;
@@ -146,6 +124,28 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		var expectedVariablesDict: Array<Dictionary<Variable, Array<ParseStateItem>>>
 		var expectedSymbols: Array<Array<ParseStateItem>>
 		var completed: Array<Array<ParseStateItem>>
+
+		public struct ParseStateItem: Hashable, CustomStringConvertible {
+			public let production: Production
+			/// How many body elements have been parsed (zero through the element count inclusive)
+			public let progress: Int
+			/// The offset of this production's first symbol from the string's first symbol
+			public let offset: Int
+			// Computed properties
+			public var isComplete: Bool { progress == production.body.count }
+			public var expecting: Production.BodyElement? { progress < production.body.count ? production.body[progress] : nil }
+			func next() -> Self { ParseStateItem(production: production, progress: progress + 1, offset: offset) }
+			public var description: String {
+				"\(self.production.name) @\(offset) →" + self.production.rhs.enumerated().map { (element_i, element) in
+					let c = (self.progress == element_i ? "● " : "")
+					let x = switch element {
+					case .nonterminal(let x): String(describing: x);
+					case .terminal(let x): String(describing: x);
+					};
+					return  " \(c)\(x)";
+				}.joined(separator: "") + (isComplete ? " ■" : "")
+			}
+		}
 
 		init() {
 			grammar = .init();
