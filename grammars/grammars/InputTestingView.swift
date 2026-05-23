@@ -54,15 +54,16 @@ struct InputTestingView: View {
 						ForEach(Array(cfg_test_parse.allItems.enumerated()), id: \.offset) { offset, chart_position in
 							VStack(alignment: .leading) {
 								ForEach(chart_position, id: \.self) { item in
+									// Mostly the same as ParseStateItem.description except this shows a range like @1-3
 									let body = item.production.rhs.enumerated().map { (element_i, element) in
-										let c = (item.progress == element_i ? "● " : "")
+										let c = (item.progress == element_i ? "●" : "")
 										let x = switch element {
 											case .nonterminal(let x): String(describing: x);
 											case .terminal(let x): describeCharacterSet(x, charset: charset)
 										};
 										return  "\(c)\(x)";
 									}.joined(separator: " ") + (item.isComplete ? " ■" : "")
-									Text("\(item.offset)...\(offset) \(item.production.name) → \(body)")
+									Text("\(item.production.name) @\(item.offset)-\(offset) → \(body)")
 								}
 							}
 							Divider()
