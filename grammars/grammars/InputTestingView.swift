@@ -73,6 +73,45 @@ struct InputTestingView: View {
 						}
 					}
 				}
+				DisclosureGroup("Parse forest") {
+					// The parse forest is the largest subset of the original grammar that matches only the input string.
+					// cfg_test_tree should always be defined, but in the event it's not just show the empty set
+					let grammar = cfg_test_tree ?? .init();
+					VStack(alignment: .leading) {
+						ForEach(grammar.start, id: \.self) { rulename in
+							Text("\u{2192} \(rulename)")
+						}
+						if grammar.start.isEmpty {
+							Text("\u{2192} \u{2205}")
+						}
+						Spacer()
+						let dictionary = grammar.dictionary
+						let ruleNames = grammar.ruleNames;
+						ForEach(ruleNames, id: \.self) { (ruleName: ABNFRulelist<UInt32>.CFG.ParseTree.Variable) in
+							let rules = dictionary[ruleName] ?? []
+							Text("\(ruleName)").font(.headline);
+							if rules.isEmpty {
+								Text("\t= \u{2205}");
+							}
+							ForEach(rules, id: \.self) { rule in
+								HStack {
+									Text("\t\u{2192} ")
+									ForEach(rule.body, id: \.self) { (token: ABNFRulelist<UInt32>.CFG.ParseTree.BodyElement) in
+										switch token {
+											case .terminal(let sym): Text(describeCharacterSet(sym, charset: charset)).monospaced()
+											case .nonterminal(let name): Text(name.description)
+//											default: Text(String(describing: token))
+										}
+									}
+									if rule.body.isEmpty {
+										Text("\u{3B5}") // Epsilon
+									}
+								}
+							}
+							Spacer()
+						}
+					}.frame(maxWidth: .infinity, alignment: .topLeading)
+				}
 			}
 		}
 		.onAppear { updatedInput() }
@@ -110,22 +149,17 @@ struct InputTestingView: View {
 				} else {
 					fsm_test_error = "oblivion"
 				}
-			} else if let cfg = content_cfg {
-				// Also attempt a CFG parse to display the parse tree
-				let cfg_parse = cfg.parse(input);
-				cfg_test_parse = cfg_parse;
-				cfg_test_result = cfg_parse.isCompleted;
-				cfg_test_tree = cfg_parse.parseTree;
-				fsm_test_next = cfg_parse.nextSymbols.flatMap { $0 };
 			}
-		} else if let cfg = content_cfg {
+		}
+		if let cfg = content_cfg {
+			// Also attempt a CFG parse to display the parse tree
 			let cfg_parse = cfg.parse(input);
 			cfg_test_parse = cfg_parse;
 			cfg_test_result = cfg_parse.isCompleted;
 			cfg_test_tree = cfg_parse.parseTree;
 			fsm_test_next = cfg_parse.nextSymbols.flatMap { $0 };
 		} else {
-			fsm_test_error = "Rule `\(selectedRule)` is recursive or missing rules"
+			fsm_test_error = "Could not read rule `\(selectedRule)`"
 		}
 	}
 }

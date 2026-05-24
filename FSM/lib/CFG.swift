@@ -369,10 +369,13 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	public typealias ParseTree = CFGNamed<ParseTreeKey, Alphabet>;
 
 	///The production name in a ParseTree is the name of the production combined with substring slice information
-	public struct ParseTreeKey: Hashable {
+	public struct ParseTreeKey: Hashable, CustomStringConvertible {
 		public let name: Variable;
 		public let offset: Int;
 		public let length: Int;
+		public var description: String {
+			"\(name)@\(offset)-\(offset+length)"
+		}
 	}
 
 	// TODO: Implement a simple forest parser (returns a parse forest)
