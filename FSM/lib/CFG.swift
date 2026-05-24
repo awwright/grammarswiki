@@ -158,9 +158,9 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			start = [];
 		}
 
-		init(grammar: CFGNamed, string: Array<Symbol>) {
+		init(grammar: CFGNamed) {
 			self.grammar = grammar;
-			len = string.count;
+			len = 0;
 			expectedVariables = Array(repeating: [], count: len + 1);
 			expectedVariablesDict = Array(repeating: [:], count: len + 1);
 			expectedSymbols = Array(repeating: [], count: len + 1);
@@ -169,33 +169,36 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			start = grammar.start;
 			// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
 			for prod in (grammar.start.flatMap{ dict[$0] ?? [] }) {
-				let startRule = ParseStateItem(production: prod, progress: 0, offset: 0);
 				// Can ignore the return result of this, the completer will get re-run at least once
-				addChart(i: 0, item: startRule);
+				addChart(i: 0, item: ParseStateItem(production: prod, progress: 0, offset: 0));
 			}
+		}
+
+		init(grammar: CFGNamed, string: Array<Symbol>) {
+			self.init(grammar: grammar);
+			len = string.count;
 			for chr in string {
 				parseSymbol(chr);
 			}
+			// Run the completer after the final symbol has been consumed
 			parseSymbol(nil);
 		}
 
+		@discardableResult
 		mutating func addChart(i: Int, item: ParseStateItem) -> Bool {
-			let expecting = item.expecting;
-			if let expecting {
-				switch expecting {
-					case .nonterminal(let variable):
-						if !expectedVariables[i].contains(item) {
-							expectedVariables[i].append(item);
-							expectedVariablesDict[i][variable, default: []].append(item);
-							return true;
-						}
-					case .terminal(let symbol):
-						if !expectedSymbols[i].contains(item) {
-							expectedSymbols[i].append(item);
-							return true;
-						}
+			switch item.expecting {
+			case .nonterminal(let variable):
+				if !expectedVariables[i].contains(item) {
+					expectedVariables[i].append(item);
+					expectedVariablesDict[i][variable, default: []].append(item);
+					return true;
 				}
-			} else {
+			case .terminal:
+				if !expectedSymbols[i].contains(item) {
+					expectedSymbols[i].append(item);
+					return true;
+				}
+			case nil:
 				if !completed[i].contains(item) {
 					completed[i].append(item);
 					return true;
