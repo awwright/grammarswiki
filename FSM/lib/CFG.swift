@@ -211,6 +211,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				added = false;
 
 				// Predictor
+				// Ensure that all variables expected by incomplete items are also added as items.
 				j = 0;
 				while j < expectedVariables[i].count {
 					let item = expectedVariables[i][j];
@@ -223,6 +224,9 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				}
 
 				// Completer
+				// If any items were advanced to their final position, that item is complete.
+				// Check if that completes any other items, and advance those too.
+				// This always includes epsilon items, items with no symbols, those complete immediately.
 				j = 0;
 				while j < completed[i].count {
 					let item = completed[i][j];
@@ -240,6 +244,9 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				}
 
 				// Scanner
+				// Read the next symbol from the input, and advance any items depending on it.
+				// After reading the last symbol in the input, the predictor and completer stage needs to be run one last time,
+				// so skip this step in that case.
 				if let currentSymbol {
 					for item in expectedSymbols[i] {
 						if let expecting = item.expecting, case .terminal(let symClass) = expecting {

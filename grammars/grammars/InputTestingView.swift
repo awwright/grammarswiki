@@ -42,6 +42,9 @@ struct InputTestingView: View {
 			}
 
 			if let cfg_test_tree, let start = cfg_test_tree.start.first {
+				// TODO: Show a partial parse result. Either:
+				// - The longest completed subsequence of a production, if more input is expected
+				// - The longest substring of input that was matched, if in an oblivion state
 				ScrollView([.horizontal, .vertical]) {
 					ParseTreeResult(result: cfg_test_tree, rule: start, charset: charset)
 				}
@@ -56,7 +59,7 @@ struct InputTestingView: View {
 								ForEach(chart_position, id: \.self) { item in
 									// Mostly the same as ParseStateItem.description except this shows a range like @1-3
 									let body = item.production.rhs.enumerated().map { (element_i, element) in
-										let c = (item.progress == element_i ? "●" : "")
+										let c = (item.progress == element_i ? "● " : "")
 										let x = switch element {
 											case .nonterminal(let x): String(describing: x);
 											case .terminal(let x): describeCharacterSet(x, charset: charset)
