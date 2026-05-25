@@ -306,82 +306,76 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			(0...len).map { completed[$0] + expectedVariables[$0] + expectedSymbols[$0] }
 		}
 
-		/// Parse the given string as being in the grammar
-		///
-		/// This will return a new CFG, with at most one production per rule.
-		public var parseTree: ParseTree {
-			// Construct the parse tree as a CFGNamed<TreeKey, Alphabet> with exactly one production per TreeKey
-			guard let rootItem = rootItem else {
-				return ParseTree(); // empty language if no parse
-			}
+		/// Get a grammar that describes exactly the input, in every possible way that the grammar can process the input.
+		/// If any rule has multiple alternatives, then the parse is ambiguous.
+		public var parseForest: ParseTree {
+			let forestStart = start
+				.map { ParseTree.Variable(name: $0, offset: 0, length: len) }
+				.filter { vari in rootItems.contains(where: { vari.name == $0.production.name }) };
+			let items = completed.last!.filter { start.contains($0.production.name) && $0.isComplete && $0.offset == 0 };
 
-			let chart = allItems;
-			var treeProductions: [ParseTree.Production] = [];
-			var seenKeys = Set<ParseTreeKey>();
-			// rootItem is going to be one of the matches for a start symbol that spans the entire input
-			//
-			return ParseTree(start: build(item: rootItem, end: len), rules: treeProductions);
+			// The list of completed items that we need to generate a parse forest for
+			// Initially, add rules matching start variables
+			var queue: Array<(ParseStateItem, Int)> = items.map { ($0, len) };
 
-			func build(item: ParseStateItem, end: Int) -> ParseTreeKey {
-				let key = ParseTreeKey(name: item.production.name, offset: item.offset, length: end - item.offset);
-				if seenKeys.contains(key) { return key; }
-				seenKeys.insert(key);
+			// The generated parse forest
+			var forest: Array<ParseTree.Production> = [];
 
-				// Reconstruct body by walking the advances for this item
-				var body: [GrammarProductionBodyElement<SymbolClass, ParseTreeKey>] = [];
-				var pos = item.offset;
-				var prog = 0;
-				while prog < item.production.body.count {
-					let elem = item.production.body[prog];
-					switch elem {
-						case .terminal(let symClass):
-							// Must be a scanner advance of exactly one symbol
-							if pos < end {
-								body.append(.terminal(symClass));
-								pos += 1;
-								prog += 1;
+			var i = 0;
+			while i < queue.count {
+				let (item, item_end) = queue[i];
+				i += 1;
+				// Search for all completed items matching the given completed item
+
+				// Iterate through the rules in forestRoot and add the rules that complete it
+				// Start at the completed items from the end and work backwards to the start
+				// There may be multiple such completions
+				var currentItems: Array<(Int, Array<ParseTree.BodyElement>, Array<(ParseStateItem, Int)>)> = [ (item_end, [], []) ];
+				while !currentItems.isEmpty {
+					let (inputOffset, sequence, newQueue) = currentItems.removeFirst();
+					let j = item.production.body.count - 1 - sequence.count;
+
+					if j < 0 {
+						// Only add this if the beginning reaches to the start of the completed sequence being matched
+						if inputOffset == item.offset {
+							let newProduction = ParseTree.Production(name: ParseTree.Variable(name: item.production.name, offset: item.offset, length: item_end-item.offset), production: sequence);
+							if !forest.contains(newProduction) {
+								forest.append(newProduction);
 							}
-						case .nonterminal(let childName):
-							// Find a completed child item that advanced this step
-							// Search chart for a completer that produced an item expecting this nonterminal at pos
-							var foundChild: ParseStateItem? = nil;
-							var childEnd = pos;
-							for j in (pos...end).reversed() {
-								for prev in chart[pos] {
-									if let exp = prev.expecting,
-										case .nonterminal(let nm) = exp,
-										nm == childName,
-										let completed = chart[j].first(where: { $0.production.name == childName && $0.isComplete && $0.offset == pos })
-									{
-										foundChild = completed;
-										childEnd = j;
-										break;
-									}
+							newQueue.forEach { tuple in
+								if !queue.contains(where: { $0 == tuple }) {
+									queue.append(tuple);
 								}
-								if foundChild != nil { break; }
 							}
-							if let child = foundChild {
-								let childKey = build(item: child, end: childEnd);
-								body.append(.nonterminal(childKey));
-								pos = childEnd;
-								prog += 1;
-							} else {
-								// fallback
-								break;
-							}
+						}
+						continue;
+					}
+					let element = item.production.body[j];
+					switch element {
+					case .terminal(let symbol):
+						let terminal = expectedSymbols[inputOffset-1].first(where: { $0.production == item.production && $0.progress == j });
+						if let terminal {
+							currentItems.append( (inputOffset-1, [.terminal(symbol)]+sequence, newQueue) );
+						}
+					case .nonterminal(let name):
+						// Look for a completed rule by the same name as currentItem
+						let previousMatches = completed[inputOffset].filter { $0.production.name == name }
+						previousMatches.forEach { previous in
+							let length = inputOffset - previous.offset;
+							let tuple: (ParseStateItem, Int) = (previous, inputOffset);
+							currentItems.append( (previous.offset, [.nonterminal(.init(name: name, offset: previous.offset, length: length))]+sequence, [tuple]+newQueue) );
+						}
 					}
 				}
-
-				let treeProd = ParseTree.Production(name: key, production: body);
-				treeProductions.append(treeProd);
-				return key;
 			}
+			// TODO: Ensure that the rules are listed in the same order as the original
+			return ParseTree(startSet: forestStart, rules: forest);
 		}
 
 		/// List the symbols
 		/// The partitions of the alphabet represent the different branches that the input will send the parser
 		public var nextSymbols: Alphabet {
-			var symbols: Array<SymbolClass> = expectedSymbols.last!.map {
+			let symbols: Array<SymbolClass> = expectedSymbols.last!.map {
 				guard case .terminal(let symbolClass) = $0.expecting else { fatalError(); }
 				return symbolClass;
 			}

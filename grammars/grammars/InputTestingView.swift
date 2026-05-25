@@ -156,7 +156,7 @@ struct InputTestingView: View {
 			let cfg_parse = cfg.parse(input);
 			cfg_test_parse = cfg_parse;
 			cfg_test_result = cfg_parse.isCompleted;
-			cfg_test_tree = cfg_parse.parseTree;
+			cfg_test_tree = cfg_parse.parseForest;
 			fsm_test_next = cfg_parse.nextSymbols.flatMap { $0 };
 		} else {
 			fsm_test_error = "Could not read rule `\(selectedRule)`"
