@@ -147,6 +147,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			}
 		}
 
+		/// Create a parser for an empty language and empty string
 		init() {
 			grammar = .init();
 			len = 0;
@@ -158,15 +159,16 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			start = [];
 		}
 
+		/// Create a parser for the given grammar parsing the empty string
 		init(grammar: CFGNamed) {
 			self.grammar = grammar;
+			dict = grammar.dictionary;
+			start = grammar.start;
 			len = 0;
 			expectedVariables = Array(repeating: [], count: len + 1);
 			expectedVariablesDict = Array(repeating: [:], count: len + 1);
 			expectedSymbols = Array(repeating: [], count: len + 1);
 			completed = Array(repeating: [], count: len + 1);
-			dict = grammar.dictionary;
-			start = grammar.start;
 			// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
 			for prod in (grammar.start.flatMap{ dict[$0] ?? [] }) {
 				// Can ignore the return result of this, the completer will get re-run at least once
@@ -174,9 +176,28 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			}
 		}
 
+		/// Create a parser for the given grammar, parsing a string of the given length.
+		///
+		/// The string can be provided by calling ``parseSymbol(_:)`` and signaling EOF with `parseSymbol(nil)`
+		init(grammar: CFGNamed, len: Int) {
+			self.grammar = grammar;
+			dict = grammar.dictionary;
+			start = grammar.start;
+			self.len = len;
+			expectedVariables = Array(repeating: [], count: len + 1);
+			expectedVariablesDict = Array(repeating: [:], count: len + 1);
+			expectedSymbols = Array(repeating: [], count: len + 1);
+			completed = Array(repeating: [], count: len + 1);
+			// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
+			for prod in (grammar.start.flatMap{ dict[$0] ?? [] }) {
+				// Can ignore the return result of this, the completer will get re-run at least once
+				addChart(i: 0, item: ParseStateItem(production: prod, progress: 0, offset: 0));
+			}
+		}
+
+		/// Create a parser for the given grammar and parse the given string
 		init(grammar: CFGNamed, string: Array<Symbol>) {
-			self.init(grammar: grammar);
-			len = string.count;
+			self.init(grammar: grammar, len: string.count);
 			for chr in string {
 				parseSymbol(chr);
 			}
