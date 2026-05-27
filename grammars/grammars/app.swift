@@ -53,10 +53,10 @@ struct MainApp: App {
 	var body: some Scene {
 		// The DocumentGroup is listed first so that it gets the keyboard shortcuts for New, Save, Open
 		DocumentGroup(newDocument: Document()) { file in
-			DocumentDetail(document: file.$document);
+			DocumentView(document: file.$document);
 		}
 		Window("Catalog", id: "Catalog") {
-			ContentView(model: model)
+			CatalogView(model: model)
 		}
 		Settings {
 			SettingsView()

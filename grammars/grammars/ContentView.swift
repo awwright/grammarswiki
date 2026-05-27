@@ -12,7 +12,7 @@ import CodeEditorView
 import LanguageSupport
 
 /// Forms the body of the Catalog window
-struct ContentView: View {
+struct CatalogView: View {
 	@ObservedObject var model: MainAppModel
 	@State private var selectionId: UUID? = nil
 
@@ -23,14 +23,14 @@ struct ContentView: View {
 					Section("Saved") {
 						ForEach(Array(model.user.values), id: \.id) {
 							document in
-							DocumentItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), onDelete: { self.selectionId = nil; model.delDocument(document) }, onDuplicate: { let newDoc = document.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id; }, isEditable: true)
+							CatalogListItemView(document: Binding(get: { document }, set: { model.addDocument($0) }), onDelete: { self.selectionId = nil; model.delDocument(document) }, onDuplicate: { let newDoc = document.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id; }, isEditable: true)
 						}
 					}
 				}
 				Section("Catalog") {
 					ForEach(model.catalog, id: \.id) {
 						document in
-						DocumentItemView(document: Binding(get: { document }, set: { let newDoc = $0.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id }), onDelete: {}, onDuplicate: { let newDoc = document.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id }, isEditable: false)
+						CatalogListItemView(document: Binding(get: { document }, set: { let newDoc = $0.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id }), onDelete: {}, onDuplicate: { let newDoc = document.duplicate(); model.addDocument(newDoc); selectionId = newDoc.id }, isEditable: false)
 					}
 				}
 			}
@@ -46,7 +46,7 @@ struct ContentView: View {
 			if let id = selectionId {
 				if let document = model.user[id] {
 					let binding = Binding(get: { document }, set: { model.addDocument($0) })
-					DocumentDetail(document: binding)
+					DocumentView(document: binding)
 						.navigationTitle(document.name)
 				} else if let document = model.catalog.first(where: { $0.id == id }) {
 					let binding = Binding(
@@ -57,7 +57,7 @@ struct ContentView: View {
 							selectionId = newDocument.id
 						}
 					)
-					DocumentDetail(document: binding)
+					DocumentView(document: binding)
 						.navigationTitle(document.name)
 				} else {
 					StartView()
@@ -84,7 +84,7 @@ struct ContentView: View {
 }
 
 /// Item in the sidebar for selecting, renaming, or deleting a grammar from the Catalog
-struct DocumentItemView: View {
+struct CatalogListItemView: View {
 	@Binding var document: Document
 	let onDelete: () -> Void
 	let onDuplicate: () -> Void
@@ -137,7 +137,7 @@ struct DocumentItemView: View {
 }
 
 /// The main viewer for a single grammar
-struct DocumentDetail: View {
+struct DocumentView: View {
 	@Binding var document: Document
 
 	// User input
