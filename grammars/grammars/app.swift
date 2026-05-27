@@ -65,8 +65,9 @@ struct MainApp: App {
 }
 
 class MainAppModel: ObservableObject {
-	@Published var user: [UUID: Document] = [:]
-	let catalog: [Document]
+	@Published var user: [UUID: CatalogListItem] = [:]
+	let catalog: Array<CatalogListItem>
+	let userDocumentsDirectory: URL?
 
 	static let fileTypes: [FileType] = [
 		FileType(
@@ -241,11 +242,12 @@ class MainAppModel: ObservableObject {
 
 	init(){
 		catalog = Self.getCatalog()
+		userDocumentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("user")
 		reloadUser()
 	}
 
 	private func reloadUser() {
-		let userDocumentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("user")
+		guard let userDocumentsDirectory else { return }
 		do {
 			try FileManager.default.createDirectory(at: userDocumentsDirectory, withIntermediateDirectories: true, attributes: nil)
 		} catch {
@@ -260,11 +262,8 @@ class MainAppModel: ObservableObject {
 		for filename in contents {
 			let components = filename.split(separator: ".")
 			if components.count > 1, let ext = components.last, let type = MainAppModel.extensionsType["."+String(ext)] {
-				print("\tLoading \(filename) -> \(type)");
-				let name = components.dropLast().joined(separator: ".")
 				let filePath = userDocumentsDirectory.appendingPathComponent(filename)
-				let content = try! String(contentsOf: filePath, encoding: .utf8)
-				let newDocument = Document(filepath: filePath, name: name, type: type, charset: "UTF-32", content: content)
+				let newDocument = CatalogListItem(filepath: filePath)!
 				user[newDocument.id] = newDocument
 			} else {
 				print("Ignoring extension of \(filename)");
@@ -272,7 +271,7 @@ class MainAppModel: ObservableObject {
 		}
 	}
 
-	func addDocument(_ document: Document) {
+	func put(_ document: CatalogListItem) {
 		user[document.id] = document
 		print(document)
 		let oldFilepath = document.filepath
@@ -288,14 +287,11 @@ class MainAppModel: ObservableObject {
 		let ext = MainAppModel.typeExtensions[document.type] ?? ".txt"
 		let filepath = userDocumentsDirectory.appendingPathComponent(document.name + ext)
 		do {
-			if let oldFilepath, oldFilepath != filepath {
+			if oldFilepath != filepath {
 				print("move", oldFilepath, " -> ", filepath);
 				// Name changed, rename the file
 				try FileManager.default.moveItem(at: oldFilepath, to: filepath)
 			}
-			let data = Data(document.content.utf8);
-			try data.write(to: filepath, options: [.atomic, .completeFileProtection])
-			document.filepath = filepath
 		} catch {
 			// Use old name
 			//			document.name = user[document.id]!.name
@@ -303,33 +299,29 @@ class MainAppModel: ObservableObject {
 		}
 	}
 
-	func delDocument(_ document: Document) {
-		if let oldFilepath = document.filepath {
-			do {
-				try FileManager.default.removeItem(at: oldFilepath)
-			} catch {
-				print(error.localizedDescription)
-			}
+	func del(_ document: CatalogListItem) {
+		let oldFilepath = document.filepath;
+		do {
+			try FileManager.default.removeItem(at: oldFilepath)
+		} catch {
+			print(error.localizedDescription)
 		}
 		user.removeValue(forKey: document.id)
 	}
 
-	static private func getCatalog() -> Array<Document> {
+	static private func getCatalog() -> Array<CatalogListItem> {
 		guard let bundlePath = Bundle.main.resourcePath else { return [] }
 		do {
 			let fileManager = FileManager.default
 			let textDirectory = bundlePath + "/catalog"
 			let contents = try fileManager.contentsOfDirectory(atPath: textDirectory)
-			var loadedFiles: [Document] = []
+			var loadedFiles: Array<CatalogListItem> = [];
 			for filename in contents {
 				let components = filename.split(separator: ".")
 				if components.count > 1, let ext = components.last, let type = MainAppModel.extensionsType["."+String(ext)] {
-					let name = components.dropLast().joined(separator: ".")
-					let filePath = textDirectory + "/" + filename
-					let content = try String(contentsOfFile: filePath, encoding: .utf8)
-					let filepath = URL(fileURLWithPath: filePath)
-					let document = Document(filepath: filepath, name: name, type: type, charset: "UTF-32", content: content)
-					loadedFiles.append(document)
+					let filepath = URL(fileURLWithPath: textDirectory + "/" + filename)
+					let document = CatalogListItem(filepath: filepath)!;
+					loadedFiles.append(document);
 				} else {
 					print("Ignoring extension of \(filename)");
 				}
@@ -345,6 +337,7 @@ class MainAppModel: ObservableObject {
 // Model to represent a text file
 @Observable final class Document: Identifiable, Hashable, Equatable, FileDocument {
 	let id = UUID()
+	/// Used in in the inspector view in ``DocumentView``
 	var filepath: URL?
 	var name: String
 	var type: String
