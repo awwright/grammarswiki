@@ -13,7 +13,7 @@ import LanguageSupport
 
 /// Forms the body of the Catalog window
 struct ContentView: View {
-	@ObservedObject var model: AppModel
+	@ObservedObject var model: MainAppModel
 	@State private var selectionId: UUID? = nil
 
 	var body: some View {
@@ -70,7 +70,7 @@ struct ContentView: View {
 
  	func addDocument(){
  		withAnimation {
- 			let newDocument = DocumentItem(
+ 			let newDocument = Document(
 				filepath: nil,
  				name: "New Document \(model.user.count + 1)",
  				type: "ABNF",
@@ -85,7 +85,7 @@ struct ContentView: View {
 
 /// Item in the sidebar for selecting, renaming, or deleting a grammar from the Catalog
 struct DocumentItemView: View {
-	@Binding var document: DocumentItem
+	@Binding var document: Document
 	let onDelete: () -> Void
 	let onDuplicate: () -> Void
 	let isEditable: Bool
@@ -138,7 +138,7 @@ struct DocumentItemView: View {
 
 /// The main viewer for a single grammar
 struct DocumentDetail: View {
-	@Binding var document: DocumentItem
+	@Binding var document: Document
 
 	// User input
 	@State private var selectedDocumentLanguage: String = "ABNF"
@@ -216,7 +216,7 @@ struct DocumentDetail: View {
 
 					Tab("Translate", systemImage: "translate") {
 						if let content_cfg {
-							CFGContentView(grammar: content_cfg, charset: AppModel.charsetDict[selectedCharsetId]!);
+							CFGContentView(grammar: content_cfg, charset: MainAppModel.charsetDict[selectedCharsetId]!);
 						} else if let content_cfg_err {
 							Text(content_cfg_err)
 						} else {
@@ -241,7 +241,7 @@ struct DocumentDetail: View {
 					}
 
 					Tab("Graph", systemImage: "photo") {
-						DFAGraphPageView(rule_fsm: $rule_fsm, charset: AppModel.charsetDict[selectedCharsetId]!)
+						DFAGraphPageView(rule_fsm: $rule_fsm, charset: MainAppModel.charsetDict[selectedCharsetId]!)
 					}
 
 					Tab("Railroad", systemImage: "train.side.front.car") {
@@ -270,7 +270,7 @@ struct DocumentDetail: View {
 									rule_alphabet: $rule_alphabet,
 									rule_fsm: $rule_fsm,
 									content_cfg: $content_cfg,
-									charset: AppModel.charsetDict[selectedCharsetId]!,
+									charset: MainAppModel.charsetDict[selectedCharsetId]!,
 								)
 								Spacer()
 							}
@@ -298,7 +298,7 @@ struct DocumentDetail: View {
 						// First, show information true about the whole grammar file
 						// If there's no rulelist, then the grammar file isn't parsed at all.
 						Picker("Parse as", selection: $selectedDocumentLanguage) {
-							ForEach(AppModel.fileTypes, id: \.label) { type in
+							ForEach(MainAppModel.fileTypes, id: \.label) { type in
 								Text(type.label).tag(type.label)
 							}
 						}
@@ -339,7 +339,7 @@ struct DocumentDetail: View {
 						// Integer ensures they are always opaque
 						//
 						Picker("Charset", selection: $selectedCharsetId) {
-							ForEach(AppModel.charsets, id: \.id) { type in
+							ForEach(MainAppModel.charsets, id: \.id) { type in
 								Text(type.label).tag(type.id)
 							}
 						}
@@ -380,7 +380,7 @@ struct DocumentDetail: View {
 									let rule_alphabet_sorted: [ClosedRangeAlphabet<UInt32>.SymbolClass] = Array(rule_alphabet)
 									ForEach(rule_alphabet_sorted, id: \.self) {
 										(part: ClosedRangeAlphabet<UInt32>.SymbolClass) in
-										Text(describeCharacterSet(part, charset: AppModel.charsetDict[document.charset]!)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
+										Text(describeCharacterSet(part, charset: MainAppModel.charsetDict[document.charset]!)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
 									}
 								}else{
 									Text("Computing alphabet...")
@@ -486,7 +486,7 @@ struct DocumentDetail: View {
 										rule_alphabet: $rule_alphabet,
 										rule_fsm: $rule_fsm,
 										content_cfg: $content_cfg,
-										charset: AppModel.charsetDict[selectedCharsetId]!,
+										charset: MainAppModel.charsetDict[selectedCharsetId]!,
 									)
 								})
 							}
@@ -548,7 +548,7 @@ struct DocumentDetail: View {
 		rule_alphabet = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
-		guard let fileType = AppModel.fileTypes.first(where: { $0.label == selectedDocumentLanguage }) else {
+		guard let fileType = MainAppModel.fileTypes.first(where: { $0.label == selectedDocumentLanguage }) else {
 			// No parser for this type
 			return
 		}
@@ -665,7 +665,7 @@ struct DocumentDetail: View {
 
 	// Language configuration
 	private func abnfLanguageConfiguration() -> LanguageConfiguration {
-		return AppModel.fileTypes.first { $0.label == selectedDocumentLanguage }?.languageConfiguration ?? AppModel.fileTypes[0].languageConfiguration
+		return MainAppModel.fileTypes.first { $0.label == selectedDocumentLanguage }?.languageConfiguration ?? MainAppModel.fileTypes[0].languageConfiguration
 	}
 
 	private func computeGroupedRules(for rulelist: ABNFRulelist<UInt32>) -> (first: String?, orphanGroup: [String], subGroup: [String]) {

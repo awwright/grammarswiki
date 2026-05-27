@@ -29,7 +29,7 @@ struct Charset {
 }
 
 @main
-struct ABNFEditorApp: App {
+struct MainApp: App {
 	@NSApplicationDelegateAdaptor var appdelegate: AppDelegate
 	class AppDelegate: NSObject, NSApplicationDelegate {
 		@Environment(\.openWindow)
@@ -49,10 +49,10 @@ struct ABNFEditorApp: App {
 		}
 	}
 
-	@State private var model = AppModel()
+	@State private var model = MainAppModel()
 	var body: some Scene {
 		// The DocumentGroup is listed first so that it gets the keyboard shortcuts for New, Save, Open
-		DocumentGroup(newDocument: DocumentItem()) { file in
+		DocumentGroup(newDocument: Document()) { file in
 			DocumentDetail(document: file.$document);
 		}
 		Window("Catalog", id: "Catalog") {
@@ -64,9 +64,9 @@ struct ABNFEditorApp: App {
 	}
 }
 
-class AppModel: ObservableObject {
-	@Published var user: [UUID: DocumentItem] = [:]
-	let catalog: [DocumentItem]
+class MainAppModel: ObservableObject {
+	@Published var user: [UUID: Document] = [:]
+	let catalog: [Document]
 
 	static let fileTypes: [FileType] = [
 		FileType(
@@ -259,12 +259,12 @@ class AppModel: ObservableObject {
 		}
 		for filename in contents {
 			let components = filename.split(separator: ".")
-			if components.count > 1, let ext = components.last, let type = AppModel.extensionsType["."+String(ext)] {
+			if components.count > 1, let ext = components.last, let type = MainAppModel.extensionsType["."+String(ext)] {
 				print("\tLoading \(filename) -> \(type)");
 				let name = components.dropLast().joined(separator: ".")
 				let filePath = userDocumentsDirectory.appendingPathComponent(filename)
 				let content = try! String(contentsOf: filePath, encoding: .utf8)
-				let newDocument = DocumentItem(filepath: filePath, name: name, type: type, charset: "UTF-32", content: content)
+				let newDocument = Document(filepath: filePath, name: name, type: type, charset: "UTF-32", content: content)
 				user[newDocument.id] = newDocument
 			} else {
 				print("Ignoring extension of \(filename)");
@@ -272,7 +272,7 @@ class AppModel: ObservableObject {
 		}
 	}
 
-	func addDocument(_ document: DocumentItem) {
+	func addDocument(_ document: Document) {
 		user[document.id] = document
 		print(document)
 		let oldFilepath = document.filepath
@@ -285,7 +285,7 @@ class AppModel: ObservableObject {
 			print("Error creating folder <\(userDocumentsDirectory)>: \(error)")
 		}
 		// If the name changed, assign the new filepath
-		let ext = AppModel.typeExtensions[document.type] ?? ".txt"
+		let ext = MainAppModel.typeExtensions[document.type] ?? ".txt"
 		let filepath = userDocumentsDirectory.appendingPathComponent(document.name + ext)
 		do {
 			if let oldFilepath, oldFilepath != filepath {
@@ -303,7 +303,7 @@ class AppModel: ObservableObject {
 		}
 	}
 
-	func delDocument(_ document: DocumentItem) {
+	func delDocument(_ document: Document) {
 		if let oldFilepath = document.filepath {
 			do {
 				try FileManager.default.removeItem(at: oldFilepath)
@@ -314,21 +314,21 @@ class AppModel: ObservableObject {
 		user.removeValue(forKey: document.id)
 	}
 
-	static private func getCatalog() -> Array<DocumentItem> {
+	static private func getCatalog() -> Array<Document> {
 		guard let bundlePath = Bundle.main.resourcePath else { return [] }
 		do {
 			let fileManager = FileManager.default
 			let textDirectory = bundlePath + "/catalog"
 			let contents = try fileManager.contentsOfDirectory(atPath: textDirectory)
-			var loadedFiles: [DocumentItem] = []
+			var loadedFiles: [Document] = []
 			for filename in contents {
 				let components = filename.split(separator: ".")
-				if components.count > 1, let ext = components.last, let type = AppModel.extensionsType["."+String(ext)] {
+				if components.count > 1, let ext = components.last, let type = MainAppModel.extensionsType["."+String(ext)] {
 					let name = components.dropLast().joined(separator: ".")
 					let filePath = textDirectory + "/" + filename
 					let content = try String(contentsOfFile: filePath, encoding: .utf8)
 					let filepath = URL(fileURLWithPath: filePath)
-					let document = DocumentItem(filepath: filepath, name: name, type: type, charset: "UTF-32", content: content)
+					let document = Document(filepath: filepath, name: name, type: type, charset: "UTF-32", content: content)
 					loadedFiles.append(document)
 				} else {
 					print("Ignoring extension of \(filename)");
@@ -343,7 +343,7 @@ class AppModel: ObservableObject {
 }
 
 // Model to represent a text file
-@Observable final class DocumentItem: Identifiable, Hashable, Equatable, FileDocument {
+@Observable final class Document: Identifiable, Hashable, Equatable, FileDocument {
 	let id = UUID()
 	var filepath: URL?
 	var name: String
@@ -389,11 +389,11 @@ class AppModel: ObservableObject {
 		hasher.combine(id)
 	}
 
-	static func == (lhs: DocumentItem, rhs: DocumentItem) -> Bool {
+	static func == (lhs: Document, rhs: Document) -> Bool {
 		lhs.id == rhs.id && lhs.name == rhs.name && lhs.content == rhs.content && lhs.type == rhs.type
 	}
 
-	func duplicate() -> DocumentItem {
-		DocumentItem(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
+	func duplicate() -> Document {
+		Document(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
 	}
 }
