@@ -7,10 +7,18 @@ struct CatalogView: View {
 
 	var body: some View {
 		NavigationSplitView {
+			// This list shows .abnf files in two directories, each in a separate section.
+			// Files in the user directory are edited in place.
+			// Files in the system directory are duplicated to the user directory on write.
+			// Files in the user directory can be deleted, which should select the item above, or deselect the item.
+			// Files in the user directory can be renamed.
+			// The filesystem is watched for changes, which reloads the changed files.
+			// A file with a known inode and a new filename is a rename or a hard link.
+			// A filename with a new inode and a known filename should be treated as an edit to the same file (usually an atomic write-and-replace).
 			List(selection: $selectionId) {
 				if model.user.values.isEmpty == false {
 					Section("Saved") {
-						ForEach(Array(model.user.values), id: \.id) {
+						ForEach(model.userSorted, id: \.id) {
 							document in
 							CatalogListItemView(item: Binding(get: { document }, set: { model.put($0) }), onDelete: { self.selectionId = nil; model.del(document) }, onDuplicate: { let newDoc = document.duplicate(); model.put(newDoc); selectionId = newDoc.id; }, isEditable: true)
 						}
@@ -76,9 +84,9 @@ struct CatalogView: View {
 }
 
 /// Item in the sidebar for selecting, renaming, or deleting a grammar from the Catalog
-struct CatalogListItem {
+struct CatalogListItem: Comparable {
 	let id = UUID()
-	let basepath: URL
+	var basepath: URL
 	var name: String
 	var type: String
 
@@ -91,7 +99,6 @@ struct CatalogListItem {
 		let filename = filepath.pathComponents.last!
 		let components = filename.split(separator: ".")
 		if components.count > 1, let ext = components.last, let type = MainAppModel.extensionsType["."+String(ext)] {
-			print("\tLoading \(filename) -> \(type)");
 			let name = components.dropLast().joined(separator: ".")
 			self.basepath = filepath.deletingLastPathComponent()
 			self.name = name
@@ -109,6 +116,11 @@ struct CatalogListItem {
 
 	func duplicate() -> Self {
 		Self(basepath: basepath, name: name + " Copy", type: type)!
+	}
+
+	// Implement Comparable
+	static func < (lhs: CatalogListItem, rhs: CatalogListItem) -> Bool {
+		return lhs.filepath.absoluteString < rhs.filepath.absoluteString
 	}
 }
 
@@ -132,8 +144,6 @@ struct CatalogListItemView: View {
 						}
 						isRenaming = false
 						isFocused = false
-						// Save the changes, trigger a binding set operation
-						item = item;
 					}).focused($isFocused)
 				}
 			} else {
