@@ -5,15 +5,7 @@ import UniformTypeIdentifiers
 
 // TODO: Automatically update file list from filesystem events
 // TODO: Add DocumentProtocol to Document that outlines methods like:
-// - rule list: for debugging subrules (get list of rule names, enumerate groups in regular expresions, etc)
-// 	- select which sub expression to export as a regular expression, test for input, etc
-//		- get a list of rules that can be referenced by other grammars (even of other types)
-// - unresolved references: Get list of external rules in other grammars that need to be dereferenced to use the grammar
-// - toCFG: get the specified rule as a CFG, if possible
-// - toFSM: get the specified rule as a FSM, if possible
-// - editor view: A View that can be used to edit the grammar (e.g. a code editor for ABNF)
-// - CFG export options view: A View that specifies how to convert the source grammar to a CFG (e.g. tail recursion technique to use, case sensitive)
-// TODO: Implement CFG methods for chomsky normal form, greibach normal form, and reordering rules in breadth/depth/alphabetical order.
+// TODO: Implement CFG methods for chomsky normal form, greibach normal form
 // TODO: List parse forest productions/alternatives in same order as the original grammar does
 // TODO: Add RegexDocument to import regular expressions as a grammar
 // TODO: Add JSONSchemaDocument to import a JSON Schema as a grammar
@@ -391,8 +383,25 @@ class MainAppModel: ObservableObject {
 	}
 }
 
+protocol DocumentProtocol {
+	// - rule list: for debugging subrules (get list of rule names, enumerate groups in regular expresions, etc)
+	// 	- select which sub expression to export as a regular expression, test for input, etc
+	//		- get a list of rules that can be referenced by other grammars (even of other types)
+	// - unresolved references: Get list of external rules in other grammars that need to be dereferenced to use the grammar
+	// - toCFG: get the specified rule as a CFG, if possible
+	// - toFSM: get the specified rule as a FSM, if possible
+	// - editor view: A View that can be used to edit the grammar (e.g. a code editor for ABNF)
+	// - CFG export options view: A View that specifies how to convert the source grammar to a CFG (e.g. tail recursion technique to use, case sensitive)
+
+	//associatedtype SettingsView: View;
+	//var settings: SettingsView { get }
+	//
+	//associatedtype EditorView: View;
+	//var editor: EditorView {get}
+}
+
 // Model to represent a text file
-@Observable final class Document: Identifiable, Hashable, Equatable, FileDocument {
+struct Document: Hashable, Equatable, FileDocument {
 	let id = UUID()
 	/// Used in in the inspector view in ``DocumentView``
 	var filepath: URL?
@@ -439,11 +448,11 @@ class MainAppModel: ObservableObject {
 		hasher.combine(id)
 	}
 
-	static func == (lhs: Document, rhs: Document) -> Bool {
+	static func == (lhs: Self, rhs: Self) -> Bool {
 		lhs.id == rhs.id && lhs.name == rhs.name && lhs.content == rhs.content && lhs.type == rhs.type
 	}
 
-	func duplicate() -> Document {
-		Document(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
+	func duplicate() -> Self {
+		Self(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
 	}
 }
