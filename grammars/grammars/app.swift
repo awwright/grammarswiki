@@ -85,6 +85,7 @@ class MainAppModel: ObservableObject {
 	@Published var user: [UUID: CatalogListItem] = [:]
 	@Published var user_filepath_id: [URL: UUID] = [:]
 	@Published var userSorted: Array<CatalogListItem> = []
+	// You could also watch the catalog directory, but it's usually embedded inside the app bundle and isn't going to change
 	let catalog: Array<CatalogListItem>
 	let userDocumentsDirectory: URL?
 	let userDocumentsWatcher: DirectoryWatcher

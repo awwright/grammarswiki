@@ -10,7 +10,7 @@ struct CFGContentView: View {
 	@State private var selectedEliminateUseless: Bool = true
 	@State private var selectedEliminateEpsilon: Bool = false
 	@State private var selectedForm: String = ""
-	@State private var selectedMatchType: String = "b"
+	@State private var selectedSortOrder: String = "b"
 	@State private var selectedCharset: String = ""
 
 	var body: some View {
@@ -44,7 +44,7 @@ struct CFGContentView: View {
 				}
 
 				// TODO: Disable this if it seems like it wouldn't make a difference
-				Picker("Sort", selection: $selectedMatchType) {
+				Picker("Sort", selection: $selectedSortOrder) {
 					Text("Breadth-first").tag("b")
 					Text("Depth-first").tag("d")
 					Text("Alphabetical").tag("a")
@@ -63,7 +63,12 @@ struct CFGContentView: View {
 				}
 				Spacer()
 				let dictionary = grammar.dictionary
-				let ruleNames = grammar.ruleNames;
+				let ruleNames = switch(selectedSortOrder) {
+					case "b": grammar.ruleNames;
+					case "d": grammar.ruleNamesDepthFirst;
+					case "a": grammar.ruleNames.sorted();
+					default: grammar.ruleNames;
+				}
 				ForEach(ruleNames, id: \.self) { (ruleName: ABNFRulelist<UInt32>.CFG.Variable) in
 					let rules = dictionary[ruleName] ?? []
 					Text("\(ruleName)").font(.headline);

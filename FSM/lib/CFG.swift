@@ -80,6 +80,33 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		return rules.keys.sorted { (ordering[$0] ?? Int.max) < (ordering[$1] ?? Int.max) }
 	}
 
+	/// Get the list of used rule names in breadth-first order from the start symbol
+	public var ruleNamesDepthFirst: Array<Variable> {
+		let rules = self.dictionary;
+		var visited = Set<Variable>()
+		var stack = Array(start.reversed())   // LIFO stack; reverse so first start symbol is processed first
+		var referencedNames = [Variable]()
+		while let current = stack.popLast() {
+			if visited.contains(current) { continue }
+			visited.insert(current)
+			referencedNames.append(current)
+			if let rulesForCurrent = rules[current] {
+				// Push in reverse so the leftmost child is popped next (pre-order DFS)
+				for rule in rulesForCurrent.reversed() {
+					for symbol in rule.body.reversed() {
+						if case .nonterminal(let name) = symbol {
+							if !visited.contains(name) && !stack.contains(name) {
+								stack.append(name);
+							}
+						}
+					}
+				}
+			}
+		}
+		let ordering = Dictionary(uniqueKeysWithValues: referencedNames.enumerated().map { ($1, $0) })
+		return rules.keys.sorted { (ordering[$0] ?? Int.max) < (ordering[$1] ?? Int.max) }
+	}
+
 	/// Produce the empty language
 	public init() {
 		// If no rule exists for the starting nonterminal, that's not an error, that just means the language is the empty set.
