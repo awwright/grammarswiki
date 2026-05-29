@@ -187,6 +187,36 @@ import Testing
 		}
 	}
 
+	@Suite("reversed") struct CFGTests_reversed {
+		@Test("empty language")
+		func test_empty() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>().reversed();
+			#expect(cfg.maxCardinality() == 0)
+			#expect(!cfg.contains([]));
+		}
+
+		@Test("balanced parens language")
+		func test_parens() async throws {
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>().reversed();
+			#expect(cfg.maxCardinality() == 0)
+			// Turns out it's mostly the same
+			#expect(!cfg.contains([]));
+		}
+
+		@Test("balanced parens language")
+		func test_number() async throws {
+			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
+				.init(name: "S", production: [.terminal(0x31), .terminal(0x32), .terminal(0x33)]),
+				.init(name: "S", production: [.terminal(0x32), .terminal(0x33), .terminal(0x34)]),
+			]).reversed();
+			#expect(cfg.maxCardinality() == 2)
+			#expect(cfg.contains([0x33, 0x32, 0x31]));
+			#expect(cfg.contains([0x34, 0x33, 0x32]));
+			#expect(!cfg.contains([0x31, 0x32, 0x33]));
+			#expect(!cfg.contains([0x32, 0x33, 0x34]));
+		}
+	}
+
 	@Suite("chomskyClass") struct CFGTests_chomskyClass {
 		@Test("empty language -> finite")
 		func test_empty() async throws {

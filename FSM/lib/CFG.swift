@@ -44,6 +44,9 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			self.name = from.lhs[0].asNonterminal!
 			self.body = from.rhs
 		}
+		public func reversed() -> Self {
+			Self(name: name, production: body.reversed())
+		}
 	}
 
 	public var start: Array<Variable>
@@ -421,6 +424,13 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		public var description: String {
 			"\(name)@\(offset)-\(offset+length)"
 		}
+	}
+
+	/// Get the language where each string is reversed, back-to-front and front-to-back
+	///
+	/// Keep in mind this will also change left tail recursion to the right, etc
+	public func reversed() -> Self {
+		Self(startSet: start, rules: rules.map { $0.reversed() })
 	}
 
 	// TODO: Implement a simple forest parser (returns a parse forest)
