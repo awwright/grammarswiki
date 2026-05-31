@@ -15,6 +15,7 @@ struct CatalogView: View {
 			// The filesystem is watched for changes, which reloads the changed files.
 			// A file with a known inode and a new filename is a rename or a hard link.
 			// A filename with a new inode and a known filename should be treated as an edit to the same file (usually an atomic write-and-replace).
+			// TODO: Offer search and sort by last-modified time
 			List(selection: $selectionId) {
 				if model.user.values.isEmpty == false {
 					Section("Saved") {

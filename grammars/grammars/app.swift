@@ -43,7 +43,7 @@ struct MainApp: App {
 	var body: some Scene {
 		// The DocumentGroup is listed first so that it gets the keyboard shortcuts for New, Save, Open
 		DocumentGroup(newDocument: Document()) { file in
-			DocumentView(document: file.$document);
+			DocumentView<Document>(document: file.$document)
 		}
 		Window("Catalog", id: "Catalog") {
 			CatalogView(model: model)
@@ -365,6 +365,13 @@ class MainAppModel: ObservableObject {
 }
 
 protocol DocumentProtocol {
+	var id: UUID {get}
+	var filepath: URL? {get set}
+	var name: String {get set}
+	var type: String {get set}
+	var charset: String {get set}
+	var content: String {get set}
+
 	// - rule list: for debugging subrules (get list of rule names, enumerate groups in regular expresions, etc)
 	// 	- select which sub expression to export as a regular expression, test for input, etc
 	//		- get a list of rules that can be referenced by other grammars (even of other types)
@@ -373,16 +380,28 @@ protocol DocumentProtocol {
 	// - toFSM: get the specified rule as a FSM, if possible
 	// - editor view: A View that can be used to edit the grammar (e.g. a code editor for ABNF)
 	// - CFG export options view: A View that specifies how to convert the source grammar to a CFG (e.g. tail recursion technique to use, case sensitive)
-
-	//associatedtype SettingsView: View;
-	//var settings: SettingsView { get }
-	//
-	//associatedtype EditorView: View;
-	//var editor: EditorView {get}
+	associatedtype EditorView: EditorViewBody, View where EditorView.Document == Self;
 }
 
+extension DocumentProtocol {
+	func editorView(document: Binding<Self>, parseErrorLine: Binding<Int?>) -> EditorView {
+		EditorView(document: document, parseErrorLine: parseErrorLine)
+	}
+}
+
+//protocol SettingsViewBody: View {
+//	@ViewBuilder var document: Binding<Document> {get}
+//}
+protocol EditorViewBody: View {
+	associatedtype Document: DocumentProtocol
+	init(document: Binding<Document>, parseErrorLine: Binding<Int?>)
+}
+
+import CodeEditorView
+import LanguageSupport
+
 // Model to represent a text file
-struct Document: Hashable, Equatable, FileDocument {
+struct Document: DocumentProtocol, Hashable, Equatable, FileDocument {
 	let id = UUID()
 	/// Used in in the inspector view in ``DocumentView``
 	var filepath: URL?
@@ -435,5 +454,47 @@ struct Document: Hashable, Equatable, FileDocument {
 
 	func duplicate() -> Self {
 		Self(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
+	}
+
+	struct EditorView: EditorViewBody {
+		@Binding var document: Document
+		@Binding var parseErrorLine: Int?
+
+		// Code editor variables
+		@State private var position: CodeEditor.Position       = CodeEditor.Position()
+		@State private var messages: Set<TextLocated<Message>> = [] // For syntax errors or annotations
+		@State private var selectionLink: NSRange? = nil // For linking rule to definition
+		@Environment(\.colorScheme) private var colorScheme: ColorScheme
+
+		// Language configuration
+		private func abnfLanguageConfiguration() -> LanguageConfiguration {
+			return MainAppModel.fileTypes.first { $0.label == "ABNF" }?.languageConfiguration ?? MainAppModel.fileTypes[0].languageConfiguration
+		}
+
+		var body: some View {
+			// Some views that were considered for this:
+			// - Builtin TextEditor - would be sufficient except it automatically curls quotes and there's no way to disable it
+			// - https://github.com/krzyzanowskim/STTextView - more like a text field, lacks code highlighting, instead wants an AttributedString, though maybe that's what I want
+			// - https://github.com/CodeEditApp/CodeEditSourceEditor - This requires ten thousand different properties I don't know how to set
+			// - https://github.com/mchakravarty/CodeEditorView - This one
+			CodeEditor(
+				text: $document.content,
+				position: $position,
+				messages: $messages,
+				language: abnfLanguageConfiguration()
+			)
+			.environment(\.codeEditorTheme, colorScheme == .dark ? Theme.defaultDark : Theme.defaultLight)
+			.frame(minHeight: 300)
+			.font(.system(size: 14, design: .monospaced))
+			.onChange(of: parseErrorLine) {
+				if let parseErrorLine, parseErrorLine >= 0 {
+					messages = Set([
+						TextLocated(location: TextLocation(zeroBasedLine: parseErrorLine, column: 0), entity: Message(category: .error, length: 2, summary: "Syntax Error", description: nil))
+					])
+				} else {
+					messages = [];
+				}
+			}
+		}
 	}
 }

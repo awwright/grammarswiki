@@ -8,11 +8,9 @@
 
 import SwiftUI
 import FSM
-import CodeEditorView
-import LanguageSupport
 
 /// The main viewer for a single grammar
-struct DocumentView: View {
+struct DocumentView<Document: DocumentProtocol>: View {
 	@Binding var document: Document
 
 	// User input
@@ -26,6 +24,7 @@ struct DocumentView: View {
 	// TODO: Cache computation results with <https://developer.apple.com/documentation/Foundation/NSCache>
 	@State private var content_rulelist: ABNFRulelist<UInt32>? = nil
 	@State private var content_rulelist_error: String? = nil
+	@State private var content_parseErrorLine: Int? = nil
 
 	@State private var content_cfg: ABNFRulelist<UInt32>.CFG? = nil;
 	@State private var content_cfg_err: String? = nil;
@@ -39,12 +38,6 @@ struct DocumentView: View {
 	@State private var rule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
 	@State private var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
 	@State private var rule_fsm_error: String? = nil
-
-	// Code editor variables
-	@State private var position: CodeEditor.Position       = CodeEditor.Position()
-	@State private var messages: Set<TextLocated<Message>> = [] // For syntax errors or annotations
-	@State private var selectionLink: NSRange? = nil // For linking rule to definition
-	@Environment(\.colorScheme) private var colorScheme: ColorScheme
 
 	@AppStorage("showAlphabet") private var showAlphabet: Bool = true
 	@AppStorage("showStateCount") private var showStateCount: Bool = true
@@ -72,21 +65,8 @@ struct DocumentView: View {
 		HStack(spacing: 20) {
 			VStack(alignment: .leading) {
 				TabView {
-					Tab("Code", systemImage: "pencil") {
-						// Some views that were considered for this:
-						// - Builtin TextEditor - would be sufficient except it automatically curls quotes and there's no way to disable it
-						// - https://github.com/krzyzanowskim/STTextView - more like a text field, lacks code highlighting, instead wants an AttributedString, though maybe that's what I want
-						// - https://github.com/CodeEditApp/CodeEditSourceEditor - This requires ten thousand different properties I don't know how to set
-						// - https://github.com/mchakravarty/CodeEditorView - This one
-						CodeEditor(
-							text: $document.content,
-							position: $position,
-							messages: $messages,
-							language: abnfLanguageConfiguration()
-						)
-						.environment(\.codeEditorTheme, colorScheme == .dark ? Theme.defaultDark : Theme.defaultLight)
-						.frame(minHeight: 300)
-						.font(.system(size: 14, design: .monospaced))
+					Tab("Edit", systemImage: "pencil") {
+						document.editorView(document: $document, parseErrorLine: $content_parseErrorLine)
 					}
 
 					Tab("Translate", systemImage: "translate") {
@@ -456,7 +436,7 @@ struct DocumentView: View {
 					} else if let s = selectedRule, let content_rulelist, content_rulelist.dictionary[s] == nil, let firstRule = content_rulelist.rules.first {
 						selectedRule = firstRule.rulename.id
 					}
-					messages = [];
+					content_parseErrorLine = nil;
 				}
 			} catch let error as ABNFParseError<Array<UInt32>.Index> {
 				await MainActor.run {
@@ -464,10 +444,7 @@ struct DocumentView: View {
 					content_rulelist_error = "Error at index: " + String(describing: error.index)
 					rule_alphabet = nil
 					let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-					let line = input[0...error.index.startIndex].count(where: { $0 == 0xA })
-					messages = Set([
-						TextLocated(location: TextLocation(zeroBasedLine: line, column: 0), entity: Message(category: .error, length: 2, summary: "Syntax Error", description: nil))
-					])
+					content_parseErrorLine = input[0...error.index.startIndex].count(where: { $0 == 0xA })
 				}
 			} catch {
 				await MainActor.run {
@@ -536,11 +513,6 @@ struct DocumentView: View {
 		guard let content_cfg else { return }
 		content_cfg_chomskyClass = content_cfg.chomskyClass();
 		content_cfg_memoryRequirements = content_cfg.memoryRequirements();
-	}
-
-	// Language configuration
-	private func abnfLanguageConfiguration() -> LanguageConfiguration {
-		return MainAppModel.fileTypes.first { $0.label == selectedDocumentLanguage }?.languageConfiguration ?? MainAppModel.fileTypes[0].languageConfiguration
 	}
 
 	private func computeGroupedRules(for rulelist: ABNFRulelist<UInt32>) -> (first: String?, orphanGroup: [String], subGroup: [String]) {
