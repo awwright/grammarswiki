@@ -42,8 +42,8 @@ struct MainApp: App {
 	@State private var model = MainAppModel()
 	var body: some Scene {
 		// The DocumentGroup is listed first so that it gets the keyboard shortcuts for New, Save, Open
-		DocumentGroup(newDocument: Document()) { file in
-			DocumentView<Document>(document: file.$document)
+		DocumentGroup(newDocument: ABNFDocument()) { file in
+			DocumentView<ABNFDocument>(document: file.$document)
 		}
 		Window("Catalog", id: "Catalog") {
 			CatalogView(model: model)
@@ -397,11 +397,14 @@ protocol EditorViewBody: View {
 	init(document: Binding<Document>, parseErrorLine: Binding<Int?>)
 }
 
+import SwiftUI
+import FSM
 import CodeEditorView
 import LanguageSupport
+import UniformTypeIdentifiers
 
 // Model to represent a text file
-struct Document: DocumentProtocol, Hashable, Equatable, FileDocument {
+struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	let id = UUID()
 	/// Used in in the inspector view in ``DocumentView``
 	var filepath: URL?
@@ -457,7 +460,7 @@ struct Document: DocumentProtocol, Hashable, Equatable, FileDocument {
 	}
 
 	struct EditorView: EditorViewBody {
-		@Binding var document: Document
+		@Binding var document: ABNFDocument
 		@Binding var parseErrorLine: Int?
 
 		// Code editor variables

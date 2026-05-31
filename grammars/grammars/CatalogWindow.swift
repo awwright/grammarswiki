@@ -185,7 +185,7 @@ struct CatalogDocumentView: View {
 	/// in the event the user forks a builtin item to the user store.
 	@Binding var selectedURL: URL
 
-	@State private var document: Document? = nil
+	@State private var document: ABNFDocument? = nil
 
 	var body: some View {
 		if let document {
@@ -194,7 +194,7 @@ struct CatalogDocumentView: View {
 				.onAppear { loadDocument() }
 				.onChange(of: fileURL) { loadDocument() }
 		} else {
-			DocumentView(document: .constant(Document()))
+			DocumentView(document: .constant(ABNFDocument()))
 				.onAppear { loadDocument() }
 				.onChange(of: fileURL) { loadDocument() }
 		}
@@ -204,7 +204,7 @@ struct CatalogDocumentView: View {
 		do {
 			let name = fileURL.lastPathComponent;
 			let content = try String(contentsOf: fileURL, encoding: .utf8);
-			self.document = Document(filepath: fileURL, name: name, type: "ABNF", charset: "UTF-32", content: content);
+			self.document = ABNFDocument(filepath: fileURL, name: name, type: "ABNF", charset: "UTF-32", content: content);
 		} catch {
 			// Handle error (e.g., show alert)
 			print("Load error: \(error)")
