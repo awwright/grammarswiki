@@ -407,20 +407,20 @@ struct DocumentView<Document: DocumentProtocol>: View {
 			// No parser for this type
 			return
 		}
-		let parser = fileType.parser
 		guard let bundlePath = Bundle.main.resourcePath else { return }
 		Task.detached(priority: .utility) {
 			do {
 				let catalog = Catalog(root: bundlePath + "/catalog/")
-				let (_, rulelist_all_final, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: document.name, content: text)
 				await MainActor.run {
-					content_rulelist = rulelist_all_final.addingBuiltins();
 					do {
+						let rulelist_all_final = try document.toABNFRulelist();
+						content_rulelist = rulelist_all_final.addingBuiltins();
 						if let selectedRule, let content_rulelist {
 							content_cfg = try content_rulelist.toCFG(rulename: selectedRule)
 						} else {
 							content_cfg = .init()
 						}
+						content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
 					} catch {
 						if let err = error as? ABNFExportError {
 							content_cfg_err = err.message;
@@ -429,7 +429,6 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						}
 						content_cfg = nil
 					}
-					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
 					// Select the first rule by default
 					if selectedRule == nil, let firstRule = content_rulelist?.rules.first {
 						selectedRule = firstRule.rulename.id

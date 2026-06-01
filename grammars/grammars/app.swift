@@ -20,7 +20,6 @@ struct FileType {
 	let label: String
 	let fileExtension: String
 	let languageConfiguration: LanguageConfiguration
-	let parser: (String) throws -> ABNFRulelist<UInt32> // nil for no parsing
 	let toRailroad: ((ABNFRulelist<UInt32>, String) throws -> RailroadNode)?
 }
 
@@ -81,7 +80,6 @@ class MainAppModel: ObservableObject {
 				reservedIdentifiers: [],
 				reservedOperators: [],
 			),
-			parser:  { _ in return ABNFRulelist<UInt32>.init() },
 			toRailroad: nil,
 		),
 		FileType(
@@ -101,7 +99,6 @@ class MainAppModel: ObservableObject {
 				reservedIdentifiers: [],
 				reservedOperators: [],
 			),
-			parser:  { _ in return ABNFRulelist<UInt32>.init() },
 			toRailroad: nil,
 		),
 		FileType(
@@ -121,10 +118,6 @@ class MainAppModel: ObservableObject {
 				reservedIdentifiers: [],
 				reservedOperators: [],
 			),
-			parser: { text in
-				let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-				return try ABNFRulelist<UInt32>.parse(input)
-			},
 			toRailroad: {
 				content_rulelist, selectedRule in
 				let dictionary = content_rulelist.dictionary;
@@ -136,20 +129,12 @@ class MainAppModel: ObservableObject {
 			label: "Regex (ECMAScript)",
 			fileExtension: ".js",
 			languageConfiguration: LanguageConfiguration.swift(), // FIXME: Swift is pretty close, but this can be adjusted
-			parser: { text in
-				let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-				return try ABNFRulelist<UInt32>.parse(input)
-			},
 			toRailroad: nil,
 		),
 		FileType(
 			label: "Regex (Swift)",
 			fileExtension: ".swift",
 			languageConfiguration: LanguageConfiguration.swift(),
-			parser: { text in
-				let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-				return try ABNFRulelist<UInt32>.parse(input)
-			},
 			toRailroad: nil,
 		),
 	];
@@ -371,6 +356,8 @@ protocol DocumentProtocol {
 	var type: String {get set}
 	var charset: String {get set}
 	var content: String {get set}
+
+	func toABNFRulelist() throws -> ABNFRulelist<UInt32>
 
 	// - rule list: for debugging subrules (get list of rule names, enumerate groups in regular expresions, etc)
 	// 	- select which sub expression to export as a regular expression, test for input, etc

@@ -60,6 +60,17 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		Self(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
 	}
 
+	// Export the grammar as an ABNFRulelist, if possible
+	func toABNFRulelist() throws -> ABNFRulelist<UInt32>  {
+		guard let bundlePath = Bundle.main.resourcePath else { fatalError() }
+		let text = self.content;
+		let document = self;
+		// Filename references are always within the catalog... at least for now?
+		let catalog = Catalog(root: bundlePath + "/catalog/")
+		let (_, rulelist_all_final, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try catalog.load(path: document.name, content: text)
+		return rulelist_all_final;
+	}
+
 	struct EditorView: EditorViewBody {
 		@Binding var document: ABNFDocument
 		@Binding var parseErrorLine: Int?
