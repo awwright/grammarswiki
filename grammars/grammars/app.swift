@@ -36,6 +36,45 @@ struct Charset {
 	let toQuoted: (UInt32) -> String
 }
 
+@Observable class SelectedCharset {
+	var charset: Charset
+	init(charset: Charset) {
+		self.charset = charset
+	}
+	func describe(_ rangeSet: Array<ClosedRange<UInt32>>) -> String {
+		// Handle empty set case
+		guard !rangeSet.isEmpty else { return "∅" }
+
+		// Convert set to array and sort by lower bound
+		let sortedRanges = rangeSet.sorted { $0.lowerBound < $1.lowerBound }
+
+		// Initialize result with the first range
+		var merged: [ClosedRange<UInt32>] = [sortedRanges[0]]
+
+		// Iterate through remaining ranges
+		for current in sortedRanges.dropFirst() {
+			let last = merged.last!
+
+			// Check if current range is adjacent to or overlaps with the last merged range
+			if current.lowerBound <= last.upperBound + 1 && ((0x30...0x39).contains(current.lowerBound) || (0x41...0x5A).contains(current.lowerBound) || (0x61...0x7A).contains(current.lowerBound) || current.lowerBound > 0x7F) && ((0x30...0x39).contains(last.lowerBound) || (0x41...0x5A).contains(last.lowerBound) || (0x61...0x7A).contains(last.lowerBound) || last.lowerBound > 0x7F) {
+				// Merge by creating a new range with the same lower bound and the maximum upper bound
+				let newUpper = max(last.upperBound, current.upperBound)
+				merged[merged.count - 1] = last.lowerBound...newUpper
+			} else {
+				// If not adjacent or overlapping, add the current range as a new segment
+				merged.append(current)
+			}
+		}
+
+		return merged
+		// U+22EF Midline Horizontal Ellipsis
+			.map { charset.toQuoted($0.lowerBound) + ($0.lowerBound==$0.upperBound ? "" : ("⋯" + charset.toQuoted($0.upperBound)) ) }
+		// U+2001 EM QUAD, a space that is an em-dash wide, for increased separation
+			.joined(separator: "\u{2001}")
+	}
+}
+
+
 @main
 struct MainApp: App {
 	@State private var model = MainAppModel()
@@ -354,6 +393,7 @@ protocol DocumentProtocol {
 	var filepath: URL? {get set}
 	var name: String {get set}
 	var type: String {get set}
+	/// The interpertation of the symbols fed as input
 	var charset: String {get set}
 	var content: String {get set}
 

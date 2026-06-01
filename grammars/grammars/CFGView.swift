@@ -3,7 +3,7 @@ import FSM;
 
 struct CFGContentView: View {
 	public var grammar: ABNFRulelist<UInt32>.CFG;
-	public var charset: Charset;
+	@Environment(SelectedCharset.self) private var charset;
 
 	@State private var selectedDialect: String = "bnf"
 	@State private var selectedRange: Bool = false
@@ -80,7 +80,7 @@ struct CFGContentView: View {
 							Text("\t\u{2192} ")
 							ForEach(rule.body, id: \.self) { (token: ABNFRulelist<UInt32>.CFG.BodyElement) in
 								switch token {
-								case .terminal(let sym): Text(describeCharacterSet(sym, charset: charset)).monospaced()
+								case .terminal(let sym): Text(charset.describe(sym)).monospaced()
 								case .nonterminal(let name): Text(name.description)
 								default: Text(String(describing: token))
 								}

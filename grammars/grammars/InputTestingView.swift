@@ -11,7 +11,7 @@ struct InputTestingView: View {
 	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
 	@Binding var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>?
 	@Binding var content_cfg: ABNFRulelist<UInt32>.CFG?
-	let charset: Charset
+	@Environment(SelectedCharset.self) private var charset
 	@State private var testInput: String = ""
 	@State private var fsm_test_result: Bool? = nil
 	@State private var fsm_test_next: Array<ClosedRange<UInt32>>? = nil
@@ -36,7 +36,7 @@ struct InputTestingView: View {
 			}
 
 			if let fsm_test_next {
-				Text("Next symbols: " + describeCharacterSet(fsm_test_next, charset: charset))
+				Text("Next symbols: " + charset.describe(fsm_test_next))
 			} else {
 				Text("Next symbols: Oblivion")
 			}
@@ -46,7 +46,7 @@ struct InputTestingView: View {
 				// - The longest completed subsequence of a production, if more input is expected
 				// - The longest substring of input that was matched, if in an oblivion state
 				ScrollView([.horizontal, .vertical]) {
-					ParseTreeResult(result: cfg_test_tree, rule: start, charset: charset)
+					ParseTreeResult(result: cfg_test_tree, rule: start)
 				}
 			}
 
@@ -62,7 +62,7 @@ struct InputTestingView: View {
 										let c = (item.progress == element_i ? "● " : "")
 										let x = switch element {
 											case .nonterminal(let x): String(describing: x);
-											case .terminal(let x): describeCharacterSet(x, charset: charset)
+											case .terminal(let x): charset.describe(x)
 										};
 										return  "\(c)\(x)";
 									}.joined(separator: " ") + (item.isComplete ? " ■" : "")
@@ -98,7 +98,7 @@ struct InputTestingView: View {
 									Text("\t\u{2192} ")
 									ForEach(rule.body, id: \.self) { (token: ABNFRulelist<UInt32>.CFG.ParseTree.BodyElement) in
 										switch token {
-											case .terminal(let sym): Text(describeCharacterSet(sym, charset: charset)).monospaced()
+											case .terminal(let sym): Text(charset.describe(sym)).monospaced()
 											case .nonterminal(let name): Text(name.description)
 //											default: Text(String(describing: token))
 										}
@@ -280,7 +280,7 @@ struct OctetInputField: View {
 struct ParseTreeResult: View {
 	let result: ABNFRulelist<UInt32>.CFG.ParseTree;
 	let rule: ABNFRulelist<UInt32>.CFG.ParseTreeKey;
-	let charset: Charset;
+	@Environment(SelectedCharset.self) private var charset;
 	var body: some View {
 		let production: ABNFRulelist<UInt32>.CFG.ParseTree.Production = result.dictionary[rule]![0];
 		Branch {
@@ -288,12 +288,12 @@ struct ParseTreeResult: View {
 			ForEach(Array(production.body), id: \.self) {
 				switch $0 {
 					case .terminal(let t):
-						Text(describeCharacterSet(t, charset: charset));
+						Text(charset.describe(t));
 					case .nonterminal(let t):
 						// TODO: Make this condition configurable
 						if t.length > 0 {
-							if t.name.count == 1 { ParseTreeResult(result: result, rule: t, charset: charset); }
-							else { ParseTreeFlatten(result: result, rule: t, charset: charset); }
+							if t.name.count == 1 { ParseTreeResult(result: result, rule: t); }
+							else { ParseTreeFlatten(result: result, rule: t); }
 						}
 				}
 			}
@@ -304,18 +304,18 @@ struct ParseTreeResult: View {
 struct ParseTreeFlatten: View {
 	let result: ABNFRulelist<UInt32>.CFG.ParseTree;
 	let rule: ABNFRulelist<UInt32>.CFG.ParseTreeKey;
-	let charset: Charset;
+	@Environment(SelectedCharset.self) private var charset;
 	var body: some View {
 		let production: ABNFRulelist<UInt32>.CFG.ParseTree.Production = result.dictionary[rule]![0];
 		ForEach(Array(production.body), id: \.self) {
 			switch $0 {
 				case .terminal(let t):
-					Text(describeCharacterSet(t, charset: charset));
+					Text(charset.describe(t));
 				case .nonterminal(let t):
 					// TODO: Make this condition configurable
 					if t.length > 0 {
-						if t.name.count == 1 { ParseTreeResult(result: result, rule: t, charset: charset); }
-						else { ParseTreeFlatten(result: result, rule: t, charset: charset); }
+						if t.name.count == 1 { ParseTreeResult(result: result, rule: t); }
+						else { ParseTreeFlatten(result: result, rule: t); }
 					}
 			}
 		}

@@ -71,7 +71,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					Tab("Translate", systemImage: "translate") {
 						if let content_cfg {
-							CFGContentView(grammar: content_cfg, charset: MainAppModel.charsetDict[selectedCharsetId]!);
+							CFGContentView(grammar: content_cfg);
 						} else if let content_cfg_err {
 							Text(content_cfg_err)
 						} else {
@@ -96,7 +96,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 					}
 
 					Tab("Graph", systemImage: "photo") {
-						DFAGraphPageView(rule_fsm: $rule_fsm, charset: MainAppModel.charsetDict[selectedCharsetId]!)
+						DFAGraphPageView(rule_fsm: $rule_fsm)
 					}
 
 					Tab("Railroad", systemImage: "train.side.front.car") {
@@ -125,7 +125,6 @@ struct DocumentView<Document: DocumentProtocol>: View {
 									rule_alphabet: $rule_alphabet,
 									rule_fsm: $rule_fsm,
 									content_cfg: $content_cfg,
-									charset: MainAppModel.charsetDict[selectedCharsetId]!,
 								)
 								Spacer()
 							}
@@ -235,7 +234,8 @@ struct DocumentView<Document: DocumentProtocol>: View {
 									let rule_alphabet_sorted: [ClosedRangeAlphabet<UInt32>.SymbolClass] = Array(rule_alphabet)
 									ForEach(rule_alphabet_sorted, id: \.self) {
 										(part: ClosedRangeAlphabet<UInt32>.SymbolClass) in
-										Text(describeCharacterSet(part, charset: MainAppModel.charsetDict[document.charset]!)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
+										// TODO: Maybe use @Environment and replace this with a charset.describe()
+										Text(SelectedCharset(charset: MainAppModel.charsetDict[selectedCharsetId]!).describe(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
 									}
 								}else{
 									Text("Computing alphabet...")
@@ -341,7 +341,6 @@ struct DocumentView<Document: DocumentProtocol>: View {
 										rule_alphabet: $rule_alphabet,
 										rule_fsm: $rule_fsm,
 										content_cfg: $content_cfg,
-										charset: MainAppModel.charsetDict[selectedCharsetId]!,
 									)
 								})
 							}
@@ -382,6 +381,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 				Label("Inspector", systemImage: "sidebar.squares.right")
 			}
 		}
+		.environment(SelectedCharset(charset: MainAppModel.charsetDict[selectedCharsetId]!))
 	}
 
 	/// Parses the grammar text into a rulelist
@@ -409,49 +409,32 @@ struct DocumentView<Document: DocumentProtocol>: View {
 		}
 		guard let bundlePath = Bundle.main.resourcePath else { return }
 		Task.detached(priority: .utility) {
-			do {
-				let catalog = Catalog(root: bundlePath + "/catalog/")
-				await MainActor.run {
-					do {
-						let rulelist_all_final = try document.toABNFRulelist();
-						content_rulelist = rulelist_all_final.addingBuiltins();
-						if let selectedRule, let content_rulelist {
-							content_cfg = try content_rulelist.toCFG(rulename: selectedRule)
-						} else {
-							content_cfg = .init()
-						}
-						content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
-					} catch {
-						if let err = error as? ABNFExportError {
-							content_cfg_err = err.message;
-						} else {
-							content_cfg_err = error.localizedDescription;
-						}
-						content_cfg = nil
+			let catalog = Catalog(root: bundlePath + "/catalog/")
+			await MainActor.run {
+				do {
+					let rulelist_all_final = try document.toABNFRulelist();
+					content_rulelist = rulelist_all_final.addingBuiltins();
+					if let selectedRule, let content_rulelist {
+						content_cfg = try content_rulelist.toCFG(rulename: selectedRule)
+					} else {
+						content_cfg = .init()
 					}
-					// Select the first rule by default
-					if selectedRule == nil, let firstRule = content_rulelist?.rules.first {
-						selectedRule = firstRule.rulename.id
-					} else if let s = selectedRule, let content_rulelist, content_rulelist.dictionary[s] == nil, let firstRule = content_rulelist.rules.first {
-						selectedRule = firstRule.rulename.id
+					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
+				} catch {
+					if let err = error as? ABNFExportError {
+						content_cfg_err = err.message;
+					} else {
+						content_cfg_err = error.localizedDescription;
 					}
-					content_parseErrorLine = nil;
+					content_cfg = nil
 				}
-			} catch let error as ABNFParseError<Array<UInt32>.Index> {
-				await MainActor.run {
-					content_rulelist = nil
-					content_rulelist_error = "Error at index: " + String(describing: error.index)
-					rule_alphabet = nil
-					let input = Array(text.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
-					content_parseErrorLine = input[0...error.index.startIndex].count(where: { $0 == 0xA })
+				// Select the first rule by default
+				if selectedRule == nil, let firstRule = content_rulelist?.rules.first {
+					selectedRule = firstRule.rulename.id
+				} else if let s = selectedRule, let content_rulelist, content_rulelist.dictionary[s] == nil, let firstRule = content_rulelist.rules.first {
+					selectedRule = firstRule.rulename.id
 				}
-			} catch {
-				await MainActor.run {
-					content_rulelist = nil
-					content_rulelist_error = "Unknown error: " + error.localizedDescription
-					rule_fsm = nil
-					rule_fsm_error = nil
-				}
+				content_parseErrorLine = nil;
 			}
 		}
 	}
@@ -524,37 +507,4 @@ struct DocumentView<Document: DocumentProtocol>: View {
 		let subGroup = orderedRules.filter { !orphanGroup.contains($0) && $0 != first }
 		return (first, orphanGroup, subGroup);
 	}
-}
-
-/// DIsplay ranges of symbols as characters or ranges of characters
-func describeCharacterSet(_ rangeSet: Array<ClosedRange<UInt32>>, charset: Charset) -> String {
-	// Handle empty set case
-	guard !rangeSet.isEmpty else { return "∅" }
-
-	// Convert set to array and sort by lower bound
-	let sortedRanges = rangeSet.sorted { $0.lowerBound < $1.lowerBound }
-
-	// Initialize result with the first range
-	var merged: [ClosedRange<UInt32>] = [sortedRanges[0]]
-
-	// Iterate through remaining ranges
-	for current in sortedRanges.dropFirst() {
-		let last = merged.last!
-
-		// Check if current range is adjacent to or overlaps with the last merged range
-		if current.lowerBound <= last.upperBound + 1 && ((0x30...0x39).contains(current.lowerBound) || (0x41...0x5A).contains(current.lowerBound) || (0x61...0x7A).contains(current.lowerBound) || current.lowerBound > 0x7F) && ((0x30...0x39).contains(last.lowerBound) || (0x41...0x5A).contains(last.lowerBound) || (0x61...0x7A).contains(last.lowerBound) || last.lowerBound > 0x7F) {
-			// Merge by creating a new range with the same lower bound and the maximum upper bound
-			let newUpper = max(last.upperBound, current.upperBound)
-			merged[merged.count - 1] = last.lowerBound...newUpper
-		} else {
-			// If not adjacent or overlapping, add the current range as a new segment
-			merged.append(current)
-		}
-	}
-
-	return merged
-		// U+22EF Midline Horizontal Ellipsis
-		.map { charset.toQuoted($0.lowerBound) + ($0.lowerBound==$0.upperBound ? "" : ("⋯" + charset.toQuoted($0.upperBound)) ) }
-		// U+2001 EM QUAD, a space that is an em-dash wide, for increased separation
-		.joined(separator: "\u{2001}")
 }

@@ -24,8 +24,6 @@ struct DFAGraphPageView: View {
 	typealias StringDFA = RangeDFA<UInt32>
 	// This comes in from ContentView normalized. If it's not normalized, paths will cross without reason and it'll look much worse.
 	@Binding var rule_fsm: StringDFA?
-	// How the symbols should be represented as strings
-	let charset: Charset;
 
 	@State var testInput: String = ""
 	@State var visitedNode: Set<Int> = []
@@ -61,7 +59,7 @@ struct DFAGraphPageView: View {
 					}
 				}
 			}
-			DFAGraphView(rule_fsm: $rule_fsm, charset: charset, visitedNode: $visitedNode, visitedPath: $visitedPath);
+			DFAGraphView(rule_fsm: $rule_fsm, visitedNode: $visitedNode, visitedPath: $visitedPath);
 		}
 	}
 }
@@ -71,7 +69,7 @@ struct DFAGraphView: View {
 	// This comes in from ContentView normalized. If it's not normalized, paths will cross without reason and it'll look much worse.
 	@Binding var rule_fsm: StringDFA?
 	// How the symbols should be represented as strings
-	let charset: Charset;
+	@Environment(SelectedCharset.self) private var charset;
 	// List of "visited" nodes
 	@Binding var visitedNode: Set<Int>;
 	@Binding var visitedPath: Set<Segment>;
@@ -96,7 +94,7 @@ struct DFAGraphView: View {
 						EdgeView(
 							source: nodePosition(i, in: geometry),
 							target: nodePosition(target, in: geometry),
-							label: describeCharacterSet(symbol, charset: charset),
+							label: charset.describe(symbol),
 							isVisited: visitedNode.contains(target)
 						)
 					}
