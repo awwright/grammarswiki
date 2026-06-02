@@ -397,6 +397,14 @@ protocol DocumentProtocol {
 	var charset: String {get set}
 	var content: String {get set}
 
+	/// Rules designed to be used/referenced externally
+	var topRuleNames: Array<String> {get}
+
+	/// All rule names, including those for internal use
+	var allRuleNames: Array<String> {get}
+
+	/// Convert this grammar to an ABNFRulelist
+	/// (mostly for when the source is already an ABNF document)
 	func toABNFRulelist() throws -> ABNFRulelist<UInt32>
 
 	// - rule list: for debugging subrules (get list of rule names, enumerate groups in regular expresions, etc)

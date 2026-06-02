@@ -14,6 +14,22 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	var charset: String
 	var content: String
 
+	var topRuleNames: Array<String> {
+		// FIXME: Cache this parse result somewhere
+		let rulelist = try? ABNFRulelist<UInt8>.parse(self.content.utf8);
+		guard let rulelist else { return [] }
+		let orderedRules = rulelist.ruleNames;
+		return orderedRules.filter { !rulelist.referencedRules.contains($0) }
+	}
+
+	var allRuleNames: Array<String> {
+		// FIXME: Cache this parse result somewhere
+		let rulelist = try? ABNFRulelist<UInt8>.parse(self.content.utf8);
+		guard let rulelist else { return [] }
+		let orderedRules = rulelist.ruleNames;
+		return orderedRules.filter { !rulelist.referencedRules.contains($0) }
+	}
+
 	static var readableContentTypes: [UTType] { [.grammarsDoc] }
 
 	init() {

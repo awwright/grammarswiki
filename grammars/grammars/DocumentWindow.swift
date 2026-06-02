@@ -161,14 +161,15 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						// TODO: Order this in the same order as in the grammar
 						Picker("Starting rule", selection: $selectedRule) {
 							if let content_rulelist {
-								let (first, orphanGroup, subGroup) = computeGroupedRules(for: content_rulelist)
-								if let first {
+								let list = document.topRuleNames;
+								if let first = list.first {
 									Section("First rule") {
 										Text(first).tag(String?.some(first))
 									}
 								} else {
 									Text("No rules defined").disabled(true)
 								}
+								let orphanGroup = list.isEmpty ? [] : list[1...];
 								if !orphanGroup.isEmpty {
 									Section("Orphan rules") {
 										ForEach(orphanGroup, id: \.self) { rule in
@@ -176,6 +177,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 										}
 									}
 								}
+								let subGroup = document.allRuleNames.filter { !list.contains($0) }
 								if !subGroup.isEmpty {
 									Section("Sub-rules") {
 										ForEach(subGroup, id: \.self) { rule in
@@ -375,10 +377,22 @@ struct DocumentView<Document: DocumentProtocol>: View {
 		.onChange(of: content_cfg) { updatedCFG(); }
 		.onAppear { switchDocument(); }
 		.toolbar {
-			Button {
-				inspector_isPresented.toggle()
-			} label: {
-				Label("Inspector", systemImage: "sidebar.squares.right")
+			ToolbarItem(placement: .primaryAction) {
+				Button {
+					inspector_isPresented.toggle()
+				} label: {
+					Label("Inspector", systemImage: "sidebar.squares.right")
+				}
+			}
+
+			ToolbarItem(placement: .principal) {
+				HStack(spacing: 8) {
+					Picker("Rule", systemImage: "arrow.left", selection: $selectedRule) {
+						ForEach(document.topRuleNames, id: \.self) {
+							Text($0).tag($0)
+						}
+					}.pickerStyle(.menu)
+				}
 			}
 		}
 		.environment(SelectedCharset(charset: MainAppModel.charsetDict[selectedCharsetId]!))
@@ -495,16 +509,5 @@ struct DocumentView<Document: DocumentProtocol>: View {
 		guard let content_cfg else { return }
 		content_cfg_chomskyClass = content_cfg.chomskyClass();
 		content_cfg_memoryRequirements = content_cfg.memoryRequirements();
-	}
-
-	private func computeGroupedRules(for rulelist: ABNFRulelist<UInt32>) -> (first: String?, orphanGroup: [String], subGroup: [String]) {
-		let orderedRules = rulelist.ruleNames
-		guard !orderedRules.isEmpty else { return (nil, [], []) }
-		let allReferenced = rulelist.referencedRules
-		let orphans = orderedRules.filter { !allReferenced.contains($0) }
-		let first = orderedRules[0]
-		let orphanGroup = orphans.filter { $0 != first }
-		let subGroup = orderedRules.filter { !orphanGroup.contains($0) && $0 != first }
-		return (first, orphanGroup, subGroup);
 	}
 }
