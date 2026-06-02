@@ -50,6 +50,8 @@ struct CFGContentView: View {
 					Text("Alphabetical").tag("a")
 				}
 				.pickerStyle(.segmented)
+
+				// TODO: Add option to hide unused/useless rules (on by default)
 			}
 			.pickerStyle(.menu)
 			.formStyle(.grouped)
@@ -76,6 +78,7 @@ struct CFGContentView: View {
 						Text("\t= \u{2205}");
 					}
 					ForEach(rules, id: \.self) { rule in
+						// FIXME: This will squish rather than wrap
 						HStack {
 							Text("\t\u{2192} ")
 							ForEach(rule.body, id: \.self) { (token: ABNFRulelist<UInt32>.CFG.BodyElement) in

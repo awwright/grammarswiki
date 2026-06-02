@@ -161,6 +161,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			public let progress: Int
 			/// The offset of this production's first symbol from the string's first symbol
 			public let offset: Int
+			// TODO: Add an `end` property that stores the end position that this item matches, which would replace the `i` argument in Parser.addChart
 			// Computed properties
 			public var isComplete: Bool { progress == production.body.count }
 			public var expecting: Production.BodyElement? { progress < production.body.count ? production.body[progress] : nil }
@@ -411,6 +412,8 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			}
 			return Alphabet(partitions: symbols);
 		}
+
+		// TODO: Add a function for getting a tree of the next symbols
 	}
 
 	/// A representation of a parse tree for the current CFG.

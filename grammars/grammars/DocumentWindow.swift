@@ -192,7 +192,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						// This is only used when something needs to intrepert the symbols in the context of a charset
 						//	UTF-32 is preferred
 						// Integer ensures they are always opaque
-						//
+						// TODO: Pull this list from HomomorphismGraph<UInt32>.builtin.nodes
 						Picker("Charset", selection: $selectedCharsetId) {
 							ForEach(MainAppModel.charsets, id: \.id) { type in
 								Text(type.label).tag(type.id)

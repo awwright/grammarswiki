@@ -3,8 +3,6 @@ import FSM
 import LanguageSupport
 import UniformTypeIdentifiers
 
-// TODO: Automatically update file list from filesystem events
-// TODO: Add DocumentProtocol to Document that outlines methods like:
 // TODO: Implement CFG methods for chomsky normal form, greibach normal form
 // TODO: List parse forest productions/alternatives in same order as the original grammar does
 // TODO: Add RegexDocument to import regular expressions as a grammar
@@ -98,6 +96,7 @@ class MainAppModel: ObservableObject {
 	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: typeExtensions.map { ($0.1, $0.0) });
 
 	static let charsets: [Charset] = [
+		// TODO: Add binary, which is sometimes useful for networking protocols
 		Charset(
 			id: "Decimal",
 			label: "10",
