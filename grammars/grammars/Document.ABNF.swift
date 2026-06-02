@@ -97,11 +97,6 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		@State private var selectionLink: NSRange? = nil // For linking rule to definition
 		@Environment(\.colorScheme) private var colorScheme: ColorScheme
 
-		// Language configuration
-		private func abnfLanguageConfiguration() -> LanguageConfiguration {
-			return MainAppModel.fileTypes.first { $0.label == "ABNF" }?.languageConfiguration ?? MainAppModel.fileTypes[0].languageConfiguration
-		}
-
 		var body: some View {
 			// Some views that were considered for this:
 			// - Builtin TextEditor - would be sufficient except it automatically curls quotes and there's no way to disable it
@@ -112,7 +107,20 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 				text: $document.content,
 				position: $position,
 				messages: $messages,
-				language: abnfLanguageConfiguration()
+				language: LanguageConfiguration(
+					name: "ABNF",
+					supportsSquareBrackets: true,
+					supportsCurlyBrackets: false,
+					stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
+					characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
+					numberRegex: try! Regex("[1-9][0-9]*"),
+					singleLineComment: ";",
+					nestedComment: nil,
+					identifierRegex: try! Regex("[0-9A-Za-z-]+"),
+					operatorRegex: try! Regex("/|\\*|=|=/"),
+					reservedIdentifiers: [],
+					reservedOperators: [],
+				),
 			)
 			.environment(\.codeEditorTheme, colorScheme == .dark ? Theme.defaultDark : Theme.defaultLight)
 			.frame(minHeight: 300)

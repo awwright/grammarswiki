@@ -14,7 +14,6 @@ struct DocumentView<Document: DocumentProtocol>: View {
 	@Binding var document: Document
 
 	// User input
-	@State private var selectedDocumentLanguage: String = "ABNF"
  	@State private var selectedCharsetId: String = "UTF-32"
 	@State private var selectedRule: String? = nil
 	@State private var testInput: String = ""
@@ -139,28 +138,26 @@ struct DocumentView<Document: DocumentProtocol>: View {
 			.inspector(isPresented: $inspector_isPresented) {
 				// MARK: Inspector sidebar
 				ScrollView {
-					if let filepath = document.filepath {
-						HStack {
-							Text("Filepath").foregroundColor(.primary)
-							Text(filepath.path).foregroundColor(.secondary)
-							Button("Show in Finder", systemImage: "magnifyingglass.circle.fill") {
-								// TODO: If file no longer exists, show an alert
-								NSWorkspace.shared.selectFile(filepath.path, inFileViewerRootedAtPath: "")
-							}.labelStyle(.iconOnly).buttonStyle(.plain)
-						}
-					}
-
 					Form {
-						// First, show information true about the whole grammar file
-						// If there's no rulelist, then the grammar file isn't parsed at all.
-						Picker("Parse as", selection: $selectedDocumentLanguage) {
-							ForEach(MainAppModel.fileTypes, id: \.label) { type in
-								Text(type.label).tag(type.label)
+						if let filepath = document.filepath {
+							LabeledContent("Path") {
+								Button {
+									NSWorkspace.shared.selectFile(filepath.path, inFileViewerRootedAtPath: "")
+								} label: {
+									Text(filepath.path)
+										.lineLimit(1)
+										.truncationMode(.middle)
+									Image(systemName: "magnifyingglass.circle.fill")
+								}
+								.buttonStyle(.plain)
+								.foregroundStyle(.secondary)
 							}
 						}
-						.pickerStyle(MenuPickerStyle())
 
-						// TODO: Order this in the same order as in the grammar
+						LabeledContent("Type") {
+							Text(document.type)
+						}
+
 						Picker("Starting rule", selection: $selectedRule) {
 							if let content_rulelist {
 								let list = document.topRuleNames;
@@ -257,7 +254,6 @@ struct DocumentView<Document: DocumentProtocol>: View {
 		} // HStack
 		.onChange(of: document.content) { updatedDocument() }
 		.onChange(of: selectedRule) { updatedRule(); updatedDocument() }
-		.onChange(of: selectedDocumentLanguage) { document.type = selectedDocumentLanguage }
 		.onChange(of: selectedCharsetId) { document.charset = selectedCharsetId; }
 		.onChange(of: document.id) { switchDocument(); }
 		.onChange(of: content_cfg) { updatedCFG(); }
@@ -286,7 +282,6 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 	/// Parses the grammar text into a rulelist
 	private func switchDocument() {
-		selectedDocumentLanguage = document.type;
 		selectedCharsetId = document.charset;
 		updatedDocument();
 		updatedRule();
@@ -303,10 +298,6 @@ struct DocumentView<Document: DocumentProtocol>: View {
 		rule_alphabet = nil
 		rule_fsm = nil
 		rule_fsm_error = nil
-		guard let fileType = MainAppModel.fileTypes.first(where: { $0.label == selectedDocumentLanguage }) else {
-			// No parser for this type
-			return
-		}
 		guard let bundlePath = Bundle.main.resourcePath else { return }
 		Task.detached(priority: .utility) {
 			let catalog = Catalog(root: bundlePath + "/catalog/")

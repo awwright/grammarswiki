@@ -16,13 +16,6 @@ extension UTType {
 	static var grammarsDoc = UTType(exportedAs: "name.awwright.grammars.doc")
 }
 
-struct FileType {
-	let label: String
-	let fileExtension: String
-	let languageConfiguration: LanguageConfiguration
-	let toRailroad: ((ABNFRulelist<UInt32>, String) throws -> RailroadNode)?
-}
-
 /// Stores a method of converting from a string of numbers to a String, for display purposes
 struct Charset {
 	let id: String
@@ -101,84 +94,8 @@ class MainAppModel: ObservableObject {
 	let userDocumentsDirectory: URL?
 	let userDocumentsWatcher: DirectoryWatcher
 
-	static let fileTypes: [FileType] = [
-		FileType(
-			label: "Syntax/Formal Grammar Notebook",
-			fileExtension: ".sfgnb",
-			languageConfiguration: LanguageConfiguration(
-				name: "Plain",
-				supportsSquareBrackets: true,
-				supportsCurlyBrackets: false,
-				stringRegex: nil,
-				characterRegex: nil,
-				numberRegex: nil,
-				singleLineComment: "//",
-				nestedComment: nil,
-				identifierRegex: nil,
-				operatorRegex: nil,
-				reservedIdentifiers: [],
-				reservedOperators: [],
-			),
-			toRailroad: nil,
-		),
-		FileType(
-			label: "Plain text",
-			fileExtension: ".txt",
-			languageConfiguration: LanguageConfiguration(
-				name: "Plain",
-				supportsSquareBrackets: true,
-				supportsCurlyBrackets: false,
-				stringRegex: nil,
-				characterRegex: nil,
-				numberRegex: nil,
-				singleLineComment: "//",
-				nestedComment: nil,
-				identifierRegex: nil,
-				operatorRegex: nil,
-				reservedIdentifiers: [],
-				reservedOperators: [],
-			),
-			toRailroad: nil,
-		),
-		FileType(
-			label: "ABNF",
-			fileExtension: ".abnf",
-			languageConfiguration: LanguageConfiguration(
-				name: "ABNF",
-				supportsSquareBrackets: true,
-				supportsCurlyBrackets: false,
-				stringRegex: try! Regex("\"[^\"]*\"|<[^>]*>"),
-				characterRegex: try! Regex("%[bdxBDX][0-9A-Fa-f]+(?:-[0-9A-Fa-f]+|(?:\\.[0-9A-Fa-f]+)*)"),
-				numberRegex: try! Regex("[1-9][0-9]*"),
-				singleLineComment: ";",
-				nestedComment: nil,
-				identifierRegex: try! Regex("[0-9A-Za-z-]+"),
-				operatorRegex: try! Regex("/|\\*|=|=/"),
-				reservedIdentifiers: [],
-				reservedOperators: [],
-			),
-			toRailroad: {
-				content_rulelist, selectedRule in
-				let dictionary = content_rulelist.dictionary;
-				guard let rule = dictionary[selectedRule] else { fatalError() }
-				return rule.toRailroad(rules: dictionary.mapValues { $0.alternation });
-			},
-		),
-		FileType(
-			label: "Regex (ECMAScript)",
-			fileExtension: ".js",
-			languageConfiguration: LanguageConfiguration.swift(), // FIXME: Swift is pretty close, but this can be adjusted
-			toRailroad: nil,
-		),
-		FileType(
-			label: "Regex (Swift)",
-			fileExtension: ".swift",
-			languageConfiguration: LanguageConfiguration.swift(),
-			toRailroad: nil,
-		),
-	];
-	static let typeExtensions: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.label, $0.fileExtension) })
-	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: fileTypes.map { ($0.fileExtension, $0.label) })
+	static let typeExtensions: [String: String] = ["ABNF": ".abnf"];
+	static let extensionsType: [String: String] = Dictionary(uniqueKeysWithValues: typeExtensions.map { ($0.1, $0.0) });
 
 	static let charsets: [Charset] = [
 		Charset(
