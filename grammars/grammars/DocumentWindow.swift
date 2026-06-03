@@ -83,7 +83,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					if showRegex {
 						Tab("Regex", systemImage: "textformat.characters.arrow.left.and.right") {
-							RegexContentView(rule_fsm: $rule_fsm, rulelist_fsm: computed.asABNFRulelist?.ruleNames)
+							RegexContentView(rule_fsm: $rule_fsm)
 						}
 					}
 
