@@ -12,6 +12,7 @@ import FSM
 /// The main viewer for a single grammar
 struct DocumentView<Document: DocumentProtocol>: View {
 	@Binding var document: Document
+	@State var computed: Document.Information = .init()
 
 	// User input
  	@State private var selectedCharsetId: String = "UTF-32"
@@ -66,7 +67,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					Tab("Information", systemImage: "info.circle") {
 						ScrollView {
-							RuleInformationView(content_rulelist: content_rulelist, grammar: content_cfg, selectedRule: selectedRule, rule_fsm: rule_fsm, rule_alphabet: rule_alphabet);
+							RuleInformationView(content_rulelist: computed.asABNFRulelist, grammar: content_cfg, selectedRule: selectedRule, rule_fsm: rule_fsm, rule_alphabet: rule_alphabet);
 						}.frame(maxWidth: .infinity)
 					}
 
@@ -82,7 +83,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					if showRegex {
 						Tab("Regex", systemImage: "textformat.characters.arrow.left.and.right") {
-							RegexContentView(rule_fsm: $rule_fsm, rulelist_fsm: content_rulelist?.ruleNames)
+							RegexContentView(rule_fsm: $rule_fsm, rulelist_fsm: computed.asABNFRulelist?.ruleNames)
 						}
 					}
 
@@ -157,7 +158,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						}
 
 						Picker("Starting rule", selection: $selectedRule) {
-							let list = document.topRuleNames;
+							let list = computed.topRuleNames;
 							if let first = list.first {
 								Section("First rule") {
 									Text(first).tag(String?.some(first))
@@ -202,7 +203,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 					// TODO: Add a sheet/dialog that actually transforms the language from one to another
 					//Button("Convert\u{2026}", systemImage: "arrow.trianglehead.swap", action: {});
 
-					if let content_rulelist {
+					if let content_rulelist = computed.asABNFRulelist {
 						RuleInformationView(content_rulelist: content_rulelist, grammar: content_cfg, selectedRule: selectedRule, rule_fsm: rule_fsm, rule_alphabet: rule_alphabet);
 
 						if rule_fsm != nil {
@@ -246,12 +247,12 @@ struct DocumentView<Document: DocumentProtocol>: View {
 				.inspectorColumnWidth(min: 300, ideal: 500, max: 2000)
 			}
 		} // HStack
-		.onChange(of: document.content) { updatedDocument() }
+		.onChange(of: document.content) { computed.document = document }
 		.onChange(of: selectedRule) { updatedRule(); updatedDocument() }
 		.onChange(of: selectedCharsetId) { document.charset = selectedCharsetId; }
 		.onChange(of: document.id) { switchDocument(); }
 		.onChange(of: content_cfg) { updatedCFG(); }
-		.onAppear { switchDocument(); }
+		.onAppear { switchDocument(); computed.document = document }
 		.toolbar {
 			ToolbarItem(placement: .primaryAction) {
 				Button {

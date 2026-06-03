@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Forms the body of the Catalog window
 struct CatalogView: View {
-	@ObservedObject var model: MainAppModel
+	var model: MainAppModel
 	@State private var selectionId: UUID? = nil
 
 	var body: some View {

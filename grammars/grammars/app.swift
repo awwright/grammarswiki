@@ -83,10 +83,10 @@ struct MainApp: App {
 	}
 }
 
-class MainAppModel: ObservableObject {
-	@Published var user: [UUID: CatalogListItem] = [:]
-	@Published var user_filepath_id: [URL: UUID] = [:]
-	@Published var userSorted: Array<CatalogListItem> = []
+@Observable class MainAppModel {
+	var user: [UUID: CatalogListItem] = [:]
+	var user_filepath_id: [URL: UUID] = [:]
+	var userSorted: Array<CatalogListItem> = []
 	// You could also watch the catalog directory, but it's usually embedded inside the app bundle and isn't going to change
 	let catalog: Array<CatalogListItem>
 	let userDocumentsDirectory: URL?
@@ -332,12 +332,25 @@ protocol DocumentProtocol {
 	// - editor view: A View that can be used to edit the grammar (e.g. a code editor for ABNF)
 	// - CFG export options view: A View that specifies how to convert the source grammar to a CFG (e.g. tail recursion technique to use, case sensitive)
 	associatedtype EditorView: EditorViewBody, View where EditorView.Document == Self;
+
+	/// Computes properties of the grammar used by DocumentWindow
+	associatedtype Information: DocumentInformationProtocol where Information.Document == Self;
 }
 
 extension DocumentProtocol {
 	func editorView(document: Binding<Self>, parseErrorLine: Binding<Int?>) -> EditorView {
 		EditorView(document: document, parseErrorLine: parseErrorLine)
 	}
+}
+
+protocol DocumentInformationProtocol {
+	associatedtype Document: DocumentProtocol
+	init()
+
+	var document: Document? {get set}
+	var asABNFRulelist: ABNFRulelist<UInt32>? {get}
+	var topRuleNames: Array<String> {get}
+	var allRuleNames: Array<String> {get}
 }
 
 //protocol SettingsViewBody: View {

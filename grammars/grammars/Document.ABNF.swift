@@ -136,4 +136,60 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			}
 		}
 	}
+
+	@Observable class Information: DocumentInformationProtocol {
+		typealias Document = ABNFDocument
+
+		required init() {
+			document = nil
+			self._task = Task{}
+			asABNFRulelist = nil;
+			asABNFRulelist_error = nil;
+			topRuleNames = [];
+			allRuleNames = [];
+		}
+
+		deinit { _task.cancel() }
+
+		var document: Document? { didSet { _update(); } }
+		var asABNFRulelist: FSM.ABNFRulelist<UInt32>? = nil
+		var asABNFRulelist_error: String? = nil
+		var topRuleNames: Array<String> = []
+		var allRuleNames: Array<String> = []
+
+		var _task: Task<(), Never>
+		func _update() {
+			print("updated document");
+			_task.cancel()
+			asABNFRulelist = nil;
+			asABNFRulelist_error = nil;
+			topRuleNames = [];
+			allRuleNames = [];
+			_task = Task {
+				guard let document else { return }
+				let rulelist: ABNFRulelist<UInt32>?;
+				do {
+					rulelist = try ABNFRulelist<UInt32>.parse(document.content.utf8)
+					await MainActor.run { self.asABNFRulelist = rulelist }
+				} catch {
+					asABNFRulelist_error = error.localizedDescription
+					rulelist = nil
+					return
+				}
+				if _task.isCancelled { return }
+				guard let rulelist else { return }
+
+				let orderedRules = rulelist.ruleNames;
+				let allRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) }
+				await MainActor.run { self.allRuleNames = allRuleNames }
+				if _task.isCancelled { return }
+
+				let topRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) }
+				await MainActor.run { self.topRuleNames = topRuleNames }
+				if _task.isCancelled { return }
+			}
+		}
+	}
+
+
 }
