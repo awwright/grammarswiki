@@ -89,7 +89,7 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 	struct EditorView: EditorViewBody {
 		@Binding var document: ABNFDocument
-		@Binding var parseErrorLine: Int?
+		let computed: ABNFDocument.Parser
 
 		// Code editor variables
 		@State private var position: CodeEditor.Position       = CodeEditor.Position()
@@ -125,8 +125,8 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			.environment(\.codeEditorTheme, colorScheme == .dark ? Theme.defaultDark : Theme.defaultLight)
 			.frame(minHeight: 300)
 			.font(.system(size: 14, design: .monospaced))
-			.onChange(of: parseErrorLine) {
-				if let parseErrorLine, parseErrorLine >= 0 {
+			.onChange(of: computed.content_parseErrorLine) {
+				if let parseErrorLine = computed.content_parseErrorLine, parseErrorLine >= 0 {
 					messages = Set([
 						TextLocated(location: TextLocation(zeroBasedLine: parseErrorLine, column: 0), entity: Message(category: .error, length: 2, summary: "Syntax Error", description: nil))
 					])
@@ -137,14 +137,14 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		}
 	}
 
-	@Observable class Information: DocumentInformationProtocol {
+	@Observable class Parser: DocumentParserProtocol {
 		typealias Document = ABNFDocument
 
 		required init() {
 			document = nil
 			self._task = Task{}
 			asABNFRulelist = nil;
-			asABNFRulelist_error = nil;
+			document_error = nil;
 			topRuleNames = [];
 			allRuleNames = [];
 		}
@@ -152,28 +152,59 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		deinit { _task.cancel() }
 
 		var document: Document? { didSet { _update(); } }
+		var document_error: String? = nil
+		var content_parseErrorLine: Int? = nil
 		var asABNFRulelist: FSM.ABNFRulelist<UInt32>? = nil
-		var asABNFRulelist_error: String? = nil
 		var topRuleNames: Array<String> = []
 		var allRuleNames: Array<String> = []
+
+		var selectedRulename: String? { didSet { _update(); } }
+		var selectedRule_error: String? = nil
+		var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
+		var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
+		var selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = nil
+		var selectedRule_rr: RailroadNode? = nil
+		var selectedRule_complexityClass: Int? = nil
+		var selectedRule_chomskyClass: Int? = nil
+		var selectedRule_memoryRequirements: Int? = nil
+
+		let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() };
 
 		var _task: Task<(), Never>
 		func _update() {
 			print("updated document");
 			_task.cancel()
+			document_error = nil;
 			asABNFRulelist = nil;
-			asABNFRulelist_error = nil;
+			content_parseErrorLine = nil;
 			topRuleNames = [];
 			allRuleNames = [];
 			_task = Task {
 				guard let document else { return }
 				let rulelist: ABNFRulelist<UInt32>?;
 				do {
-					rulelist = try ABNFRulelist<UInt32>.parse(document.content.utf8)
+					print("Parsing");
+					// Array() is necessary otherwise the error will be of type ABNFParseError<String.Index>
+					rulelist = try ABNFRulelist<UInt32>.parse(Array(document.content.utf8))
+					print("Parsed");
 					await MainActor.run { self.asABNFRulelist = rulelist }
+				} catch let error as ABNFParseError<Array<UInt32>.Index> {
+					print("ABNFParseError");
+					print(error.localizedDescription);
+					rulelist = nil;
+					await MainActor.run {
+						self.document_error = "Error at index: " + String(describing: error.index)
+						let input = Array(document.content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
+						content_parseErrorLine = input[0...error.index.startIndex].count(where: { $0 == 0xA })
+					}
+					return
 				} catch {
-					asABNFRulelist_error = error.localizedDescription
-					rulelist = nil
+					print("Undefined error while parsing")
+					print(error.localizedDescription);
+					rulelist = nil;
+					await MainActor.run {
+						self.document_error = error.localizedDescription;
+					}
 					return
 				}
 				if _task.isCancelled { return }
@@ -187,6 +218,43 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 				let topRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) }
 				await MainActor.run { self.topRuleNames = topRuleNames }
 				if _task.isCancelled { return }
+
+				guard let selectedRulename else { return }
+
+				let dependencies_list = rulelist.dependencies(rulename: selectedRulename);
+				let dict = rulelist.dictionary;
+				let dependencies = dependencies_list.dependencies.compactMap { if let rule = dict[$0] { ($0, rule) } else { nil } }
+				if(dependencies.isEmpty){
+					await MainActor.run { selectedRule_error = "dependencies is empty"; }
+					return
+				}
+				if(dependencies_list.recursive.isEmpty == false){
+					await MainActor.run { selectedRule_error = "Rule is recursive"; }
+					return
+				}
+
+				var result_fsm_dict: Dictionary<String, DFA<ClosedRangeAlphabet<UInt32>>> = builtins.mapValues { $0.minimized() }
+				for (rulename, definition) in dependencies {
+					let pat: DFA<ClosedRangeAlphabet<UInt32>> = try! definition.toPattern(rules: result_fsm_dict);
+					result_fsm_dict[rulename] = pat.minimized()
+				}
+				let result = result_fsm_dict[selectedRulename]!
+
+				let selectedRule_alphabet: ClosedRangeAlphabet<UInt32> = result.alphabet;
+				let selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>> = result;
+				let selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = try? rulelist.toCFG(rulename: selectedRulename);
+//				let selectedRule_complexityClass: Int =
+				let selectedRule_chomskyClass: Int? = selectedRule_cfg?.chomskyClass();
+				let selectedRule_memoryRequirements: Int? = selectedRule_cfg?.memoryRequirements();
+//
+				await MainActor.run {
+					self.selectedRule_alphabet = selectedRule_alphabet;
+					self.selectedRule_fsm = selectedRule_fsm;
+					self.selectedRule_cfg = selectedRule_cfg;
+//					self.selectedRule_complexityClass = selectedRule_complexityClass;
+					self.selectedRule_chomskyClass = selectedRule_chomskyClass;
+					self.selectedRule_memoryRequirements = selectedRule_memoryRequirements;
+				}
 			}
 		}
 	}

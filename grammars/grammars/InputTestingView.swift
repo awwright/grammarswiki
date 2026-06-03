@@ -6,9 +6,9 @@ import FSM
 // TODO: Show an option for newline representation and character encoding
 
 struct InputTestingView: View {
-	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
-	@Binding var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>?
-	@Binding var content_cfg: ABNFRulelist<UInt32>.CFG?
+	let rule_alphabet: ClosedRangeAlphabet<UInt32>?
+	let rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>?
+	let content_cfg: ABNFRulelist<UInt32>.CFG?
 	@Environment(SelectedCharset.self) private var charset
 	@State private var testInput: String = ""
 	@State private var fsm_test_result: Bool? = nil

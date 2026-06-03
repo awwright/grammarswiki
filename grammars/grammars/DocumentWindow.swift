@@ -12,32 +12,13 @@ import FSM
 /// The main viewer for a single grammar
 struct DocumentView<Document: DocumentProtocol>: View {
 	@Binding var document: Document
-	@State var computed: Document.Information = .init()
+	// TODO: Cache computation results with <https://developer.apple.com/documentation/Foundation/NSCache>
+	@State var computed: Document.Parser = .init()
 
 	// User input
  	@State private var selectedCharsetId: String = "UTF-32"
 	@State private var selectedRule: String? = nil
 	@State private var testInput: String = ""
-
-	// Computed variables
-	// TODO: There's probably a way to actually compute these reactive to the user input
-	// TODO: Cache computation results with <https://developer.apple.com/documentation/Foundation/NSCache>
-	@State private var content_rulelist: ABNFRulelist<UInt32>? = nil
-	@State private var content_rulelist_error: String? = nil
-	@State private var content_parseErrorLine: Int? = nil
-
-	@State private var content_cfg: ABNFRulelist<UInt32>.CFG? = nil;
-	@State private var content_cfg_err: String? = nil;
-	@State private var content_rr: RailroadNode? = nil
-
-	@State private var content_cfg_complexityClass: Int? = nil
-	@State private var content_cfg_chomskyClass: Int? = nil
-	@State private var content_cfg_memoryRequirements: Int? = nil
-
-	@State private var rule_error: String? = nil
-	@State private var rule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
-	@State private var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
-	@State private var rule_fsm_error: String? = nil
 
 	@AppStorage("showRegex") private var showRegex: Bool = true
 	@AppStorage("showExport") private var showExport: Bool = true
@@ -62,20 +43,18 @@ struct DocumentView<Document: DocumentProtocol>: View {
 			VStack(alignment: .leading) {
 				TabView {
 					Tab("Edit", systemImage: "pencil") {
-						document.editorView(document: $document, parseErrorLine: $content_parseErrorLine)
+						document.editorView(document: $document, computed: computed)
 					}
 
 					Tab("Information", systemImage: "info.circle") {
 						ScrollView {
-							RuleInformationView(content_rulelist: computed.asABNFRulelist, grammar: content_cfg, selectedRule: selectedRule, rule_fsm: rule_fsm, rule_alphabet: rule_alphabet);
+							RuleInformationView(content_rulelist: computed.asABNFRulelist, grammar: computed.selectedRule_cfg, selectedRule: selectedRule, rule_fsm: computed.selectedRule_fsm, rule_alphabet: computed.selectedRule_alphabet);
 						}.frame(maxWidth: .infinity)
 					}
 
 					Tab("Translate", systemImage: "translate") {
-						if let content_cfg {
+						if let content_cfg = computed.selectedRule_cfg {
 							CFGContentView(grammar: content_cfg);
-						} else if let content_cfg_err {
-							Text(content_cfg_err)
 						} else {
 							Text("CFG is generating...")
 						}
@@ -83,7 +62,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					if showRegex {
 						Tab("Regex", systemImage: "textformat.characters.arrow.left.and.right") {
-							RegexContentView(rule_fsm: $rule_fsm)
+							RegexContentView(rule_fsm: computed.selectedRule_fsm)
 						}
 					}
 
@@ -91,19 +70,19 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						// TODO: "Copy to clipboard" button
 						Tab("Export", systemImage: "rectangle.portrait.and.arrow.right") {
 							ScrollView {
-								FSMExportView(rule_alphabet: $rule_alphabet, rule_fsm: $rule_fsm)
+								FSMExportView(rule_alphabet: computed.selectedRule_alphabet, rule_fsm: computed.selectedRule_fsm)
 								Spacer()
 							}
 						}
 					}
 
 					Tab("Graph", systemImage: "photo") {
-						DFAGraphPageView(rule_fsm: $rule_fsm)
+						DFAGraphPageView(rule_fsm: computed.selectedRule_fsm)
 					}
 
 					Tab("Railroad", systemImage: "train.side.front.car") {
 						ScrollView([.horizontal, .vertical]) {
-							if let content_rr {
+							if let content_rr = computed.selectedRule_rr {
 								content_rr.view
 							} else {
 								Text("Select a rule to view its railroad diagram")
@@ -114,7 +93,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					if showInstances {
 						Tab("Instances", systemImage: "printer.dotmatrix") {
-							InstanceGeneratorView(rule_fsm: $rule_fsm)
+							InstanceGeneratorView(rule_fsm: computed.selectedRule_fsm)
 						}
 					}
 
@@ -122,9 +101,9 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						Tab("Input Testing", systemImage: "pencil") {
 							ScrollView {
 								InputTestingView(
-									rule_alphabet: $rule_alphabet,
-									rule_fsm: $rule_fsm,
-									content_cfg: $content_cfg,
+									rule_alphabet: computed.selectedRule_alphabet,
+									rule_fsm: computed.selectedRule_fsm,
+									content_cfg: computed.selectedRule_cfg,
 								)
 								Spacer()
 							}
@@ -198,18 +177,27 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						.pickerStyle(MenuPickerStyle())
 
 						// TODO: Add an option to translate and re-interpret symbols, e.g. hex or URL encode the input string
+						//document.settingsView(document: self.$document)
 					}.formStyle(.grouped)
 
 					// TODO: Add a sheet/dialog that actually transforms the language from one to another
 					//Button("Convert\u{2026}", systemImage: "arrow.trianglehead.swap", action: {});
 
-					if let content_rulelist = computed.asABNFRulelist {
-						RuleInformationView(content_rulelist: content_rulelist, grammar: content_cfg, selectedRule: selectedRule, rule_fsm: rule_fsm, rule_alphabet: rule_alphabet);
+					if let err = computed.document_error {
+						Text(err)
+					}
 
-						if rule_fsm != nil {
+					if let err = computed.selectedRule_error {
+						Text(err)
+					}
+
+					if let content_rulelist = computed.asABNFRulelist {
+						RuleInformationView(content_rulelist: computed.asABNFRulelist, grammar: computed.selectedRule_cfg, selectedRule: selectedRule, rule_fsm: computed.selectedRule_fsm, rule_alphabet: computed.selectedRule_alphabet);
+
+						if let rule_fsm = computed.selectedRule_fsm {
 							if showRegex {
 								DisclosureGroup("Regex", isExpanded: $regex_expanded, content: {
-									RegexContentView(rule_fsm: $rule_fsm)
+									RegexContentView(rule_fsm: rule_fsm)
 								})
 							}
 
@@ -218,24 +206,24 @@ struct DocumentView<Document: DocumentProtocol>: View {
 							if showTestInput {
 								DisclosureGroup("Test Input", isExpanded: $test_expanded, content: {
 									InputTestingView(
-										rule_alphabet: $rule_alphabet,
-										rule_fsm: $rule_fsm,
-										content_cfg: $content_cfg,
+										rule_alphabet: computed.selectedRule_alphabet,
+										rule_fsm: computed.selectedRule_fsm,
+										content_cfg: computed.selectedRule_cfg,
 									)
 								})
 							}
-						} else if let rule_fsm_error {
+						} else if let rule_fsm_error = computed.selectedRule_error {
 							Text(rule_fsm_error)
 								.foregroundColor(.red)
-						} else if rule_fsm != nil {
+						} else if computed.selectedRule_fsm != nil {
 							Text("Selected rule is recursive")
 								.foregroundColor(.gray)
 						} else {
 							Text("Building FSM...")
 								.foregroundColor(.gray)
 						}
-					} else if let content_rulelist_error {
-						Text("Parse Error: \(content_rulelist_error)")
+					} else if let rule_fsm_error = computed.selectedRule_error {
+						Text("Parse Error: \(rule_fsm_error)")
 							.foregroundColor(.red)
 					} else {
 						Text("Parsing...")
@@ -247,12 +235,9 @@ struct DocumentView<Document: DocumentProtocol>: View {
 				.inspectorColumnWidth(min: 300, ideal: 500, max: 2000)
 			}
 		} // HStack
-		.onChange(of: document.content) { computed.document = document }
-		.onChange(of: selectedRule) { updatedRule(); updatedDocument() }
-		.onChange(of: selectedCharsetId) { document.charset = selectedCharsetId; }
-		.onChange(of: document.id) { switchDocument(); }
-		.onChange(of: content_cfg) { updatedCFG(); }
-		.onAppear { switchDocument(); computed.document = document }
+		.onAppear { computed.document = document; computed.selectedRulename = selectedRule; }
+		.onChange(of: document.content) { computed.document = document; computed.selectedRulename = selectedRule; }
+		.onChange(of: selectedRule) { computed.selectedRulename = selectedRule; }
 		.toolbar {
 			ToolbarItem(placement: .primaryAction) {
 				Button {
@@ -265,7 +250,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 			ToolbarItem(placement: .principal) {
 				HStack(spacing: 8) {
 					Picker("Rule", systemImage: "arrow.left", selection: $selectedRule) {
-						ForEach(document.topRuleNames, id: \.self) {
+						ForEach(computed.topRuleNames, id: \.self) {
 							Text($0).tag($0)
 						}
 					}.pickerStyle(.menu)
@@ -273,113 +258,5 @@ struct DocumentView<Document: DocumentProtocol>: View {
 			}
 		}
 		.environment(SelectedCharset(charset: MainAppModel.charsetDict[selectedCharsetId]!))
-	}
-
-	/// Parses the grammar text into a rulelist
-	private func switchDocument() {
-		selectedCharsetId = document.charset;
-		updatedDocument();
-		updatedRule();
-	}
-
-	/// Parses the grammar text into a rulelist
-	private func updatedDocument() {
-		let text = document.content;
-		content_rulelist = nil
-		content_rulelist_error = nil
-		content_cfg = nil
-		content_cfg_err = nil;
-		// invalidate updatedRule
-		rule_alphabet = nil
-		rule_fsm = nil
-		rule_fsm_error = nil
-		guard let bundlePath = Bundle.main.resourcePath else { return }
-		Task.detached(priority: .utility) {
-			let catalog = Catalog(root: bundlePath + "/catalog/")
-			await MainActor.run {
-				do {
-					let rulelist_all_final = try document.toABNFRulelist();
-					content_rulelist = rulelist_all_final.addingBuiltins();
-					if let selectedRule, let content_rulelist {
-						content_cfg = try content_rulelist.toCFG(rulename: selectedRule)
-					} else {
-						content_cfg = .init()
-					}
-					content_rr = rulelist_all_final.dictionary[selectedRule ?? ""]?.toRailroad(rules: content_rulelist!.dictionary.mapValues { $0.alternation })
-				} catch {
-					if let err = error as? ABNFExportError {
-						content_cfg_err = err.message;
-					} else {
-						content_cfg_err = error.localizedDescription;
-					}
-					content_cfg = nil
-				}
-				// Select the first rule by default
-				if selectedRule == nil, let firstRule = content_rulelist?.rules.first {
-					selectedRule = firstRule.rulename.id
-				} else if let s = selectedRule, let content_rulelist, content_rulelist.dictionary[s] == nil, let firstRule = content_rulelist.rules.first {
-					selectedRule = firstRule.rulename.id
-				}
-				content_parseErrorLine = nil;
-			}
-		}
-	}
-
-	/// Render the FSM
-	private func updatedRule() {
-		rule_alphabet = nil
-		rule_fsm = nil
-		rule_fsm_error = nil
-
-		guard let content_rulelist, let selectedRule else {
-			rule_fsm_error = "No rule selected"
-			return
-		}
-
-		// Compute alphabets
-		Task.detached(priority: .utility) {
-			let dependencies_list = content_rulelist.dependencies(rulename: selectedRule);
-			let dict = content_rulelist.dictionary;
-			let dependencies = dependencies_list.dependencies.compactMap { if let rule = dict[$0] { ($0, rule) } else { nil } }
-			if(dependencies.isEmpty){
-				await MainActor.run { rule_fsm_error = "dependencies is empty"; }
-				return
-			}
-			if(dependencies_list.recursive.isEmpty == false){
-				await MainActor.run { rule_fsm_error = "Rule is recursive"; }
-				return
-			}
-			do {
-				var result_fsm_dict = builtins.mapValues { $0.minimized() }
-				for (rulename, definition) in dependencies {
-					let pat = try definition.toPattern(rules: result_fsm_dict);
-					result_fsm_dict[rulename] = pat.minimized()
-				}
-				let result = result_fsm_dict[selectedRule]!
-				let result_alphabet = result.alphabet
-
-				await MainActor.run {
-					rule_fsm = result.normalized()
-					rule_fsm_error = nil
-					rule_alphabet = result_alphabet
-				}
-			} catch let error as ABNFExportError {
-				await MainActor.run {
-					rule_fsm = nil
-					rule_fsm_error = "ABNFExportError: " + String(describing: error)
-				}
-			} catch {
-				await MainActor.run {
-					rule_fsm = nil
-					rule_fsm_error = error.localizedDescription
-				}
-			}
-		}
-	}
-
-	private func updatedCFG() {
-		guard let content_cfg else { return }
-		content_cfg_chomskyClass = content_cfg.chomskyClass();
-		content_cfg_memoryRequirements = content_cfg.memoryRequirements();
 	}
 }

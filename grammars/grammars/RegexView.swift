@@ -33,7 +33,7 @@ struct RegexPreset: Identifiable, Codable {
 }
 
 struct RegexContentView: View {
-	@Binding var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>?
+	let rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>?
 	@State private var regexDescription: String?
 	@State private var error: String?
 	@State private var unsavedChanges: Bool = false
@@ -380,5 +380,5 @@ struct RegexContentView: View {
 
 #Preview {
 	let fsm = DFA<ClosedRangeAlphabet<UInt32>>.empty;
-	RegexContentView(rule_fsm: Binding(get: { fsm }, set: { fsm in }))
+	RegexContentView(rule_fsm: fsm)
 }

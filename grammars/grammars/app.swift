@@ -334,23 +334,39 @@ protocol DocumentProtocol {
 	associatedtype EditorView: EditorViewBody, View where EditorView.Document == Self;
 
 	/// Computes properties of the grammar used by DocumentWindow
-	associatedtype Information: DocumentInformationProtocol where Information.Document == Self;
+	associatedtype Parser: DocumentParserProtocol where Parser.Document == Self;
 }
 
 extension DocumentProtocol {
-	func editorView(document: Binding<Self>, parseErrorLine: Binding<Int?>) -> EditorView {
-		EditorView(document: document, parseErrorLine: parseErrorLine)
+	func editorView(document: Binding<Self>, computed: Parser) -> EditorView {
+		EditorView(document: document, computed: computed)
 	}
 }
 
-protocol DocumentInformationProtocol {
+protocol DocumentParserProtocol {
 	associatedtype Document: DocumentProtocol
 	init()
 
 	var document: Document? {get set}
+	var document_error: String? {get}
 	var asABNFRulelist: ABNFRulelist<UInt32>? {get}
 	var topRuleNames: Array<String> {get}
 	var allRuleNames: Array<String> {get}
+
+	var selectedRulename: String? {get set}
+	var selectedRule_error: String? {get}
+
+	//var selectedRule_dependencies: Array<String> {get}
+	//var selectedRule_builtins: Array<String> {get}
+	//var selectedRule_undefined: Array<String> {get}
+	//var selectedRule_recursive: Array<String> {get}
+	var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? {get}
+	var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? {get}
+	var selectedRule_cfg: ABNFRulelist<UInt32>.CFG? {get}
+	var selectedRule_rr: RailroadNode? {get}
+	var selectedRule_complexityClass: Int? {get}
+	var selectedRule_chomskyClass: Int? {get}
+	var selectedRule_memoryRequirements: Int? {get}
 }
 
 //protocol SettingsViewBody: View {
@@ -358,5 +374,5 @@ protocol DocumentInformationProtocol {
 //}
 protocol EditorViewBody: View {
 	associatedtype Document: DocumentProtocol
-	init(document: Binding<Document>, parseErrorLine: Binding<Int?>)
+	init(document: Binding<Document>, computed: Document.Parser)
 }
