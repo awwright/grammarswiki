@@ -11,6 +11,7 @@ import AppKit
 // If a preset is selected and I make edits, I should see options to update the selected preset, or to duplicate it as a new preset.
 // TODO: The regular expression should be factored out in roughly the same way the ABNF is;
 // If multiple choices in an alternation overlap, then remove the match from the subsequent alternation options.
+// TODO: There should be an easy way to "filter out" rule names (change the production to the empty set), especially deprecated rules
 
 struct RegexPreset: Identifiable, Codable {
 	let id: UUID
@@ -51,8 +52,6 @@ struct RegexContentView: View {
 	@State private var selectedPreset: RegexPreset? = nil
 	@State private var filteredDialects: Array<String> = []
 	@State private var filteredConstructors: Array<REDialactCollection.Constructor> = []
-	@State private var selectedRule: String = ""
-	@State private var selectedRules: Set<String> = []
 	@State private var presetName: String = ""
 	@State private var caseInsensitive: Bool = false
 	@State private var selectedConstructorId: String = ""
@@ -155,24 +154,6 @@ struct RegexContentView: View {
 					}).labelStyle(.iconOnly)
 			}
 			.padding()
-
-			// TODO: This doesn't currently do anything
-			if let rulelist_fsm {
-				Group {
-					Picker("Rules", selection: $selectedRule) {
-						// TODO: Show the name of the starting rule, e.g. "Starting rule (HTTP-message)"
-						Text("Starting Rule").tag("")
-						//Text("All").tag("\u{1B}all")
-						//Text("Orphans").tag("\u{1B}orphans")
-						//Text("Multiple\u{2026}").tag("\u{1B}multi")
-						Divider()
-						ForEach(rulelist_fsm, id: \.self) { key in
-							Text(key).tag(key)
-						}
-					}
-					.pickerStyle(.menu)
-				}.padding();
-			}
 
 			// TODO: Add a "Compare all/selected presets" option to show multiple regex next to each other
 

@@ -6,8 +6,6 @@ import FSM
 // TODO: Show an option for newline representation and character encoding
 
 struct InputTestingView: View {
-	@Binding var content_rulelist: ABNFRulelist<UInt32>?
-	@Binding var selectedRule: String?
 	@Binding var rule_alphabet: ClosedRangeAlphabet<UInt32>?
 	@Binding var rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>?
 	@Binding var content_cfg: ABNFRulelist<UInt32>.CFG?
@@ -115,7 +113,6 @@ struct InputTestingView: View {
 			}
 		}
 		.onAppear { updatedInput() }
-		.onChange(of: selectedRule) { updatedInput() }
 		.onChange(of: rule_fsm) { updatedInput() }
 		.onChange(of: rule_alphabet) { updatedInput() }
 		.onChange(of: testInput) { updatedInput() }
@@ -129,13 +126,6 @@ struct InputTestingView: View {
 		cfg_test_parse = nil
 		cfg_test_tree = nil
 
-		guard let content_rulelist = content_rulelist,
-				let selectedRule = selectedRule,
-				content_rulelist.dictionary[selectedRule] != nil
-		else {
-			fsm_test_error = "Invalid selection"
-			return
-		}
 		let input = Array(testInput.unicodeScalars.map(\.value))
 		if let selected_fsm = rule_fsm {
 			let fsm_test_state = selected_fsm.nextState(state: selected_fsm.initial, input: input)
@@ -159,7 +149,7 @@ struct InputTestingView: View {
 			cfg_test_tree = cfg_parse.parseForest;
 			fsm_test_next = cfg_parse.nextSymbols.flatMap { $0 };
 		} else {
-			fsm_test_error = "Could not read rule `\(selectedRule)`"
+			fsm_test_error = "Could not read rule"
 		}
 	}
 }

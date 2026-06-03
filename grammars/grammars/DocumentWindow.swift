@@ -121,8 +121,6 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						Tab("Input Testing", systemImage: "pencil") {
 							ScrollView {
 								InputTestingView(
-									content_rulelist: $content_rulelist,
-									selectedRule: $selectedRule,
 									rule_alphabet: $rule_alphabet,
 									rule_fsm: $rule_fsm,
 									content_cfg: $content_cfg,
@@ -159,29 +157,27 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						}
 
 						Picker("Starting rule", selection: $selectedRule) {
-							if let content_rulelist {
-								let list = document.topRuleNames;
-								if let first = list.first {
-									Section("First rule") {
-										Text(first).tag(String?.some(first))
-									}
-								} else {
-									Text("No rules defined").disabled(true)
+							let list = document.topRuleNames;
+							if let first = list.first {
+								Section("First rule") {
+									Text(first).tag(String?.some(first))
 								}
-								let orphanGroup = list.isEmpty ? [] : list[1...];
-								if !orphanGroup.isEmpty {
-									Section("Orphan rules") {
-										ForEach(orphanGroup, id: \.self) { rule in
-											Text(rule).tag(String?.some(rule))
-										}
+							} else {
+								Text("No rules defined").disabled(true)
+							}
+							let orphanGroup = list.isEmpty ? [] : list[1...];
+							if !orphanGroup.isEmpty {
+								Section("Orphan rules") {
+									ForEach(orphanGroup, id: \.self) { rule in
+										Text(rule).tag(String?.some(rule))
 									}
 								}
-								let subGroup = document.allRuleNames.filter { !list.contains($0) }
-								if !subGroup.isEmpty {
-									Section("Sub-rules") {
-										ForEach(subGroup, id: \.self) { rule in
-											Text(rule).tag(String?.some(rule))
-										}
+							}
+							let subGroup = document.allRuleNames.filter { !list.contains($0) }
+							if !subGroup.isEmpty {
+								Section("Sub-rules") {
+									ForEach(subGroup, id: \.self) { rule in
+										Text(rule).tag(String?.some(rule))
 									}
 								}
 							}
@@ -221,8 +217,6 @@ struct DocumentView<Document: DocumentProtocol>: View {
 							if showTestInput {
 								DisclosureGroup("Test Input", isExpanded: $test_expanded, content: {
 									InputTestingView(
-										content_rulelist: $content_rulelist,
-										selectedRule: $selectedRule,
 										rule_alphabet: $rule_alphabet,
 										rule_fsm: $rule_fsm,
 										content_cfg: $content_cfg,
