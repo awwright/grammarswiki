@@ -246,8 +246,14 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 				if _task.isCancelled { return }
 				guard let selectedRulename else { return }
 
-				let dependencies_list = rulelist.dependencies(rulename: selectedRulename);
-				let dict = rulelist.dictionary;
+				guard let bundlePath = Bundle.main.resourcePath else { fatalError() }
+				// Filename references are always within the catalog... at least for now?
+				let catalog = Catalog(root: bundlePath + "/catalog/")
+				let (_, rulelist_all_final, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: document.name, content: document.content);
+				let rulelist_resolved = rulelist_all_final.addingBuiltins();
+
+				let dependencies_list = rulelist_resolved.dependencies(rulename: selectedRulename);
+				let dict = rulelist_resolved.dictionary;
 				let dependencies = dependencies_list.dependencies.compactMap { if let rule = dict[$0] { ($0, rule) } else { nil } }
 				if(dependencies.isEmpty){
 					await MainActor.run { selectedRule_error = "dependencies is empty"; }
@@ -262,16 +268,18 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 				for (rulename, definition) in dependencies {
 					let pat: DFA<ClosedRangeAlphabet<UInt32>>? = try? definition.toPattern(rules: result_fsm_dict);
 					if let pat { result_fsm_dict[rulename] = pat.minimized() }
+					if _task.isCancelled { return }
 				}
 				guard let result = result_fsm_dict[selectedRulename] else { return }
 
 				let selectedRule_alphabet: ClosedRangeAlphabet<UInt32> = result.alphabet;
 				let selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>> = result;
-				let selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = try? rulelist.toCFG(rulename: selectedRulename);
-				let selectedRule_rr: RailroadNode? = rulelist.dictionary[selectedRulename]?.toRailroad(rules: rulelist.dictionary.mapValues { $0.alternation })
+				let selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = try? rulelist_resolved.toCFG(rulename: selectedRulename);
+				let selectedRule_rr: RailroadNode? = dict[selectedRulename]?.toRailroad(rules: dict.mapValues { $0.alternation })
 //				let selectedRule_complexityClass: Int =
 				let selectedRule_chomskyClass: Int? = selectedRule_cfg?.chomskyClass();
 				let selectedRule_memoryRequirements: Int? = selectedRule_cfg?.memoryRequirements();
+				if _task.isCancelled { return }
 				await MainActor.run {
 					self.selectedRule_alphabet = selectedRule_alphabet;
 					self.selectedRule_fsm = selectedRule_fsm;
@@ -284,6 +292,4 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			}
 		}
 	}
-
-
 }
