@@ -10,7 +10,7 @@ public protocol CFGProductionProtocol: GrammarProductionProtocol {
 
 public typealias CFG<Alphabet: AlphabetProtocol> = CFGNamed<String, Alphabet>;
 
-public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable {
+public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable, ExpressibleByDictionaryLiteral, ExpressibleByArrayLiteral {
 	public typealias Alphabet = Alphabet
 	public typealias Symbol = Alphabet.Symbol
 	public typealias SymbolClass = Alphabet.SymbolClass
@@ -130,6 +130,22 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	public init(startSet: [Variable], rules: [Production]) {
 		self.start = startSet;
 		self.rules = rules;
+	}
+
+	public typealias Key = Variable
+	public typealias Value = Array<Array<BodyElement>>
+	public init(dictionaryLiteral elements: (Variable, Array<Array<BodyElement>>)...) {
+		if elements.isEmpty { self.start = []; self.rules = []; return; }
+		self.start = [elements.first!.0];
+		self.rules = elements.flatMap { (name, productions) in productions.map { .init(name: name, production: $0) } };
+	}
+
+	public typealias ArrayLiteralElement = Production
+	public init(arrayLiteral elements: Production...) {
+		if elements.isEmpty { self.start = []; self.rules = []; return; }
+		self.start = [elements.first!.name];
+		self.rules = elements;
+
 	}
 
 	/// Recognise (accept or reject) the given string as being in the grammar

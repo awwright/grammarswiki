@@ -2,6 +2,36 @@ import Testing
 @testable import FSM
 
 @Suite("CFG Tests") struct CFGTests {
+	static var empty: CFG<SymbolAlphabet<UInt8>> = .init();
+	static var epsilon: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
+		.init(name: "S", production: []),
+	]);
+	static var character: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
+		.init(name: "S", production: [.terminal(1)]),
+	]);
+	static var parens: CFG<SymbolAlphabet<UInt8>> = [
+		"S": [ [], [.nonterminal("S"), .nonterminal("S")], [.terminal(0x5B), .nonterminal("S"), .terminal(0x5D)] ],
+	];
+	static var lwsp: CFG<SymbolAlphabet<UInt8>> = [
+		.init(name: "LWSP", production: []),
+		.init(name: "LWSP", production: [.nonterminal("element"), .nonterminal("LWSP")]),
+		.init(name: "element", production: [.nonterminal("WSP")]),
+		.init(name: "element", production: [.nonterminal("CRLF"), .nonterminal("WSP")]),
+		.init(name: "CRLF", production: [.nonterminal("CR"), .nonterminal("LF")]),
+		.init(name: "WSP", production: [.nonterminal("SP")]),
+		.init(name: "WSP", production: [.nonterminal("HTAB")]),
+		.init(name: "HTAB", production: [.terminal(0x09)]),
+		.init(name: "CR", production: [.terminal(0x0D)]),
+		.init(name: "LF", production: [.terminal(0x0A)]),
+		.init(name: "SP", production: [.terminal(0x20)]),
+	];
+	static var positveNumber: CFG<SymbolAlphabet<UInt8>> = [
+		"S": [ [.nonterminal("1"), .nonterminal("N")] ],
+		"1": [ [.terminal(0x31)], [.terminal(0x32)], [.terminal(0x33)], [.terminal(0x34)], [.terminal(0x35)], [.terminal(0x36)], [.terminal(0x37)], [.terminal(0x38)], [.terminal(0x39)] ],
+		"N": [ [], [ .nonterminal("0"), .nonterminal("N") ] ],
+		"0": [ [.terminal(0x30)], [.terminal(0x31)], [.terminal(0x32)], [.terminal(0x33)], [.terminal(0x34)], [.terminal(0x35)], [.terminal(0x36)], [.terminal(0x37)], [.terminal(0x38)], [.terminal(0x39)] ],
+	];
+
 	@Suite("Interface") struct CFGTests_init {
 		@Test("empty")
 		func test_init_empty() async throws {
@@ -258,19 +288,7 @@ import Testing
 
 		@Test("linear whitespace")
 		func test_lwsp() async throws {
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "LWSP", rules: [
-				.init(name: "LWSP", production: []),
-				.init(name: "LWSP", production: [.nonterminal("element"), .nonterminal("LWSP")]),
-				.init(name: "element", production: [.nonterminal("WSP")]),
-				.init(name: "element", production: [.nonterminal("CRLF"), .nonterminal("WSP")]),
-				.init(name: "CRLF", production: [.nonterminal("CR"), .nonterminal("LF")]),
-				.init(name: "WSP", production: [.nonterminal("SP")]),
-				.init(name: "WSP", production: [.nonterminal("HTAB")]),
-				.init(name: "HTAB", production: [.terminal([0x09...0x09])]),
-				.init(name: "CR", production: [.terminal([0x0D...0x0D])]),
-				.init(name: "LF", production: [.terminal([0x0A...0x0A])]),
-				.init(name: "SP", production: [.terminal([0x20...0x20])]),
-			]);
+			let cfg = CFGTests.lwsp;
 			#expect(cfg.maxCardinality() == nil)
 			#expect(cfg.chomskyClass() == 2);
 		}
@@ -283,6 +301,16 @@ import Testing
 				.init(name: "S", production: [.terminal([0x5B...0x5B]), .nonterminal("S"), .terminal([0x5D...0x5D])]),
 			]);
 			#expect(cfg.chomskyClass() == 2)
+		}
+
+		@Test("positive number")
+		func test_number() async throws {
+			let cfg = CFGTests.positveNumber;
+			#expect(!cfg.contains(Array("".utf8)))
+			#expect(!cfg.contains(Array("0".utf8)))
+			#expect(cfg.contains(Array("1".utf8)))
+			#expect(cfg.contains(Array("12".utf8)))
+			#expect(cfg.contains(Array("123".utf8)))
 		}
 	}
 }
