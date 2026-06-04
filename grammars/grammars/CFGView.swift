@@ -15,6 +15,7 @@ struct CFGContentView: View {
 
 	func filteredGrammar() -> ABNFRulelist<UInt32>.CFG {
 		var grammar = self.grammar;
+		if selectedEliminateUseless { grammar = grammar.eliminateUseless(); }
 		if selectedEliminateEpsilon { grammar = grammar.eliminateEpsilon(); }
 		return grammar;
 	}

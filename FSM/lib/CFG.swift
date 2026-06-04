@@ -567,7 +567,26 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 
 	/// Eliminate rules that are never used
 	public func eliminateUseless() -> Self {
-		fatalError()
+		let rules = self.dictionary;
+		var visited = Set<Variable>()
+		var queue = start;
+		while let current = queue.first {
+			queue.removeFirst()
+			if visited.contains(current) { continue }
+			visited.insert(current)
+			if let rulesForCurrent = rules[current] {
+				for rule in rulesForCurrent {
+					for symbol in rule.body {
+						if case .nonterminal(let name) = symbol {
+							if !visited.contains(name) && !queue.contains(name) {
+								queue.append(name);
+							}
+						}
+					}
+				}
+			}
+		}
+		return Self(startSet: start, rules: self.rules.filter { visited.contains($0.name) });
 	}
 
 	/// This will return an equivalent CFG except for the production of the empty string, if it did before
