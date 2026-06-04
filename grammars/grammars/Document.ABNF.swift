@@ -14,22 +14,6 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	var charset: String
 	var content: String
 
-	var topRuleNames: Array<String> {
-		// FIXME: Cache this parse result somewhere
-		let rulelist = try? ABNFRulelist<UInt8>.parse(self.content.utf8);
-		guard let rulelist else { return [] }
-		let orderedRules = rulelist.ruleNames;
-		return orderedRules.filter { !rulelist.referencedRules.contains($0) }
-	}
-
-	var allRuleNames: Array<String> {
-		// FIXME: Cache this parse result somewhere
-		let rulelist = try? ABNFRulelist<UInt8>.parse(self.content.utf8);
-		guard let rulelist else { return [] }
-		let orderedRules = rulelist.ruleNames;
-		return orderedRules.filter { !rulelist.referencedRules.contains($0) }
-	}
-
 	static var readableContentTypes: [UTType] { [.grammarsDoc] }
 
 	init() {
@@ -143,8 +127,10 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		required init() {
 			document = nil
 			self._task = Task{}
+			document_error = nil;
 			asABNFRulelist = nil;
 			document_error = nil;
+			content_parseErrorLine = nil;
 			topRuleNames = [];
 			allRuleNames = [];
 		}
@@ -155,6 +141,7 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		var document_error: String? = nil
 		var content_parseErrorLine: Int? = nil
 		var asABNFRulelist: FSM.ABNFRulelist<UInt32>? = nil
+		var primaryRuleName: String? = nil
 		var topRuleNames: Array<String> = []
 		var allRuleNames: Array<String> = []
 
@@ -176,9 +163,10 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			_task.cancel()
 			document_error = nil;
 			asABNFRulelist = nil;
+			document_error = nil;
 			content_parseErrorLine = nil;
-			topRuleNames = [];
-			allRuleNames = [];
+			// Don't clear the rule names during parsing, only update when the document is successfully parsed
+			//topRuleNames = []; allRuleNames = [];
 			_task = Task {
 				guard let document else { return }
 				let rulelist: ABNFRulelist<UInt32>?;
@@ -211,12 +199,14 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 				guard let rulelist else { return }
 
 				let orderedRules = rulelist.ruleNames;
-				let allRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) }
-				await MainActor.run { self.allRuleNames = allRuleNames }
-				if _task.isCancelled { return }
-
-				let topRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) }
-				await MainActor.run { self.topRuleNames = topRuleNames }
+				let primaryRuleName = orderedRules.first;
+				let topRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) };
+				let allRuleNames = orderedRules;
+				await MainActor.run {
+					self.primaryRuleName = primaryRuleName
+					self.topRuleNames = topRuleNames
+					self.allRuleNames = allRuleNames
+				}
 				if _task.isCancelled { return }
 
 				guard let selectedRulename else { return }
@@ -235,10 +225,10 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 				var result_fsm_dict: Dictionary<String, DFA<ClosedRangeAlphabet<UInt32>>> = builtins.mapValues { $0.minimized() }
 				for (rulename, definition) in dependencies {
-					let pat: DFA<ClosedRangeAlphabet<UInt32>> = try! definition.toPattern(rules: result_fsm_dict);
-					result_fsm_dict[rulename] = pat.minimized()
+					let pat: DFA<ClosedRangeAlphabet<UInt32>>? = try? definition.toPattern(rules: result_fsm_dict);
+					if let pat { result_fsm_dict[rulename] = pat.minimized() }
 				}
-				let result = result_fsm_dict[selectedRulename]!
+				guard let result = result_fsm_dict[selectedRulename] else { return }
 
 				let selectedRule_alphabet: ClosedRangeAlphabet<UInt32> = result.alphabet;
 				let selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>> = result;
@@ -246,7 +236,6 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 //				let selectedRule_complexityClass: Int =
 				let selectedRule_chomskyClass: Int? = selectedRule_cfg?.chomskyClass();
 				let selectedRule_memoryRequirements: Int? = selectedRule_cfg?.memoryRequirements();
-//
 				await MainActor.run {
 					self.selectedRule_alphabet = selectedRule_alphabet;
 					self.selectedRule_fsm = selectedRule_fsm;

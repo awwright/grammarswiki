@@ -313,12 +313,6 @@ protocol DocumentProtocol {
 	var charset: String {get set}
 	var content: String {get set}
 
-	/// Rules designed to be used/referenced externally
-	var topRuleNames: Array<String> {get}
-
-	/// All rule names, including those for internal use
-	var allRuleNames: Array<String> {get}
-
 	/// Convert this grammar to an ABNFRulelist
 	/// (mostly for when the source is already an ABNF document)
 	func toABNFRulelist() throws -> ABNFRulelist<UInt32>
@@ -350,7 +344,11 @@ protocol DocumentParserProtocol {
 	var document: Document? {get set}
 	var document_error: String? {get}
 	var asABNFRulelist: ABNFRulelist<UInt32>? {get}
+	/// The "top level" rule that should be loaded by default, typically the first listed rule
+	var primaryRuleName: String? {get}
+	/// Rules designed to be used/referenced externally
 	var topRuleNames: Array<String> {get}
+	/// All rule names, including those for internal use
 	var allRuleNames: Array<String> {get}
 
 	var selectedRulename: String? {get set}

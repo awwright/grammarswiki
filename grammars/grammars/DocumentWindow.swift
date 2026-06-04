@@ -153,7 +153,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 									}
 								}
 							}
-							let subGroup = document.allRuleNames.filter { !list.contains($0) }
+							let subGroup = computed.allRuleNames.filter { !list.contains($0) }
 							if !subGroup.isEmpty {
 								Section("Sub-rules") {
 									ForEach(subGroup, id: \.self) { rule in
@@ -247,13 +247,17 @@ struct DocumentView<Document: DocumentProtocol>: View {
 				}
 			}
 
-			ToolbarItem(placement: .principal) {
-				HStack(spacing: 8) {
-					Picker("Rule", systemImage: "arrow.left", selection: $selectedRule) {
-						ForEach(computed.topRuleNames, id: \.self) {
-							Text($0).tag($0)
-						}
-					}.pickerStyle(.menu)
+			// It only makes sense to show this if there's rules to select between
+			if computed.topRuleNames.count > 1 {
+				ToolbarItem(placement: .principal) {
+					HStack(spacing: 2) {
+						Image(systemName: "arrow.right")
+						Picker("Rule", systemImage: "arrow.right", selection: $selectedRule) {
+							ForEach(computed.topRuleNames, id: \.self) {
+								Text($0).tag($0)
+							}
+						}.pickerStyle(.menu)
+					}
 				}
 			}
 		}
