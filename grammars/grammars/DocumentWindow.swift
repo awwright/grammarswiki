@@ -48,7 +48,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					Tab("Information", systemImage: "info.circle") {
 						ScrollView {
-							RuleInformationView(content_rulelist: computed.asABNFRulelist, grammar: computed.selectedRule_cfg, selectedRule: selectedRule, rule_fsm: computed.selectedRule_fsm, rule_alphabet: computed.selectedRule_alphabet);
+							RuleInformationView(document: $document, computed: computed);
 						}.frame(maxWidth: .infinity)
 					}
 
@@ -166,7 +166,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 					}
 
 					if let content_rulelist = computed.asABNFRulelist {
-						RuleInformationView(content_rulelist: computed.asABNFRulelist, grammar: computed.selectedRule_cfg, selectedRule: selectedRule, rule_fsm: computed.selectedRule_fsm, rule_alphabet: computed.selectedRule_alphabet);
+						RuleInformationView(document: $document, computed: computed);
 
 						if let rule_fsm = computed.selectedRule_fsm {
 							if showRegex {

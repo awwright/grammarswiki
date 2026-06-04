@@ -1,17 +1,10 @@
 import SwiftUI
 import FSM
 
-struct RuleInformationView: View {
-	let content_rulelist: ABNFRulelist<UInt32>?;
-	let grammar: ABNFRulelist<UInt32>.CFG?;
-	let selectedRule: String?;
-	let rule_fsm: DFA<ClosedRangeAlphabet<UInt32>>?;
-	let rule_alphabet: ClosedRangeAlphabet<UInt32>?;
+struct RuleInformationView<Document: DocumentProtocol>: View {
+	@Binding var document: Document
+	let computed: Document.Parser
 
-	@AppStorage("expandedRule_deps") private var rule_deps_expanded = true
-	@AppStorage("expandedRule_builtin") private var rule_builtin_expanded = true
-	@AppStorage("expandedRule_undefined") private var rule_undefined_expanded = true
-	@AppStorage("expandedRule_recursive") private var rule_recursive_expanded = true
 	@AppStorage("expandedAlphabet") private var alphabet_expanded = true
 	@Environment(SelectedCharset.self) private var charset;
 
@@ -26,31 +19,11 @@ struct RuleInformationView: View {
 	@State private var content_cfg_memoryRequirements: Int? = nil
 
 	var body: some View {
-		if let content_rulelist, let selectedRule {
-			let deps = content_rulelist.dependencies(rulename: selectedRule)
-			DisclosureGroup("Rule Dependencies", isExpanded: $rule_deps_expanded, content: {
-				Text(String(deps.dependencies.reversed().joined(separator: ", ")))
-			})
-			if(deps.builtins.isEmpty == false){
-				DisclosureGroup("Implicit Builtins", isExpanded: $rule_builtin_expanded, content: {
-					Text(String(deps.builtins.joined(separator: ", ")))
-				})
-			}
-			if(deps.undefined.isEmpty == false){
-				DisclosureGroup("Undefined Rules", isExpanded: $rule_undefined_expanded, content: {
-					Text(String(deps.undefined.joined(separator: ", ")))
-				})
-			}
-			if(deps.recursive.isEmpty == false){
-				DisclosureGroup("Recursive Rules", isExpanded: $rule_recursive_expanded, content: {
-					Text(String(deps.recursive.joined(separator: ", ")))
-				})
-			}
-		}
+		document.ruleInfoView(document: $document, computed: computed)
 
 		if showAlphabet {
 			DisclosureGroup("Alphabet", isExpanded: $alphabet_expanded, content: {
-				if let rule_alphabet: ClosedRangeAlphabet<UInt32> = rule_alphabet {
+				if let rule_alphabet: ClosedRangeAlphabet<UInt32> = computed.selectedRule_alphabet {
 					let rule_alphabet_sorted: [ClosedRangeAlphabet<UInt32>.SymbolClass] = Array(rule_alphabet)
 					ForEach(rule_alphabet_sorted, id: \.self) {
 						(part: ClosedRangeAlphabet<UInt32>.SymbolClass) in
@@ -132,7 +105,7 @@ struct RuleInformationView: View {
 						Text("CPU Complexity").font(.headline).gridColumnAlignment(.trailing)
 						Text("(Undetermined)")
 					}
-					if let rule_fsm {
+					if let rule_fsm = computed.selectedRule_fsm {
 						GridRow(alignment: .top) {
 							Text("FSM States").font(.headline).gridColumnAlignment(.trailing)
 							Text(String(rule_fsm.states.count))

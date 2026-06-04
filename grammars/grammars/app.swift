@@ -325,6 +325,7 @@ protocol DocumentProtocol {
 	// - toFSM: get the specified rule as a FSM, if possible
 	// - editor view: A View that can be used to edit the grammar (e.g. a code editor for ABNF)
 	// - CFG export options view: A View that specifies how to convert the source grammar to a CFG (e.g. tail recursion technique to use, case sensitive)
+ 	associatedtype RuleInfoView: EditorViewBody, View where RuleInfoView.Document == Self;
 	associatedtype EditorView: EditorViewBody, View where EditorView.Document == Self;
 
 	/// Computes properties of the grammar used by DocumentWindow
@@ -332,6 +333,9 @@ protocol DocumentProtocol {
 }
 
 extension DocumentProtocol {
+	func ruleInfoView(document: Binding<Self>, computed: Parser) -> RuleInfoView {
+		RuleInfoView(document: document, computed: computed)
+	}
 	func editorView(document: Binding<Self>, computed: Parser) -> EditorView {
 		EditorView(document: document, computed: computed)
 	}
@@ -367,9 +371,6 @@ protocol DocumentParserProtocol {
 	var selectedRule_memoryRequirements: Int? {get}
 }
 
-//protocol SettingsViewBody: View {
-//	@ViewBuilder var document: Binding<Document> {get}
-//}
 protocol EditorViewBody: View {
 	associatedtype Document: DocumentProtocol
 	init(document: Binding<Document>, computed: Document.Parser)

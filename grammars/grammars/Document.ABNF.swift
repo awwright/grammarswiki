@@ -121,6 +121,41 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		}
 	}
 
+	struct RuleInfoView: EditorViewBody {
+		@Binding var document: ABNFDocument
+		let computed: ABNFDocument.Parser
+
+		@AppStorage("expandedRule_deps") private var rule_deps_expanded = true
+		@AppStorage("expandedRule_builtin") private var rule_builtin_expanded = true
+		@AppStorage("expandedRule_undefined") private var rule_undefined_expanded = true
+		@AppStorage("expandedRule_recursive") private var rule_recursive_expanded = true
+
+		var body: some View {
+			if let content_rulelist = computed.asABNFRulelist, let selectedRule = computed.selectedRulename {
+				let deps = content_rulelist.dependencies(rulename: selectedRule)
+				DisclosureGroup("Rule Dependencies", isExpanded: $rule_deps_expanded, content: {
+					Text(String(deps.dependencies.reversed().joined(separator: ", ")))
+				})
+				if(deps.builtins.isEmpty == false){
+					DisclosureGroup("Implicit Builtins", isExpanded: $rule_builtin_expanded, content: {
+						Text(String(deps.builtins.joined(separator: ", ")))
+					})
+				}
+				if(deps.undefined.isEmpty == false){
+					DisclosureGroup("Undefined Rules", isExpanded: $rule_undefined_expanded, content: {
+						Text(String(deps.undefined.joined(separator: ", ")))
+					})
+				}
+				if(deps.recursive.isEmpty == false){
+					DisclosureGroup("Recursive Rules", isExpanded: $rule_recursive_expanded, content: {
+						Text(String(deps.recursive.joined(separator: ", ")))
+					})
+				}
+			}
+		}
+	}
+
+
 	@Observable class Parser: DocumentParserProtocol {
 		typealias Document = ABNFDocument
 
