@@ -171,8 +171,12 @@ struct OctetInputField: View {
 					.font(hexFont)
 					.textFieldStyle(RoundedBorderTextFieldStyle())
 			}
-			Tab("Multiline", systemImage: "pencil") {
+			Tab("Text (\u{240A})", systemImage: "pencil") {
 				TextEditor(text: $testInput)
+					.font(hexFont)
+			}
+			Tab("Text (\u{240D}\u{240A})", systemImage: "pencil") {
+				TextEditor(text: Binding(get: {testInput.replacingOccurrences(of: "\r\n", with: "\n")}, set: { testInput = $0.replacingOccurrences(of: "\n", with: "\r\n") }))
 					.font(hexFont)
 			}
 			Tab("File", systemImage: "pencil") {
