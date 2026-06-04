@@ -13,7 +13,14 @@ struct CFGContentView: View {
 	@State private var selectedSortOrder: String = "b"
 	@State private var selectedCharset: String = ""
 
+	func filteredGrammar() -> ABNFRulelist<UInt32>.CFG {
+		var grammar = self.grammar;
+		if selectedEliminateEpsilon { grammar = grammar.eliminateEpsilon(); }
+		return grammar;
+	}
+
 	var body: some View {
+		let grammar = self.filteredGrammar();
 		ScrollView {
 			Form {
 				Picker("Dialect", selection: $selectedDialect) {
@@ -22,11 +29,9 @@ struct CFGContentView: View {
 
 				Toggle("Range operator", isOn: $selectedRange)
 
-				Toggle("Eliminate useless prodictions", isOn: $selectedEliminateEpsilon)
+				Toggle("Eliminate useless prodictions", isOn: $selectedEliminateUseless)
 
-				// TODO: If this is selected, and epsilon is in the language, then include epsilon in the set of start symbols.
-				// Because ordinarily "eliminate epsilon" removes it from the resulting language.
-				Toggle("Eliminate epsilon", isOn: $selectedEliminateUseless)
+				Toggle("Eliminate epsilon productions", isOn: $selectedEliminateEpsilon)
 
 				Picker("Normalize", selection: $selectedForm) {
 					Text("None").tag("")
@@ -59,6 +64,10 @@ struct CFGContentView: View {
 			VStack(alignment: .leading) {
 				ForEach(grammar.start, id: \.self) { rulename in
 					Text("\u{2192} \(rulename)")
+				}
+				if selectedEliminateEpsilon && self.grammar.contains([]) {
+					// If the "eliminate epsilon productions" option removed epsilon from the language, add it back here
+					Text("\u{2192} \u{3B5}") // Epsilon
 				}
 				if grammar.start.isEmpty {
 					Text("\u{2192} \u{2205}")

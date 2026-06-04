@@ -549,7 +549,6 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		return 4;
 	}
 
-	
 	/// Compute the complexity of the automaton
 	///
 	/// This will return a number representing the complexity class:
@@ -573,7 +572,31 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 
 	/// This will return an equivalent CFG except for the production of the empty string, if it did before
 	public func eliminateEpsilon() -> Self {
-		fatalError()
+		var epsilonRulesQueue: Array<Variable> = [];
+		var epsilonRules: Set<Variable> = [];
+		var newProductions: [Production] = self.rules;
+		newProductions.forEach { if $0.body.isEmpty && epsilonRules.insert($0.name).inserted { epsilonRulesQueue.append($0.name); } }
+		while let epsilonRule = epsilonRulesQueue.popLast() {
+			// Remove epsilon productions for this rule
+			newProductions = newProductions.filter { $0.name != epsilonRule || !$0.body.isEmpty }
+			newProductions = newProductions.flatMap {
+				var list = [$0];
+				for i in (0..<$0.body.count).reversed() {
+					if $0.body[i] == .nonterminal(epsilonRule) {
+						list.forEach { production in
+							// Make a copy of the production without the ith element
+							list.append( Production(name: production.name, production: Array(production.body[0..<i]) + Array(production.body[(i+1)...])) );
+							// TODO: Does this preserve the disambiguition priority? Consider flipping list[j] and list.last as needed
+						}
+					}
+				}
+				// By the end there should be 2^i productions
+				return list;
+			}
+			// Queue any epsilon rules that were newly created as a side effect
+			newProductions.forEach { if $0.body.isEmpty && epsilonRules.insert($0.name).inserted { epsilonRulesQueue.append($0.name); } }
+		}
+		return Self(startSet: start, rules: newProductions);
 	}
 
 	public func eliminateUnitProduction() -> Self {
