@@ -198,6 +198,7 @@ struct CatalogDocumentView: View {
 			DocumentView(document: .constant(ABNFDocument()))
 				.onAppear { loadDocument() }
 				.onChange(of: fileURL) { loadDocument() }
+				.id(fileURL)
 		}
 	}
 

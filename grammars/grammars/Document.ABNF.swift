@@ -200,15 +200,15 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 				let orderedRules = rulelist.ruleNames;
 				let primaryRuleName = orderedRules.first;
+				// FIXME: This shouldn't filter out recursive references
 				let topRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) };
 				let allRuleNames = orderedRules;
 				await MainActor.run {
-					self.primaryRuleName = primaryRuleName
-					self.topRuleNames = topRuleNames
-					self.allRuleNames = allRuleNames
+					self.primaryRuleName = primaryRuleName;
+					self.topRuleNames = topRuleNames;
+					self.allRuleNames = allRuleNames;
 				}
 				if _task.isCancelled { return }
-
 				guard let selectedRulename else { return }
 
 				let dependencies_list = rulelist.dependencies(rulename: selectedRulename);
@@ -233,6 +233,7 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 				let selectedRule_alphabet: ClosedRangeAlphabet<UInt32> = result.alphabet;
 				let selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>> = result;
 				let selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = try? rulelist.toCFG(rulename: selectedRulename);
+				let selectedRule_rr: RailroadNode? = rulelist.dictionary[selectedRulename]?.toRailroad(rules: rulelist.dictionary.mapValues { $0.alternation })
 //				let selectedRule_complexityClass: Int =
 				let selectedRule_chomskyClass: Int? = selectedRule_cfg?.chomskyClass();
 				let selectedRule_memoryRequirements: Int? = selectedRule_cfg?.memoryRequirements();
@@ -240,6 +241,7 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 					self.selectedRule_alphabet = selectedRule_alphabet;
 					self.selectedRule_fsm = selectedRule_fsm;
 					self.selectedRule_cfg = selectedRule_cfg;
+					self.selectedRule_rr = selectedRule_rr;
 //					self.selectedRule_complexityClass = selectedRule_complexityClass;
 					self.selectedRule_chomskyClass = selectedRule_chomskyClass;
 					self.selectedRule_memoryRequirements = selectedRule_memoryRequirements;

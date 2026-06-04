@@ -136,33 +136,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 							Text(document.type)
 						}
 
-						Picker("Starting rule", selection: $selectedRule) {
-							let list = computed.topRuleNames;
-							if let first = list.first {
-								Section("First rule") {
-									Text(first).tag(String?.some(first))
-								}
-							} else {
-								Text("No rules defined").disabled(true)
-							}
-							let orphanGroup = list.isEmpty ? [] : list[1...];
-							if !orphanGroup.isEmpty {
-								Section("Orphan rules") {
-									ForEach(orphanGroup, id: \.self) { rule in
-										Text(rule).tag(String?.some(rule))
-									}
-								}
-							}
-							let subGroup = computed.allRuleNames.filter { !list.contains($0) }
-							if !subGroup.isEmpty {
-								Section("Sub-rules") {
-									ForEach(subGroup, id: \.self) { rule in
-										Text(rule).tag(String?.some(rule))
-									}
-								}
-							}
-						}
-						.pickerStyle(MenuPickerStyle())
+						StartRulePicker(title: "Starting rule", computed: computed, selection: $selectedRule)
 
 						// Specifies how to interpert the meaning of a number in the language
 						// This is only used when something needs to intrepert the symbols in the context of a charset
@@ -235,9 +209,10 @@ struct DocumentView<Document: DocumentProtocol>: View {
 				.inspectorColumnWidth(min: 300, ideal: 500, max: 2000)
 			}
 		} // HStack
-		.onAppear { computed.document = document; computed.selectedRulename = selectedRule; }
-		.onChange(of: document.content) { computed.document = document; computed.selectedRulename = selectedRule; }
-		.onChange(of: selectedRule) { computed.selectedRulename = selectedRule; }
+		.onAppear { computed.document = document; computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
+		.onChange(of: document.content) { computed.document = document; computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
+		.onChange(of: selectedRule) { computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
+		.onChange(of: computed.primaryRuleName) { if selectedRule == nil { selectedRule = computed.primaryRuleName } }
 		.toolbar {
 			ToolbarItem(placement: .primaryAction) {
 				Button {
@@ -248,19 +223,50 @@ struct DocumentView<Document: DocumentProtocol>: View {
 			}
 
 			// It only makes sense to show this if there's rules to select between
-			if computed.topRuleNames.count > 1 {
+			if computed.allRuleNames.count > 1 {
 				ToolbarItem(placement: .principal) {
 					HStack(spacing: 2) {
 						Image(systemName: "arrow.right")
-						Picker("Rule", systemImage: "arrow.right", selection: $selectedRule) {
-							ForEach(computed.topRuleNames, id: \.self) {
-								Text($0).tag($0)
-							}
-						}.pickerStyle(.menu)
+						StartRulePicker(title: "Starting rule", computed: computed, selection: $selectedRule)
 					}
 				}
 			}
 		}
 		.environment(SelectedCharset(charset: MainAppModel.charsetDict[selectedCharsetId]!))
+	}
+}
+
+struct StartRulePicker<Parser: DocumentParserProtocol>: View {
+	let title: String
+	let computed: Parser
+	@Binding var selection: String?
+	var body: some View {
+		Picker(title, selection: $selection) {
+			let list = computed.topRuleNames;
+			if let first = list.first {
+				Section("First rule") {
+					Text(first).tag(String?.some(first))
+				}
+			} else {
+				Text("No rules defined").disabled(true)
+			}
+			let orphanGroup = list.isEmpty ? [] : list[1...];
+			if !orphanGroup.isEmpty {
+				Section("Orphan rules") {
+					ForEach(orphanGroup, id: \.self) { rule in
+						Text(rule).tag(String?.some(rule))
+					}
+				}
+			}
+			let subGroup = computed.allRuleNames.filter { !list.contains($0) }
+			if !subGroup.isEmpty {
+				Section("Sub-rules") {
+					ForEach(subGroup, id: \.self) { rule in
+						Text(rule).tag(String?.some(rule))
+					}
+				}
+			}
+		}.pickerStyle(.menu)
+
 	}
 }
