@@ -12,13 +12,13 @@ public protocol GrammarProtocol {
 	associatedtype Production: GrammarProductionProtocol where Production.BodyElement == BodyElement;
 
 	var start: [Variable] { get }
-	var rules: [Production] { get }
+	var productions: [Production] { get }
 	// Alternatively
 	//var initials: Array<Array<Symbol>> { get }
 
 	init()
-	init(start: Variable, rules: [Production])
-	init(startSet: [Variable], rules: [Production])
+	init(start: Variable, productions: [Production])
+	init(startSet: [Variable], productions: [Production])
 }
 
 /// Production for unrestricted grammars
@@ -37,8 +37,8 @@ public protocol GrammarProductionProtocol {
 }
 
 extension GrammarProductionProtocol {
-	init(name: Variable, production: [BodyElement]) {
-		self.init(lhs: [BodyElement.nonterminal(name)], rhs: production);
+	init(name: Variable, body: [BodyElement]) {
+		self.init(lhs: [BodyElement.nonterminal(name)], rhs: body);
 	}
 	// TODO: Offer an "invert" method that flips lhs <-> rhs, turning a "parse" operation into a "generate" operation and vice-versa
 }

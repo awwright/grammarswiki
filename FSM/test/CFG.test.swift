@@ -3,27 +3,27 @@ import Testing
 
 @Suite("CFG Tests") struct CFGTests {
 	static var empty: CFG<SymbolAlphabet<UInt8>> = .init();
-	static var epsilon: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
-		.init(name: "S", production: []),
+	static var epsilon: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", productions: [
+		.init(name: "S", body: []),
 	]);
-	static var character: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
-		.init(name: "S", production: [.terminal(1)]),
+	static var character: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", productions: [
+		.init(name: "S", body: [.terminal(1)]),
 	]);
 	static var parens: CFG<SymbolAlphabet<UInt8>> = [
 		"S": [ [], [.nonterminal("S"), .nonterminal("S")], [.terminal(0x5B), .nonterminal("S"), .terminal(0x5D)] ],
 	];
 	static var lwsp: CFG<SymbolAlphabet<UInt8>> = [
-		.init(name: "LWSP", production: []),
-		.init(name: "LWSP", production: [.nonterminal("element"), .nonterminal("LWSP")]),
-		.init(name: "element", production: [.nonterminal("WSP")]),
-		.init(name: "element", production: [.nonterminal("CRLF"), .nonterminal("WSP")]),
-		.init(name: "CRLF", production: [.nonterminal("CR"), .nonterminal("LF")]),
-		.init(name: "WSP", production: [.nonterminal("SP")]),
-		.init(name: "WSP", production: [.nonterminal("HTAB")]),
-		.init(name: "HTAB", production: [.terminal(0x09)]),
-		.init(name: "CR", production: [.terminal(0x0D)]),
-		.init(name: "LF", production: [.terminal(0x0A)]),
-		.init(name: "SP", production: [.terminal(0x20)]),
+		.init(name: "LWSP", body: []),
+		.init(name: "LWSP", body: [.nonterminal("element"), .nonterminal("LWSP")]),
+		.init(name: "element", body: [.nonterminal("WSP")]),
+		.init(name: "element", body: [.nonterminal("CRLF"), .nonterminal("WSP")]),
+		.init(name: "CRLF", body: [.nonterminal("CR"), .nonterminal("LF")]),
+		.init(name: "WSP", body: [.nonterminal("SP")]),
+		.init(name: "WSP", body: [.nonterminal("HTAB")]),
+		.init(name: "HTAB", body: [.terminal(0x09)]),
+		.init(name: "CR", body: [.terminal(0x0D)]),
+		.init(name: "LF", body: [.terminal(0x0A)]),
+		.init(name: "SP", body: [.terminal(0x20)]),
 	];
 	static var positveNumber: CFG<SymbolAlphabet<UInt8>> = [
 		"S": [ [.nonterminal("1"), .nonterminal("N")] ],
@@ -37,28 +37,28 @@ import Testing
 		func test_init_empty() async throws {
 			let cfg = CFG<ClosedRangeAlphabet<UInt8>>()
 			#expect(cfg.start == [])
-			#expect(cfg.rules.isEmpty)
+			#expect(cfg.productions.isEmpty)
 			#expect(cfg.dictionary.isEmpty)
 		}
 
 		@Test("initializer")
 		func test_init() async throws {
-			let rules: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
-				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x61...0x7A))]),
-				.init(name: "A", production: [.nonterminal("S")])
+			let productions: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
+				.init(name: "S", body: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x61...0x7A))]),
+				.init(name: "A", body: [.nonterminal("S")])
 			];
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: rules);
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: productions);
 			#expect(cfg.start == ["S"])
-			#expect(cfg.rules.count == 2)
+			#expect(cfg.productions.count == 2)
 			#expect(cfg.dictionary.keys.sorted() == ["A", "S"])
 		}
 
 		@Test("Equatable")
 		func test_equatable() async throws {
 			let cfg1 = CFG<ClosedRangeAlphabet<UInt8>>();
-			let cfg2 = CFG<ClosedRangeAlphabet<UInt8>>(start: "A", rules: [ .init(name: "A", production: []) ]);
-			let cfg3 = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [ .init(name: "S", production: []) ]);
-			let cfg4 = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [ .init(name: "S", production: []) ]);
+			let cfg2 = CFG<ClosedRangeAlphabet<UInt8>>(start: "A", productions: [ .init(name: "A", body: []) ]);
+			let cfg3 = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: [ .init(name: "S", body: []) ]);
+			let cfg4 = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: [ .init(name: "S", body: []) ]);
 			#expect(cfg1 != cfg2)
 			#expect(cfg2 != cfg3)
 			#expect(cfg3 == cfg4)
@@ -76,12 +76,12 @@ import Testing
 	@Suite("dictionary and ruleNames") struct CFGTests_dictionary {
 		@Test("dictionary groups by name")
 		func test_dictionary() async throws {
-			let rules: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
-				.init(name: "S", production: [.nonterminal("A")]),
-				.init(name: "A", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
-				.init(name: "S", production: [.nonterminal("B")])
+			let productions: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
+				.init(name: "S", body: [.nonterminal("A")]),
+				.init(name: "A", body: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
+				.init(name: "S", body: [.nonterminal("B")])
 			]
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: rules)
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: productions)
 			let dict = cfg.dictionary
 			#expect(dict["S"]?.count == 2)
 			#expect(dict["A"]?.count == 1)
@@ -90,25 +90,25 @@ import Testing
 
 		@Test("ruleNames")
 		func test_ruleNames() async throws {
-			let rules: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
-				.init(name: "S", production: [.nonterminal("A")]),
-				.init(name: "A", production: [.nonterminal("B")]),
-				.init(name: "B", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))])
+			let productions: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
+				.init(name: "S", body: [.nonterminal("A")]),
+				.init(name: "A", body: [.nonterminal("B")]),
+				.init(name: "B", body: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))])
 			]
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: rules)
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: productions)
 			let names = cfg.ruleNames
 			#expect(names == ["S", "A", "B"])
 		}
 
 		@Test("ruleNames with multiple rules per name")
 		func test_ruleNames_alternates() async throws {
-			let rules: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
-				.init(name: "S", production: [.nonterminal("A")]),
-				.init(name: "S", production: [.nonterminal("B")]),
-				.init(name: "A", production: []),
-				.init(name: "B", production: [])
+			let productions: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
+				.init(name: "S", body: [.nonterminal("A")]),
+				.init(name: "S", body: [.nonterminal("B")]),
+				.init(name: "A", body: []),
+				.init(name: "B", body: [])
 			]
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: rules)
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: productions)
 			let names = cfg.ruleNames
 			#expect(names == ["S", "A", "B"])
 		}
@@ -125,8 +125,8 @@ import Testing
 
 		@Test("epsilon language")
 		func test_epsilon() async throws {
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "ep", rules: [
-				.init(name: "ep", production: []),
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "ep", productions: [
+				.init(name: "ep", body: []),
 			])
 			#expect(cfg.contains([]))
 			#expect(!cfg.contains([0]))
@@ -143,9 +143,9 @@ import Testing
 
 		@Test("single space 2")
 		func test_sp2() async throws {
-			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
-				.init(name: "S", production: [.nonterminal("X"), .nonterminal("X"), .terminal(0x20)]),
-				.init(name: "X", production: []),
+			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", productions: [
+				.init(name: "S", body: [.nonterminal("X"), .nonterminal("X"), .terminal(0x20)]),
+				.init(name: "X", body: []),
 			]);
 			#expect(!cfg.contains([]))
 			#expect(!cfg.contains([0]))
@@ -155,9 +155,9 @@ import Testing
 
 		@Test("left-recursive space")
 		func test_sp3() async throws {
-			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
-				.init(name: "S", production: [.nonterminal("S"), .terminal(0x20)]),
-				.init(name: "S", production: []),
+			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", productions: [
+				.init(name: "S", body: [.nonterminal("S"), .terminal(0x20)]),
+				.init(name: "S", body: []),
 			]);
 			#expect(cfg.contains([]))
 			#expect(!cfg.contains([0]))
@@ -169,9 +169,9 @@ import Testing
 
 		@Test("right-recursive space")
 		func test_sp4() async throws {
-			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
-				.init(name: "S", production: [.terminal(0x20), .nonterminal("S")]),
-				.init(name: "S", production: []),
+			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", productions: [
+				.init(name: "S", body: [.terminal(0x20), .nonterminal("S")]),
+				.init(name: "S", body: []),
 			]);
 			#expect(cfg.contains([]))
 			#expect(!cfg.contains([0]))
@@ -201,11 +201,11 @@ import Testing
 		@Test("star / repetition with epsilon")
 		func test_star_epsilon() async throws {
 			// Equivalent to a simple "a*" grammar as emitted by ABNFRulelist.toCFG
-			let cfg = CFG<SymbolAlphabet<UInt8>>(start: "S", rules: [
-				.init(name: "S", production: [.nonterminal("star")]),
-				.init(name: "star", production: []), // epsilon
-				.init(name: "star", production: [.nonterminal("A"), .nonterminal("star")]),
-				.init(name: "A", production: [.terminal(0x61)]), // "a"
+			let cfg = CFG<SymbolAlphabet<UInt8>>(start: "S", productions: [
+				.init(name: "S", body: [.nonterminal("star")]),
+				.init(name: "star", body: []), // epsilon
+				.init(name: "star", body: [.nonterminal("A"), .nonterminal("star")]),
+				.init(name: "A", body: [.terminal(0x61)]), // "a"
 			])
 
 			#expect(cfg.contains([]))
@@ -235,9 +235,9 @@ import Testing
 
 		@Test("balanced parens language")
 		func test_number() async throws {
-			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", rules: [
-				.init(name: "S", production: [.terminal(0x31), .terminal(0x32), .terminal(0x33)]),
-				.init(name: "S", production: [.terminal(0x32), .terminal(0x33), .terminal(0x34)]),
+			let cfg: CFG<SymbolAlphabet<UInt8>> = .init(start: "S", productions: [
+				.init(name: "S", body: [.terminal(0x31), .terminal(0x32), .terminal(0x33)]),
+				.init(name: "S", body: [.terminal(0x32), .terminal(0x33), .terminal(0x34)]),
 			]).reversed();
 			#expect(cfg.maxCardinality() == 2)
 			#expect(cfg.contains([0x33, 0x32, 0x31]));
@@ -257,9 +257,9 @@ import Testing
 
 		@Test("set of empty string -> finite")
 		func test_epsilon_finite() async throws {
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
-				.init(name: "S", production: []),
-				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: [
+				.init(name: "S", body: []),
+				.init(name: "S", body: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
 			]);
 			#expect(cfg.maxCardinality() == 27) // 26 lowercase letters and epsilon
 			#expect(cfg.chomskyClass() == 4)
@@ -267,19 +267,19 @@ import Testing
 
 		@Test("non-productive grammar", .disabled("not implemented"))
 		func test_nonproductive() async throws {
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
-				.init(name: "S", production: [.nonterminal("A"), .nonterminal("B")]),
-				.init(name: "A", production: [.nonterminal("B")]),
-				.init(name: "B", production: [.nonterminal("A")]),
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: [
+				.init(name: "S", body: [.nonterminal("A"), .nonterminal("B")]),
+				.init(name: "A", body: [.nonterminal("B")]),
+				.init(name: "B", body: [.nonterminal("A")]),
 			]);
 			#expect(cfg.chomskyClass() == 4)
 		}
 
 		@Test("self-referential start symbol")
 		func test_strings() async throws {
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
-				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x61...0x7A))]),
-				.init(name: "S", production: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x30...0x39)), .nonterminal("S")]),
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: [
+				.init(name: "S", body: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x61...0x7A))]),
+				.init(name: "S", body: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x30...0x39)), .nonterminal("S")]),
 			]);
 			// FIXME: Maybe it's possible to detect non-productive unit productions and count those as zero... but currently it doesn't
 			//#expect(cfg.maxCardinality() == 0)
@@ -295,10 +295,10 @@ import Testing
 
 		@Test("balanced parenthesies")
 		func test_parens() async throws {
-			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
-				.init(name: "S", production: []),
-				.init(name: "S", production: [.nonterminal("S"), .nonterminal("S")]),
-				.init(name: "S", production: [.terminal([0x5B...0x5B]), .nonterminal("S"), .terminal([0x5D...0x5D])]),
+			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: [
+				.init(name: "S", body: []),
+				.init(name: "S", body: [.nonterminal("S"), .nonterminal("S")]),
+				.init(name: "S", body: [.terminal([0x5B...0x5B]), .nonterminal("S"), .terminal([0x5D...0x5D])]),
 			]);
 			#expect(cfg.chomskyClass() == 2)
 		}

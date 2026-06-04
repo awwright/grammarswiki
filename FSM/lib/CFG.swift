@@ -6,6 +6,7 @@ public protocol CFGProtocol: GrammarProtocol where Production: CFGProductionProt
 public protocol CFGProductionProtocol: GrammarProductionProtocol {
 	var name: Variable {get};
 	var body: Array<BodyElement> {get};
+	init(name: Variable, body: Array<BodyElement>);
 }
 
 public typealias CFG<Alphabet: AlphabetProtocol> = CFGNamed<String, Alphabet>;
@@ -30,9 +31,9 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		public var lhs: Alternative { [.nonterminal(name)] }
 		public var rhs: Alternative { body }
 
-		public init(name: Variable, production: Alternative) {
+		public init(name: Variable, body: Alternative) {
 			self.name = name
-			self.body = production
+			self.body = body
 		}
 		public init(lhs: [BodyElement], rhs: [BodyElement]) {
 			precondition(lhs.count == 1)
@@ -45,15 +46,15 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			self.body = from.rhs
 		}
 		public func reversed() -> Self {
-			Self(name: name, production: body.reversed())
+			Self(name: name, body: body.reversed())
 		}
 	}
 
 	public var start: Array<Variable>
-	public var rules: Array<Production>
+	public var productions: Array<Production>
 
 	public var dictionary: Dictionary<Variable, Array<Production>> {
-		return Dictionary(grouping: self.rules, by: \.name);
+		return Dictionary(grouping: self.productions, by: \.name);
 	}
 
 	/// Get the list of used rule names in breadth-first order from the start symbol
@@ -114,37 +115,37 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	public init() {
 		// If no rule exists for the starting nonterminal, that's not an error, that just means the language is the empty set.
 		self.start = [];
-		self.rules = []
+		self.productions = []
 	}
 
 	/// Createa a context-free grammar with the given rules and starting rule
-	public init(start: Variable, rules: [Production]) {
+	public init(start: Variable, productions: [Production]) {
 		self.start = [start]
-		self.rules = rules
+		self.productions = productions
 		// For the sake of bug catching, we usually want the starting rule to have at least one production when using this constructor.
 		// FIXME: actually maybe this is too aggressive, lots of code likes creating empty languages for some reason
 		//assert(rules.contains(where: { $0.name == start }))
 	}
 
 	/// Createa a context-free grammar with the given rules and starting rules
-	public init(startSet: [Variable], rules: [Production]) {
+	public init(startSet: [Variable], productions: [Production]) {
 		self.start = startSet;
-		self.rules = rules;
+		self.productions = productions;
 	}
 
 	public typealias Key = Variable
 	public typealias Value = Array<Array<BodyElement>>
 	public init(dictionaryLiteral elements: (Variable, Array<Array<BodyElement>>)...) {
-		if elements.isEmpty { self.start = []; self.rules = []; return; }
+		if elements.isEmpty { self.start = []; self.productions = []; return; }
 		self.start = [elements.first!.0];
-		self.rules = elements.flatMap { (name, productions) in productions.map { .init(name: name, production: $0) } };
+		self.productions = elements.flatMap { (name, productions) in productions.map { .init(name: name, body: $0) } };
 	}
 
 	public typealias ArrayLiteralElement = Production
 	public init(arrayLiteral elements: Production...) {
-		if elements.isEmpty { self.start = []; self.rules = []; return; }
+		if elements.isEmpty { self.start = []; self.productions = []; return; }
 		self.start = [elements.first!.name];
-		self.rules = elements;
+		self.productions = elements;
 
 	}
 
@@ -385,7 +386,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 					if j < 0 {
 						// Only add this if the beginning reaches to the start of the completed sequence being matched
 						if inputOffset == item.offset {
-							let newProduction = ParseTree.Production(name: ParseTree.Variable(name: item.production.name, offset: item.offset, length: item_end-item.offset), production: sequence);
+							let newProduction = ParseTree.Production(name: ParseTree.Variable(name: item.production.name, offset: item.offset, length: item_end-item.offset), body: sequence);
 							if !forest.contains(newProduction) {
 								forest.append(newProduction);
 							}
@@ -416,7 +417,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				}
 			}
 			// TODO: Ensure that the rules are listed in the same order as the original
-			return ParseTree(startSet: forestStart, rules: forest);
+			return ParseTree(startSet: forestStart, productions: forest);
 		}
 
 		/// List the symbols
@@ -449,7 +450,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	///
 	/// Keep in mind this will also change left tail recursion to the right, etc
 	public func reversed() -> Self {
-		Self(startSet: start, rules: rules.map { $0.reversed() })
+		Self(startSet: start, productions: productions.map { $0.reversed() })
 	}
 
 	// TODO: Implement a simple forest parser (returns a parse forest)
@@ -586,14 +587,14 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				}
 			}
 		}
-		return Self(startSet: start, rules: self.rules.filter { visited.contains($0.name) });
+		return Self(startSet: start, productions: self.productions.filter { visited.contains($0.name) });
 	}
 
 	/// This will return an equivalent CFG except for the production of the empty string, if it did before
 	public func eliminateEpsilon() -> Self {
 		var epsilonRulesQueue: Array<Variable> = [];
 		var epsilonRules: Set<Variable> = [];
-		var newProductions: [Production] = self.rules;
+		var newProductions: [Production] = self.productions;
 		newProductions.forEach { if $0.body.isEmpty && epsilonRules.insert($0.name).inserted { epsilonRulesQueue.append($0.name); } }
 		while let epsilonRule = epsilonRulesQueue.popLast() {
 			// Remove epsilon productions for this rule
@@ -604,7 +605,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 					if $0.body[i] == .nonterminal(epsilonRule) {
 						list.forEach { production in
 							// Make a copy of the production without the ith element
-							list.append( Production(name: production.name, production: Array(production.body[0..<i]) + Array(production.body[(i+1)...])) );
+							list.append( Production(name: production.name, body: Array(production.body[0..<i]) + Array(production.body[(i+1)...])) );
 							// TODO: Does this preserve the disambiguition priority? Consider flipping list[j] and list.last as needed
 						}
 					}
@@ -615,7 +616,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			// Queue any epsilon rules that were newly created as a side effect
 			newProductions.forEach { if $0.body.isEmpty && epsilonRules.insert($0.name).inserted { epsilonRulesQueue.append($0.name); } }
 		}
-		return Self(startSet: start, rules: newProductions);
+		return Self(startSet: start, productions: newProductions);
 	}
 
 	public func eliminateUnitProduction() -> Self {

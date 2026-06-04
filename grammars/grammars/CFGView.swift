@@ -24,12 +24,6 @@ struct CFGContentView: View {
 		let grammar = self.filteredGrammar();
 		ScrollView {
 			Form {
-				Picker("Dialect", selection: $selectedDialect) {
-					Text("BNF").tag("bnf")
-				}
-
-				Toggle("Range operator", isOn: $selectedRange)
-
 				Toggle("Eliminate useless prodictions", isOn: $selectedEliminateUseless)
 
 				Toggle("Eliminate epsilon productions", isOn: $selectedEliminateEpsilon)
@@ -57,7 +51,15 @@ struct CFGContentView: View {
 				}
 				.pickerStyle(.segmented)
 
-				// TODO: Add option to hide unused/useless rules (on by default)
+				// TODO: collapse tail recursive rules like:
+				// rule = epsilon / element rule
+				// into: rule = element*
+				Toggle("Kleene star operator", isOn: $selectedRange)
+				Toggle("Optional group operator", isOn: $selectedRange)
+
+				Picker("Dialect", selection: $selectedDialect) {
+					Text("BNF").tag("bnf")
+				}
 			}
 			.pickerStyle(.menu)
 			.formStyle(.grouped)

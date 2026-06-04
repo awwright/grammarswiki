@@ -5,9 +5,9 @@ class CFGPerf_parens: XCTestCase {
 	// A simple, non-ambiguous grammar
 	func test_parens_8() {
 		let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
-			.init(name: "S", production: []),
-			.init(name: "S", production: [.nonterminal("S"), .nonterminal("S")]),
-			.init(name: "S", production: [.terminal([0x28...0x28]), .nonterminal("S"), .terminal([0x29...0x29])]),
+			.init(name: "S", body: []),
+			.init(name: "S", body: [.nonterminal("S"), .nonterminal("S")]),
+			.init(name: "S", body: [.terminal([0x28...0x28]), .nonterminal("S"), .terminal([0x29...0x29])]),
 		]);
 
 		var str = "";
