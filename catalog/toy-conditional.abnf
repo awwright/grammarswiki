@@ -1,0 +1,13 @@
+; An example of how a C-style if/else block can be ambiguous without braces, e.g. the statement:
+;     if if else
+; might mean:
+; (1) if{if} else
+; (2) if{if else}
+; C uses (2) such that the "else" attaches to the closest "if"
+
+document = *statement LWSP
+statement = LWSP "{" *statement "}" / expression
+expression = LWSP if [ LWSP else ] / LWSP value
+if = "if" statement
+else = "else" statement
+value = *DIGIT
