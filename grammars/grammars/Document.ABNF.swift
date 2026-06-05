@@ -256,11 +256,8 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 				let dict = rulelist_resolved.dictionary;
 				let dependencies = dependencies_list.dependencies.compactMap { if let rule = dict[$0] { ($0, rule) } else { nil } }
 				if(dependencies.isEmpty){
+					// At the very least, dependencies should include the name of the rule, so something went wrong
 					await MainActor.run { selectedRule_error = "dependencies is empty"; }
-					return
-				}
-				if(dependencies_list.recursive.isEmpty == false){
-					await MainActor.run { selectedRule_error = "Rule is recursive"; }
 					return
 				}
 
@@ -270,10 +267,10 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 					if let pat { result_fsm_dict[rulename] = pat.minimized() }
 					if _task.isCancelled { return }
 				}
-				guard let result = result_fsm_dict[selectedRulename] else { return }
+				let result = result_fsm_dict[selectedRulename];
 
-				let selectedRule_alphabet: ClosedRangeAlphabet<UInt32> = result.alphabet;
-				let selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>> = result;
+				let selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = result?.alphabet;
+				let selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = result;
 				let selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = try? rulelist_resolved.toCFG(rulename: selectedRulename);
 				let selectedRule_rr: RailroadNode? = dict[selectedRulename]?.toRailroad(rules: dict.mapValues { $0.alternation })
 //				let selectedRule_complexityClass: Int =
