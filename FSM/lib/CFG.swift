@@ -48,6 +48,9 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		public func reversed() -> Self {
 			Self(name: name, body: body.reversed())
 		}
+		public func mapVariableName<Target>(_ transform: ((Variable) -> Target)) -> CFGNamed<Target, Alphabet>.Production {
+			CFGNamed<Target, Alphabet>.Production(name: transform(name), body: body.map { switch $0 { case .nonterminal(let name): return .nonterminal(transform(name)); case .terminal(let symbol): return .terminal(symbol); } })
+		}
 	}
 
 	public var start: Array<Variable>
@@ -634,4 +637,8 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	//public func toPDA() -> SymbolPDA<Symbol> {
 	//	fatalError()
 	//}
+
+	public func mapVariableName<Target>(_ transform: (Variable) -> Target) -> CFGNamed<Target, Alphabet> {
+		CFGNamed<Target, Alphabet>(startSet: start.map(transform), productions: productions.map { $0.mapVariableName(transform) })
+	}
 }
