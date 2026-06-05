@@ -304,14 +304,13 @@ struct MainApp: App {
 	}
 }
 
-protocol DocumentProtocol {
+protocol DocumentProtocol: Hashable {
 	var id: UUID {get}
 	var filepath: URL? {get set}
 	var name: String {get set}
 	var type: String {get set}
 	/// The interpertation of the symbols fed as input
 	var charset: String {get set}
-	var content: String {get set}
 
 	/// Convert this grammar to an ABNFRulelist
 	/// (mostly for when the source is already an ABNF document)

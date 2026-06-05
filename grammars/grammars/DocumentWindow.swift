@@ -210,7 +210,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 			}
 		} // HStack
 		.onAppear { computed.document = document; computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
-		.onChange(of: document.content) { computed.document = document; computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
+		.onChange(of: document) { computed.document = document; computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
 		.onChange(of: selectedRule) { computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
 		.onChange(of: computed.primaryRuleName) { if selectedRule == nil { selectedRule = computed.primaryRuleName } }
 		.toolbar {
