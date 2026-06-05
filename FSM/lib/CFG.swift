@@ -404,8 +404,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 					let element = item.production.body[j];
 					switch element {
 					case .terminal(let symbol):
-						let terminal = expectedSymbols[inputOffset-1].first(where: { $0.production == item.production && $0.progress == j });
-						if let terminal {
+						if inputOffset > 0, let terminal = expectedSymbols[inputOffset-1].first(where: { $0.production == item.production && $0.progress == j }) {
 							currentItems.append( (inputOffset-1, [.terminal(symbol)]+sequence, newQueue) );
 						}
 					case .nonterminal(let name):
