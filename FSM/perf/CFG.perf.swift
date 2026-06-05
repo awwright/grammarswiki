@@ -4,7 +4,7 @@ import FSM
 class CFGPerf_parens: XCTestCase {
 	// A simple, non-ambiguous grammar
 	func test_parens_8() {
-		let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", rules: [
+		let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: [
 			.init(name: "S", body: []),
 			.init(name: "S", body: [.nonterminal("S"), .nonterminal("S")]),
 			.init(name: "S", body: [.terminal([0x28...0x28]), .nonterminal("S"), .terminal([0x29...0x29])]),
