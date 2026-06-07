@@ -207,7 +207,7 @@ struct CatalogDocumentView: View {
 		do {
 			let name = fileURL.lastPathComponent;
 			let content = try String(contentsOf: fileURL, encoding: .utf8);
-			self.document = ABNFDocument(filepath: fileURL, name: name, type: "ABNF", charset: "UTF-32", content: content);
+			self.document = ABNFDocument(filepath: fileURL, name: name, charset: "UTF-32", content: content);
 		} catch {
 			// Handle error (e.g., show alert)
 			print("Load error: \(error)")

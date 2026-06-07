@@ -10,7 +10,7 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	/// Used in in the inspector view in ``DocumentView``
 	var filepath: URL?
 	var name: String
-	var type: String
+	var type: String { "ABNF" }
 	var charset: String
 	var content: String
 	var isImportingRFCXML: Bool = false
@@ -20,15 +20,13 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	init() {
 		self.filepath = nil
 		self.name = ""
-		self.type = "ABNF"
 		self.content = ""
 		self.charset = "UTF-8"
 	}
 
-	init(filepath: URL?, name: String, type: String, charset: String, content: String) {
+	init(filepath: URL?, name: String, charset: String, content: String) {
 		self.filepath = filepath
 		self.name = name
-		self.type = type
 		self.content = content
 		self.charset = charset
 	}
@@ -39,7 +37,6 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		}
 		self.filepath = nil
 		self.name = "name"
-		self.type = "ABNF"
 		self.content = String(decoding: data, as: UTF8.self)
 		self.charset = "UTF-8"
 	}
@@ -58,7 +55,7 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	}
 
 	func duplicate() -> Self {
-		Self(filepath: nil, name: name + " Copy", type: type, charset: charset, content: content)
+		Self(filepath: nil, name: name + " Copy", charset: charset, content: content)
 	}
 
 	// Export the grammar as an ABNFRulelist, if possible
