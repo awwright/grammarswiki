@@ -3,6 +3,7 @@ import FSM
 import LanguageSupport
 import UniformTypeIdentifiers
 
+// TODO: Move test input into DocumentWindow, so that other widgets like CFGView can highlight rules based on the input and parse status
 // TODO: Implement CFG methods for chomsky normal form, greibach normal form
 // TODO: List parse forest productions/alternatives in same order as the original grammar does
 // TODO: Add RegexDocument to import regular expressions as a grammar
@@ -11,7 +12,8 @@ import UniformTypeIdentifiers
 // TODO: Add RFC XML Document (reads ABNF code inside RFC XML)
 
 extension UTType {
-	static var grammarsDoc = UTType(exportedAs: "name.awwright.grammars.doc")
+	static var grammarsDoc = UTType(exportedAs: "name.awwright.grammars.doc", conformingTo: .xml)
+	static var abnfDoc = UTType(exportedAs: "name.awwright.grammars.doc.abnf", conformingTo: .text)
 }
 
 /// Stores a method of converting from a string of numbers to a String, for display purposes
@@ -70,9 +72,14 @@ struct Charset {
 @main
 struct MainApp: App {
 	@State private var model = MainAppModel()
+	@Environment(\.newDocument) private var newDocument
 	@FocusedBinding(\.isImportingRFCXML) var isImportingRFCXML: Bool?
 	var body: some Scene {
 		// The DocumentGroup is listed first so that it gets the keyboard shortcuts for New, Save, Open
+		DocumentGroup(newDocument: NoteDocument()) { file in
+			DocumentView<NoteDocument>(document: file.$document)
+		}
+
 		DocumentGroup(newDocument: ABNFDocument()) { file in
 			DocumentView<ABNFDocument>(document: file.$document)
 				.focusedSceneValue(\.isImportingRFCXML, file.$document.isImportingRFCXML)
@@ -81,13 +88,21 @@ struct MainApp: App {
 		Window("Catalog", id: "Catalog") {
 			CatalogView(model: model)
 		}.defaultLaunchBehavior(.presented)
-		
+
 		Settings {
 			SettingsView()
 		}
 		.commands {
 			// Adding commands to one window seems to suffice for all of them
 			// File mennu
+			CommandGroup(replacing: .newItem) {
+				Menu("New", systemImage: "plus") {
+					// TODO: Figure out how to get this to work for the Catalog window
+					Button("Grammar notebook") { newDocument(contentType: .grammarsDoc) }.keyboardShortcut("N")
+					Divider()
+					Button("ABNF rule list") { newDocument(contentType: .abnfDoc) }
+				}
+			}
 			CommandGroup(after: .importExport) {
 				Menu("Import") {
 					// TODO: Figure out how to get this to work for the Catalog window
@@ -326,7 +341,7 @@ protocol DocumentProtocol: Hashable {
 	var id: UUID {get}
 	var filepath: URL? {get set}
 	var name: String {get set}
-	var type: String {get set}
+	var type: String {get}
 	/// The interpertation of the symbols fed as input
 	var charset: String {get set}
 

@@ -15,7 +15,7 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	var content: String
 	var isImportingRFCXML: Bool = false
 
-	static var readableContentTypes: [UTType] { [.grammarsDoc] }
+	static var readableContentTypes: [UTType] { [.abnfDoc] }
 
 	init() {
 		self.filepath = nil
