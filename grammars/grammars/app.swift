@@ -32,6 +32,7 @@ struct Charset {
 	init(charset: Charset) {
 		self.charset = charset
 	}
+	// TODO: Use double quotes for case-insensitive, and single quotes (or no quotes) for case-sensitive
 	func describe(_ rangeSet: Array<ClosedRange<UInt32>>) -> String {
 		// Handle empty set case
 		guard !rangeSet.isEmpty else { return "∅" }
@@ -69,16 +70,33 @@ struct Charset {
 @main
 struct MainApp: App {
 	@State private var model = MainAppModel()
+	@FocusedBinding(\.isImportingRFCXML) var isImportingRFCXML: Bool?
 	var body: some Scene {
 		// The DocumentGroup is listed first so that it gets the keyboard shortcuts for New, Save, Open
 		DocumentGroup(newDocument: ABNFDocument()) { file in
 			DocumentView<ABNFDocument>(document: file.$document)
+				.focusedSceneValue(\.isImportingRFCXML, file.$document.isImportingRFCXML)
 		}
+
 		Window("Catalog", id: "Catalog") {
 			CatalogView(model: model)
 		}.defaultLaunchBehavior(.presented)
+		
 		Settings {
 			SettingsView()
+		}
+		.commands {
+			// Adding commands to one window seems to suffice for all of them
+			// File mennu
+			CommandGroup(after: .importExport) {
+				Menu("Import") {
+					// TODO: Figure out how to get this to work for the Catalog window
+					Button("RFC XML") { isImportingRFCXML = true }.disabled(isImportingRFCXML == nil)
+				}
+			}
+			// View menu
+			SidebarCommands()
+			InspectorCommands()
 		}
 	}
 }
@@ -374,3 +392,8 @@ protocol EditorViewBody: View {
 	associatedtype Document: DocumentProtocol
 	init(document: Binding<Document>, computed: Document.Parser)
 }
+
+extension FocusedValues {
+	@Entry var isImportingRFCXML: Binding<Bool>?
+}
+

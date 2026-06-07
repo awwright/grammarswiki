@@ -13,6 +13,7 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	var type: String
 	var charset: String
 	var content: String
+	var isImportingRFCXML: Bool = false
 
 	static var readableContentTypes: [UTType] { [.grammarsDoc] }
 
@@ -116,6 +117,29 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 					])
 				} else {
 					messages = [];
+				}
+			}
+			.fileImporter(isPresented: $document.isImportingRFCXML, allowedContentTypes: [.xml]) {
+				defer { document.isImportingRFCXML = false }
+				guard case .success(let url) = $0 else { return }
+				let documentName = url.lastPathComponent;
+				do {
+					guard url.startAccessingSecurityScopedResource() else { return }
+					defer { url.stopAccessingSecurityScopedResource() }
+					let xmlDoc = try XMLDocument(contentsOf: url, options: [])
+					// Use local-name() to handle the default namespace used by real RFC XML (urn:ietf:rfc:7991 etc.).
+					let sourceCodeNodes = try? xmlDoc.nodes(forXPath: "//*[local-name()='sourcecode'][@type=\"abnf9110\"]") as? [XMLElement] ?? []
+					document.content += sourceCodeNodes?.map { node in
+						// Many RFC XML elements add leading whitespace, strip it out if any
+						// This line also has the effect of converting LF to CRLF
+						let lines = (node.stringValue ?? "").split(separator: /\r?\n/, omittingEmptySubsequences: false);
+						let minIndent = lines.compactMap{ $0.isEmpty ? nil : $0.prefix { $0.isWhitespace }.count }.min();
+						guard let minIndent else { return node.stringValue ?? "" }
+						let title = node.attribute(forName: "pn")?.stringValue ?? ""
+						return  "; \(documentName) \(title)\r\n" + lines.map{ $0.dropFirst(minIndent) }.joined(separator: "\r\n");
+					}.joined(separator: "\r\n") ?? "";
+				} catch {
+					print(error);
 				}
 			}
 		}
