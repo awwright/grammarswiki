@@ -7,6 +7,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	let id = UUID()
 	var filepath: URL?
 	var name: String
+	var start: String
 	var charset: String
 	var rules: [Rule]
 
@@ -24,41 +25,83 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	init() {
 		self.filepath = nil
 		self.name = ""
+		self.start = ""
 		self.charset = "UTF-8"
 		self.rules = []
 	}
 
-	init(filepath: URL?, name: String, charset: String, rules: [Rule] = []) {
+	init(filepath: URL?, name: String, start: String, charset: String, rules: [Rule] = []) {
 		self.filepath = filepath
 		self.name = name
+		self.start = start
 		self.charset = charset
 		self.rules = rules
 	}
 
 	init(configuration: ReadConfiguration) throws {
 		guard let data = configuration.file.regularFileContents else {
-			throw CocoaError(.fileReadCorruptFile)
+			throw CocoaError(.fileReadCorruptFile);
 		}
-		self.filepath = nil
-		self.name = "name"
-		self.charset = "UTF-8"
-		do {
-			let xmlDoc = try XMLDocument(data: data, options: []);
-			// TODO actually read the rules from the file...
-			self.rules = []
-		} catch {
-			self.rules = []
+		let xmlDoc = try XMLDocument(data: data, options: [])
+		guard let root = xmlDoc.rootElement(), root.name == "grammar" else {
+			throw CocoaError(.fileReadCorruptFile);
 		}
+		self.filepath = nil;
+		self.name = root.attribute(forName: "name")?.stringValue ?? "";
+		self.start = root.attribute(forName: "start")?.stringValue ?? "";
+		self.charset = root.attribute(forName: "charset")?.stringValue ?? "UTF-8";
+
+		var parsedRules: [Rule] = [];
+		for eRule in root.elements(forName: "rule") {
+			let rName = eRule.attribute(forName: "name")?.stringValue ?? "";
+			let topStr = eRule.attribute(forName: "top")?.stringValue?.lowercased() ?? "";
+			let top = !topStr.isEmpty
+			for eProduction in eRule.elements(forName: "p") {
+				let expr = eProduction.stringValue ?? "";
+				parsedRules.append(Rule(name: rName, expression: expr, top: top));
+				// TODO: Support more than one alternative production
+				break;
+			}
+		}
+		self.rules = parsedRules;
 	}
 
 	func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-		//fatalError()
-		//let data = Data(content.utf8)
-		return .init(regularFileWithContents: Data())
+		let root = XMLElement(name: "grammar");
+		root.setAttributesWith([
+			"name": self.name,
+			"start": self.start,
+			"charset": self.charset,
+			"xmlns": "http://grammars.awwright.name/doc",
+		]);
+
+		for rule in self.rules {
+			root.addChild({
+				let ruleEl = XMLElement(name: "rule");
+				ruleEl.setAttributesWith([
+					"name": rule.name,
+					"top": rule.top ? "true" : "",
+				]);
+				ruleEl.addChild({
+					let eProduction = XMLElement(name: "p");
+					eProduction.setStringValue(rule.expression, resolvingEntities: false)
+					return eProduction;
+				}())
+				return ruleEl;
+			}());
+		}
+
+		let xmlDoc = XMLDocument(rootElement: root);
+		xmlDoc.characterEncoding = "UTF-8";
+		xmlDoc.version = "1.0";
+		let versionPI = XMLNode.processingInstruction(withName: "version", stringValue: "1") as! XMLNode;
+		xmlDoc.insertChild(versionPI, at: 0);
+		let data = xmlDoc.xmlData(options: [.nodePrettyPrint]);
+		return FileWrapper(regularFileWithContents: data);
 	}
 
 	func duplicate() -> Self {
-		Self(filepath: nil, name: name + " Copy", charset: charset, rules: rules)
+		Self(filepath: nil, name: name + " Copy", start: start, charset: charset, rules: rules)
 	}
 
 	// Export the grammar as an ABNFRulelist, if possible
