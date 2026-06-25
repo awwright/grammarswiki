@@ -71,7 +71,61 @@ public struct ABNFExportError: Error {
 	}
 }
 
-public enum CFGRuleName: Hashable, Comparable, CustomStringConvertible {
+// TODO: Is this a good name? This is ABNF-specific
+// Is this the best way to wrap an Array? Maybe...
+public struct CFGRuleName: Hashable, Comparable, CustomStringConvertible, RandomAccessCollection, ExpressibleByArrayLiteral {
+
+	public let components: Array<CFGRuleNameComponent>
+
+	public typealias Index = Array<CFGRuleNameComponent>.Index
+	public typealias Element = CFGRuleNameComponent
+	public typealias ArrayLiteralElement = CFGRuleNameComponent
+
+	public var startIndex: Index { components.startIndex }
+	public var endIndex: Index { components.endIndex }
+
+	public init() {
+		self.components = [];
+	}
+
+	public init(_ components: CFGRuleNameComponent...) {
+		self.components = components;
+	}
+
+	public init(arrayLiteral components: CFGRuleNameComponent...) {
+		self.components = components;
+	}
+
+	public init(components: Array<CFGRuleNameComponent>) {
+		self.components = components;
+	}
+
+	public static func < (lhs: borrowing CFGRuleName, rhs: borrowing CFGRuleName) -> Bool {
+		return lhs.components < rhs.components
+	}
+
+	public subscript(position: Index) -> Element {
+		components[position]
+	}
+
+	public func index(after i: Index) -> Index {
+		components.index(after: i)
+	}
+
+	public func index(before i: Index) -> Index {
+		components.index(before: i)
+	}
+
+	public var description: String {
+		"<\(components.map(\.description).joined(separator: ""))>"
+	}
+
+	public static func + (lhs: CFGRuleName, rhs: CFGRuleName) -> CFGRuleName {
+		.init(components: lhs.components + rhs.components)
+	}
+}
+
+public enum CFGRuleNameComponent: Hashable, Comparable, CustomStringConvertible {
 	case rule(String);
 	case alternate(Int);
 	case concat(Int);
@@ -373,16 +427,16 @@ public struct ABNFRulelist<Symbol>: ABNFProduction, ExpressibleByArrayLiteral wh
 		return resolvedRules;
 	}
 
-	public typealias CFG = CFGNamed<Array<CFGRuleName>, Alphabet>;
+	public typealias CFG = CFGNamed<CFGRuleName, Alphabet>;
 
 	/// Convert the first ABNF rule to a CFG
-	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Variable == Array<CFGRuleName>, CFGType.Alphabet.Symbol == Symbol, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
+	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil) throws -> CFGType where CFGType.Variable == CFGRuleName, CFGType.Alphabet.Symbol == Symbol, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
 		try toCFG(as: CFGType.self, rulename: rules.first?.rulename.id ?? "")
 	}
 
 	/// Convert the named ABNF rule to a CFG
-	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil, rulename: String) throws -> CFGType where CFGType.Variable == Array<CFGRuleName>, CFGType.Alphabet.Symbol == Symbol, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
-		func addRules(for alternation: ABNFAlternation<Symbol>, withName ruleName: Array<CFGRuleName>, to cfgRules: inout [CFGType.Production]) throws {
+	public func toCFG<CFGType: CFGProtocol>(as: CFGType.Type? = nil, rulename: String) throws -> CFGType where CFGType.Variable == CFGRuleName, CFGType.Alphabet.Symbol == Symbol, CFGType.Alphabet: ClosedRangeSymbolClassProtocol {
+		func addRules(for alternation: ABNFAlternation<Symbol>, withName ruleName: CFGRuleName, to cfgRules: inout [CFGType.Production]) throws {
 			for (alternation_i, concat) in alternation.matches.enumerated() {
 				var prod: Array<CFGType.Production.BodyElement> = []
 				for (concat_i, rep) in concat.repetitions.enumerated() {
