@@ -18,6 +18,7 @@ struct CFGContentView: View {
 	@State private var selectedRange: Bool = false
 	@State private var selectedEliminateUseless: Bool = true
 	@State private var selectedEliminateEpsilon: Bool = false
+	@State private var selectedEliminateUnitProd: Bool = false
 	@State private var selectedForm: String = ""
 	@State private var selectedSortOrder: CFGContentView_SortOrder = .breadthFirst
 	@State private var selectedCharset: String = ""
@@ -37,6 +38,8 @@ struct CFGContentView: View {
 				Toggle("Eliminate useless prodictions", isOn: $selectedEliminateUseless)
 
 				Toggle("Eliminate epsilon productions", isOn: $selectedEliminateEpsilon)
+
+				Toggle("Eliminate unit productions", isOn: $selectedEliminateUnitProd)
 
 				Picker("Normalize", selection: $selectedForm) {
 					Text("None").tag("")
