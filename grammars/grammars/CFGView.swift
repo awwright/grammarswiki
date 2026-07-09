@@ -1,17 +1,27 @@
 import SwiftUI;
 import FSM;
 
+enum CFGContentView_SortOrder {
+	case breadthFirst;
+	case depthFirst;
+	case name;
+}
+
+enum CFGContentView_Dialect {
+	case bnf;
+	case swift_cfg;
+}
+
 struct CFGContentView: View {
 	public var grammar: ABNFRulelist<UInt32>.CFG;
-	@Environment(SelectedCharset.self) private var charset;
 
-	@State private var selectedDialect: String = "bnf"
 	@State private var selectedRange: Bool = false
 	@State private var selectedEliminateUseless: Bool = true
 	@State private var selectedEliminateEpsilon: Bool = false
 	@State private var selectedForm: String = ""
-	@State private var selectedSortOrder: String = "b"
+	@State private var selectedSortOrder: CFGContentView_SortOrder = .breadthFirst
 	@State private var selectedCharset: String = ""
+	@State private var selectedDialect: CFGContentView_Dialect = .bnf
 
 	func filteredGrammar() -> ABNFRulelist<UInt32>.CFG {
 		var grammar = self.grammar;
@@ -58,57 +68,69 @@ struct CFGContentView: View {
 				Toggle("Optional group operator", isOn: $selectedRange)
 
 				Picker("Dialect", selection: $selectedDialect) {
-					Text("BNF").tag("bnf")
+					Text("BNF").tag(CFGContentView_Dialect.bnf)
 				}
 			}
 			.pickerStyle(.menu)
 			.formStyle(.grouped)
 
 			VStack(alignment: .leading) {
-				ForEach(grammar.start, id: \.self) { rulename in
-					Text("\u{2192} \(rulename)")
-				}
-				if selectedEliminateEpsilon && self.grammar.contains([]) {
-					// If the "eliminate epsilon productions" option removed epsilon from the language, add it back here
-					Text("\u{2192} \u{3B5}") // Epsilon
-				}
-				if grammar.start.isEmpty {
-					Text("\u{2192} \u{2205}")
-				}
-				Spacer()
-				let dictionary = grammar.dictionary
-				let ruleNames = switch(selectedSortOrder) {
-					case "b": grammar.ruleNames;
-					case "d": grammar.ruleNamesDepthFirst;
-					case "a": grammar.ruleNames.sorted();
-					default: grammar.ruleNames;
-				}
-				ForEach(ruleNames, id: \.self) { (ruleName: ABNFRulelist<UInt32>.CFG.Variable) in
-					let rules = dictionary[ruleName] ?? []
-					Text("\(ruleName)").font(.headline);
-					if rules.isEmpty {
-						Text("\t= \u{2205}");
-					}
-					ForEach(rules, id: \.self) { rule in
-						// FIXME: This will squish rather than wrap
-						HStack {
-							Text("\t\u{2192} ")
-							ForEach(rule.body, id: \.self) { (token: ABNFRulelist<UInt32>.CFG.BodyElement) in
-								switch token {
-								case .terminal(let sym): Text(charset.describe(sym)).monospaced()
-								case .nonterminal(let name): Text(name.description)
-								default: Text(String(describing: token))
-								}
-							}
-							if rule.body.isEmpty {
-								Text("\u{3B5}") // Epsilon
-							}
-						}
-					}
-					Spacer()
-				}
+				CFGContentView_BNF(grammar: grammar, selectedEliminateEpsilon: selectedEliminateEpsilon, selectedSortOrder: selectedSortOrder)
 			}
 			.frame(maxWidth: .infinity, alignment: .topLeading)
 		}
+	}
+}
+
+struct CFGContentView_BNF: View {
+	let grammar: ABNFRulelist<UInt32>.CFG
+	let selectedEliminateEpsilon: Bool
+	let selectedSortOrder: CFGContentView_SortOrder
+
+	@Environment(SelectedCharset.self) private var charset;
+
+	var body: some View {
+		ForEach(grammar.start, id: \.self) { rulename in
+			Text("\u{2192} \(rulename)")
+		}
+		if selectedEliminateEpsilon && self.grammar.contains([]) {
+			// If the "eliminate epsilon productions" option removed epsilon from the language, add it back here
+			Text("\u{2192} \u{3B5}") // Epsilon
+		}
+		if grammar.start.isEmpty {
+			Text("\u{2192} \u{2205}")
+		}
+		Spacer()
+		let dictionary = grammar.dictionary
+		let ruleNames = switch(selectedSortOrder) {
+			case .breadthFirst: grammar.ruleNames;
+			case .depthFirst: grammar.ruleNamesDepthFirst;
+			case .name: grammar.ruleNames.sorted();
+		}
+		ForEach(ruleNames, id: \.self) { (ruleName: ABNFRulelist<UInt32>.CFG.Variable) in
+			let rules = dictionary[ruleName] ?? []
+			Text("\(ruleName)").font(.headline);
+			if rules.isEmpty {
+				Text("\t= \u{2205}");
+			}
+			ForEach(rules, id: \.self) { rule in
+				// FIXME: This will squish rather than wrap
+				HStack {
+					Text("\t\u{2192} ")
+					ForEach(rule.body, id: \.self) { (token: ABNFRulelist<UInt32>.CFG.BodyElement) in
+						switch token {
+							case .terminal(let sym): Text(charset.describe(sym)).monospaced()
+							case .nonterminal(let name): Text(name.description)
+							default: Text(String(describing: token))
+						}
+					}
+					if rule.body.isEmpty {
+						Text("\u{3B5}") // Epsilon
+					}
+				}
+			}
+			Spacer()
+		}
+
 	}
 }
