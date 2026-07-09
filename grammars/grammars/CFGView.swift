@@ -12,6 +12,12 @@ enum CFGContentView_Dialect {
 	case swift_cfg;
 }
 
+enum CFGContentView_Form {
+	case none;
+	case chomsky;
+	case greibach;
+}
+
 struct CFGContentView: View {
 	public var grammar: ABNFRulelist<UInt32>.CFG;
 
@@ -19,7 +25,7 @@ struct CFGContentView: View {
 	@State private var selectedEliminateUseless: Bool = true
 	@State private var selectedEliminateEpsilon: Bool = false
 	@State private var selectedEliminateUnitProd: Bool = false
-	@State private var selectedForm: String = ""
+	@State private var selectedForm: CFGContentView_Form = .none
 	@State private var selectedSortOrder: CFGContentView_SortOrder = .breadthFirst
 	@State private var selectedCharset: String = ""
 	@State private var selectedDialect: CFGContentView_Dialect = .bnf
@@ -29,6 +35,8 @@ struct CFGContentView: View {
 		if selectedEliminateUseless { grammar = grammar.eliminateUseless(); }
 		if selectedEliminateEpsilon { grammar = grammar.eliminateEpsilon(); }
 		if selectedEliminateUnitProd { grammar = grammar.eliminateUnitProduction(); }
+		// Run this again because "eliminate unit productions" often adds many useless productions
+		if selectedEliminateUseless { grammar = grammar.eliminateUseless(); }
 		return grammar;
 	}
 
@@ -43,9 +51,9 @@ struct CFGContentView: View {
 				Toggle("Eliminate unit productions", isOn: $selectedEliminateUnitProd)
 
 				Picker("Normalize", selection: $selectedForm) {
-					Text("None").tag("")
-					Text("Chomsky").tag("c")
-					Text("Greibach").tag("g")
+					Text("None").tag(CFGContentView_Form.none)
+					Text("Chomsky").tag(CFGContentView_Form.chomsky)
+					Text("Greibach").tag(CFGContentView_Form.greibach)
 				}
 				.pickerStyle(.segmented)
 
@@ -58,7 +66,7 @@ struct CFGContentView: View {
 				}
 
 				// TODO: Disable this if it seems like it wouldn't make a difference
-				Picker("Sort", selection: $selectedSortOrder) {
+				Picker("Sort Rules", selection: $selectedSortOrder) {
 					Text("Breadth-first").tag(CFGContentView_SortOrder.breadthFirst)
 					Text("Depth-first").tag(CFGContentView_SortOrder.depthFirst)
 					Text("Alphabetical").tag(CFGContentView_SortOrder.name)
