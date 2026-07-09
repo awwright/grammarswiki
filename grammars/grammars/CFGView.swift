@@ -58,9 +58,9 @@ struct CFGContentView: View {
 
 				// TODO: Disable this if it seems like it wouldn't make a difference
 				Picker("Sort", selection: $selectedSortOrder) {
-					Text("Breadth-first").tag("b")
-					Text("Depth-first").tag("d")
-					Text("Alphabetical").tag("a")
+					Text("Breadth-first").tag(CFGContentView_SortOrder.breadthFirst)
+					Text("Depth-first").tag(CFGContentView_SortOrder.depthFirst)
+					Text("Alphabetical").tag(CFGContentView_SortOrder.name)
 				}
 				.pickerStyle(.segmented)
 
