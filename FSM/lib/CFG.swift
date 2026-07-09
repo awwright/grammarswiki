@@ -621,8 +621,76 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		return Self(startSet: start, productions: newProductions);
 	}
 
+	/// Substitute productions that are just aliases for another production
+	/// This may not work reliably if epsilon productions have not been eliminated!
 	public func eliminateUnitProduction() -> Self {
-		fatalError()
+		let dict = self.dictionary;
+
+		// Collect every variable that appears, in first-appearance order (start symbols first, then LHS then RHS nonterminals)
+		var variableOrder: [Variable] = [];
+		var seen: Set<Variable> = [];
+		for v in start {
+			if seen.insert(v).inserted { variableOrder.append(v) }
+		}
+		for prod in self.productions {
+			if seen.insert(prod.name).inserted {
+				variableOrder.append(prod.name);
+			}
+			for elem in prod.body {
+				if let nt = elem.asNonterminal, seen.insert(nt).inserted {
+					variableOrder.append(nt);
+				}
+			}
+		}
+
+		// For a variable, return the list of reachable variables (including self) in the order
+		// their unit edges are discovered when expanding productions in listed order.
+		func orderedReachable(_ name: Variable) -> [Variable] {
+			var ordered: [Variable] = [];
+			var visited: Set<Variable> = [];
+			var queue: [Variable] = [name];
+			var queued: Set<Variable> = [name];
+			while let current = queue.first {
+				queue.removeFirst();
+				queued.remove(current);
+				if visited.contains(current) { continue; }
+				visited.insert(current);
+				ordered.append(current);
+				guard let prods = dict[current] else { continue; }
+				for p in prods {
+					if p.body.count == 1, let nt = p.body[0].asNonterminal {
+						if !visited.contains(nt) && !queued.contains(nt) {
+							queue.append(nt);
+							queued.insert(nt);
+						}
+					}
+				}
+			}
+			return ordered;
+		}
+
+		// For every variable in stable order, attach all non-unit productions from every reachable target,
+		// visiting targets in discovery order so that earlier-listed unit alternatives contribute first.
+		var newProductions: [Production] = [];
+		var dedup: Set<Production> = [];
+		for name in variableOrder {
+			let reachables = orderedReachable(name);
+			for target in reachables {
+				guard let targetProds = dict[target] else { continue; }
+				for prod in targetProds {
+					// Skip any unit productions (single nonterminal body)
+					if prod.body.count == 1, prod.body[0].asNonterminal != nil {
+						continue;
+					}
+					let newProd = Production(name: name, body: prod.body);
+					if dedup.insert(newProd).inserted {
+						newProductions.append(newProd);
+					}
+				}
+			}
+		}
+
+		return Self(startSet: start, productions: newProductions);
 	}
 
 	public func chomskyNormalForm() -> Self {

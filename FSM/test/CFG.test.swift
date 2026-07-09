@@ -247,6 +247,24 @@ import Testing
 		}
 	}
 
+	@Suite("eliminateUnitProduction") struct CFGTests_eliminateUnitProduction {
+		@Test func basicUnitChain() throws {
+			let g: CFG<SymbolAlphabet<Character>> = [
+				"S": [[.nonterminal("A")]],
+				"A": [[.terminal("x")], [.nonterminal("B")]],
+				"B": [[.terminal("y")]],
+			];
+			let cleaned = g.eliminateUnitProduction();
+			#expect(cleaned.productions[0] == .init(name: "S", body: [.terminal("x")]))
+			#expect(cleaned.productions[1] == .init(name: "S", body: [.terminal("y")]))
+			#expect(cleaned.productions[2] == .init(name: "A", body: [.terminal("x")]))
+			#expect(cleaned.productions[3] == .init(name: "A", body: [.terminal("y")]))
+			#expect(cleaned.productions[4] == .init(name: "B", body: [.terminal("y")]))
+			// No units remain
+			#expect(cleaned.productions.count == 5)
+		}
+	}
+
 	@Suite("chomskyClass") struct CFGTests_chomskyClass {
 		@Test("empty language -> finite")
 		func test_empty() async throws {

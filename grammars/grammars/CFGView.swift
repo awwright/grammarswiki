@@ -28,6 +28,7 @@ struct CFGContentView: View {
 		var grammar = self.grammar;
 		if selectedEliminateUseless { grammar = grammar.eliminateUseless(); }
 		if selectedEliminateEpsilon { grammar = grammar.eliminateEpsilon(); }
+		if selectedEliminateUnitProd { grammar = grammar.eliminateUnitProduction(); }
 		return grammar;
 	}
 
