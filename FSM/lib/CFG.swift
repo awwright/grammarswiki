@@ -1,5 +1,16 @@
 /// A struct that represents a Context-Free Grammar
 public protocol CFGProtocol: GrammarProtocol where Production: CFGProductionProtocol {
+	// A CFG generally has all of these properties
+	// Union
+	func union(_ other: Self) -> Self
+	// Intersect, whenever other is a regular language (and maybe other cases)
+	func intersection(_ language: Self) -> Self?
+	// Concatenation
+	func concatenate(_ other: Self) -> Self
+	// Kleene Star
+	func star() -> Self
+	// Reversal
+	func reversed() -> Self
 }
 
 /// A CFG production must have exactly one variable on the left-hand side
@@ -446,6 +457,26 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		public var description: String {
 			"\(name)@\(offset)-\(offset+length)"
 		}
+	}
+
+	// Union
+	public func union(_ other: Self) -> Self {
+		fatalError("Unimplemented")
+	}
+
+	// Intersection
+	public func intersection(_ other: Self) -> Self? {
+		fatalError("Unimplemented")
+	}
+
+	// Concatenation
+	public func concatenate(_ other: Self) -> Self {
+		fatalError("Unimplemented")
+	}
+
+	// Kleene Star
+	public func star() -> Self {
+		fatalError("Unimplemented")
 	}
 
 	/// Get the language where each string is reversed, back-to-front and front-to-back
