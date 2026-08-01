@@ -14,6 +14,7 @@ import UniformTypeIdentifiers
 extension UTType {
 	static var grammarsDoc = UTType(exportedAs: "name.awwright.grammars.doc", conformingTo: .xml)
 	static var abnfDoc = UTType(exportedAs: "name.awwright.grammars.doc.abnf", conformingTo: .text)
+	static var cfgJsonDoc = UTType(exportedAs: "name.awwright.grammars.doc.cfgjson", conformingTo: .json)
 }
 
 /// Stores a method of converting from a string of numbers to a String, for display purposes
@@ -85,6 +86,10 @@ struct MainApp: App {
 				.focusedSceneValue(\.isImportingRFCXML, file.$document.isImportingRFCXML)
 		}
 
+		DocumentGroup(newDocument: CFGDocument()) { file in
+			DocumentView<CFGDocument>(document: file.$document)
+		}
+
 		Window("Catalog", id: "Catalog") {
 			CatalogView(model: model)
 		}.defaultLaunchBehavior(.presented)
@@ -101,6 +106,7 @@ struct MainApp: App {
 					Button("Grammar notebook") { newDocument(contentType: .grammarsDoc) }.keyboardShortcut("N")
 					Divider()
 					Button("ABNF rule list") { newDocument(contentType: .abnfDoc) }
+					Button("CFG (JSON)") { newDocument(contentType: .cfgJsonDoc) }
 				}
 			}
 			CommandGroup(after: .importExport) {
