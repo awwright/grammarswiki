@@ -104,11 +104,6 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		Self(filepath: nil, name: name + " Copy", start: start, charset: charset, rules: rules)
 	}
 
-	// Export the grammar as an ABNFRulelist, if possible
-	func toABNFRulelist() throws -> ABNFRulelist<UInt32>  {
-		fatalError()
-	}
-
 	struct EditorView: EditorViewBody {
 		@Binding var document: NoteDocument
 		let computed: NoteDocument.Parser
@@ -155,7 +150,6 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			document = nil
 			self._task = Task{}
 			document_error = nil;
-			asABNFRulelist = nil;
 			document_error = nil;
 			topRuleNames = [];
 			allRuleNames = [];
@@ -165,7 +159,6 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 		var document: Document? { didSet { _update(); } }
 		var document_error: String? = nil
-		var asABNFRulelist: FSM.ABNFRulelist<UInt32>? = nil
 		var primaryRuleName: String? = nil
 		var topRuleNames: Array<String> = []
 		var allRuleNames: Array<String> = []
@@ -186,7 +179,6 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		func _update() {
 			_task.cancel()
 			document_error = nil;
-			asABNFRulelist = nil;
 			document_error = nil;
 
 			// Don't clear the rule names during parsing, only update when the document is successfully parsed

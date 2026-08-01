@@ -165,7 +165,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						Text(err)
 					}
 
-					if let content_rulelist = computed.asABNFRulelist {
+					if computed.allRuleNames.isEmpty == false {
 						RuleInformationView(document: $document, computed: computed);
 
 						if let rule_fsm = computed.selectedRule_fsm {

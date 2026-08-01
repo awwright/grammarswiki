@@ -93,9 +93,6 @@ struct CFGDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		Self(filepath: nil, name: name + " Copy", charset: charset, productions: productions)
 	}
 
-	// Export the grammar as an ABNFRulelist, if possible
-	func toABNFRulelist() throws -> ABNFRulelist<UInt32>  { ABNFRulelist<UInt32>() }
-
 	// MARK: Editor
 
 	struct EditorView: EditorViewBody {
@@ -197,7 +194,6 @@ struct CFGDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			document = nil;
 			self._task = Task{};
 			document_error = nil;
-			asABNFRulelist = nil;
 			topRuleNames = [];
 			allRuleNames = [];
 		}
@@ -206,7 +202,6 @@ struct CFGDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 		var document: Document? { didSet { _update() } }
 		var document_error: String? = nil
-		var asABNFRulelist: FSM.ABNFRulelist<UInt32>? = nil
 		var primaryRuleName: String? = nil
 		var topRuleNames: Array<String> = []
 		var allRuleNames: Array<String> = []
@@ -227,7 +222,6 @@ struct CFGDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		func _update() {
 			_task.cancel();
 			document_error = nil;
-			asABNFRulelist = nil;
 
 			_task = Task {
 				guard let document else { return }
