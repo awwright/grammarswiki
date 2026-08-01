@@ -19,16 +19,45 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 	@State private var content_cfg_memoryRequirements: Int? = nil
 
 	var body: some View {
+		DisclosureGroup("Document", content: {
+			Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
+				GridRow(alignment: .top) {
+					Text("Top rules").font(.headline).gridColumnAlignment(.trailing)
+					VStack(alignment: .leading) {
+						ForEach(computed.topRuleNames, id: \.self) {
+							Text($0)
+						}
+					}
+					//Text(String(computed.topRuleNames.joined(separator: ", ")))
+				}
+
+				GridRow(alignment: .top) {
+					Text("All rules").font(.headline).gridColumnAlignment(.trailing)
+					VStack(alignment: .leading) {
+						ForEach(computed.allRuleNames, id: \.self) {
+							Text($0)
+						}
+					}
+					//Text(String(computed.allRuleNames.joined(separator: ", ")))
+				}
+			}
+			.padding()
+			.frame(maxWidth: .infinity, alignment: .leading)
+		})
+
 		document.ruleInfoView(document: $document, computed: computed)
+			.frame(maxWidth: .infinity, alignment: .leading)
 
 		if showAlphabet {
 			DisclosureGroup("Alphabet", isExpanded: $alphabet_expanded, content: {
 				if let rule_alphabet: ClosedRangeAlphabet<UInt32> = computed.selectedRule_alphabet {
 					let rule_alphabet_sorted: [ClosedRangeAlphabet<UInt32>.SymbolClass] = Array(rule_alphabet)
-					ForEach(rule_alphabet_sorted, id: \.self) {
-						(part: ClosedRangeAlphabet<UInt32>.SymbolClass) in
-						Text(charset.describe(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
-					}
+					VStack(alignment: .leading){
+						ForEach(rule_alphabet_sorted, id: \.self) {
+							(part: ClosedRangeAlphabet<UInt32>.SymbolClass) in
+							Text(charset.describe(part)).frame(maxWidth: .infinity, alignment: .leading).padding(1).border(Color.gray, width: 0.5)
+						}
+					}.padding()
 				}else{
 					Text("Computing alphabet...")
 						.foregroundColor(.gray)
@@ -113,6 +142,7 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 					}
 					// TODO: Estimate entropy by measuring selection of states per byte
 				}
+				.padding()
 			})
 		}
 	}
