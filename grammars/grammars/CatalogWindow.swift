@@ -223,7 +223,7 @@ struct CatalogDocumentView: View {
 			if writePath != fileURL {
 				selectedURL = writePath;
 			}
-			let data = Data(document.content.utf8);
+			let data = Data(abnfNormalizeLineEndings(document.content).utf8)
 			try data.write(to: writePath, options: [.atomic, .completeFileProtection])
 		} catch {
 			print("Save error: \(error)")

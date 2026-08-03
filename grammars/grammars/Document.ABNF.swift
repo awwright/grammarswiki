@@ -4,6 +4,14 @@ import CodeEditorView
 import LanguageSupport
 import UniformTypeIdentifiers
 
+/// Normalize line endings to CRLF before feeding text to `ABNFRulelist.parse`.
+func abnfNormalizeLineEndings(_ text: String) -> String {
+	text
+		.replacingOccurrences(of: "\r\n", with: "\n")
+		.replacingOccurrences(of: "\r", with: "\n")
+		.replacingOccurrences(of: "\n", with: "\r\n")
+}
+
 // Model to represent a text file
 struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	let id = UUID()
@@ -27,7 +35,7 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	init(filepath: URL?, name: String, charset: String, content: String) {
 		self.filepath = filepath
 		self.name = name
-		self.content = content
+		self.content = abnfNormalizeLineEndings(content)
 		self.charset = charset
 	}
 
@@ -37,12 +45,12 @@ struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		}
 		self.filepath = nil
 		self.name = "name"
-		self.content = String(decoding: data, as: UTF8.self)
+		self.content = abnfNormalizeLineEndings(String(decoding: data, as: UTF8.self))
 		self.charset = "UTF-8"
 	}
 
 	func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-		let data = Data(content.utf8)
+		let data = Data(abnfNormalizeLineEndings(content).utf8)
 		return .init(regularFileWithContents: data)
 	}
 
