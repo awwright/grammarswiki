@@ -4,6 +4,10 @@ import CodeEditorView
 import LanguageSupport
 import UniformTypeIdentifiers
 
+extension UTType {
+	static var abnfDoc = UTType(exportedAs: "name.awwright.grammars.doc.abnf", conformingTo: .text)
+}
+
 /// Normalize line endings to CRLF before feeding text to `ABNFRulelist.parse`.
 func abnfNormalizeLineEndings(_ text: String) -> String {
 	text

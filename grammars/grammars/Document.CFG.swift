@@ -3,6 +3,10 @@ import FSM
 import UniformTypeIdentifiers
 import Foundation
 
+extension UTType {
+	static var cfgJsonDoc = UTType(exportedAs: "name.awwright.grammars.doc.cfgjson", conformingTo: .json)
+}
+
 /// On-disk representation for a .cfgjson file. Structured form matching CFG<ClosedRangeAlphabet<UInt32>>.
 private struct CFGDocumentFile: Codable {
 	var name: String?

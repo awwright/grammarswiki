@@ -8,14 +8,7 @@ import UniformTypeIdentifiers
 // TODO: List parse forest productions/alternatives in same order as the original grammar does
 // TODO: Add RegexDocument to import regular expressions as a grammar
 // TODO: Add JSONSchemaDocument to import a JSON Schema as a grammar
-// TODO: Add NotebookDocument to edit a mixture of all of these documents
 // TODO: Add RFC XML Document (reads ABNF code inside RFC XML)
-
-extension UTType {
-	static var grammarsDoc = UTType(exportedAs: "name.awwright.grammars.doc", conformingTo: .xml)
-	static var abnfDoc = UTType(exportedAs: "name.awwright.grammars.doc.abnf", conformingTo: .text)
-	static var cfgJsonDoc = UTType(exportedAs: "name.awwright.grammars.doc.cfgjson", conformingTo: .json)
-}
 
 /// Stores a method of converting from a string of numbers to a String, for display purposes
 struct Charset {

@@ -3,6 +3,10 @@ import FSM
 import UniformTypeIdentifiers
 import Foundation
 
+extension UTType {
+	static var grammarsDoc = UTType(exportedAs: "name.awwright.grammars.doc", conformingTo: .xml)
+}
+
 struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	let id = UUID()
 	var filepath: URL?
