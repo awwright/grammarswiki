@@ -9,13 +9,13 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	var name: String
 	var start: String
 	var charset: String
-	var rules: [Rule]
+	var pages: [Page]
 
 	var type: String { "Grammar XML" }
 
-	struct Rule: Hashable {
+	struct Page: Hashable {
 		var name: String
-		var expression: String
+		var type: String
 		/// If this is a "top-level" rule intended for external use
 		var top: Bool
 	}
@@ -27,15 +27,15 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		self.name = ""
 		self.start = ""
 		self.charset = "UTF-8"
-		self.rules = []
+		self.pages = []
 	}
 
-	init(filepath: URL?, name: String, start: String, charset: String, rules: [Rule] = []) {
+	init(filepath: URL?, name: String, start: String, charset: String, rules: [Page] = []) {
 		self.filepath = filepath
 		self.name = name
 		self.start = start
 		self.charset = charset
-		self.rules = rules
+		self.pages = rules
 	}
 
 	init(configuration: ReadConfiguration) throws {
@@ -51,19 +51,19 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		self.start = root.attribute(forName: "start")?.stringValue ?? "";
 		self.charset = root.attribute(forName: "charset")?.stringValue ?? "UTF-8";
 
-		var parsedRules: [Rule] = [];
+		var parsedRules: [Page] = [];
 		for eRule in root.elements(forName: "rule") {
 			let rName = eRule.attribute(forName: "name")?.stringValue ?? "";
 			let topStr = eRule.attribute(forName: "top")?.stringValue?.lowercased() ?? "";
 			let top = !topStr.isEmpty
 			for eProduction in eRule.elements(forName: "p") {
 				let expr = eProduction.stringValue ?? "";
-				parsedRules.append(Rule(name: rName, expression: expr, top: top));
+				parsedRules.append(Page(name: rName, type: expr, top: top));
 				// TODO: Support more than one alternative production
 				break;
 			}
 		}
-		self.rules = parsedRules;
+		self.pages = parsedRules;
 	}
 
 	func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
@@ -75,16 +75,16 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			"xmlns": "http://grammars.awwright.name/doc",
 		]);
 
-		for rule in self.rules {
+		for rule in self.pages {
 			root.addChild({
-				let ruleEl = XMLElement(name: "rule");
+				let ruleEl = XMLElement(name: "page");
 				ruleEl.setAttributesWith([
 					"name": rule.name,
 					"top": rule.top ? "true" : "",
 				]);
 				ruleEl.addChild({
 					let eProduction = XMLElement(name: "p");
-					eProduction.setStringValue(rule.expression, resolvingEntities: false)
+					eProduction.setStringValue(rule.type, resolvingEntities: false)
 					return eProduction;
 				}())
 				return ruleEl;
@@ -101,7 +101,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 	}
 
 	func duplicate() -> Self {
-		Self(filepath: nil, name: name + " Copy", start: start, charset: charset, rules: rules)
+		Self(filepath: nil, name: name + " Copy", start: start, charset: charset, rules: pages)
 	}
 
 	struct EditorView: EditorViewBody {
@@ -110,27 +110,55 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 		var body: some View {
 			ScrollView {
-				VStack(alignment: .leading) {
-					ForEach(Array(document.rules.enumerated()), id: \.offset) { (offset, content) in
-						HStack {
-							Text("\(offset)")
-							Button("Export", systemImage: content.top ? "star.fill" : "star") {
-								document.rules[offset].top.toggle()
-							}
-							Button("Delete", systemImage: "minus.circle") {
-								document.rules.remove(at: offset)
+				VStack(alignment: .leading, spacing: 16) {
+					GroupBox("Document") {
+						VStack(alignment: .leading, spacing: 6) {
+							TextField("Start rule (overall)", text: $document.start)
+							TextField("Charset", text: $document.charset)
+						}
+						.padding(4)
+					}
+
+					ForEach(Array(document.pages.enumerated()), id: \.offset) { (offset, frag) in
+						GroupBox(frag.type) {
+							VStack(alignment: .leading, spacing: 4) {
+								HStack {
+									TextField("Name", text: Binding(
+										get: { document.pages[offset].name },
+										set: { document.pages[offset].name = $0 }
+									))
+									.font(.headline)
+
+									Spacer()
+
+									Button(role: .destructive) {
+										document.pages.remove(at: offset)
+									} label: {
+										Image(systemName: "trash")
+									}
+								}
+
+								// TODO: Show view for page here
 							}
 						}
-						TextField("Name", text: Binding(get: {content.name}, set: { document.rules[offset].name = $0; }))
-						TextField("Expression", text: Binding(get: {content.expression}, set: { document.rules[offset].expression = $0; }))
-							.font(.system(size: 14, design: .monospaced))
-						Divider()
+					}
+
+					Menu {
+						Button("ABNF") {
+							//var d = ABNFDocument()
+							//d.name = "abnf\(document.pages.count + 1)"
+							//document.pages.append(d)
+						}
+						Button("CFG") {
+							//var d = CFGDocument()
+							//d.name = "cfg\(document.pages.count + 1)"
+							//document.pages.append(d)
+						}
+					} label: {
+						Label("Add page", systemImage: "plus.rectangle")
 					}
 				}
-
-				Button("Add", systemImage: "plus.rectangle") {
-					document.rules.append(.init(name: "Label", expression: "", top: false))
-				}
+				.padding()
 			}
 		}
 	}
@@ -185,9 +213,9 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			//topRuleNames = []; allRuleNames = [];
 			_task = Task {
 				guard let document else { return }
-				let primaryRuleName: String? = document.rules.first?.name;
-				let topRuleNames: [String] = document.rules.compactMap{ $0.top ? $0.name : nil };
-				let allRuleNames: [String] = document.rules.map { $0.name };
+				let primaryRuleName: String? = document.pages.first?.name;
+				let topRuleNames: [String] = document.pages.compactMap{ $0.top ? $0.name : nil };
+				let allRuleNames: [String] = document.pages.map { $0.name };
 				if _task.isCancelled { return }
 				await MainActor.run {
 					self.primaryRuleName = primaryRuleName;
