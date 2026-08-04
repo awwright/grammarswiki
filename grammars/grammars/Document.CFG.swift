@@ -15,7 +15,7 @@ private struct CFGDocumentFile: Codable {
 	var productions: [CFGDocument.Production]?
 }
 
-struct CFGDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
+struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDocument {
 	let id = UUID()
 	var filepath: URL?
 	var name: String

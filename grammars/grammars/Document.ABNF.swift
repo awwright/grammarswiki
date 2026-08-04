@@ -17,7 +17,7 @@ func abnfNormalizeLineEndings(_ text: String) -> String {
 }
 
 // Model to represent a text file
-struct ABNFDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
+struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDocument {
 	let id = UUID()
 	/// Used in in the inspector view in ``DocumentView``
 	var filepath: URL?
