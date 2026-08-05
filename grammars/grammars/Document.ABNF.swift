@@ -70,6 +70,34 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 		Self(filepath: nil, name: name + " Copy", charset: charset, content: content)
 	}
 
+	// MARK: PageProtocol XML
+	static var xmlElementName: String { "abnf" }
+
+	init(xmlElement: XMLElement) throws {
+		guard xmlElement.name == Self.xmlElementName else {
+			throw PageXMLError.unexpectedElement(expected: Self.xmlElementName, actual: xmlElement.name);
+		}
+		self.filepath = nil;
+		self.name = xmlElement.attribute(forName: "name")?.stringValue ?? "";
+		self.charset = xmlElement.attribute(forName: "charset")?.stringValue ?? "UTF-8";
+		self.isImportingRFCXML = false;
+		let codeText = xmlElement.elements(forName: "code").first?.stringValue ?? "";
+		self.content = abnfNormalizeLineEndings(codeText);
+	}
+
+	func toXMLElement() throws -> XMLElement {
+		let el = XMLElement(name: Self.xmlElementName);
+		el.setAttributesWith([
+			"name": name,
+			"charset": charset,
+		]);
+		let code = XMLElement(name: "code");
+		// Escaped text content (Foundation serializes entities as needed).
+		code.setStringValue(abnfNormalizeLineEndings(content), resolvingEntities: false);
+		el.addChild(code);
+		return el;
+	}
+
 	struct EditorView: EditorViewBody {
 		@Binding var document: ABNFDocument
 		let computed: ABNFDocument.Parser
@@ -228,10 +256,8 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 				guard let document else { return }
 				let rulelist: ABNFRulelist<UInt32>?;
 				do {
-					print("Parsing");
 					// Array() is necessary otherwise the error will be of type ABNFParseError<String.Index>
 					rulelist = try ABNFRulelist<UInt32>.parse(Array(document.content.utf8))
-					print("Parsed");
 					await MainActor.run { self.asABNFRulelist = rulelist }
 				} catch let error as ABNFParseError<Array<UInt32>.Index> {
 					print("ABNFParseError");
@@ -239,7 +265,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 					rulelist = nil;
 					await MainActor.run {
 						self.document_error = "Error at index: " + String(describing: error.index)
-						let input = Array(document.content.replacingOccurrences(of: "\n", with: "\r\n").replacingOccurrences(of: "\r\r", with: "\r").utf8)
+						let input = Array(abnfNormalizeLineEndings(document.content).utf8)
 						content_parseErrorLine = input[0...error.index.startIndex].count(where: { $0 == 0xA })
 					}
 					return

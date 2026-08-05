@@ -7,6 +7,24 @@ extension UTType {
 	static var grammarsDoc = UTType(exportedAs: "name.awwright.grammars.doc", conformingTo: .xml)
 }
 
+/// Errors while encoding/decoding notebook page XML.
+enum PageXMLError: Error, LocalizedError {
+	case unexpectedElement(expected: String, actual: String?)
+	case missingChild(String)
+	case invalidAttribute(String)
+
+	var errorDescription: String? {
+		switch self {
+		case .unexpectedElement(let expected, let actual):
+			"Expected <\(expected)> element, got \(actual.map { "<\($0)>" } ?? "nil")"
+		case .missingChild(let name):
+			"Missing required child <\(name)>"
+		case .invalidAttribute(let name):
+			"Invalid or missing attribute \"\(name)\""
+		}
+	}
+}
+
 /// A page that can appear in a notebook.
 protocol PageProtocol: Hashable, Identifiable where ID == UUID {
 	var id: UUID { get }
@@ -19,6 +37,15 @@ protocol PageProtocol: Hashable, Identifiable where ID == UUID {
 	/// Editor UI when this model is embedded as a notebook page.
 	@ViewBuilder
 	static func pageEditor(_ page: Binding<Self>) -> PageEditor
+
+	/// Root XML element name for this page kind (e.g. `"abnf"`, `"cfg"`, `"fc"`).
+	static var xmlElementName: String { get }
+
+	/// Parse a page from an element whose name is ``xmlElementName``.
+	init(xmlElement: XMLElement) throws
+
+	/// Emit an element named ``xmlElementName`` for notebook save.
+	func toXMLElement() throws -> XMLElement
 }
 
 extension PageProtocol {
@@ -48,6 +75,10 @@ extension PageProtocol {
 	/// Open this erased page's notebook editor by casting the ``Page`` binding to `Self`.
 	func erasedPageEditor(binding: Binding<Page>) -> AnyView {
 		AnyView(Self.pageEditor(Self.binding(from: binding)))
+	}
+
+	func erasedMakeXMLElement() throws -> XMLElement {
+		try toXMLElement()
 	}
 
 	func erasedEquals(_ other: any PageProtocol) -> Bool {
@@ -90,6 +121,11 @@ struct Page: Identifiable, Hashable {
 	/// Dispatch to the concrete type's ``PageProtocol/pageEditor`` (opens the existential).
 	func pageEditor(binding: Binding<Page>) -> AnyView {
 		box.erasedPageEditor(binding: binding)
+	}
+
+	/// Encode this page to its structured XML element.
+	func makeXMLElement() throws -> XMLElement {
+		try box.erasedMakeXMLElement()
 	}
 
 	/// Cast the erased payload to a concrete ``PageProtocol`` type.
@@ -149,20 +185,34 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		self.pages = rules
 	}
 
+	/// Element local-name → page constructor.
+	/// Later: optional parameter / property may override this table.
+	private static let pageXMLDecoders: [String: (XMLElement) throws -> Page] = [
+		ABNFDocument.xmlElementName: { Page(try ABNFDocument(xmlElement: $0)) },
+		CFGDocument.xmlElementName: { Page(try CFGDocument(xmlElement: $0)) },
+		FCDocument.xmlElementName: { Page(try FCDocument(xmlElement: $0)) },
+	]
+
 	init(configuration: ReadConfiguration) throws {
 		guard let data = configuration.file.regularFileContents else {
-			throw CocoaError(.fileReadCorruptFile);
+			throw CocoaError(.fileReadCorruptFile)
 		}
 		let xmlDoc = try XMLDocument(data: data, options: [])
 		guard let root = xmlDoc.rootElement(), root.name == "grammar" else {
-			throw CocoaError(.fileReadCorruptFile);
+			throw CocoaError(.fileReadCorruptFile)
 		}
-		self.filepath = nil;
-		self.name = root.attribute(forName: "name")?.stringValue ?? "";
-		self.start = root.attribute(forName: "start")?.stringValue ?? "";
-		self.charset = root.attribute(forName: "charset")?.stringValue ?? "UTF-8";
-		// TODO: Parse pages from the loaded document
-		self.pages = [];
+		self.filepath = nil
+		self.name = root.attribute(forName: "name")?.stringValue ?? ""
+		self.start = root.attribute(forName: "start")?.stringValue ?? ""
+		self.charset = root.attribute(forName: "charset")?.stringValue ?? "UTF-8"
+
+		var loaded: [Page] = []
+		for case let el as XMLElement in root.children ?? [] {
+			guard let elName = el.name, elName != "version" else { continue }
+			guard let decode = Self.pageXMLDecoders[elName] else { continue }
+			loaded.append(try decode(el))
+		}
+		self.pages = loaded
 	}
 
 	func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
@@ -172,27 +222,20 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			"start": self.start,
 			"charset": self.charset,
 			"xmlns": "http://grammars.awwright.name/doc",
-		]);
+		])
 
-		for rule in self.pages {
-			root.addChild({
-				let ruleEl = XMLElement(name: "page");
-				ruleEl.setAttributesWith([
-					"name": rule.name,
-				]);
-				ruleEl.addChild({
-					let eProduction = XMLElement(name: "p");
-					eProduction.setStringValue(rule.type, resolvingEntities: false)
-					return eProduction;
-				}())
-				return ruleEl;
-			}());
+		let versionEl = XMLElement(name: "version")
+		versionEl.setStringValue("2", resolvingEntities: false)
+		root.addChild(versionEl)
+
+		for page in self.pages {
+			root.addChild(try page.makeXMLElement());
 		}
 
 		let xmlDoc = XMLDocument(rootElement: root);
 		xmlDoc.characterEncoding = "UTF-8";
 		xmlDoc.version = "1.0";
-		let versionPI = XMLNode.processingInstruction(withName: "version", stringValue: "1") as! XMLNode;
+		let versionPI = XMLNode.processingInstruction(withName: "version", stringValue: "2") as! XMLNode;
 		xmlDoc.insertChild(versionPI, at: 0);
 		let data = xmlDoc.xmlData(options: [.nodePrettyPrint]);
 		return FileWrapper(regularFileWithContents: data);

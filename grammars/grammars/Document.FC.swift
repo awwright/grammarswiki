@@ -1,5 +1,6 @@
 import SwiftUI
 import FSM
+import Foundation
 
 /// A Finite Choice page: a language that is exactly a finite set of strings.
 /// Any listed string matches; nothing else does.
@@ -29,6 +30,32 @@ struct FCDocument: PageProtocol, Hashable, Equatable {
 		self.name = name;
 		self.charset = charset;
 		self.choices = choices;
+	}
+
+	// MARK: PageProtocol XML
+	static var xmlElementName: String { "fc" }
+
+	init(xmlElement: XMLElement) throws {
+		guard xmlElement.name == Self.xmlElementName else {
+			throw PageXMLError.unexpectedElement(expected: Self.xmlElementName, actual: xmlElement.name);
+		}
+		self.name = xmlElement.attribute(forName: "name")?.stringValue ?? "";
+		self.charset = xmlElement.attribute(forName: "charset")?.stringValue ?? "UTF-32";
+		self.choices = xmlElement.elements(forName: "s").map { Choice(string: $0.stringValue ?? "") };
+	}
+
+	func toXMLElement() throws -> XMLElement {
+		let el = XMLElement(name: Self.xmlElementName);
+		el.setAttributesWith([
+			"name": name,
+			"charset": charset,
+		]);
+		for choice in choices {
+			let s = XMLElement(name: "s");
+			s.setStringValue(choice.string, resolvingEntities: false);
+			el.addChild(s);
+		}
+		return el;
 	}
 
 	/// Primary / only rule name exposed to notebook analysis.

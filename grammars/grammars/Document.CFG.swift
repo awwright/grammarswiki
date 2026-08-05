@@ -35,6 +35,58 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 		var top: Bool
 
 		enum CodingKeys: String, CodingKey { case id, name, body, top }
+
+		init(id: UUID = UUID(), name: String, body: [BodyElement], top: Bool) {
+			self.id = id;
+			self.name = name;
+			self.body = body;
+			self.top = top;
+		}
+
+		init(xmlElement: XMLElement) throws {
+			guard xmlElement.name == "production" else {
+				throw PageXMLError.unexpectedElement(expected: "production", actual: xmlElement.name)
+			}
+			self.id = UUID();
+			self.name = xmlElement.attribute(forName: "name")?.stringValue ?? "";
+			let topStr = xmlElement.attribute(forName: "top")?.stringValue?.lowercased() ?? "";
+			self.top = topStr == "true" || topStr == "1";
+			var body: [BodyElement] = [];
+			for case let child as XMLElement in xmlElement.children ?? [] {
+				switch child.name {
+				case "nt":
+					body.append(.nonterminal(child.stringValue ?? ""));
+				case "t":
+					let ranges: [TerminalRange] = try child.elements(forName: "range").map { try TerminalRange(xmlElement: $0) }
+					body.append(.terminal(ranges));
+				default:
+					continue;
+				}
+			}
+			self.body = body;
+		}
+
+		func makeXMLElement() throws -> XMLElement {
+			let el = XMLElement(name: "production");
+			var attrs: [String: String] = ["name": name];
+			if top { attrs["top"] = "true" }
+			el.setAttributesWith(attrs);
+			for element in body {
+				switch element {
+				case .nonterminal(let nt):
+					let ntEl = XMLElement(name: "nt");
+					ntEl.setStringValue(nt, resolvingEntities: false);
+					el.addChild(ntEl);
+				case .terminal(let ranges):
+					let tEl = XMLElement(name: "t");
+					for range in ranges {
+						tEl.addChild(range.makeXMLElement());
+					}
+					el.addChild(tEl);
+				}
+			}
+			return el;
+		}
 	}
 
 	/// One element of a production body (RHS).
@@ -50,6 +102,34 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 		var lower: UInt32
 		var upper: UInt32
 		var closedRange: ClosedRange<UInt32> { lower...upper }
+
+		init(lower: UInt32, upper: UInt32) {
+			self.lower = lower;
+			self.upper = upper;
+		}
+
+		init(xmlElement: XMLElement) throws {
+			guard xmlElement.name == "range" else {
+				throw PageXMLError.unexpectedElement(expected: "range", actual: xmlElement.name)
+			}
+			guard let lowerStr = xmlElement.attribute(forName: "lower")?.stringValue,
+			      let upperStr = xmlElement.attribute(forName: "upper")?.stringValue,
+			      let lower = UInt32(lowerStr),
+			      let upper = UInt32(upperStr) else {
+				throw PageXMLError.invalidAttribute("lower/upper")
+			}
+			self.lower = lower
+			self.upper = upper
+		}
+
+		func makeXMLElement() -> XMLElement {
+			let el = XMLElement(name: "range")
+			el.setAttributesWith([
+				"lower": String(lower),
+				"upper": String(upper),
+			])
+			return el
+		}
 	}
 
 	static var readableContentTypes: [UTType] { [.cfgJsonDoc] }
@@ -95,6 +175,31 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 
 	func duplicate() -> Self {
 		Self(filepath: nil, name: name + " Copy", charset: charset, productions: productions)
+	}
+
+	// MARK: PageProtocol XML
+	static var xmlElementName: String { "cfg" }
+
+	init(xmlElement: XMLElement) throws {
+		guard xmlElement.name == Self.xmlElementName else {
+			throw PageXMLError.unexpectedElement(expected: Self.xmlElementName, actual: xmlElement.name);
+		}
+		self.filepath = nil
+		self.name = xmlElement.attribute(forName: "name")?.stringValue ?? "";
+		self.charset = xmlElement.attribute(forName: "charset")?.stringValue ?? "UTF-32";
+		self.productions = try xmlElement.elements(forName: "production").map { try Production(xmlElement: $0) }
+	}
+
+	func toXMLElement() throws -> XMLElement {
+		let el = XMLElement(name: Self.xmlElementName);
+		el.setAttributesWith([
+			"name": name,
+			"charset": charset,
+		])
+		for production in productions {
+			el.addChild(try production.makeXMLElement());
+		}
+		return el;
 	}
 
 	// MARK: Editor
@@ -170,7 +275,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 							}
 
 							Button {
-								document.productions.append(.init(name: "X", body: [], top: false))
+								document.productions.append(Production(name: "X", body: [], top: false))
 							} label: {
 								Label("Add production", systemImage: "plus.rectangle")
 							}
