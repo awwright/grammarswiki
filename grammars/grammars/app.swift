@@ -108,6 +108,16 @@ struct MainApp: App {
 					Button("RFC XML") { isImportingRFCXML = true }.disabled(isImportingRFCXML == nil)
 				}
 			}
+			CommandGroup(replacing: .help) {
+				let name = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") ?? "";
+				Button("\(name) Help", systemImage: "questionmark.circle") {
+					// TODO: Bundle this file with the app, or remove this replacement and use the builtin help viewer
+					if let url = URL(string: "https://awwright.name/2026/Syntax%20Forge%20Guide.pdf") {
+						NSWorkspace.shared.open(url)
+					}
+				}
+				.keyboardShortcut("?", modifiers: [.command])
+			}
 			// View menu
 			SidebarCommands()
 			InspectorCommands()
