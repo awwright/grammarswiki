@@ -612,6 +612,130 @@ import Testing
 		#expect(pfx4.contains(""))
 	}
 
+	@Test("substrings()")
+	func test_substrings() async throws {
+		// Empty language → empty substrings (no ε)
+		let empty = SymbolDFA<Character>()
+		let subEmpty = empty.substrings()
+		#expect(subEmpty.isEmpty)
+		#expect(!subEmpty.contains(""))
+		#expect(!subEmpty.contains("a"))
+
+		// Epsilon only → only ε
+		let eps = SymbolDFA<Character>([""])
+		let subEps = eps.substrings()
+		#expect(subEps.contains(""))
+		#expect(!subEps.contains("a"))
+
+		// Single string "abc": all contiguous factors
+		let abc = SymbolDFA<Character>(verbatim: "abc")
+		let subAbc = abc.substrings()
+		#expect(subAbc.contains(""))
+		#expect(subAbc.contains("a"))
+		#expect(subAbc.contains("b"))
+		#expect(subAbc.contains("c"))
+		#expect(subAbc.contains("ab"))
+		#expect(subAbc.contains("bc"))
+		#expect(subAbc.contains("abc"))
+		#expect(!subAbc.contains("ac"))
+		#expect(!subAbc.contains("ba"))
+		#expect(!subAbc.contains("cb"))
+		#expect(!subAbc.contains("d"))
+		#expect(!subAbc.contains("abcd"))
+
+		// Multiple disjoint strings
+		let multi = SymbolDFA<Character>(["ab", "cd"])
+		let subMulti = multi.substrings()
+		#expect(subMulti.contains(""))
+		#expect(subMulti.contains("a"))
+		#expect(subMulti.contains("b"))
+		#expect(subMulti.contains("ab"))
+		#expect(subMulti.contains("c"))
+		#expect(subMulti.contains("d"))
+		#expect(subMulti.contains("cd"))
+		#expect(!subMulti.contains("ac"))
+		#expect(!subMulti.contains("bc"))
+		#expect(!subMulti.contains("ad"))
+
+		// Shared prefixes across alternatives: "ab" and "ac"
+		let shared = SymbolDFA<Character>(["ab", "ac"])
+		let subShared = shared.substrings()
+		#expect(subShared.contains(""))
+		#expect(subShared.contains("a"))
+		#expect(subShared.contains("b"))
+		#expect(subShared.contains("c"))
+		#expect(subShared.contains("ab"))
+		#expect(subShared.contains("ac"))
+		#expect(!subShared.contains("bc"))
+
+		// Star language: ("ab")* has factors including "ba" across concatenations
+		let star = SymbolDFA<Character>(["ab"]).star()
+		let subStar = star.substrings()
+		#expect(subStar.contains(""))
+		#expect(subStar.contains("a"))
+		#expect(subStar.contains("b"))
+		#expect(subStar.contains("ab"))
+		#expect(subStar.contains("ba"))
+		#expect(subStar.contains("aba"))
+		#expect(subStar.contains("bab"))
+		#expect(subStar.contains("abab"))
+		#expect(!subStar.contains("aa"))
+		#expect(!subStar.contains("bb"))
+		#expect(!subStar.contains("c"))
+
+		// Plus language without ε in original still yields ε as a substring
+		let plus = SymbolDFA<Character>(["xy"]).plus()
+		let subPlus = plus.substrings()
+		#expect(subPlus.contains(""))
+		#expect(subPlus.contains("x"))
+		#expect(subPlus.contains("y"))
+		#expect(subPlus.contains("xy"))
+		#expect(subPlus.contains("yx"))
+		#expect(!subPlus.contains("xx"))
+		#expect(!subPlus.contains("yy"))
+
+		// Dead / unreachable states must not invent spurious substrings
+		// Accepts only "ab"; state 2 is a dead sink reachable via "x"
+		let withDead = SymbolDFA<Character>(
+			states: [
+				["a": 1, "x": 2],
+				["b": 3],
+				["y": 2],
+				[:],
+			],
+			initial: 0,
+			finals: [3]
+		)
+		#expect(withDead.contains("ab"))
+		#expect(!withDead.contains("x"))
+		let subDead = withDead.substrings()
+		#expect(subDead.contains(""))
+		#expect(subDead.contains("a"))
+		#expect(subDead.contains("b"))
+		#expect(subDead.contains("ab"))
+		#expect(!subDead.contains("x"))
+		#expect(!subDead.contains("y"))
+		#expect(!subDead.contains("xy"))
+		#expect(!subDead.contains("ay"))
+
+		// Unreachable state must not invent substrings either
+		let withUnreachable = SymbolDFA<Character>(
+			states: [
+				["a": 1],
+				[:],
+				["z": 3], // unreachable from initial
+				[:],
+			],
+			initial: 0,
+			finals: [1]
+		)
+		#expect(withUnreachable.contains("a"))
+		let subUnreach = withUnreachable.substrings()
+		#expect(subUnreach.contains(""))
+		#expect(subUnreach.contains("a"))
+		#expect(!subUnreach.contains("z"))
+	}
+
 	@Test("clover-leaf")
 	func test_cloverleaf() async throws {
 		let R = SymbolDFA<UInt8>.symbol(0x0);

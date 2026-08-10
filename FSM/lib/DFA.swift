@@ -833,7 +833,7 @@ public struct DFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol,
 
 	/// The right quotient; return a FSM of all strings with a string from `input` removed from the end.
 	///
-	/// That is, the set of all strings `x` where `x++y` is a string in `self` and `y` is a string in `input`.
+	/// That is, the set with all strings `x` where `x+y` is a string in `self` and `y` is a string in `input`.
 	///
 	/// Often denoted `self/input`, e.g.:
 	/// * <https://en.wikipedia.org/wiki/Quotient_of_a_formal_language>
@@ -862,6 +862,27 @@ public struct DFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol,
 			initial: initial,
 			finals: finals,
 		);
+	}
+
+	/// Creates a DFA that contains every possible substring of strings in this language.
+	///
+	/// That is, the language of all factors: for every accepted string *w*, every contiguous
+	/// subsequence of *w* (including ε and *w* itself) is accepted by the result.
+	/// Empty languages map to empty; every non-empty language includes ε.
+	public func substrings() -> Self {
+		if(self.isEmpty){
+			return Self.empty;
+		}
+		// Prune all dead and inaccessible states, then minimize
+		let trim = self.minimized();
+		// All remaining (useful) states are both initial and final: any path through them is a factor
+		let nfa = NFA<Alphabet>(
+			states: trim.statesSet,
+			epsilon: trim.states.map { _ in Set() },
+			initials: Set(0..<trim.states.count),
+			finals: Set(0..<trim.states.count),
+		);
+		return Self(nfa: nfa);
 	}
 
 	/// An iterator over all accepted sequences. Implements `Sequence`.
