@@ -59,11 +59,53 @@ struct RegexContentView: View {
 
 	var body: some View {
 		VStack(spacing: 0) {
-			Form {
-				DisclosureGroup(
-					isExpanded: $presetExpanded,
-					content: {
-						Form {
+			DisclosureGroup(
+				isExpanded: $presetExpanded,
+				content: {
+					HStack(spacing: 8) {
+						Picker("Preset", selection: $selectedPresetId) {
+							Text("None").tag(UUID?.none)
+							// TODO: Keep a "stage" item, where modifications are kept for using while they're unsaved.
+							// When the Save button is pressed, then copy the stage to the saved preset data.
+							if unsavedChanges, let id = selectedPresetId, let preset = presets.first(where: { $0.id == id }) {
+								Text(preset.name + " (Edited)").tag(UUID?.some(preset.id))
+							}
+							Divider();
+							ForEach(presets) { preset in
+								Text(preset.name).tag(UUID?.some(preset.id))
+							}
+						}
+						.pickerStyle(.menu)
+						.frame(minWidth: 0, maxWidth: 300, alignment: .leading)
+						.popover(isPresented: $showingNamePopover, attachmentAnchor: .rect(.bounds), arrowEdge: .bottom) {
+							TextField("Preset Name", text: $presetName)
+								.padding()
+								.frame(width: 300)
+								.onSubmit {
+									savePresetName()
+									showingNamePopover = false;
+								}
+						}
+						if(unsavedChanges){
+							Button("Update Preset", systemImage: "square.and.arrow.down", action: savePreset)
+								.fixedSize()
+						}
+						Spacer(minLength: 0)
+						if(presetExpanded){
+							// Should I use RenameButton? I can't figure out how that works.
+							Button(action: { showingNamePopover = true }) {
+								Image(systemName: "pencil")
+							}
+							if(selectedPreset != nil){
+								Button("Duplicate", systemImage: "square.on.square", action: duplicatePreset)
+								Button("Delete", systemImage: "trash", action: deletePreset)
+							}
+						}
+					}
+					.frame(minWidth: 0, maxWidth: .infinity)
+
+					Form {
+						Section {
 							// First the user picks the programming language environment in use
 							// This will filter the regex engines and output formats to a useful set
 							Picker("Filter Language", selection: $selectedLanguage) {
@@ -74,7 +116,8 @@ struct RegexContentView: View {
 								}
 							}
 							.pickerStyle(.menu)
-
+						}
+						Section {
 							// From the regex engines available in the language, the user picks the one
 							Picker("Dialect", selection: $selectedDialect) {
 								Text("All").tag("")
@@ -106,57 +149,21 @@ struct RegexContentView: View {
 								Text("Find").tag("find")
 							}
 							.pickerStyle(.segmented)
-
-						}.formStyle(.grouped)
-					},
-					label: {
-						// TODO: Allow user to star/favorite specific dialects and configurations
-						HStack {
-							Picker("Preset", selection: $selectedPresetId) {
-								Text("None").tag(UUID?.none)
-								// TODO: Keep a "stage" item, where modifications are kept for using while they're unsaved.
-								// When the Save button is pressed, then copy the stage to the saved preset data.
-								if unsavedChanges, let id = selectedPresetId, let preset = presets.first(where: { $0.id == id }) {
-									Text(preset.name + " (Edited)").tag(UUID?.some(preset.id))
-								}
-								Divider();
-								ForEach(presets) { preset in
-									Text(preset.name).tag(UUID?.some(preset.id))
-								}
-							}
-							.pickerStyle(.menu)
-							.popover(isPresented: $showingNamePopover, attachmentAnchor: .rect(.bounds), arrowEdge: .bottom) {
-								TextField("Preset Name", text: $presetName)
-									.padding()
-									.frame(width: 300)
-									.onSubmit {
-										savePresetName()
-										showingNamePopover = false;
-									}
-							}
-							if(unsavedChanges){
-								Button("Update Preset", systemImage: "square.and.arrow.down", action: savePreset)
-							}
-							Spacer();
-							if(presetExpanded){
-								// Should I use RenameButton? I can't figure out how that works.
-								Button(action: { showingNamePopover = true }) {
-									Image(systemName: "pencil")
-								}
-								if(selectedPreset != nil){
-									Button("Duplicate", systemImage: "square.on.square", action: duplicatePreset)
-									Button("Delete", systemImage: "trash", action: deletePreset)
-								}
-							}
 						}
-					}).labelStyle(.iconOnly)
-			}
+					}
+					.formStyle(.grouped)
+					.frame(minWidth: 0, maxWidth: .infinity, alignment: .topLeading)
+				},
+				label: {
+					Text("Dialect")
+				}).labelStyle(.iconOnly)
+			.fixedSize(horizontal: false, vertical: true)
 			.padding()
 
 			// TODO: Add a "Compare all/selected presets" option to show multiple regex next to each other
 
 			HStack {
-				Spacer();
+				Spacer(minLength: 0)
 
 				Button(
 					"Copy to Clipboard",
@@ -174,24 +181,31 @@ struct RegexContentView: View {
 				.disabled(regexDescription == nil);
 
 			}
+			.fixedSize(horizontal: false, vertical: true)
 
 			ScrollView {
-				if let regexDescription = regexDescription {
-					Text(regexDescription)
-						.textSelection(.enabled)
-						.padding()
-						.border(Color.gray, width: 1)
-				} else if let error = error {
-					Text("Error: \(error)")
-						.foregroundColor(.red)
-				} else {
-					Text("Building...")
-						.foregroundColor(.gray)
+				Group {
+					if let regexDescription {
+						Text(regexDescription)
+							.textSelection(.enabled)
+							.frame(maxWidth: .infinity, alignment: .topLeading)
+							.padding()
+							.border(Color.gray, width: 1)
+					} else if let error = error {
+						Text("Error: \(error)")
+							.foregroundColor(.red)
+							.frame(maxWidth: .infinity, alignment: .topLeading)
+					} else {
+						Text("Building...")
+							.foregroundColor(.gray)
+							.frame(maxWidth: .infinity, alignment: .center)
+					}
 				}
+				.frame(maxWidth: .infinity, alignment: .topLeading)
 			}
-			.frame(minHeight: 0, idealHeight: 240, maxHeight: .infinity)
+			.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, idealHeight: 240, maxHeight: .infinity)
 		}
-		.frame(maxWidth: .infinity, maxHeight: .infinity)
+		.frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
 		.onAppear {
 			loadPresets()
 			computeRegexDescription()
