@@ -53,7 +53,7 @@ struct RegexContentView: View {
 	@State private var filteredConstructors: Array<REDialactCollection.Constructor> = []
 	@State private var presetName: String = ""
 	@State private var caseInsensitive: Bool = false
-	@State private var selectedConstructorId: String = ""
+	@State private var selectedConstructorId: String = REDialactCollection.builtins.constructors.first?.id ?? ""
 	@State private var renameText: String = ""
 	@State private var showingNamePopover: Bool = false
 
@@ -125,7 +125,6 @@ struct RegexContentView: View {
 								}
 							}
 							.pickerStyle(.menu)
-							.frame(width: 300)
 							.popover(isPresented: $showingNamePopover, attachmentAnchor: .rect(.bounds), arrowEdge: .bottom) {
 								TextField("Preset Name", text: $presetName)
 									.padding()
@@ -180,7 +179,6 @@ struct RegexContentView: View {
 				if let regexDescription = regexDescription {
 					Text(regexDescription)
 						.textSelection(.enabled)
-						.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 						.padding()
 						.border(Color.gray, width: 1)
 				} else if let error = error {
@@ -191,8 +189,9 @@ struct RegexContentView: View {
 						.foregroundColor(.gray)
 				}
 			}
+			.frame(minHeight: 0, idealHeight: 240, maxHeight: .infinity)
 		}
-		.frame(maxWidth: .infinity)
+		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.onAppear {
 			loadPresets()
 			computeRegexDescription()
