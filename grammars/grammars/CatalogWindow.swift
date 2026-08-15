@@ -4,6 +4,7 @@ import SwiftUI
 struct CatalogView: View {
 	var model: MainAppModel
 	@State private var selectionId: UUID? = nil
+	@State private var renamingId: UUID? = nil
 
 	var body: some View {
 		NavigationSplitView {
@@ -21,14 +22,14 @@ struct CatalogView: View {
 					Section("Saved") {
 						ForEach(model.userSorted, id: \.id) {
 							document in
-							CatalogListItemView(item: Binding(get: { document }, set: { model.put($0) }), onDelete: { self.selectionId = nil; model.del(document) }, onDuplicate: { let newDoc = document.duplicate(); model.put(newDoc); selectionId = newDoc.id; }, isEditable: true)
+							CatalogListItemView(item: Binding(get: { document }, set: { model.put($0) }), isRenaming: renamingBinding(document.id), onDelete: { self.selectionId = nil; model.del(document) }, onDuplicate: { let newDoc = document.duplicate(); model.put(newDoc); selectionId = newDoc.id; renamingId = newDoc.id }, isEditable: true)
 						}
 					}
 				}
 				Section("Catalog") {
 					ForEach(model.catalog, id: \.id) {
 						document in
-						CatalogListItemView(item: Binding(get: { document }, set: { let newDoc = $0.duplicate(); model.put(newDoc); selectionId = newDoc.id }), onDelete: {}, onDuplicate: { let newDoc = document.duplicate(); model.put(newDoc); selectionId = newDoc.id }, isEditable: false)
+						CatalogListItemView(item: Binding(get: { document }, set: { let newDoc = $0.duplicate(); model.put(newDoc); selectionId = newDoc.id; renamingId = newDoc.id }), isRenaming: .constant(false), onDelete: {}, onDuplicate: { let newDoc = document.duplicate(); model.put(newDoc); selectionId = newDoc.id; renamingId = newDoc.id }, isEditable: false)
 					}
 				}
 			}
@@ -74,15 +75,29 @@ struct CatalogView: View {
 
  	func addDocument(){
  		withAnimation {
+			var index = model.user.count + 1;
+			var name = "New Document \(index)";
+			while model.user.values.contains(where: { $0.name == name }) {
+				index += 1;
+				name = "New Document \(index)";
+			}
  			let newDocument = CatalogListItem(
 				basepath: model.userDocumentsDirectory!,
- 				name: "New Document \(model.user.count + 1)",
- 				type: "ABNF",
- 			)!;
- 			model.put(newDocument)
- 			selectionId = newDocument.id
+				name: name,
+				type: "ABNF",
+			)!;
+			model.put(newDocument);
+			selectionId = newDocument.id;
+			renamingId = newDocument.id;
  		}
  	}
+
+	private func renamingBinding(_ id: UUID) -> Binding<Bool> {
+		Binding(
+			get: { renamingId == id },
+			set: { renamingId = $0 ? id : nil }
+		)
+	}
 }
 
 /// Item in the sidebar for selecting, renaming, or deleting a grammar from the Catalog
@@ -129,10 +144,10 @@ struct CatalogListItem: Comparable {
 /// Item in the sidebar for selecting, renaming, or deleting a grammar from the Catalog
 struct CatalogListItemView: View {
 	@Binding var item: CatalogListItem
+	@Binding var isRenaming: Bool
 	let onDelete: () -> Void
 	let onDuplicate: () -> Void
 	let isEditable: Bool
-	@State private var isRenaming: Bool = false
 	@FocusState private var isFocused: Bool
 	@State private var draftName: String = ""
 
@@ -146,7 +161,12 @@ struct CatalogListItemView: View {
 						}
 						isRenaming = false
 						isFocused = false
-					}).focused($isFocused)
+					})
+					.focused($isFocused)
+					.onAppear {
+						draftName = item.name
+						DispatchQueue.main.async { isFocused = true }
+					}
 				}
 			} else {
 				Text(item.name)

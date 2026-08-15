@@ -302,12 +302,15 @@ struct MainApp: App {
 				print("move", oldFilepath, " -> ", filepath);
 				// Name changed, rename the file
 				try FileManager.default.moveItem(at: oldFilepath, to: filepath)
+			} else if oldFilepath == nil, FileManager.default.fileExists(atPath: filepath.path) == false {
+				try Data().write(to: filepath, options: [.atomic])
 			}
 		} catch {
 			// Use old name
 			//			document.name = user[document.id]!.name
 			print("Error writing file <\(filepath)>: \(error.localizedDescription)")
 		}
+		userSorted = user.values.sorted()
 	}
 
 	func del(_ document: CatalogListItem) {
@@ -319,6 +322,7 @@ struct MainApp: App {
 		}
 		user.removeValue(forKey: document.id)
 		user_filepath_id.removeValue(forKey: document.filepath)
+		userSorted = user.values.sorted()
 	}
 
 	static private func getCatalog() -> Array<CatalogListItem> {
