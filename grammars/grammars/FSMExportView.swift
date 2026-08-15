@@ -23,7 +23,7 @@ struct FSMExportView: View {
 		VStack(spacing: 0) {
 			Form {
 				Section(header: Text("Format Options").font(.headline)) {
-					Picker("Regex Dialect", selection: $exportFormatSelected) {
+					Picker("Dialect", selection: $exportFormatSelected) {
 						ForEach(ExportFormat.allCases) { dialect in
 							Text(dialect.rawValue).tag(dialect.rawValue)
 						}

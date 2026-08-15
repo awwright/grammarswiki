@@ -52,7 +52,7 @@ struct CFGContentView: View {
 		let grammar = self.filteredGrammar;
 		ScrollView {
 			Form {
-				Toggle("Eliminate useless prodictions", isOn: $selectedEliminateUseless)
+				Toggle("Eliminate useless productions", isOn: $selectedEliminateUseless)
 
 				Toggle("Eliminate epsilon productions", isOn: $selectedEliminateEpsilon)
 

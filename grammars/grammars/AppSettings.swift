@@ -4,7 +4,6 @@ import SwiftUI
 struct SettingsView: View {
 	@AppStorage("showAlphabet") private var showAlphabet: Bool = true
 	@AppStorage("showStateCount") private var showStateCount: Bool = true
-	@AppStorage("showFSM") private var showFSM: Bool = true
 	@AppStorage("showRegex") private var showRegex: Bool = true
 	@AppStorage("showExport") private var showExport: Bool = true
 	@AppStorage("showInstances") private var showInstances: Bool = true
@@ -22,12 +21,11 @@ struct SettingsView: View {
 			Tab("Display", systemImage: "eye") {
 				Form {
 					Toggle("Show Alphabet", isOn: $showAlphabet)
-					Toggle("Show State Count", isOn: $showStateCount)
-					Toggle("Show FSM", isOn: $showFSM)
+					Toggle("Show Language Info", isOn: $showStateCount)
 					Toggle("Show Regex", isOn: $showRegex)
-					Toggle("Show GraphViz", isOn: $showExport)
-					Toggle("Show Example Instances", isOn: $showInstances)
-					Toggle("Show Test Input", isOn: $showTestInput)
+					Toggle("Show FSM", isOn: $showExport)
+					Toggle("Show Instances", isOn: $showInstances)
+					Toggle("Show Input", isOn: $showTestInput)
 					Picker("Regex Dialect", selection: $regexDialect) {
 						ForEach(RegexDialect.allCases) { dialect in
 							Text(dialect.rawValue).tag(dialect.rawValue)
@@ -42,7 +40,7 @@ struct SettingsView: View {
 						TextField("'dot' executable path", text: $graphvizDot)
 					}
 					Section("Ragel") {
-						Toggle("Ragen Compiler", isOn: $ragelEnabled)
+						Toggle("Ragel Compiler", isOn: $ragelEnabled)
 						TextField("'ragel' executable path", text: $ragelPath)
 					}
 					Section("Wireshark") {

@@ -10,7 +10,6 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 
 	@AppStorage("showAlphabet") private var showAlphabet: Bool = true
 	@AppStorage("showStateCount") private var showStateCount: Bool = true
-	@AppStorage("showFSM") private var showFSM: Bool = true
 
 	@State private var fsm_expanded = true
 
@@ -121,7 +120,7 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 							DisclosureGroup(label) {
 								VStack(alignment: .leading) {
 									Text("O(1): Constant").bold(content_cfg_memoryRequirements == 0)
-									Text("O(log n): Logrimithic").bold(content_cfg_memoryRequirements == 1)
+									Text("O(log n): Logarithmic").bold(content_cfg_memoryRequirements == 1)
 									Text("O(n): Linear").bold(content_cfg_memoryRequirements == 2)
 									Text("O(n log n): Log-linear").bold(content_cfg_memoryRequirements == 3)
 									Text("O(n²): Quadratic").bold(content_cfg_memoryRequirements == 4)

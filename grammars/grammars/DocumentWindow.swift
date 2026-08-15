@@ -1,5 +1,4 @@
 // TODO:
-// - Auto-completion of rule names
 // - Show tab of alternative forms of the document
 // - Limit text field to accepted characters, use a multi-line field if \n is permitted; use \r\n for newlines when \r is permitted
 // - Search feature for catalog
@@ -52,11 +51,11 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						}.frame(maxWidth: .infinity)
 					}
 
-					Tab("Translate", systemImage: "translate") {
+					Tab("CFG", systemImage: "translate") {
 						if let content_cfg = computed.selectedRule_cfg {
 							CFGContentView(grammar: content_cfg);
 						} else {
-							Text("CFG is generating...")
+							Text("Building CFG...")
 						}
 					}
 
@@ -68,7 +67,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					if showExport {
 						// TODO: "Copy to clipboard" button
-						Tab("Export", systemImage: "rectangle.portrait.and.arrow.right") {
+						Tab("FSM", systemImage: "rectangle.portrait.and.arrow.right") {
 							ScrollView {
 								FSMExportView(rule_alphabet: computed.selectedRule_alphabet, rule_fsm: computed.selectedRule_fsm)
 								Spacer()
@@ -136,7 +135,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 							Text(document.type)
 						}
 
-						StartRulePicker(title: "Starting rule", computed: computed, selection: $selectedRule)
+						StartRulePicker(title: "Start rule", computed: computed, selection: $selectedRule)
 
 						// Specifies how to interpert the meaning of a number in the language
 						// This is only used when something needs to intrepert the symbols in the context of a charset
@@ -227,7 +226,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 				ToolbarItem(placement: .principal) {
 					HStack(spacing: 2) {
 						Image(systemName: "arrow.right")
-						StartRulePicker(title: "Starting rule", computed: computed, selection: $selectedRule)
+						StartRulePicker(title: "Start rule", computed: computed, selection: $selectedRule)
 					}
 				}
 			}

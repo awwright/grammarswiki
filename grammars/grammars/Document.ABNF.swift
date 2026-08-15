@@ -1,3 +1,6 @@
+// TODO:
+// - Auto-completion of rule names
+
 import SwiftUI
 import FSM
 import CodeEditorView
