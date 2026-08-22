@@ -32,7 +32,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 	@AppStorage("expandedAlphabet") private var alphabet_expanded = true
 	@State private var regex_expanded = false
 	@State private var test_expanded = false
-	@State private var inspector_isPresented = true
+	@State private var inspector_isPresented = false
 
 	// minimized() is necessary here otherwise it won't return a minimized alphabetPartitions
 	let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() };
