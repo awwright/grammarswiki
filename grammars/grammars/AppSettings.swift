@@ -49,10 +49,57 @@ struct SettingsView: View {
 					}
 				}
 			}
+			Tab("Reset", systemImage: "arrow.counterclockwise") {
+				Form {
+					Section {
+						ForEach(Self.userPaths, id:\.self) { filepath in
+							LabeledContent("Preferences path") {
+								Button {
+									NSWorkspace.shared.selectFile(filepath.path, inFileViewerRootedAtPath: "")
+								} label: {
+									Text(filepath.path)
+									Image(systemName: "magnifyingglass.circle.fill")
+								}
+								.buttonStyle(.plain)
+								.foregroundStyle(.secondary)
+							}
+						}
+					}
+					// TODO: Operations to move user preferences to trash
+					//Section {
+					//	Button("Reset Settings", role: .destructive) {}
+					//	Button("Reset User Catalog", role: .destructive) {}
+					//	Button("Reset Regex Presets", role: .destructive) {}
+					//} footer: {
+					//	Text("The selected preferences and data are moved to the trash")
+					//}
+					//Section {
+					//	Button("Factory Reset", role: .destructive) {}
+					//} footer: {
+					//	Text("Resets all of the above")
+					//}
+				}
+			}
 		}
 		.frame(width: 450, alignment: .leading)
 		.formStyle(.grouped)
 		.padding()
+	}
+
+	static var userPaths: Array<URL> {
+		guard let bundleID = Bundle.main.bundleIdentifier else { return [] }
+		let fm = FileManager.default;
+		let possiblePaths: Array<URL> = [
+			// Non-sandboxed
+			"~/Library/Preferences/\(bundleID).plist",
+			// Sandboxed
+			"~/Library/Containers/\(bundleID)/Data/Library/Preferences/\(bundleID).plist"
+		].compactMap {
+			let path = NSString(string: $0).expandingTildeInPath;
+			guard fm.fileExists(atPath: path) else { return nil; }
+			return URL(fileURLWithPath: path);
+		}
+		return possiblePaths;
 	}
 }
 
