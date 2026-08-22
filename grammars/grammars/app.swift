@@ -406,6 +406,7 @@ protocol DocumentParserProtocol {
 	var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? {get}
 	var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? {get}
 	var selectedRule_cfg: ABNFRulelist<UInt32>.CFG? {get}
+	var selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? {get}
 	var selectedRule_rr: RailroadNode? {get}
 	var selectedRule_complexityClass: Int? {get}
 	var selectedRule_chomskyClass: Int? {get}

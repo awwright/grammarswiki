@@ -238,6 +238,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 		var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
 		var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
 		var selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = nil
+		var selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = nil
 		var selectedRule_rr: RailroadNode? = nil
 		var selectedRule_complexityClass: Int? = nil
 		var selectedRule_chomskyClass: Int? = nil
@@ -323,6 +324,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 				let selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = result?.alphabet;
 				let selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = result;
 				let selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = try? rulelist_resolved.toCFG(rulename: selectedRulename);
+				let selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = selectedRule_cfg.map { CFGArray($0) };
 				let selectedRule_rr: RailroadNode? = dict[selectedRulename]?.toRailroad(rules: dict.mapValues { $0.alternation })
 //				let selectedRule_complexityClass: Int =
 				let selectedRule_chomskyClass: Int? = selectedRule_cfg?.chomskyClass();
@@ -332,6 +334,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 					self.selectedRule_alphabet = selectedRule_alphabet;
 					self.selectedRule_fsm = selectedRule_fsm;
 					self.selectedRule_cfg = selectedRule_cfg;
+					self.selectedRule_cfga = selectedRule_cfga;
 					self.selectedRule_rr = selectedRule_rr;
 //					self.selectedRule_complexityClass = selectedRule_complexityClass;
 					self.selectedRule_chomskyClass = selectedRule_chomskyClass;

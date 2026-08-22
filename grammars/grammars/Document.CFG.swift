@@ -320,6 +320,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 		var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
 		var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
 		var selectedRule_cfg: FSM.ABNFRulelist<UInt32>.CFG? = nil
+		var selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = nil
 		var selectedRule_rr: RailroadNode? = nil
 		var selectedRule_complexityClass: Int? = nil
 		var selectedRule_chomskyClass: Int? = nil
