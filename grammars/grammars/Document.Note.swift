@@ -313,6 +313,20 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		@Binding var document: NoteDocument
 		let computed: NoteDocument.Parser
 		var body: some View {
+			DisclosureGroup("Notebook Properties", content: {
+				Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
+					GridRow(alignment: .top) {
+						Text("Pages").font(.headline).gridColumnAlignment(.trailing)
+						VStack(alignment: .leading) {
+							ForEach(document.pages, id: \.self) {
+								Text($0.name)
+							}
+						}
+					}
+				}
+				.padding()
+				.frame(maxWidth: .infinity, alignment: .leading)
+			})
 		}
 	}
 
