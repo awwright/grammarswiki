@@ -258,10 +258,11 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 			//topRuleNames = []; allRuleNames = [];
 			_task = Task {
 				guard let document else { return }
+				let parseInput = abnfNormalizeLineEndings(document.content)
 				let rulelist: ABNFRulelist<UInt32>?;
 				do {
 					// Array() is necessary otherwise the error will be of type ABNFParseError<String.Index>
-					rulelist = try ABNFRulelist<UInt32>.parse(Array(document.content.utf8))
+					rulelist = try ABNFRulelist<UInt32>.parse(Array(parseInput.utf8))
 					await MainActor.run { self.asABNFRulelist = rulelist }
 				} catch let error as ABNFParseError<Array<UInt32>.Index> {
 					print("ABNFParseError");
@@ -269,7 +270,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 					rulelist = nil;
 					await MainActor.run {
 						self.document_error = "Error at index: " + String(describing: error.index)
-						let input = Array(abnfNormalizeLineEndings(document.content).utf8)
+						let input = Array(parseInput.utf8)
 						content_parseErrorLine = input[0...error.index.startIndex].count(where: { $0 == 0xA })
 					}
 					return
@@ -301,7 +302,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 				guard let bundlePath = Bundle.main.resourcePath else { fatalError() }
 				// Filename references are always within the catalog... at least for now?
 				let catalog = Catalog(root: bundlePath + "/catalog/")
-				let (_, rulelist_all_final, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: document.name, content: document.content);
+				let (_, rulelist_all_final, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: document.name, content: parseInput);
 				let rulelist_resolved = rulelist_all_final.addingBuiltins();
 
 				let dependencies_list = rulelist_resolved.dependencies(rulename: selectedRulename);
