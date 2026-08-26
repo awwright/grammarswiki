@@ -350,7 +350,7 @@ struct MainApp: App {
 	}
 }
 
-protocol DocumentProtocol: Hashable {
+protocol DocumentProtocol: LanguageSource, Hashable {
 	var id: UUID {get}
 	var filepath: URL? {get set}
 	var name: String {get set}
@@ -368,9 +368,6 @@ protocol DocumentProtocol: Hashable {
 	// - CFG export options view: A View that specifies how to convert the source grammar to a CFG (e.g. tail recursion technique to use, case sensitive)
  	associatedtype RuleInfoView: EditorViewBody, View where RuleInfoView.Document == Self;
 	associatedtype EditorView: EditorViewBody, View where EditorView.Document == Self;
-
-	/// Computes properties of the grammar used by DocumentWindow
-	associatedtype Parser: DocumentParserProtocol where Parser.Document == Self;
 }
 
 extension DocumentProtocol {
@@ -382,8 +379,13 @@ extension DocumentProtocol {
 	}
 }
 
+protocol LanguageSource {
+	/// Computes properties of the grammar used by DocumentWindow
+	associatedtype Parser: DocumentParserProtocol where Parser.Document == Self;
+}
+
 protocol DocumentParserProtocol {
-	associatedtype Document: DocumentProtocol
+	associatedtype Document: LanguageSource
 	init()
 
 	var document: Document? {get set}

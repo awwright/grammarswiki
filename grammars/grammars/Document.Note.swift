@@ -26,7 +26,8 @@ enum PageXMLError: Error, LocalizedError {
 }
 
 /// A page that can appear in a notebook.
-protocol PageProtocol: Hashable, Identifiable where ID == UUID {
+protocol PageProtocol: LanguageSource, Hashable, Identifiable {
+	typealias ID = UUID;
 	var id: UUID { get }
 	var name: String { get set }
 	/// Type shown in the page (e.g. "ABNF").
