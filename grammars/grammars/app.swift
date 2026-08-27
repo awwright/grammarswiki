@@ -371,53 +371,69 @@ protocol DocumentProtocol: LanguageSource, Hashable {
 }
 
 extension DocumentProtocol {
-	func ruleInfoView(document: Binding<Self>, computed: Parser) -> RuleInfoView {
+	func ruleInfoView(document: Binding<Self>, computed: GrammarAnalysis) -> RuleInfoView {
 		RuleInfoView(document: document, computed: computed)
 	}
-	func editorView(document: Binding<Self>, computed: Parser) -> EditorView {
+	func editorView(document: Binding<Self>, computed: GrammarAnalysis) -> EditorView {
 		EditorView(document: document, computed: computed)
 	}
 }
 
+/// A grammar definition that can snapshot itself onto the shared ``Parser``.
 protocol LanguageSource {
-	/// Computes properties of the grammar used by DocumentWindow
-	associatedtype Parser: DocumentParserProtocol where Parser.Document == Self;
+	/// Snapshot this definition and publish analysis onto `parser`.
+	/// Rule names must be written first (and independently of selected-rule artifacts).
+	func updateParser(_ parser: GrammarAnalysis)
 }
 
-protocol DocumentParserProtocol {
-	associatedtype Document: LanguageSource
-	init()
+/// The sink for every ``LanguageSource``.
+///
+/// `nil` means the property has not been computed or cannot be computed (see error if any)
+@Observable
+final class GrammarAnalysis {
+	/// Rule to compile; read by ``LanguageSource/updateParser`` when a job starts.
+	var selectedRulename: String? = nil
 
-	var document: Document? {get set}
-	var document_error: String? {get}
+	var document_error: String? = nil
+	var selectedRule_error: String? = nil
+	/// Zero-based line of a syntax error, when the source is line-oriented.
+	var content_parseErrorLine: Int? = nil
 
-	/// The "top level" rule that should be loaded by default, typically the first listed rule
-	var primaryRuleName: String? {get}
-	/// Rules designed to be used/referenced externally
-	var topRuleNames: Array<String> {get}
-	/// All rule names, including those for internal use
-	var allRuleNames: Array<String> {get}
+	var primaryRuleName: String? = nil
+	var topRuleNames: Array<String> = []
+	var allRuleNames: Array<String> = []
 
-	var selectedRulename: String? {get set}
-	var selectedRule_error: String? {get}
+	var selectedRule_dependencies: Array<String> = []
+	var selectedRule_builtins: Array<String> = []
+	var selectedRule_undefined: Array<String> = []
+	var selectedRule_recursive: Array<String> = []
 
-	//var selectedRule_dependencies: Array<String> {get}
-	//var selectedRule_builtins: Array<String> {get}
-	//var selectedRule_undefined: Array<String> {get}
-	//var selectedRule_recursive: Array<String> {get}
-	var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? {get}
-	var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? {get}
-	var selectedRule_cfg: ABNFRulelist<UInt32>.CFG? {get}
-	var selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? {get}
-	var selectedRule_rr: RailroadNode? {get}
-	var selectedRule_complexityClass: Int? {get}
-	var selectedRule_chomskyClass: Int? {get}
-	var selectedRule_memoryRequirements: Int? {get}
+	var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
+	var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
+	var selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = nil
+	var selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = nil
+	var selectedRule_rr: RailroadNode? = nil
+	var selectedRule_complexityClass: Int? = nil
+	var selectedRule_chomskyClass: Int? = nil
+	var selectedRule_memoryRequirements: Int? = nil
+
+	/// Nested parsers for NoteDocument
+	var nested: Dictionary<UUID, GrammarAnalysis> = [:]
+
+	private var _task = Task<Void, Never> {}
+
+	deinit { _task.cancel() }
+
+	/// Cancel any in-flight job and run `body` as the sole update. `body` should hop to the main actor to publish fields.
+	func runUpdate(_ body: @escaping () async -> Void) {
+		_task.cancel();
+		_task = Task { await body() };
+	}
 }
 
 protocol EditorViewBody: View {
 	associatedtype Document: DocumentProtocol
-	init(document: Binding<Document>, computed: Document.Parser)
+	init(document: Binding<Document>, computed: GrammarAnalysis)
 }
 
 extension FocusedValues {

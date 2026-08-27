@@ -3,7 +3,7 @@ import FSM
 
 struct RuleInformationView<Document: DocumentProtocol>: View {
 	@Binding var document: Document
-	let computed: Document.Parser
+	let computed: GrammarAnalysis
 
 	@AppStorage("expandedAlphabet") private var alphabet_expanded = true
 	@Environment(SelectedCharset.self) private var charset;

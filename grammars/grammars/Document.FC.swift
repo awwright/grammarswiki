@@ -106,76 +106,37 @@ struct FCDocument: PageProtocol, Hashable, Equatable {
 		FCPageEditor(page: page)
 	}
 
-	@Observable class Parser: DocumentParserProtocol {
-		typealias Document = FCDocument
-
-		required init() {
-			document = nil;
-			self._task = Task{};
-			document_error = nil;
-			topRuleNames = [];
-			allRuleNames = [];
-		}
-
-		deinit { _task.cancel() }
-
-		var document: Document? { didSet { _update(); } }
-		var document_error: String? = nil
-		var primaryRuleName: String? = nil
-		var topRuleNames: Array<String> = []
-		var allRuleNames: Array<String> = []
-
-		var selectedRulename: String? { didSet { _update(); } }
-		var selectedRule_error: String? = nil
-		var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
-		var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
-		var selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = nil
-		var selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = nil
-		var selectedRule_rr: RailroadNode? = nil
-		var selectedRule_complexityClass: Int? = nil
-		var selectedRule_chomskyClass: Int? = nil
-		var selectedRule_memoryRequirements: Int? = nil
-
-		var _task: Task<(), Never>
-		func _update() {
-			_task.cancel();
-			document_error = nil;
-			selectedRule_error = nil;
-
-			_task = Task {
-				guard let document else { return }
-				let ruleName = document.ruleName;
-				if Task.isCancelled { return }
-				await MainActor.run {
-					self.primaryRuleName = ruleName;
-					self.topRuleNames = [ruleName];
-					self.allRuleNames = [ruleName];
-				}
-
-				// Finite choice is a single language; analyze regardless of selectedRulename.
-				if Task.isCancelled { return }
-				let selectedRule_fsm = document.toDFA();
-				let selectedRule_alphabet = selectedRule_fsm.alphabet;
-				let selectedRule_cfg = document.toCFG();
-				let selectedRule_cfga = CFGArray(selectedRule_cfg);
-				let selectedRule_rr: RailroadNode = .Diagram(
-					start: .Start(label: ruleName, attributes: [:]),
-					sequence: [document.toRailroad()],
-					end: .End(label: nil, attributes: [:]),
-					attributes: [:]
-				);
-				let selectedRule_chomskyClass = selectedRule_cfg.chomskyClass();
-				let selectedRule_memoryRequirements = selectedRule_cfg.memoryRequirements();
-				if Task.isCancelled { return }
-				await MainActor.run {
-					self.selectedRule_alphabet = selectedRule_alphabet;
-					self.selectedRule_fsm = selectedRule_fsm;
-					self.selectedRule_cfg = selectedRule_cfg;
-					self.selectedRule_cfga = selectedRule_cfga;
-					self.selectedRule_rr = selectedRule_rr;
-					self.selectedRule_chomskyClass = selectedRule_chomskyClass;
-					self.selectedRule_memoryRequirements = selectedRule_memoryRequirements;
-				}
+	func updateParser(_ parser: GrammarAnalysis) {
+		let snapshot = self;
+		parser.runUpdate {
+			let ruleName = snapshot.ruleName;
+			if Task.isCancelled { return }
+			await MainActor.run {
+				parser.primaryRuleName = ruleName;
+				parser.topRuleNames = [ruleName];
+				parser.allRuleNames = [ruleName];
+			}
+			let selectedRule_fsm = snapshot.toDFA();
+			let selectedRule_alphabet = selectedRule_fsm.alphabet;
+			let selectedRule_cfg = snapshot.toCFG();
+			let selectedRule_cfga = CFGArray(selectedRule_cfg);
+			let selectedRule_rr: RailroadNode = .Diagram(
+				start: .Start(label: ruleName, attributes: [:]),
+				sequence: [snapshot.toRailroad()],
+				end: .End(label: nil, attributes: [:]),
+				attributes: [:]
+			);
+			let selectedRule_chomskyClass = selectedRule_cfg.chomskyClass();
+			let selectedRule_memoryRequirements = selectedRule_cfg.memoryRequirements();
+			if Task.isCancelled { return }
+			await MainActor.run {
+				parser.selectedRule_alphabet = selectedRule_alphabet;
+				parser.selectedRule_fsm = selectedRule_fsm;
+				parser.selectedRule_cfg = selectedRule_cfg;
+				parser.selectedRule_cfga = selectedRule_cfga;
+				parser.selectedRule_rr = selectedRule_rr;
+				parser.selectedRule_chomskyClass = selectedRule_chomskyClass;
+				parser.selectedRule_memoryRequirements = selectedRule_memoryRequirements;
 			}
 		}
 	}

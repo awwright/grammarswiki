@@ -129,6 +129,10 @@ struct Page: Identifiable, Hashable {
 		try box.erasedMakeXMLElement()
 	}
 
+	func updateParser(_ parser: GrammarAnalysis) {
+		box.updateParser(parser)
+	}
+
 	/// Cast the erased payload to a concrete ``PageProtocol`` type.
 	fileprivate func unwrap<T: PageProtocol>(_ type: T.Type) -> T? {
 		box as? T
@@ -147,13 +151,13 @@ struct Page: Identifiable, Hashable {
 /// Default notebook embed for types that are both ``DocumentProtocol`` and ``PageProtocol``.
 struct PageDocumentEditor<Document: DocumentProtocol>: View {
 	@Binding var document: Document
-	@State private var computed = Document.Parser()
+	@State private var computed = GrammarAnalysis()
 
 	var body: some View {
 		Document.EditorView(document: $document, computed: computed)
-			.onAppear { computed.document = document }
+			.onAppear { document.updateParser(computed) }
 			.onChange(of: document) { _, newValue in
-				computed.document = newValue;
+				newValue.updateParser(computed);
 			}
 	}
 }
@@ -248,7 +252,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 	struct EditorView: EditorViewBody {
 		@Binding var document: NoteDocument
-		let computed: NoteDocument.Parser
+		let computed: GrammarAnalysis
 
 		var body: some View {
 			ScrollView {
@@ -312,7 +316,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 	struct RuleInfoView: EditorViewBody {
 		@Binding var document: NoteDocument
-		let computed: NoteDocument.Parser
+		let computed: GrammarAnalysis
 		var body: some View {
 			DisclosureGroup("Notebook Properties", content: {
 				Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
@@ -331,53 +335,46 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		}
 	}
 
-	@Observable class Parser: DocumentParserProtocol {
-		typealias Document = NoteDocument
+	func updateParser(_ parser: GrammarAnalysis) {
+		let previous = parser.nested;
+		var next: Dictionary<UUID, GrammarAnalysis> = [:];
+		for page in pages {
+			let child = previous[page.id] ?? GrammarAnalysis();
+			let isNew = previous[page.id] == nil;
+			page.updateParser(child);
+			next[page.id] = child;
+			if isNew {
+				observeChild(parent: parser, id: page.id, child: child);
+			}
+		}
+		parser.nested = next;
+		publish(parser, start: start);
 
-		required init() {
-			document = nil
-			self._task = Task{}
-			document_error = nil;
-			topRuleNames = [];
-			allRuleNames = [];
+		func publish(_ parser: GrammarAnalysis, start: String) {
+			let all = pages.flatMap { parser.nested[$0.id]?.allRuleNames ?? [] };
+			let tops = pages.flatMap { parser.nested[$0.id]?.topRuleNames ?? [] };
+			parser.allRuleNames = all;
+			parser.topRuleNames = tops;
+			parser.primaryRuleName = start.isEmpty ? all.first : start;
 		}
 
-		deinit { _task.cancel() }
-
-		var document: Document? { didSet { _update(); } }
-		var document_error: String? = nil
-		var primaryRuleName: String? = nil
-		var topRuleNames: Array<String> = []
-		var allRuleNames: Array<String> = []
-
-		var selectedRulename: String? { didSet { _update(); } }
-		var selectedRule_error: String? = nil
-		var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
-		var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
-		var selectedRule_cfg: FSM.ABNFRulelist<UInt32>.CFG? = nil
-		var selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = nil
-		var selectedRule_rr: RailroadNode? = nil
-		var selectedRule_complexityClass: Int? = nil
-		var selectedRule_chomskyClass: Int? = nil
-		var selectedRule_memoryRequirements: Int? = nil
-
-		var _task: Task<(), Never>
-		func _update() {
-			_task.cancel()
-			document_error = nil;
-
-			// Don't clear the rule names during parsing, only update when the document is successfully parsed
-			//topRuleNames = []; allRuleNames = [];
-			_task = Task {
-				guard let document else { return }
-				let primaryRuleName: String? = document.pages.first?.name;
-				let topRuleNames: [String] = document.pages.map { $0.name };
-				let allRuleNames: [String] = document.pages.map { $0.name };
-				if Task.isCancelled { return }
-				await MainActor.run {
-					self.primaryRuleName = primaryRuleName;
-					self.topRuleNames = topRuleNames;
-					self.allRuleNames = allRuleNames;
+		/// When a child publishes an update, refresh the aggregation
+		func observeChild(parent: GrammarAnalysis, id: UUID, child: GrammarAnalysis) {
+			withObservationTracking {
+				_ = child.allRuleNames;
+				_ = child.topRuleNames;
+			} onChange: {
+				DispatchQueue.main.async {
+					guard parent.nested[id] === child else { return }
+					let oldFirst = parent.allRuleNames.first;
+					let all = pages.flatMap { parser.nested[$0.id]?.allRuleNames ?? [] };
+					let tops = pages.flatMap { parser.nested[$0.id]?.topRuleNames ?? [] };
+					parent.allRuleNames = all;
+					parent.topRuleNames = tops;
+					if parent.primaryRuleName == nil || parent.primaryRuleName == oldFirst {
+						parent.primaryRuleName = all.first;
+					}
+					observeChild(parent: parent, id: id, child: child);
 				}
 			}
 		}

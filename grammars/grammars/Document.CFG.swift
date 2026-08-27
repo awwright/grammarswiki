@@ -206,7 +206,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 
 	struct EditorView: EditorViewBody {
 		@Binding var document: CFGDocument
-		let computed: CFGDocument.Parser
+		let computed: GrammarAnalysis
 
 		// Placeholder for empty value
 		private let kEmpty = "<empty>"
@@ -291,59 +291,60 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 	// MARK: Rule info
 	struct RuleInfoView: EditorViewBody {
 		@Binding var document: CFGDocument
-		let computed: CFGDocument.Parser
+		let computed: GrammarAnalysis
 		var body: some View { EmptyView() }
 	}
 
-	// MARK: Parser
-	@Observable class Parser: DocumentParserProtocol {
-		typealias Document = CFGDocument
-
-		required init() {
-			document = nil;
-			self._task = Task{};
-			document_error = nil;
-			topRuleNames = [];
-			allRuleNames = [];
-		}
-
-		deinit { _task.cancel() }
-
-		var document: Document? { didSet { _update() } }
-		var document_error: String? = nil
-		var primaryRuleName: String? = nil
-		var topRuleNames: Array<String> = []
-		var allRuleNames: Array<String> = []
-
-		var selectedRulename: String? { didSet { _update() } }
-		var selectedRule_error: String? = nil
-		var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
-		var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
-		var selectedRule_cfg: FSM.ABNFRulelist<UInt32>.CFG? = nil
-		var selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = nil
-		var selectedRule_rr: RailroadNode? = nil
-		var selectedRule_complexityClass: Int? = nil
-		var selectedRule_chomskyClass: Int? = nil
-		var selectedRule_memoryRequirements: Int? = nil
-
-		let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() }
-
-		var _task: Task<(), Never>
-		func _update() {
-			_task.cancel();
-			document_error = nil;
-
-			_task = Task {
-				guard let document else { return }
-				let primary = document.productions.first?.name;
-				let tops = document.productions.filter { $0.top }.map { $0.name };
-				let all = document.productions.map { $0.name };
-				if _task.isCancelled { return }
-				await MainActor.run {
-					self.primaryRuleName = primary;
-					self.topRuleNames = tops;
-					self.allRuleNames = all;
+	func toCFG(startRule: String?) -> ABNFRulelist<UInt32>.CFG {
+		typealias G = ABNFRulelist<UInt32>.CFG
+		func ruleName(_ name: String) -> CFGRuleName { CFGRuleName(.rule(name)) }
+		let namedProductions: [G.Production] = productions.map { p in
+			G.Production(name: ruleName(p.name), body: p.body.map { element in
+				switch element {
+				case .nonterminal(let name):
+					return .nonterminal(ruleName(name))
+				case .terminal(let ranges):
+					return .terminal(ranges.map(\.closedRange))
 				}
+			})
+		}
+		let start = startRule.flatMap { name in namedProductions.contains(where: { $0.name == ruleName(name) }) ? ruleName(name) : nil }
+		?? namedProductions.first?.name
+		guard let start else { return G() }
+		return G(start: start, productions: namedProductions)
+	}
+
+	func toCFGArray(startRule: String?) -> CFGArray<ClosedRangeAlphabet<UInt32>> {
+		CFGArray(toCFG(startRule: startRule))
+	}
+
+	func updateParser(_ parser: GrammarAnalysis) {
+		let snapshot = self
+		let selectedRulename = parser.selectedRulename
+		parser.runUpdate {
+			var seenAll = Set<String>();
+			var all: [String] = [];
+			var seenTops = Set<String>();
+			var tops: [String] = [];
+			for p in snapshot.productions {
+				if seenAll.insert(p.name).inserted { all.append(p.name) }
+				if p.top, seenTops.insert(p.name).inserted { tops.append(p.name) }
+			}
+			let primary = snapshot.productions.first?.name
+			if Task.isCancelled { return }
+			await MainActor.run {
+				parser.primaryRuleName = primary
+				parser.topRuleNames = tops
+				parser.allRuleNames = all
+			}
+			let cfg = snapshot.toCFG(startRule: selectedRulename ?? primary)
+			let empty = cfg.productions.isEmpty
+			if Task.isCancelled { return }
+			await MainActor.run {
+				parser.selectedRule_cfg = empty ? nil : cfg
+				parser.selectedRule_cfga = empty ? nil : CFGArray(cfg)
+				parser.selectedRule_chomskyClass = empty ? nil : cfg.chomskyClass()
+				parser.selectedRule_memoryRequirements = empty ? nil : cfg.memoryRequirements()
 			}
 		}
 	}

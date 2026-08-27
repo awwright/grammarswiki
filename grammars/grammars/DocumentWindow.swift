@@ -12,7 +12,7 @@ import FSM
 struct DocumentView<Document: DocumentProtocol>: View {
 	@Binding var document: Document
 	// TODO: Cache computation results with <https://developer.apple.com/documentation/Foundation/NSCache>
-	@State var computed: Document.Parser = .init()
+	@State var computed = GrammarAnalysis()
 
 	// User input
  	@State private var selectedCharsetId: String = "UTF-32"
@@ -208,9 +208,18 @@ struct DocumentView<Document: DocumentProtocol>: View {
 				.inspectorColumnWidth(min: 300, ideal: 500, max: 2000)
 			}
 		} // HStack
-		.onAppear { computed.document = document; computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
-		.onChange(of: document) { computed.document = document; computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
-		.onChange(of: selectedRule) { computed.selectedRulename = selectedRule ?? computed.primaryRuleName; }
+		.onAppear {
+			computed.selectedRulename = selectedRule ?? computed.primaryRuleName
+			document.updateParser(computed)
+		}
+		.onChange(of: document) {
+			computed.selectedRulename = selectedRule ?? computed.primaryRuleName
+			document.updateParser(computed)
+		}
+		.onChange(of: selectedRule) {
+			computed.selectedRulename = selectedRule ?? computed.primaryRuleName
+			document.updateParser(computed)
+		}
 		.onChange(of: computed.primaryRuleName) { if selectedRule == nil { selectedRule = computed.primaryRuleName } }
 		.toolbar {
 			ToolbarItem(placement: .primaryAction) {
@@ -235,9 +244,9 @@ struct DocumentView<Document: DocumentProtocol>: View {
 	}
 }
 
-struct StartRulePicker<Parser: DocumentParserProtocol>: View {
+struct StartRulePicker: View {
 	let title: String
-	let computed: Parser
+	let computed: GrammarAnalysis
 	@Binding var selection: String?
 	var body: some View {
 		Picker(title, selection: $selection) {
