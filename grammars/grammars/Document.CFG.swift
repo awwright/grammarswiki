@@ -289,7 +289,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 	}
 
 	// MARK: Rule info
-	struct RuleInfoView: EditorViewBody {
+	struct RuleInfoView: RuleInfoViewBody {
 		@Binding var document: CFGDocument
 		let computed: RulelistAnalysis
 		var body: some View { EmptyView() }

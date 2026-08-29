@@ -320,7 +320,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		}
 	}
 
-	struct RuleInfoView: EditorViewBody {
+	struct RuleInfoView: RuleInfoViewBody {
 		@Binding var document: NoteDocument
 		let computed: RulelistAnalysis
 		var body: some View {

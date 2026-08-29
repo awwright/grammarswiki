@@ -174,7 +174,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 		}
 	}
 
-	struct RuleInfoView: EditorViewBody {
+	struct RuleInfoView: RuleInfoViewBody {
 		@Binding var document: ABNFDocument
 		let computed: RulelistAnalysis
 

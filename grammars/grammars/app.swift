@@ -366,7 +366,7 @@ protocol DocumentProtocol: LanguageSource, Hashable {
 	// - toFSM: get the specified rule as a FSM, if possible
 	// - editor view: A View that can be used to edit the grammar (e.g. a code editor for ABNF)
 	// - CFG export options view: A View that specifies how to convert the source grammar to a CFG (e.g. tail recursion technique to use, case sensitive)
- 	associatedtype RuleInfoView: EditorViewBody, View where RuleInfoView.Document == Self;
+ 	associatedtype RuleInfoView: RuleInfoViewBody, View where RuleInfoView.Document == Self;
 	associatedtype EditorView: EditorViewBody, View where EditorView.Document == Self;
 }
 
@@ -429,6 +429,11 @@ final class RulelistAnalysis {
 		_task.cancel();
 		_task = Task { await body() };
 	}
+}
+
+protocol RuleInfoViewBody: View {
+	associatedtype Document: DocumentProtocol
+	init(document: Binding<Document>, computed: RulelistAnalysis)
 }
 
 protocol EditorViewBody: View {
