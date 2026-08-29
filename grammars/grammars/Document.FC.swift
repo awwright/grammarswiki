@@ -115,28 +115,45 @@ struct FCDocument: PageProtocol, Hashable, Equatable {
 				parser.primaryRuleName = ruleName;
 				parser.topRuleNames = [ruleName];
 				parser.allRuleNames = [ruleName];
+				let old = parser.parsed(FCDocument.self);
+				if old != snapshot {
+					parser.parsedSource = snapshot;
+					parser.parseRevision += 1;
+				}
 			}
-			let selectedRule_fsm = snapshot.toDFA();
-			let selectedRule_alphabet = selectedRule_fsm.alphabet;
-			let selectedRule_cfg = snapshot.toCFG();
-			let selectedRule_cfga = CFGArray(selectedRule_cfg);
-			let selectedRule_rr: RailroadNode = .Diagram(
+		}
+	}
+
+	func compileRule(_ ruleName: String, from list: RulelistAnalysis, into rule: RuleAnalysis) {
+		guard let snapshot = list.parsed(FCDocument.self) else { return }
+		rule.runCompile(ruleName: ruleName, from: list) { revision in
+			guard ruleName == snapshot.ruleName else {
+				await MainActor.run {
+					rule.error = "Unknown rule \(ruleName)";
+					rule.compiledRevision = revision;
+				}
+				return
+			}
+			let fsm = snapshot.toDFA();
+			let cfg = snapshot.toCFG();
+			let rr: RailroadNode = .Diagram(
 				start: .Start(label: ruleName, attributes: [:]),
 				sequence: [snapshot.toRailroad()],
 				end: .End(label: nil, attributes: [:]),
 				attributes: [:]
 			);
-			let selectedRule_chomskyClass = selectedRule_cfg.chomskyClass();
-			let selectedRule_memoryRequirements = selectedRule_cfg.memoryRequirements();
+			let chomskyClass = cfg.chomskyClass();
+			let memoryRequirements = cfg.memoryRequirements();
 			if Task.isCancelled { return }
 			await MainActor.run {
-				parser.selectedRule_alphabet = selectedRule_alphabet;
-				parser.selectedRule_fsm = selectedRule_fsm;
-				parser.selectedRule_cfg = selectedRule_cfg;
-				parser.selectedRule_cfga = selectedRule_cfga;
-				parser.selectedRule_rr = selectedRule_rr;
-				parser.selectedRule_chomskyClass = selectedRule_chomskyClass;
-				parser.selectedRule_memoryRequirements = selectedRule_memoryRequirements;
+				rule.alphabet = fsm.alphabet;
+				rule.fsm = fsm;
+				rule.cfg = cfg;
+				rule.cfga = CFGArray(cfg);
+				rule.rr = rr;
+				rule.chomskyClass = chomskyClass;
+				rule.memoryRequirements = memoryRequirements;
+				rule.compiledRevision = revision;
 			}
 		}
 	}

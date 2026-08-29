@@ -176,7 +176,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 
 	struct RuleInfoView: RuleInfoViewBody {
 		@Binding var document: ABNFDocument
-		let computed: RulelistAnalysis
+		let rule: RuleAnalysis
 
 		@AppStorage("expandedRule_deps") private var rule_deps_expanded = true
 		@AppStorage("expandedRule_builtin") private var rule_builtin_expanded = true
@@ -184,25 +184,25 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 		@AppStorage("expandedRule_recursive") private var rule_recursive_expanded = true
 
 		var body: some View {
-			if computed.selectedRulename != nil {
-				if computed.selectedRule_dependencies.isEmpty == false {
+			if rule.rulename != nil {
+				if rule.dependencies.isEmpty == false {
 					DisclosureGroup("Rule Dependencies", isExpanded: $rule_deps_expanded, content: {
-						Text(String(computed.selectedRule_dependencies.joined(separator: ", ")))
+						Text(String(rule.dependencies.joined(separator: ", ")))
 					})
 				}
-				if computed.selectedRule_builtins.isEmpty == false {
+				if rule.builtins.isEmpty == false {
 					DisclosureGroup("Implicit Builtins", isExpanded: $rule_builtin_expanded, content: {
-						Text(String(computed.selectedRule_builtins.joined(separator: ", ")))
+						Text(String(rule.builtins.joined(separator: ", ")))
 					})
 				}
-				if computed.selectedRule_undefined.isEmpty == false {
+				if rule.undefined.isEmpty == false {
 					DisclosureGroup("Undefined Rules", isExpanded: $rule_undefined_expanded, content: {
-						Text(String(computed.selectedRule_undefined.joined(separator: ", ")))
+						Text(String(rule.undefined.joined(separator: ", ")))
 					})
 				}
-				if computed.selectedRule_recursive.isEmpty == false {
+				if rule.recursive.isEmpty == false {
 					DisclosureGroup("Recursive Rules", isExpanded: $rule_recursive_expanded, content: {
-						Text(String(computed.selectedRule_recursive.joined(separator: ", ")))
+						Text(String(rule.recursive.joined(separator: ", ")))
 					})
 				}
 			}
@@ -214,16 +214,36 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 	func updateParser(_ parser: RulelistAnalysis) {
 		let content = self.content;
 		let documentName = self.name;
-		let selectedRulename = parser.selectedRulename;
 		parser.runUpdate {
 			let parseInput = abnfNormalizeLineEndings(content);
-			let rulelist: ABNFRulelist<UInt32>?;
 			do {
-				rulelist = try ABNFRulelist<UInt32>.parse(Array(parseInput.utf8));
+				let rulelist = try ABNFRulelist<UInt32>.parse(Array(parseInput.utf8));
+				if Task.isCancelled { return }
+				if let old = parser.parsed(ABNFParsedSource.self), old.rulelist == rulelist {
+					await MainActor.run {
+						parser.document_error = nil;
+						parser.content_parseErrorLine = nil;
+					}
+					return
+				}
+				let orderedRules = rulelist.ruleNames;
+				let primaryRuleName = orderedRules.first;
+				// FIXME: This shouldn't filter out recursive references
+				let topRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) };
+				let parsed = ABNFParsedSource(rulelist: rulelist, documentName: documentName, content: parseInput);
+				await MainActor.run {
+					parser.document_error = nil;
+					parser.content_parseErrorLine = nil;
+					parser.primaryRuleName = primaryRuleName;
+					parser.topRuleNames = topRuleNames;
+					parser.allRuleNames = orderedRules;
+					parser.parsedSource = parsed;
+					parser.parseRevision += 1;
+				}
 			} catch let error as ABNFParseError<Array<UInt32>.Index> {
+				let input = Array(parseInput.utf8);
 				await MainActor.run {
 					parser.document_error = "Error at index: " + String(describing: error.index);
-					let input = Array(parseInput.utf8);
 					parser.content_parseErrorLine = input[0...error.index.startIndex].count(where: { $0 == 0xA });
 				}
 				return
@@ -234,57 +254,46 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 				}
 				return
 			}
+		}
+	}
+
+	func compileRule(_ ruleName: String, from list: RulelistAnalysis, into rule: RuleAnalysis) {
+		guard let parsed = list.parsed(ABNFParsedSource.self) else { return }
+		rule.runCompile(ruleName: ruleName, from: list) { revision in
+			let rulelist_resolved = parsed.resolvedRulelist();
 			if Task.isCancelled { return }
-			guard let rulelist else { return }
 
-			let orderedRules = rulelist.ruleNames;
-			let primaryRuleName = orderedRules.first;
-			// FIXME: This shouldn't filter out recursive references
-			let topRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) };
-			let allRuleNames = orderedRules;
+			let dependencies_list = rulelist_resolved.dependencies(rulename: ruleName);
 			await MainActor.run {
-				parser.document_error = nil;
-				parser.content_parseErrorLine = nil;
-				parser.primaryRuleName = primaryRuleName;
-				parser.topRuleNames = topRuleNames;
-				parser.allRuleNames = allRuleNames;
-			}
-			if Task.isCancelled { return }
-			guard let selectedRulename else { return }
-
-			guard let bundlePath = Bundle.main.resourcePath else { fatalError() }
-			let catalog = Catalog(root: bundlePath + "/catalog/");
-			let (_, rulelist_all_final, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: documentName, content: parseInput);
-			let rulelist_resolved = rulelist_all_final.addingBuiltins();
-
-			let dependencies_list = rulelist_resolved.dependencies(rulename: selectedRulename);
-			await MainActor.run {
-				parser.selectedRule_dependencies = Array(dependencies_list.dependencies.reversed());
-				parser.selectedRule_builtins = dependencies_list.builtins;
-				parser.selectedRule_undefined = dependencies_list.undefined;
-				parser.selectedRule_recursive = dependencies_list.recursive;
+				rule.dependencies = Array(dependencies_list.dependencies.reversed());
+				rule.builtins = dependencies_list.builtins;
+				rule.undefined = dependencies_list.undefined;
+				rule.recursive = dependencies_list.recursive;
 			}
 
 			let dict = rulelist_resolved.dictionary;
-			let dependencies = dependencies_list.dependencies.compactMap { if let rule = dict[$0] { ($0, rule) } else { nil } };
+			let dependencies = dependencies_list.dependencies.compactMap { if let definition = dict[$0] { ($0, definition) } else { nil } };
 			if dependencies.isEmpty {
-				await MainActor.run { parser.selectedRule_error = "dependencies is empty" }
+				await MainActor.run {
+					rule.error = dict[ruleName] == nil ? "Unknown rule \(ruleName)" : "dependencies is empty";
+					rule.compiledRevision = revision;
+				}
 				return;
 			}
 
-			let selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = try? rulelist_resolved.toCFG(rulename: selectedRulename);
-			let selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = selectedRule_cfg.map { CFGArray($0) };
-			let selectedRule_rr: RailroadNode? = dict[selectedRulename]?.toRailroad(rules: dict.mapValues { $0.alternation });
-			let selectedRule_chomskyClass = selectedRule_cfg?.chomskyClass();
-			let selectedRule_memoryRequirements = selectedRule_cfg?.memoryRequirements();
+			let cfg: ABNFRulelist<UInt32>.CFG? = try? rulelist_resolved.toCFG(rulename: ruleName);
+			let cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = cfg.map { CFGArray($0) };
+			let rr: RailroadNode? = dict[ruleName]?.toRailroad(rules: dict.mapValues { $0.alternation });
+			let chomskyClass = cfg?.chomskyClass();
+			let memoryRequirements = cfg?.memoryRequirements();
 			if Task.isCancelled { return }
 			await MainActor.run {
-				parser.selectedRule_error = nil;
-				parser.selectedRule_cfg = selectedRule_cfg;
-				parser.selectedRule_cfga = selectedRule_cfga;
-				parser.selectedRule_rr = selectedRule_rr;
-				parser.selectedRule_chomskyClass = selectedRule_chomskyClass;
-				parser.selectedRule_memoryRequirements = selectedRule_memoryRequirements;
+				rule.error = nil;
+				rule.cfg = cfg;
+				rule.cfga = cfga;
+				rule.rr = rr;
+				rule.chomskyClass = chomskyClass;
+				rule.memoryRequirements = memoryRequirements;
 			}
 
 			var result_fsm_dict: Dictionary<String, DFA<ClosedRangeAlphabet<UInt32>>> = Self.builtins;
@@ -293,12 +302,37 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 				if let pat { result_fsm_dict[rulename] = pat.minimized() }
 				if Task.isCancelled { return }
 			}
-			let result = result_fsm_dict[selectedRulename];
+			let result = result_fsm_dict[ruleName];
 			if Task.isCancelled { return }
 			await MainActor.run {
-				parser.selectedRule_alphabet = result?.alphabet;
-				parser.selectedRule_fsm = result;
+				rule.alphabet = result?.alphabet;
+				rule.fsm = result;
+				rule.compiledRevision = revision;
 			}
 		}
+	}
+}
+
+/// Last successful ABNF parse. Compile reads this instead of re-parsing source.
+final class ABNFParsedSource {
+	let rulelist: ABNFRulelist<UInt32>
+	let documentName: String
+	let content: String
+	private var resolved: ABNFRulelist<UInt32>?
+
+	init(rulelist: ABNFRulelist<UInt32>, documentName: String, content: String) {
+		self.rulelist = rulelist;
+		self.documentName = documentName;
+		self.content = content;
+	}
+
+	func resolvedRulelist() -> ABNFRulelist<UInt32> {
+		if let resolved { return resolved }
+		guard let bundlePath = Bundle.main.resourcePath else { fatalError() }
+		let catalog = Catalog(root: bundlePath + "/catalog/");
+		let (_, merged, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: documentName, content: content);
+		let value = merged.addingBuiltins();
+		resolved = value;
+		return value;
 	}
 }

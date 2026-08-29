@@ -4,6 +4,7 @@ import FSM
 struct RuleInformationView<Document: DocumentProtocol>: View {
 	@Binding var document: Document
 	let computed: RulelistAnalysis
+	let rule: RuleAnalysis
 
 	@AppStorage("expandedAlphabet") private var alphabet_expanded = true
 	@Environment(SelectedCharset.self) private var charset;
@@ -12,10 +13,6 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 	@AppStorage("showStateCount") private var showStateCount: Bool = true
 
 	@State private var fsm_expanded = true
-
-	@State private var content_cfg_complexityClass: Int? = nil
-	@State private var content_cfg_chomskyClass: Int? = nil
-	@State private var content_cfg_memoryRequirements: Int? = nil
 
 	var body: some View {
 		DisclosureGroup("Document", content: {
@@ -44,12 +41,12 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 			.frame(maxWidth: .infinity, alignment: .leading)
 		})
 
-		document.ruleInfoView(document: $document, computed: computed)
+		document.ruleInfoView(document: $document, rule: rule)
 			.frame(maxWidth: .infinity, alignment: .leading)
 
 		if showAlphabet {
 			DisclosureGroup("Alphabet", isExpanded: $alphabet_expanded, content: {
-				if let rule_alphabet: ClosedRangeAlphabet<UInt32> = computed.selectedRule_alphabet {
+				if let rule_alphabet: ClosedRangeAlphabet<UInt32> = rule.alphabet {
 					let rule_alphabet_sorted: [ClosedRangeAlphabet<UInt32>.SymbolClass] = Array(rule_alphabet)
 					VStack(alignment: .leading){
 						ForEach(rule_alphabet_sorted, id: \.self) {
@@ -81,7 +78,7 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 							}.frame(maxWidth: .infinity, alignment: .leading)
 						}
 					}
-					if let content_cfg_chomskyClass {
+					if let content_cfg_chomskyClass = rule.chomskyClass {
 						GridRow(alignment: .top) {
 							Text("Chomsky Class").font(.headline).gridColumnAlignment(.trailing)
 							// Higher numbers have more limitations and more functionality:
@@ -104,7 +101,7 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 							}
 						}
 					}
-					if let content_cfg_memoryRequirements {
+					if let content_cfg_memoryRequirements = rule.memoryRequirements {
 						GridRow(alignment: .top) {
 							Text("Memory Complexity").font(.headline).gridColumnAlignment(.trailing)
 							// TODO: Can I deduplicate these labels somehow?
@@ -133,7 +130,7 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 						Text("CPU Complexity").font(.headline).gridColumnAlignment(.trailing)
 						Text("(Undetermined)")
 					}
-					if let rule_fsm = computed.selectedRule_fsm {
+					if let rule_fsm = rule.fsm {
 						GridRow(alignment: .top) {
 							Text("FSM States").font(.headline).gridColumnAlignment(.trailing)
 							Text(String(rule_fsm.states.count))

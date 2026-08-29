@@ -13,6 +13,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 	@Binding var document: Document
 	// TODO: Cache computation results with <https://developer.apple.com/documentation/Foundation/NSCache>
 	@State var computed = RulelistAnalysis()
+	@State var rule = RuleAnalysis()
 
 	// User input
  	@State private var selectedCharsetId: String = "UTF-32"
@@ -47,12 +48,12 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					Tab("Information", systemImage: "info.circle") {
 						ScrollView {
-							RuleInformationView(document: $document, computed: computed);
+							RuleInformationView(document: $document, computed: computed, rule: rule);
 						}.frame(maxWidth: .infinity)
 					}
 
 					Tab("CFG", systemImage: "translate") {
-						if let content_cfg = computed.selectedRule_cfg {
+						if let content_cfg = rule.cfg {
 							CFGContentView(grammar: content_cfg);
 						} else {
 							Text("Building CFG...")
@@ -61,7 +62,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					if showRegex {
 						Tab("Regex", systemImage: "textformat.characters.arrow.left.and.right") {
-							RegexContentView(rule_fsm: computed.selectedRule_fsm)
+							RegexContentView(rule_fsm: rule.fsm)
 						}
 					}
 
@@ -69,19 +70,19 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						// TODO: "Copy to clipboard" button
 						Tab("FSM", systemImage: "rectangle.portrait.and.arrow.right") {
 							ScrollView {
-								FSMExportView(rule_alphabet: computed.selectedRule_alphabet, rule_fsm: computed.selectedRule_fsm)
+								FSMExportView(rule_alphabet: rule.alphabet, rule_fsm: rule.fsm)
 								Spacer()
 							}
 						}
 					}
 
 					Tab("Graph", systemImage: "photo") {
-						DFAGraphPageView(rule_fsm: computed.selectedRule_fsm)
+						DFAGraphPageView(rule_fsm: rule.fsm)
 					}
 
 					Tab("Railroad", systemImage: "train.side.front.car") {
 						ScrollView([.horizontal, .vertical]) {
-							if let content_rr = computed.selectedRule_rr {
+							if let content_rr = rule.rr {
 								content_rr.view
 							} else {
 								Text("Select a rule to view its railroad diagram")
@@ -92,7 +93,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 					if showInstances {
 						Tab("Instances", systemImage: "printer.dotmatrix") {
-							InstanceGeneratorView(rule_fsm: computed.selectedRule_fsm)
+							InstanceGeneratorView(rule_fsm: rule.fsm)
 						}
 					}
 
@@ -100,9 +101,9 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						Tab("Input Testing", systemImage: "pencil") {
 							ScrollView {
 								InputTestingView(
-									rule_alphabet: computed.selectedRule_alphabet,
-									rule_fsm: computed.selectedRule_fsm,
-									content_cfg: computed.selectedRule_cfg,
+									rule_alphabet: rule.alphabet,
+									rule_fsm: rule.fsm,
+									content_cfg: rule.cfg,
 								)
 								Spacer()
 							}
@@ -160,14 +161,14 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						Text(err)
 					}
 
-					if let err = computed.selectedRule_error {
+					if let err = rule.error {
 						Text(err)
 					}
 
 					if computed.allRuleNames.isEmpty == false {
-						RuleInformationView(document: $document, computed: computed);
+						RuleInformationView(document: $document, computed: computed, rule: rule);
 
-						if let rule_fsm = computed.selectedRule_fsm {
+						if let rule_fsm = rule.fsm {
 							if showRegex {
 								DisclosureGroup("Regex", isExpanded: $regex_expanded, content: {
 									RegexContentView(rule_fsm: rule_fsm)
@@ -179,23 +180,23 @@ struct DocumentView<Document: DocumentProtocol>: View {
 							if showTestInput {
 								DisclosureGroup("Test Input", isExpanded: $test_expanded, content: {
 									InputTestingView(
-										rule_alphabet: computed.selectedRule_alphabet,
-										rule_fsm: computed.selectedRule_fsm,
-										content_cfg: computed.selectedRule_cfg,
+										rule_alphabet: rule.alphabet,
+										rule_fsm: rule.fsm,
+										content_cfg: rule.cfg,
 									)
 								})
 							}
-						} else if let rule_fsm_error = computed.selectedRule_error {
+						} else if let rule_fsm_error = rule.error {
 							Text(rule_fsm_error)
 								.foregroundColor(.red)
-						} else if computed.selectedRule_fsm != nil {
+						} else if rule.fsm != nil {
 							Text("Selected rule is recursive")
 								.foregroundColor(.gray)
 						} else {
 							Text("Building FSM...")
 								.foregroundColor(.gray)
 						}
-					} else if let rule_fsm_error = computed.selectedRule_error {
+					} else if let rule_fsm_error = rule.error {
 						Text("Parse Error: \(rule_fsm_error)")
 							.foregroundColor(.red)
 					} else {
@@ -209,18 +210,20 @@ struct DocumentView<Document: DocumentProtocol>: View {
 			}
 		} // HStack
 		.onAppear {
-			computed.selectedRulename = selectedRule ?? computed.primaryRuleName
 			document.updateParser(computed)
 		}
 		.onChange(of: document) {
-			computed.selectedRulename = selectedRule ?? computed.primaryRuleName
 			document.updateParser(computed)
 		}
 		.onChange(of: selectedRule) {
-			computed.selectedRulename = selectedRule ?? computed.primaryRuleName
-			document.updateParser(computed)
+			compileSelectedRule()
 		}
-		.onChange(of: computed.primaryRuleName) { if selectedRule == nil { selectedRule = computed.primaryRuleName } }
+		.onChange(of: computed.primaryRuleName) {
+			if selectedRule == nil { selectedRule = computed.primaryRuleName }
+		}
+		.onChange(of: computed.parseRevision) {
+			compileSelectedRule()
+		}
 		.toolbar {
 			ToolbarItem(placement: .primaryAction) {
 				Button {
@@ -241,6 +244,14 @@ struct DocumentView<Document: DocumentProtocol>: View {
 			}
 		}
 		.environment(SelectedCharset(charset: MainAppModel.charsetDict[selectedCharsetId]!))
+	}
+
+	/// Ask the document to compile whatever rule the UI currently has selected.
+	/// The editor itself does not track or compile a selected rule.
+	private func compileSelectedRule() {
+		let name = selectedRule ?? computed.primaryRuleName
+		guard let name else { return }
+		document.compileRule(name, from: computed, into: rule)
 	}
 }
 

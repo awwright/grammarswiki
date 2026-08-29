@@ -102,16 +102,33 @@ struct UnionPage: PageProtocol, Hashable, Equatable {
 		let snapshot = self;
 		parser.runUpdate {
 			let ruleName = snapshot.ruleName;
-			let refs = snapshot.operandNames.filter { $0 != ruleName };
-			let recursive = snapshot.operandNames.filter { $0 == ruleName };
 			if Task.isCancelled { return }
 			await MainActor.run {
 				parser.primaryRuleName = ruleName;
 				parser.topRuleNames = [ruleName];
 				parser.allRuleNames = [ruleName];
+				let old = parser.parsed(UnionPage.self);
+				if old != snapshot {
+					parser.parsedSource = snapshot;
+					parser.parseRevision += 1;
+				}
 			}
+		}
+	}
+
+	func compileRule(_ ruleName: String, from list: RulelistAnalysis, into rule: RuleAnalysis) {
+		guard let snapshot = list.parsed(UnionPage.self) else { return }
+		rule.runCompile(ruleName: ruleName, from: list) { revision in
+			guard ruleName == snapshot.ruleName else {
+				await MainActor.run {
+					rule.error = "Unknown rule \(ruleName)";
+					rule.compiledRevision = revision;
+				}
+				return
+			}
+			let refs = snapshot.operandNames.filter { $0 != ruleName };
+			let recursive = snapshot.operandNames.filter { $0 == ruleName };
 			let cfg = snapshot.toOpenCFG();
-			let cfga = CFGArray(cfg);
 			let rr: RailroadNode = .Diagram(
 				start: .Start(label: ruleName, attributes: [:]),
 				sequence: [snapshot.toRailroad()],
@@ -122,14 +139,15 @@ struct UnionPage: PageProtocol, Hashable, Equatable {
 			let memoryRequirements = cfg.memoryRequirements();
 			if Task.isCancelled { return }
 			await MainActor.run {
-				parser.selectedRule_cfg = cfg;
-				parser.selectedRule_cfga = cfga;
-				parser.selectedRule_rr = rr;
-				parser.selectedRule_chomskyClass = chomskyClass;
-				parser.selectedRule_memoryRequirements = memoryRequirements;
-				parser.selectedRule_dependencies = [ruleName] + refs;
-				parser.selectedRule_undefined = refs;
-				parser.selectedRule_recursive = recursive;
+				rule.cfg = cfg;
+				rule.cfga = CFGArray(cfg);
+				rule.rr = rr;
+				rule.chomskyClass = chomskyClass;
+				rule.memoryRequirements = memoryRequirements;
+				rule.dependencies = [ruleName] + refs;
+				rule.undefined = refs;
+				rule.recursive = recursive;
+				rule.compiledRevision = revision;
 			}
 		}
 	}

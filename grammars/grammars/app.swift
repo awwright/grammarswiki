@@ -371,31 +371,34 @@ protocol DocumentProtocol: LanguageSource, Hashable {
 }
 
 extension DocumentProtocol {
-	func ruleInfoView(document: Binding<Self>, computed: RulelistAnalysis) -> RuleInfoView {
-		RuleInfoView(document: document, computed: computed)
+	func ruleInfoView(document: Binding<Self>, rule: RuleAnalysis) -> RuleInfoView {
+		RuleInfoView(document: document, rule: rule)
 	}
 	func editorView(document: Binding<Self>, computed: RulelistAnalysis) -> EditorView {
 		EditorView(document: document, computed: computed)
 	}
 }
 
-/// A grammar definition that can snapshot itself onto the shared ``Parser``.
+/// A grammar definition that can snapshot itself onto a ``RulelistAnalysis``
+/// and compile a named rule onto a ``RuleAnalysis``.
 protocol LanguageSource {
-	/// Snapshot this definition and publish analysis onto `parser`.
-	/// Rule names must be written first (and independently of selected-rule artifacts).
+	/// Snapshot this definition and publish document-level analysis onto `parser`.
+	/// Rule names must be written first (and independently of compiled-rule artifacts).
 	func updateParser(_ parser: RulelistAnalysis)
+
+	/// Compile `ruleName` and publish artifacts onto `rule`.
+	/// Uses the last successful parse on `list` (does not re-parse). No-ops if `rule` was
+	/// already compiled from the current parse snapshot. `list` is also used by notebooks to find the owning page.
+	func compileRule(_ ruleName: String, from list: RulelistAnalysis, into rule: RuleAnalysis)
 }
 
-/// The sink for every ``LanguageSource``.
+/// Document-level analysis: parse errors and the set of rule names.
 ///
-/// `nil` means the property has not been computed or cannot be computed (see error if any)
+/// `nil` means the property has not been computed or cannot be computed (see error if any).
+/// A failed parse sets ``document_error`` and leaves the last successful parse in place.
 @Observable
 final class RulelistAnalysis {
-	/// Rule to compile; read by ``LanguageSource/updateParser`` when a job starts.
-	var selectedRulename: String? = nil
-
 	var document_error: String? = nil
-	var selectedRule_error: String? = nil
 	/// Zero-based line of a syntax error, when the source is line-oriented.
 	var content_parseErrorLine: Int? = nil
 
@@ -403,37 +406,104 @@ final class RulelistAnalysis {
 	var topRuleNames: Array<String> = []
 	var allRuleNames: Array<String> = []
 
-	var selectedRule_dependencies: Array<String> = []
-	var selectedRule_builtins: Array<String> = []
-	var selectedRule_undefined: Array<String> = []
-	var selectedRule_recursive: Array<String> = []
-
-	var selectedRule_alphabet: ClosedRangeAlphabet<UInt32>? = nil
-	var selectedRule_fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
-	var selectedRule_cfg: ABNFRulelist<UInt32>.CFG? = nil
-	var selectedRule_cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = nil
-	var selectedRule_rr: RailroadNode? = nil
-	var selectedRule_complexityClass: Int? = nil
-	var selectedRule_chomskyClass: Int? = nil
-	var selectedRule_memoryRequirements: Int? = nil
+	/// Last successful parse payload (LanguageSource-specific). Unchanged when parse fails.
+	var parsedSource: Any? = nil
+	/// Bumped when a successful parse replaces the snapshot. Compile records this on ``RuleAnalysis/compiledRevision``.
+	var parseRevision: Int = 0
 
 	/// Nested parsers for NoteDocument
 	var nested: Dictionary<UUID, RulelistAnalysis> = [:]
 
-	private var _task = Task<Void, Never> {}
+	private var _parseTask = Task<Void, Never> {}
 
-	deinit { _task.cancel() }
+	deinit { _parseTask.cancel() }
 
-	/// Cancel any in-flight job and run `body` as the sole update. `body` should hop to the main actor to publish fields.
+	/// Cancel any in-flight parse and run `body` as the sole document-level update.
+	/// `body` should hop to the main actor to publish fields.
 	func runUpdate(_ body: @escaping () async -> Void) {
-		_task.cancel();
-		_task = Task { await body() };
+		_parseTask.cancel();
+		_parseTask = Task { await body() };
+	}
+
+	/// Last successful parse as `T`, or `nil` if no snapshot has been stored yet.
+	func parsed<T>(_ type: T.Type) -> T? {
+		guard let parsedSource else { return nil; }
+		guard let value = parsedSource as? T else {
+			assertionFailure("RulelistAnalysis.parsedSource is \(Swift.type(of: parsedSource)), expected \(T.self)");
+			return nil;
+		}
+		return value;
+	}
+}
+
+/// Artifacts for one compiled rule.
+///
+/// `nil` means the property has not been computed or cannot be computed (see ``error`` if any).
+@Observable
+final class RuleAnalysis {
+	var rulename: String? = nil
+	var error: String? = nil
+
+	var dependencies: Array<String> = []
+	var builtins: Array<String> = []
+	var undefined: Array<String> = []
+	var recursive: Array<String> = []
+
+	var alphabet: ClosedRangeAlphabet<UInt32>? = nil
+	var fsm: DFA<ClosedRangeAlphabet<UInt32>>? = nil
+	var cfg: ABNFRulelist<UInt32>.CFG? = nil
+	var cfga: CFGArray<ClosedRangeAlphabet<UInt32>>? = nil
+	var rr: RailroadNode? = nil
+	var complexityClass: Int? = nil
+	var chomskyClass: Int? = nil
+	var memoryRequirements: Int? = nil
+
+	/// ``RulelistAnalysis/parseRevision`` this compile was produced from.
+	var compiledRevision: Int? = nil
+
+	private var _compileTask = Task<Void, Never> {}
+
+	deinit { _compileTask.cancel() }
+
+	/// Compile `ruleName` from `list`'s current snapshot, or no-op if this object already holds that result.
+	/// Same-rule recompile keeps previous artifacts until `body` publishes. `body` receives the snapshot
+	/// revision and should set ``compiledRevision`` when it finishes.
+	func runCompile(ruleName: String, from list: RulelistAnalysis, _ body: @escaping (_ revision: Int) async -> Void) {
+		let revision = list.parseRevision;
+		if rulename == ruleName && compiledRevision == revision { return }
+		let replacing = rulename != ruleName;
+		_compileTask.cancel();
+		if replacing {
+			reset(ruleName: ruleName);
+		} else {
+			rulename = ruleName;
+		}
+		_compileTask = Task { await body(revision) };
+	}
+
+	/// Drop artifacts so the UI does not show a stale rule.
+	func reset(ruleName: String?) {
+		rulename = ruleName;
+		error = nil;
+		dependencies = [];
+		builtins = [];
+		undefined = [];
+		recursive = [];
+		alphabet = nil;
+		fsm = nil;
+		cfg = nil;
+		cfga = nil;
+		rr = nil;
+		complexityClass = nil;
+		chomskyClass = nil;
+		memoryRequirements = nil;
+		compiledRevision = nil;
 	}
 }
 
 protocol RuleInfoViewBody: View {
 	associatedtype Document: DocumentProtocol
-	init(document: Binding<Document>, computed: RulelistAnalysis)
+	init(document: Binding<Document>, rule: RuleAnalysis)
 }
 
 protocol EditorViewBody: View {

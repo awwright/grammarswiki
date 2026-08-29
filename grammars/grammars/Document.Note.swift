@@ -133,6 +133,10 @@ struct Page: Identifiable, Hashable {
 		box.updateParser(parser)
 	}
 
+	func compileRule(_ ruleName: String, from list: RulelistAnalysis, into rule: RuleAnalysis) {
+		box.compileRule(ruleName, from: list, into: rule)
+	}
+
 	/// Cast the erased payload to a concrete ``PageProtocol`` type.
 	fileprivate func unwrap<T: PageProtocol>(_ type: T.Type) -> T? {
 		box as? T
@@ -147,8 +151,7 @@ struct Page: Identifiable, Hashable {
 	}
 }
 
-/// Hosts a document's standalone ``EditorView`` with a privately owned ``Parser``.
-/// Default notebook embed for types that are both ``DocumentProtocol`` and ``PageProtocol``.
+/// Hosts a document's standalone ``EditorView`` with a privately owned ``RulelistAnalysis``.
 struct PageDocumentEditor<Document: DocumentProtocol>: View {
 	@Binding var document: Document
 	@State private var computed = RulelistAnalysis()
@@ -322,7 +325,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 	struct RuleInfoView: RuleInfoViewBody {
 		@Binding var document: NoteDocument
-		let computed: RulelistAnalysis
+		let rule: RuleAnalysis
 		var body: some View {
 			DisclosureGroup("Notebook Properties", content: {
 				Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
@@ -369,6 +372,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			withObservationTracking {
 				_ = child.allRuleNames;
 				_ = child.topRuleNames;
+				_ = child.parseRevision;
 			} onChange: {
 				DispatchQueue.main.async {
 					guard parent.nested[id] === child else { return }
@@ -378,9 +382,40 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 					parent.allRuleNames = all;
 					parent.topRuleNames = tops;
 					if parent.primaryRuleName == nil || parent.primaryRuleName == oldFirst {
-						parent.primaryRuleName = all.first;
+						parent.primaryRuleName = start.isEmpty ? all.first : start;
 					}
+					parent.parseRevision += 1;
 					observeChild(parent: parent, id: id, child: child);
+				}
+			}
+		}
+	}
+
+	func compileRule(_ ruleName: String, from list: RulelistAnalysis, into rule: RuleAnalysis) {
+		if pages.isEmpty {
+			failUnknown();
+			return;
+		}
+
+		// Only compile against a page's own analysis — never the notebook parent (it has no page snapshot).
+		if let page = pages.first(where: { list.nested[$0.id]?.allRuleNames.contains(ruleName) == true }),
+		   let child = list.nested[page.id] {
+			page.compileRule(ruleName, from: child, into: rule);
+			return;
+		}
+
+		let nestedReady = pages.allSatisfy { list.nested[$0.id] != nil }
+		let namesPublished = list.nested.values.contains { $0.allRuleNames.isEmpty == false }
+		if nestedReady && namesPublished {
+			failUnknown();
+			return;
+		}
+
+		func failUnknown() {
+			rule.runCompile(ruleName: ruleName, from: list) { revision in
+				await MainActor.run {
+					rule.error = "Unknown rule \(ruleName)"
+					rule.compiledRevision = revision
 				}
 			}
 		}

@@ -291,7 +291,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 	// MARK: Rule info
 	struct RuleInfoView: RuleInfoViewBody {
 		@Binding var document: CFGDocument
-		let computed: RulelistAnalysis
+		let rule: RuleAnalysis
 		var body: some View { EmptyView() }
 	}
 
@@ -320,7 +320,6 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 
 	func updateParser(_ parser: RulelistAnalysis) {
 		let snapshot = self
-		let selectedRulename = parser.selectedRulename
 		parser.runUpdate {
 			var seenAll = Set<String>();
 			var all: [String] = [];
@@ -336,15 +335,37 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 				parser.primaryRuleName = primary
 				parser.topRuleNames = tops
 				parser.allRuleNames = all
+				let old = parser.parsed(Array<Production>.self)
+				if old != snapshot.productions {
+					parser.parsedSource = snapshot.productions
+					parser.parseRevision += 1
+				}
 			}
-			let cfg = snapshot.toCFG(startRule: selectedRulename ?? primary)
+		}
+	}
+
+	func compileRule(_ ruleName: String, from list: RulelistAnalysis, into rule: RuleAnalysis) {
+		guard let productions = list.parsed(Array<Production>.self) else { return }
+		var compileSource = self
+		compileSource.productions = productions
+		rule.runCompile(ruleName: ruleName, from: list) { revision in
+			if compileSource.productions.contains(where: { $0.name == ruleName }) == false {
+				await MainActor.run {
+					rule.error = "Unknown rule \(ruleName)"
+					rule.compiledRevision = revision
+				}
+				return
+			}
+			let cfg = compileSource.toCFG(startRule: ruleName)
 			let empty = cfg.productions.isEmpty
 			if Task.isCancelled { return }
 			await MainActor.run {
-				parser.selectedRule_cfg = empty ? nil : cfg
-				parser.selectedRule_cfga = empty ? nil : CFGArray(cfg)
-				parser.selectedRule_chomskyClass = empty ? nil : cfg.chomskyClass()
-				parser.selectedRule_memoryRequirements = empty ? nil : cfg.memoryRequirements()
+				rule.error = empty ? "Unknown rule \(ruleName)" : nil
+				rule.cfg = empty ? nil : cfg
+				rule.cfga = empty ? nil : CFGArray(cfg)
+				rule.chomskyClass = empty ? nil : cfg.chomskyClass()
+				rule.memoryRequirements = empty ? nil : cfg.memoryRequirements()
+				rule.compiledRevision = revision
 			}
 		}
 	}
