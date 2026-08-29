@@ -196,6 +196,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		ABNFDocument.xmlElementName: { Page(try ABNFDocument(xmlElement: $0)) },
 		CFGDocument.xmlElementName: { Page(try CFGDocument(xmlElement: $0)) },
 		FCDocument.xmlElementName: { Page(try FCDocument(xmlElement: $0)) },
+		UnionPage.xmlElementName: { Page(try UnionPage(xmlElement: $0)) },
 	]
 
 	init(configuration: ReadConfiguration) throws {
@@ -303,6 +304,11 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 						Button("Finite Choice") {
 							var d = FCDocument();
 							d.name = "fc\(document.pages.count + 1)";
+							document.pages.append(Page(d));
+						}
+						Button("Union") {
+							var d = UnionPage();
+							d.name = "union\(document.pages.count + 1)";
 							document.pages.append(Page(d));
 						}
 					} label: {
