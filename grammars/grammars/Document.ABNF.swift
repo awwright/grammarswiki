@@ -103,7 +103,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 
 	struct EditorView: EditorViewBody {
 		@Binding var document: ABNFDocument
-		let computed: GrammarAnalysis
+		let computed: RulelistAnalysis
 
 		// Code editor variables
 		@State private var position: CodeEditor.Position       = CodeEditor.Position()
@@ -176,7 +176,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 
 	struct RuleInfoView: EditorViewBody {
 		@Binding var document: ABNFDocument
-		let computed: GrammarAnalysis
+		let computed: RulelistAnalysis
 
 		@AppStorage("expandedRule_deps") private var rule_deps_expanded = true
 		@AppStorage("expandedRule_builtin") private var rule_builtin_expanded = true
@@ -211,7 +211,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 
 	private static let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() }
 
-	func updateParser(_ parser: GrammarAnalysis) {
+	func updateParser(_ parser: RulelistAnalysis) {
 		let content = self.content;
 		let documentName = self.name;
 		let selectedRulename = parser.selectedRulename;

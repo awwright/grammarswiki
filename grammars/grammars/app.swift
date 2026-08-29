@@ -371,10 +371,10 @@ protocol DocumentProtocol: LanguageSource, Hashable {
 }
 
 extension DocumentProtocol {
-	func ruleInfoView(document: Binding<Self>, computed: GrammarAnalysis) -> RuleInfoView {
+	func ruleInfoView(document: Binding<Self>, computed: RulelistAnalysis) -> RuleInfoView {
 		RuleInfoView(document: document, computed: computed)
 	}
-	func editorView(document: Binding<Self>, computed: GrammarAnalysis) -> EditorView {
+	func editorView(document: Binding<Self>, computed: RulelistAnalysis) -> EditorView {
 		EditorView(document: document, computed: computed)
 	}
 }
@@ -383,14 +383,14 @@ extension DocumentProtocol {
 protocol LanguageSource {
 	/// Snapshot this definition and publish analysis onto `parser`.
 	/// Rule names must be written first (and independently of selected-rule artifacts).
-	func updateParser(_ parser: GrammarAnalysis)
+	func updateParser(_ parser: RulelistAnalysis)
 }
 
 /// The sink for every ``LanguageSource``.
 ///
 /// `nil` means the property has not been computed or cannot be computed (see error if any)
 @Observable
-final class GrammarAnalysis {
+final class RulelistAnalysis {
 	/// Rule to compile; read by ``LanguageSource/updateParser`` when a job starts.
 	var selectedRulename: String? = nil
 
@@ -418,7 +418,7 @@ final class GrammarAnalysis {
 	var selectedRule_memoryRequirements: Int? = nil
 
 	/// Nested parsers for NoteDocument
-	var nested: Dictionary<UUID, GrammarAnalysis> = [:]
+	var nested: Dictionary<UUID, RulelistAnalysis> = [:]
 
 	private var _task = Task<Void, Never> {}
 
@@ -433,7 +433,7 @@ final class GrammarAnalysis {
 
 protocol EditorViewBody: View {
 	associatedtype Document: DocumentProtocol
-	init(document: Binding<Document>, computed: GrammarAnalysis)
+	init(document: Binding<Document>, computed: RulelistAnalysis)
 }
 
 extension FocusedValues {

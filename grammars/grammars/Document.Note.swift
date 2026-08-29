@@ -129,7 +129,7 @@ struct Page: Identifiable, Hashable {
 		try box.erasedMakeXMLElement()
 	}
 
-	func updateParser(_ parser: GrammarAnalysis) {
+	func updateParser(_ parser: RulelistAnalysis) {
 		box.updateParser(parser)
 	}
 
@@ -151,7 +151,7 @@ struct Page: Identifiable, Hashable {
 /// Default notebook embed for types that are both ``DocumentProtocol`` and ``PageProtocol``.
 struct PageDocumentEditor<Document: DocumentProtocol>: View {
 	@Binding var document: Document
-	@State private var computed = GrammarAnalysis()
+	@State private var computed = RulelistAnalysis()
 
 	var body: some View {
 		Document.EditorView(document: $document, computed: computed)
@@ -253,7 +253,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 	struct EditorView: EditorViewBody {
 		@Binding var document: NoteDocument
-		let computed: GrammarAnalysis
+		let computed: RulelistAnalysis
 
 		var body: some View {
 			ScrollView {
@@ -322,7 +322,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 
 	struct RuleInfoView: EditorViewBody {
 		@Binding var document: NoteDocument
-		let computed: GrammarAnalysis
+		let computed: RulelistAnalysis
 		var body: some View {
 			DisclosureGroup("Notebook Properties", content: {
 				Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
@@ -341,11 +341,11 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		}
 	}
 
-	func updateParser(_ parser: GrammarAnalysis) {
+	func updateParser(_ parser: RulelistAnalysis) {
 		let previous = parser.nested;
-		var next: Dictionary<UUID, GrammarAnalysis> = [:];
+		var next: Dictionary<UUID, RulelistAnalysis> = [:];
 		for page in pages {
-			let child = previous[page.id] ?? GrammarAnalysis();
+			let child = previous[page.id] ?? RulelistAnalysis();
 			let isNew = previous[page.id] == nil;
 			page.updateParser(child);
 			next[page.id] = child;
@@ -356,7 +356,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		parser.nested = next;
 		publish(parser, start: start);
 
-		func publish(_ parser: GrammarAnalysis, start: String) {
+		func publish(_ parser: RulelistAnalysis, start: String) {
 			let all = pages.flatMap { parser.nested[$0.id]?.allRuleNames ?? [] };
 			let tops = pages.flatMap { parser.nested[$0.id]?.topRuleNames ?? [] };
 			parser.allRuleNames = all;
@@ -365,7 +365,7 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		}
 
 		/// When a child publishes an update, refresh the aggregation
-		func observeChild(parent: GrammarAnalysis, id: UUID, child: GrammarAnalysis) {
+		func observeChild(parent: RulelistAnalysis, id: UUID, child: RulelistAnalysis) {
 			withObservationTracking {
 				_ = child.allRuleNames;
 				_ = child.topRuleNames;

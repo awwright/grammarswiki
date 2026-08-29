@@ -98,7 +98,7 @@ struct UnionPage: PageProtocol, Hashable, Equatable {
 		UnionPageEditor(page: page)
 	}
 
-	func updateParser(_ parser: GrammarAnalysis) {
+	func updateParser(_ parser: RulelistAnalysis) {
 		let snapshot = self;
 		parser.runUpdate {
 			let ruleName = snapshot.ruleName;

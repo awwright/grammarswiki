@@ -12,7 +12,7 @@ import FSM
 struct DocumentView<Document: DocumentProtocol>: View {
 	@Binding var document: Document
 	// TODO: Cache computation results with <https://developer.apple.com/documentation/Foundation/NSCache>
-	@State var computed = GrammarAnalysis()
+	@State var computed = RulelistAnalysis()
 
 	// User input
  	@State private var selectedCharsetId: String = "UTF-32"
@@ -246,7 +246,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 struct StartRulePicker: View {
 	let title: String
-	let computed: GrammarAnalysis
+	let computed: RulelistAnalysis
 	@Binding var selection: String?
 	var body: some View {
 		Picker(title, selection: $selection) {

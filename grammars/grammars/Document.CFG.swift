@@ -206,7 +206,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 
 	struct EditorView: EditorViewBody {
 		@Binding var document: CFGDocument
-		let computed: GrammarAnalysis
+		let computed: RulelistAnalysis
 
 		// Placeholder for empty value
 		private let kEmpty = "<empty>"
@@ -291,7 +291,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 	// MARK: Rule info
 	struct RuleInfoView: EditorViewBody {
 		@Binding var document: CFGDocument
-		let computed: GrammarAnalysis
+		let computed: RulelistAnalysis
 		var body: some View { EmptyView() }
 	}
 
@@ -318,7 +318,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 		CFGArray(toCFG(startRule: startRule))
 	}
 
-	func updateParser(_ parser: GrammarAnalysis) {
+	func updateParser(_ parser: RulelistAnalysis) {
 		let snapshot = self
 		let selectedRulename = parser.selectedRulename
 		parser.runUpdate {
