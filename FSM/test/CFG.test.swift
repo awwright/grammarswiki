@@ -280,12 +280,11 @@ import Testing
 				"B": [[.terminal("y")]],
 			];
 			let cleaned = g.eliminateUnitProduction();
-			#expect(cleaned.productions[0] == .init(name: "S", body: [.terminal("x")]))
-			#expect(cleaned.productions[1] == .init(name: "S", body: [.terminal("y")]))
-			#expect(cleaned.productions[2] == .init(name: "A", body: [.terminal("x")]))
-			#expect(cleaned.productions[3] == .init(name: "A", body: [.terminal("y")]))
-			#expect(cleaned.productions[4] == .init(name: "B", body: [.terminal("y")]))
+			#expect(cleaned.rules["S"] == [ [.terminal("x")], [.terminal("y")] ])
+			#expect(cleaned.rules["A"] == [ [.terminal("x")], [.terminal("y")] ])
+			#expect(cleaned.rules["B"] == [ [.terminal("y")] ])
 			// No units remain
+			#expect(cleaned.rules.count == 3)
 			#expect(cleaned.productions.count == 5)
 		}
 	}
