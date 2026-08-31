@@ -102,11 +102,20 @@ struct UnionPage: PageProtocol, Hashable, Equatable {
 		let snapshot = self;
 		parser.runUpdate {
 			let ruleName = snapshot.ruleName;
+			let operands: [String] = {
+				var operands: [String] = [];
+				var seen = Set<String>();
+				for name in snapshot.operandNames {
+					if seen.insert(name).inserted { operands.append(name) }
+				}
+				return operands;
+			}();
 			if Task.isCancelled { return }
 			await MainActor.run {
 				parser.primaryRuleName = ruleName;
 				parser.topRuleNames = [ruleName];
 				parser.allRuleNames = [ruleName];
+				parser.referencedRuleNames = [ruleName: operands];
 				let old = parser.parsed(UnionPage.self);
 				if old != snapshot {
 					parser.parsedSource = snapshot;

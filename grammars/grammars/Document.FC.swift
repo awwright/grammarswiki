@@ -115,6 +115,7 @@ struct FCDocument: PageProtocol, Hashable, Equatable {
 				parser.primaryRuleName = ruleName;
 				parser.topRuleNames = [ruleName];
 				parser.allRuleNames = [ruleName];
+				parser.referencedRuleNames = [ruleName: []];
 				let old = parser.parsed(FCDocument.self);
 				if old != snapshot {
 					parser.parsedSource = snapshot;

@@ -362,8 +362,24 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 		func publish(_ parser: RulelistAnalysis, start: String) {
 			let all = pages.flatMap { parser.nested[$0.id]?.allRuleNames ?? [] };
 			let tops = pages.flatMap { parser.nested[$0.id]?.topRuleNames ?? [] };
+			var referenced: Dictionary<String, Array<String>> = [:];
+			var seenRefs: Dictionary<String, Set<String>> = [:];
+			for page in pages {
+				for (name, refs) in parser.nested[page.id]?.referencedRuleNames ?? [:] {
+					if referenced[name] == nil {
+						referenced[name] = [];
+						seenRefs[name] = [];
+					}
+					for ref in refs {
+						if seenRefs[name, default: []].insert(ref).inserted {
+							referenced[name, default: []].append(ref);
+						}
+					}
+				}
+			}
 			parser.allRuleNames = all;
 			parser.topRuleNames = tops;
+			parser.referencedRuleNames = referenced;
 			parser.primaryRuleName = start.isEmpty ? all.first : start;
 		}
 
@@ -372,17 +388,15 @@ struct NoteDocument: DocumentProtocol, Hashable, Equatable, FileDocument {
 			withObservationTracking {
 				_ = child.allRuleNames;
 				_ = child.topRuleNames;
+				_ = child.referencedRuleNames;
 				_ = child.parseRevision;
 			} onChange: {
 				DispatchQueue.main.async {
 					guard parent.nested[id] === child else { return }
 					let oldFirst = parent.allRuleNames.first;
-					let all = pages.flatMap { parser.nested[$0.id]?.allRuleNames ?? [] };
-					let tops = pages.flatMap { parser.nested[$0.id]?.topRuleNames ?? [] };
-					parent.allRuleNames = all;
-					parent.topRuleNames = tops;
+					publish(parent, start: start);
 					if parent.primaryRuleName == nil || parent.primaryRuleName == oldFirst {
-						parent.primaryRuleName = start.isEmpty ? all.first : start;
+						parent.primaryRuleName = start.isEmpty ? parent.allRuleNames.first : start;
 					}
 					parent.parseRevision += 1;
 					observeChild(parent: parent, id: id, child: child);

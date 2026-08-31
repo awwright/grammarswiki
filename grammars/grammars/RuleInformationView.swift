@@ -14,8 +14,29 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 
 	@State private var fsm_expanded = true
 
+	/// Document rules: selected first, then depth-first from that rule, then leftover `allRuleNames` order.
+	private var ruleReferenceOrder: [String] {
+		var order: [String] = [];
+		var seen = Set<String>();
+		func dfs(_ name: String) {
+			guard computed.allRuleNames.contains(name) else { return }
+			if seen.insert(name).inserted == false { return }
+			order.append(name);
+			for ref in computed.referencedRuleNames[name] ?? [] {
+				dfs(ref);
+			}
+		}
+		if let start = rule.rulename {
+			dfs(start);
+		}
+		for name in computed.allRuleNames {
+			if seen.insert(name).inserted { order.append(name) }
+		}
+		return order;
+	}
+
 	var body: some View {
-		DisclosureGroup("Document", content: {
+		DisclosureGroup("Document Rule List", content: {
 			Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
 				GridRow(alignment: .top) {
 					Text("Top rules").font(.headline).gridColumnAlignment(.trailing)
@@ -35,6 +56,37 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 						}
 					}
 					//Text(String(computed.allRuleNames.joined(separator: ", ")))
+				}
+			}
+			.padding()
+			.frame(maxWidth: .infinity, alignment: .leading)
+		})
+		DisclosureGroup("Document Rule References", content: {
+			Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
+				ForEach(ruleReferenceOrder, id: \.self) { name in
+					GridRow(alignment: .top) {
+						Text(name).font(.headline).gridColumnAlignment(.trailing)
+						VStack(alignment: .leading) {
+							let refs = computed.referencedRuleNames[name] ?? [];
+							if refs.isEmpty {
+								Text("—").foregroundStyle(.secondary)
+							} else {
+								ForEach(refs, id: \.self) { ref in
+									let defined = computed.allRuleNames.contains(ref);
+									HStack(spacing: 4) {
+										Text(ref)
+										// TODO: Also indicate if this rule name is ambiguous, e.g. defined by multiple rules
+										// For example, if an ABNF document defines "char", then this rule would be ambiguous with the builtin "char"
+										if defined == false {
+											Image(systemName: "questionmark.circle.dashed")
+										}
+									}
+									.foregroundStyle(defined ? Color.primary : Color.orange)
+									.help(defined ? "" : "No definition in this document")
+								}
+							}
+						}
+					}
 				}
 			}
 			.padding()

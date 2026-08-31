@@ -329,12 +329,29 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 				if seenAll.insert(p.name).inserted { all.append(p.name) }
 				if p.top, seenTops.insert(p.name).inserted { tops.append(p.name) }
 			}
+			var referencedRuleNames: Dictionary<String, Array<String>> = {
+				var referencedRuleNames: Dictionary<String, Array<String>> = [:];
+				var seenRefs: Dictionary<String, Set<String>> = [:];
+				for name in all {
+					referencedRuleNames[name] = [];
+				}
+				for p in snapshot.productions {
+					for element in p.body {
+						guard case .nonterminal(let name) = element, name.isEmpty == false else { continue }
+						if seenRefs[p.name, default: []].insert(name).inserted {
+							referencedRuleNames[p.name, default: []].append(name)
+						}
+					}
+				}
+				return referencedRuleNames;
+			}();
 			let primary = snapshot.productions.first?.name
 			if Task.isCancelled { return }
 			await MainActor.run {
 				parser.primaryRuleName = primary
 				parser.topRuleNames = tops
 				parser.allRuleNames = all
+				parser.referencedRuleNames = referencedRuleNames
 				let old = parser.parsed(Array<Production>.self)
 				if old != snapshot.productions {
 					parser.parsedSource = snapshot.productions

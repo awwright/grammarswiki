@@ -402,9 +402,14 @@ final class RulelistAnalysis {
 	/// Zero-based line of a syntax error, when the source is line-oriented.
 	var content_parseErrorLine: Int? = nil
 
+	/// Default rule to pick from this rule list
 	var primaryRuleName: String? = nil
+	/// All rules intended for export (reference from outside)
 	var topRuleNames: Array<String> = []
+	/// All rules this grammar uses (for reference from inside)
 	var allRuleNames: Array<String> = []
+	/// Direct references of each defined rule, in first-seen order (including locals, imports, and builtins).
+	var referencedRuleNames: Dictionary<String, Array<String>> = [:]
 
 	/// Last successful parse payload (LanguageSource-specific). Unchanged when parse fails.
 	var parsedSource: Any? = nil

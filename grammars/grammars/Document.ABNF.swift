@@ -230,6 +230,23 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 				let primaryRuleName = orderedRules.first;
 				// FIXME: This shouldn't filter out recursive references
 				let topRuleNames = orderedRules.filter { !rulelist.referencedRules.contains($0) };
+				let referencedRuleNames: Dictionary<String, Array<String>> = {
+					var referencedRuleNames: Dictionary<String, Array<String>> = [:];
+					var seenRefs: Dictionary<String, Set<String>> = [:];
+					for name in orderedRules {
+						referencedRuleNames[name] = [];
+						seenRefs[name] = [];
+					}
+					for rule in rulelist.rules {
+						let name = rule.rulename.id;
+						for ref in rule.referencedRules {
+							if seenRefs[name, default: []].insert(ref).inserted {
+								referencedRuleNames[name, default: []].append(ref);
+							}
+						}
+					}
+					return referencedRuleNames;
+				}();
 				let parsed = ABNFParsedSource(rulelist: rulelist, documentName: documentName, content: parseInput);
 				await MainActor.run {
 					parser.document_error = nil;
@@ -237,6 +254,7 @@ struct ABNFDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDo
 					parser.primaryRuleName = primaryRuleName;
 					parser.topRuleNames = topRuleNames;
 					parser.allRuleNames = orderedRules;
+					parser.referencedRuleNames = referencedRuleNames;
 					parser.parsedSource = parsed;
 					parser.parseRevision += 1;
 				}
