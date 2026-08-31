@@ -64,16 +64,51 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		}
 	}
 
+	/// Set of variable symbols to use as start symbols
 	public var start: Array<Variable>
-	public var productions: Array<Production>
 
-	public var dictionary: Dictionary<Variable, Array<Production>> {
-		return Dictionary(grouping: self.productions, by: \.name);
+	/// Alternatives of each **defined** rule, keyed by rule name.
+	///
+	/// - A key mapped to an **empty array** is a defined rule whose language is empty (no strings).
+	/// - A **missing** key is an undefined name (a hole / external reference).
+	/// - A key mapped to `[[]]` is the epsilon language (one empty production).
+	public var rules: Dictionary<Variable, Array<Alternative>>
+
+	/// List of productions, flattened from ``rules``
+	public var productions: Array<Production> {
+		get {
+			var result: [Production] = [];
+			var emitted = Set<Variable>();
+			for v in start {
+				if let alts = rules[v], emitted.insert(v).inserted {
+					result.append(contentsOf: alts.map { Production(name: v, body: $0) });
+				}
+			}
+			for (name, alts) in rules {
+				if emitted.insert(name).inserted {
+					result.append(contentsOf: alts.map { Production(name: name, body: $0) });
+				}
+			}
+			return result;
+		}
+		set {
+			self.rules = Self.makeRules(start: start, productions: newValue);
+		}
+	}
+
+	private static func makeRules(start: [Variable], productions: [Production]) -> Dictionary<Variable, Array<Alternative>> {
+		var rules: Dictionary<Variable, Array<Alternative>> = [:];
+		for v in start {
+			if rules[v] == nil { rules[v] = []; }
+		}
+		for p in productions {
+			rules[p.name, default: []].append(p.body);
+		}
+		return rules;
 	}
 
 	/// Get the list of used rule names in breadth-first order from the start symbol
 	public var ruleNames: Array<Variable> {
-		let rules = self.dictionary;
 		var visited = Set<Variable>()
 		var queue = start;
 		var referencedNames = [Variable]()
@@ -82,9 +117,9 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			if visited.contains(current) { continue }
 			visited.insert(current)
 			referencedNames.append(current)
-			if let rulesForCurrent = rules[current] {
-				for rule in rulesForCurrent {
-					for symbol in rule.body {
+			if let alts = rules[current] {
+				for alt in alts {
+					for symbol in alt {
 						if case .nonterminal(let name) = symbol {
 							if !visited.contains(name) && !queue.contains(name) {
 								queue.append(name);
@@ -98,9 +133,8 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		return rules.keys.sorted { (ordering[$0] ?? Int.max) < (ordering[$1] ?? Int.max) }
 	}
 
-	/// Get the list of used rule names in breadth-first order from the start symbol
+	/// Get the list of used rule names in depth-first order from the start symbol
 	public var ruleNamesDepthFirst: Array<Variable> {
-		let rules = self.dictionary;
 		var visited = Set<Variable>()
 		var stack = Array(start.reversed())   // LIFO stack; reverse so first start symbol is processed first
 		var referencedNames = [Variable]()
@@ -108,10 +142,10 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			if visited.contains(current) { continue }
 			visited.insert(current)
 			referencedNames.append(current)
-			if let rulesForCurrent = rules[current] {
+			if let alts = rules[current] {
 				// Push in reverse so the leftmost child is popped next (pre-order DFS)
-				for rule in rulesForCurrent.reversed() {
-					for symbol in rule.body.reversed() {
+				for alt in alts.reversed() {
+					for symbol in alt.reversed() {
 						if case .nonterminal(let name) = symbol {
 							if !visited.contains(name) && !stack.contains(name) {
 								stack.append(name);
@@ -125,42 +159,60 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		return rules.keys.sorted { (ordering[$0] ?? Int.max) < (ordering[$1] ?? Int.max) }
 	}
 
-	/// Produce the empty language
+	/// Produce the empty language with no defined rules.
 	public init() {
-		// If no rule exists for the starting nonterminal, that's not an error, that just means the language is the empty set.
 		self.start = [];
-		self.productions = []
+		self.rules = [:];
 	}
 
-	/// Createa a context-free grammar with the given rules and starting rule
+	/// Create a context-free grammar with the given rules and starting rule.
+	/// The start symbol is always defined; if it has no productions, its language is empty.
 	public init(start: Variable, productions: [Production]) {
-		self.start = [start]
-		self.productions = productions
-		// For the sake of bug catching, we usually want the starting rule to have at least one production when using this constructor.
-		// FIXME: actually maybe this is too aggressive, lots of code likes creating empty languages for some reason
-		//assert(rules.contains(where: { $0.name == start }))
+		self.start = [start];
+		self.rules = Self.makeRules(start: self.start, productions: productions);
 	}
 
-	/// Createa a context-free grammar with the given rules and starting rules
+	/// Create a context-free grammar with the given rules and starting rules.
+	/// Every start symbol is defined; missing productions mean the empty language, not an undefined name.
 	public init(startSet: [Variable], productions: [Production]) {
 		self.start = startSet;
-		self.productions = productions;
+		self.rules = Self.makeRules(start: startSet, productions: productions);
+	}
+
+	/// Create a grammar from a dictionary of defined rules. `"S": []` is the empty language for `S`.
+	public init(start: Variable, rules: Dictionary<Variable, Array<Alternative>>) {
+		self.start = [start];
+		var rules = rules;
+		if rules[start] == nil { rules[start] = []; }
+		self.rules = rules;
+	}
+
+	public init(startSet: [Variable], rules: Dictionary<Variable, Array<Alternative>>) {
+		self.start = startSet;
+		var rules = rules;
+		for v in startSet {
+			if rules[v] == nil { rules[v] = []; }
+		}
+		self.rules = rules;
 	}
 
 	public typealias Key = Variable
 	public typealias Value = Array<Array<BodyElement>>
 	public init(dictionaryLiteral elements: (Variable, Array<Array<BodyElement>>)...) {
-		if elements.isEmpty { self.start = []; self.productions = []; return; }
+		if elements.isEmpty { self.start = []; self.rules = [:]; return; }
 		self.start = [elements.first!.0];
-		self.productions = elements.flatMap { (name, productions) in productions.map { .init(name: name, body: $0) } };
+		var rules: Dictionary<Variable, Array<Alternative>> = [:];
+		for (name, alts) in elements {
+			rules[name, default: []].append(contentsOf: alts);
+		}
+		self.rules = rules;
 	}
 
 	public typealias ArrayLiteralElement = Production
 	public init(arrayLiteral elements: Production...) {
-		if elements.isEmpty { self.start = []; self.productions = []; return; }
+		if elements.isEmpty { self.start = []; self.rules = [:]; return; }
 		self.start = [elements.first!.name];
-		self.productions = elements;
-
+		self.rules = Self.makeRules(start: self.start, productions: elements);
 	}
 
 	/// Recognise (accept or reject) the given string as being in the grammar
@@ -180,7 +232,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		let start: Array<Variable>;
 		var len: Int
 		var i: Int = 0
-		var dict: Dictionary<Variable, Array<Production>>
+		var dict: Dictionary<Variable, Array<Alternative>>
 		var expectedVariables: Array<Array<ParseStateItem>>
 		var expectedVariablesDict: Array<Dictionary<Variable, Array<ParseStateItem>>>
 		var expectedSymbols: Array<Array<ParseStateItem>>
@@ -223,19 +275,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 
 		/// Create a parser for the given grammar parsing the empty string
 		init(grammar: CFGNamed) {
-			self.grammar = grammar;
-			dict = grammar.dictionary;
-			start = grammar.start;
-			len = 0;
-			expectedVariables = Array(repeating: [], count: len + 1);
-			expectedVariablesDict = Array(repeating: [:], count: len + 1);
-			expectedSymbols = Array(repeating: [], count: len + 1);
-			completed = Array(repeating: [], count: len + 1);
-			// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
-			for prod in (grammar.start.flatMap{ dict[$0] ?? [] }) {
-				// Can ignore the return result of this, the completer will get re-run at least once
-				addChart(i: 0, item: ParseStateItem(production: prod, progress: 0, offset: 0));
-			}
+			self.init(grammar: grammar, len: 0);
 		}
 
 		/// Create a parser for the given grammar, parsing a string of the given length.
@@ -243,7 +283,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		/// The string can be provided by calling ``parseSymbol(_:)`` and signaling EOF with `parseSymbol(nil)`
 		init(grammar: CFGNamed, len: Int) {
 			self.grammar = grammar;
-			dict = grammar.dictionary;
+			dict = grammar.rules;
 			start = grammar.start;
 			self.len = len;
 			expectedVariables = Array(repeating: [], count: len + 1);
@@ -251,9 +291,10 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 			expectedSymbols = Array(repeating: [], count: len + 1);
 			completed = Array(repeating: [], count: len + 1);
 			// Seed chart[0] with all productions for the start symbol (dot at 0, origin 0)
-			for prod in (grammar.start.flatMap{ dict[$0] ?? [] }) {
-				// Can ignore the return result of this, the completer will get re-run at least once
-				addChart(i: 0, item: ParseStateItem(production: prod, progress: 0, offset: 0));
+			for name in grammar.start {
+				for alt in dict[name] ?? [] {
+					addChart(i: 0, item: ParseStateItem(production: Production(name: name, body: alt), progress: 0, offset: 0));
+				}
 			}
 		}
 
@@ -302,8 +343,8 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				while j < expectedVariables[i].count {
 					let item = expectedVariables[i][j];
 					guard let expecting = item.expecting, case .nonterminal(let name) = expecting else { fatalError() }
-					for prod in dict[name, default: []] {
-						let predicted = ParseStateItem(production: prod, progress: 0, offset: i);
+					for alt in dict[name, default: []] {
+						let predicted = ParseStateItem(production: Production(name: name, body: alt), progress: 0, offset: i);
 						if addChart(i: i, item: predicted) { added = true; }
 					}
 					j += 1;
@@ -483,7 +524,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	///
 	/// Keep in mind this will also change left tail recursion to the right, etc
 	public func reversed() -> Self {
-		Self(startSet: start, productions: productions.map { $0.reversed() })
+		Self(startSet: start, rules: rules.mapValues { alts in alts.map { Array($0.reversed()) } })
 	}
 
 	// TODO: Implement a simple forest parser (returns a parse forest)
@@ -494,19 +535,18 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	/// It may double-count some strings in the language, but reliably determines if a finite cardinality is in fact finite.
 	public func maxCardinality() -> Int? {
 		// TODO: Add this feature to DFA and RE
-		let dict = self.dictionary
 
 		// Build dependency ordering (like toPattern); detect cycles during computation
 		var ordering = start;
 		var i = 0
 		while i < ordering.count {
 			let current = ordering[i];
-			guard let prods = dict[current], !prods.isEmpty else {
+			guard let alts = rules[current], !alts.isEmpty else {
 				i += 1;
 				continue;
 			}
-			for prod in prods {
-				for sym in prod.body {
+			for alt in alts {
+				for sym in alt {
 					if case .nonterminal(let name) = sym, !ordering.contains(name) {
 						ordering.append(name);
 					}
@@ -517,17 +557,16 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 
 		// Compute cardinalities bottom-up
 		var intermediate: [Variable: Int] = [:];
-		let definitions = dict;
 		for name in ordering.reversed() {
-			guard let prods = definitions[name], !prods.isEmpty else {
+			guard let alts = rules[name], !alts.isEmpty else {
 				intermediate[name] = 0;
 				continue;
 			}
 			var total = 0;
-			for prod in prods {
+			for alt in alts {
 				// Start with the multiplicative identity
 				var prodCard = 1;
-				for elem in prod.body {
+				for elem in alt {
 					switch elem {
 					case .nonterminal(let nt):
 						guard let p = intermediate[nt] else {
@@ -559,15 +598,15 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	/// - 4: Finite
 	public func chomskyClass() -> Int {
 		// If the CFG has no cycles, then it is finite
-		let dict = self.dictionary;
+		let dict = self.rules;
 		var all = Set(self.start);
 		var queue = self.start;
 		// FIXME: Need to detect and eliminate epsilon-productions and unit productions, which will false-negative a finite grammar
 		while let current = queue.popLast() {
 			let previous_seen = all;
-			if let prods = dict[current] {
-				for prod in prods {
-					for sym in prod.body {
+			if let alts = dict[current] {
+				for alt in alts {
+					for sym in alt {
 						if case .nonterminal(let name) = sym {
 							if previous_seen.contains(name) {
 								return 2;
@@ -601,16 +640,15 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 
 	/// Eliminate rules that are never used
 	public func eliminateUseless() -> Self {
-		let rules = self.dictionary;
 		var visited = Set<Variable>()
 		var queue = start;
 		while let current = queue.first {
 			queue.removeFirst()
 			if visited.contains(current) { continue }
 			visited.insert(current)
-			if let rulesForCurrent = rules[current] {
-				for rule in rulesForCurrent {
-					for symbol in rule.body {
+			if let alts = rules[current] {
+				for alt in alts {
+					for symbol in alt {
 						if case .nonterminal(let name) = symbol {
 							if !visited.contains(name) && !queue.contains(name) {
 								queue.append(name);
@@ -620,7 +658,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				}
 			}
 		}
-		return Self(startSet: start, productions: self.productions.filter { visited.contains($0.name) });
+		return Self(startSet: start, rules: rules.filter { visited.contains($0.key) });
 	}
 
 	/// This will return an equivalent CFG except for the production of the empty string, if it did before
@@ -655,7 +693,7 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	/// Substitute productions that are just aliases for another production
 	/// This may not work reliably if epsilon productions have not been eliminated!
 	public func eliminateUnitProduction() -> Self {
-		let dict = self.dictionary;
+		let dict = self.rules;
 
 		// Collect every variable that appears, in first-appearance order (start symbols first, then LHS then RHS nonterminals)
 		var variableOrder: [Variable] = [];
@@ -663,13 +701,15 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		for v in start {
 			if seen.insert(v).inserted { variableOrder.append(v) }
 		}
-		for prod in self.productions {
-			if seen.insert(prod.name).inserted {
-				variableOrder.append(prod.name);
+		for (name, alts) in rules {
+			if seen.insert(name).inserted {
+				variableOrder.append(name);
 			}
-			for elem in prod.body {
-				if let nt = elem.asNonterminal, seen.insert(nt).inserted {
-					variableOrder.append(nt);
+			for alt in alts {
+				for elem in alt {
+					if let nt = elem.asNonterminal, seen.insert(nt).inserted {
+						variableOrder.append(nt);
+					}
 				}
 			}
 		}
@@ -687,9 +727,9 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 				if visited.contains(current) { continue; }
 				visited.insert(current);
 				ordered.append(current);
-				guard let prods = dict[current] else { continue; }
-				for p in prods {
-					if p.body.count == 1, let nt = p.body[0].asNonterminal {
+				guard let alts = dict[current] else { continue; }
+				for alt in alts {
+					if alt.count == 1, let nt = alt[0].asNonterminal {
 						if !visited.contains(nt) && !queued.contains(nt) {
 							queue.append(nt);
 							queued.insert(nt);
@@ -707,13 +747,13 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 		for name in variableOrder {
 			let reachables = orderedReachable(name);
 			for target in reachables {
-				guard let targetProds = dict[target] else { continue; }
-				for prod in targetProds {
+				guard let targetAlts = dict[target] else { continue; }
+				for alt in targetAlts {
 					// Skip any unit productions (single nonterminal body)
-					if prod.body.count == 1, prod.body[0].asNonterminal != nil {
+					if alt.count == 1, alt[0].asNonterminal != nil {
 						continue;
 					}
-					let newProd = Production(name: name, body: prod.body);
+					let newProd = Production(name: name, body: alt);
 					if dedup.insert(newProd).inserted {
 						newProductions.append(newProd);
 					}
@@ -737,6 +777,16 @@ public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable
 	//}
 
 	public func mapVariableName<Target>(_ transform: (Variable) -> Target) -> CFGNamed<Target, Alphabet> {
-		CFGNamed<Target, Alphabet>(startSet: start.map(transform), productions: productions.map { $0.mapVariableName(transform) })
+		var newRules: Dictionary<Target, Array<CFGNamed<Target, Alphabet>.Alternative>> = [:];
+		for (name, alts) in rules {
+			let mapped = alts.map { alt in alt.map { elem -> CFGNamed<Target, Alphabet>.BodyElement in
+				switch elem {
+				case .nonterminal(let n): return .nonterminal(transform(n));
+				case .terminal(let s): return .terminal(s);
+				}
+			} };
+			newRules[transform(name), default: []].append(contentsOf: mapped);
+		}
+		return CFGNamed<Target, Alphabet>(startSet: start.map(transform), rules: newRules);
 	}
 }

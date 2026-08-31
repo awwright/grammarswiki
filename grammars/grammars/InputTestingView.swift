@@ -83,25 +83,24 @@ struct InputTestingView: View {
 							Text("\u{2192} \u{2205}")
 						}
 						Spacer()
-						let dictionary = grammar.dictionary
 						let ruleNames = grammar.ruleNames;
 						ForEach(ruleNames, id: \.self) { (ruleName: ABNFRulelist<UInt32>.CFG.ParseTree.Variable) in
-							let rules = dictionary[ruleName] ?? []
+							let alts = grammar.rules[ruleName] ?? []
 							Text("\(ruleName)").font(.headline);
-							if rules.isEmpty {
+							if alts.isEmpty {
 								Text("\t= \u{2205}");
 							}
-							ForEach(rules, id: \.self) { rule in
+							ForEach(alts, id: \.self) { alt in
 								HStack {
 									Text("\t\u{2192} ")
-									ForEach(rule.body, id: \.self) { (token: ABNFRulelist<UInt32>.CFG.ParseTree.BodyElement) in
+									ForEach(alt, id: \.self) { (token: ABNFRulelist<UInt32>.CFG.ParseTree.BodyElement) in
 										switch token {
 											case .terminal(let sym): Text(charset.describe(sym)).monospaced()
 											case .nonterminal(let name): Text(name.description)
 //											default: Text(String(describing: token))
 										}
 									}
-									if rule.body.isEmpty {
+									if alt.isEmpty {
 										Text("\u{3B5}") // Epsilon
 									}
 								}
@@ -276,10 +275,10 @@ struct ParseTreeResult: View {
 	let rule: ABNFRulelist<UInt32>.CFG.ParseTreeKey;
 	@Environment(SelectedCharset.self) private var charset;
 	var body: some View {
-		let production: ABNFRulelist<UInt32>.CFG.ParseTree.Production = result.dictionary[rule]![0];
+		let body = result.rules[rule]![0];
 		Branch {
 			BranchLabel(rule.name[0].description)
-			ForEach(Array(production.body), id: \.self) {
+			ForEach(Array(body), id: \.self) {
 				switch $0 {
 					case .terminal(let t):
 						Text(charset.describe(t));
@@ -300,8 +299,8 @@ struct ParseTreeFlatten: View {
 	let rule: ABNFRulelist<UInt32>.CFG.ParseTreeKey;
 	@Environment(SelectedCharset.self) private var charset;
 	var body: some View {
-		let production: ABNFRulelist<UInt32>.CFG.ParseTree.Production = result.dictionary[rule]![0];
-		ForEach(Array(production.body), id: \.self) {
+		let body = result.rules[rule]![0];
+		ForEach(Array(body), id: \.self) {
 			switch $0 {
 				case .terminal(let t):
 					Text(charset.describe(t));

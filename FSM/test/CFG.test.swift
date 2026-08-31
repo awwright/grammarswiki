@@ -38,7 +38,7 @@ import Testing
 			let cfg = CFG<ClosedRangeAlphabet<UInt8>>()
 			#expect(cfg.start == [])
 			#expect(cfg.productions.isEmpty)
-			#expect(cfg.dictionary.isEmpty)
+			#expect(cfg.rules.isEmpty)
 		}
 
 		@Test("initializer")
@@ -50,7 +50,7 @@ import Testing
 			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: productions);
 			#expect(cfg.start == ["S"])
 			#expect(cfg.productions.count == 2)
-			#expect(cfg.dictionary.keys.sorted() == ["A", "S"])
+			#expect(cfg.rules.keys.sorted() == ["A", "S"])
 		}
 
 		@Test("Equatable")
@@ -73,19 +73,44 @@ import Testing
 		}
 	}
 
-	@Suite("dictionary and ruleNames") struct CFGTests_dictionary {
-		@Test("dictionary groups by name")
-		func test_dictionary() async throws {
+	@Suite("rules and ruleNames") struct CFGTests_rules {
+		@Test("rules groups by name")
+		func test_rules() async throws {
 			let productions: [CFG<ClosedRangeAlphabet<UInt8>>.Production] = [
 				.init(name: "S", body: [.nonterminal("A")]),
 				.init(name: "A", body: [.terminal(ClosedRangeAlphabet.symbolClass(range: 0x41...0x5A))]),
 				.init(name: "S", body: [.nonterminal("B")])
 			]
 			let cfg = CFG<ClosedRangeAlphabet<UInt8>>(start: "S", productions: productions)
-			let dict = cfg.dictionary
+			let dict = cfg.rules
 			#expect(dict["S"]?.count == 2)
 			#expect(dict["A"]?.count == 1)
 			#expect(dict["B"] == nil)
+		}
+
+		@Test("empty array is the empty language; missing key is undefined")
+		func test_defined_empty_vs_undefined() async throws {
+			let emptyLang: CFG<SymbolAlphabet<UInt8>> = ["S": []];
+			#expect(emptyLang.rules["S"] != nil)
+			#expect(emptyLang.rules["S"]?.isEmpty == true)
+			#expect(emptyLang.productions.isEmpty)
+			#expect(!emptyLang.contains([]))
+			#expect(emptyLang.maxCardinality() == 0)
+
+			let namedEmpty = CFG<SymbolAlphabet<UInt8>>(start: "S", productions: [])
+			#expect(namedEmpty.rules["S"]?.isEmpty == true)
+			#expect(namedEmpty.productions.isEmpty)
+
+			let epsilon: CFG<SymbolAlphabet<UInt8>> = ["S": [[]]];
+			#expect(epsilon.rules["S"] == Optional([[]]))
+			#expect(epsilon.contains([]))
+
+			let hole = CFG<SymbolAlphabet<UInt8>>(start: "S", productions: [
+				.init(name: "S", body: [.nonterminal("A")]),
+			])
+			#expect(hole.rules["S"] != nil)
+			#expect(hole.rules["A"] == nil)
+			#expect(!hole.contains([]))
 		}
 
 		@Test("ruleNames")

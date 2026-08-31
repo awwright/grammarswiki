@@ -146,32 +146,30 @@ struct CFGContentView_BNF: View {
 		// Empty line
 		result += "\n";
 
-		let dictionary = grammar.dictionary
-
 		for ruleName in ruleNames {
-			let rules = dictionary[ruleName] ?? [];
+			let alts = grammar.rules[ruleName] ?? [];
 
 			// Rule name (headline)
 			var namePart = AttributedString(ruleName.description);
 			namePart.font = .headline;
 			result += namePart + "\n";
 
-			if rules.isEmpty {
+			if alts.isEmpty {
 				result += "\u{2192} \u{2205}\n";
 				continue;
 			}
 
-			for rule in rules {
+			for alt in alts {
 				var arrow = AttributedString("\t\u{2192}")
 				arrow.foregroundColor = .secondary
 				result += arrow
 
-				if rule.body.isEmpty {
+				if alt.isEmpty {
 					var eps = AttributedString(" \u{3B5}\n")
 					eps.foregroundColor = .orange
 					result += eps
 				} else {
-					for token in rule.body {
+					for token in alt {
 						switch token {
 						case .terminal(let sym):
 							var term = AttributedString(charset.describe(sym));
@@ -215,8 +213,6 @@ struct CFGContentView_SwiftCFG: View {
 			return "ABNFRulelist<UInt32>.CFG()";
 		}
 
-		let dictionary = grammar.dictionary;
-
 		var lines: [String] = [];
 		lines.append("ABNFRulelist<UInt32>.CFG(");
 		if grammar.start.count == 1 {
@@ -235,8 +231,9 @@ struct CFGContentView_SwiftCFG: View {
 		lines.append("\tproductions: [");
 
 		for ruleName in ruleNames {
-			let rules = dictionary[ruleName] ?? []
-			for rule in rules {
+			let alts = grammar.rules[ruleName] ?? []
+			for alt in alts {
+				let rule = ABNFRulelist<UInt32>.CFG.Production(name: ruleName, body: alt);
 				lines.append(contentsOf: swiftProduction(rule).map { "\t\t\($0)" });
 			}
 		}
