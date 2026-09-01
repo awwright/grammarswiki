@@ -38,7 +38,7 @@ struct CatalogView: View {
 				ToolbarItem {
 					Button(action: addDocument) {
 						// TODO: Consider "book.badge.plus" when macOS 26+ is required
-						Label("Add", systemImage: "plus")
+						Label("Add", systemImage: "plus.rectangle")
 					}
 				}
 			}

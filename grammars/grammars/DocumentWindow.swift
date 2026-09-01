@@ -1,12 +1,42 @@
 // TODO:
-// - Show tab of alternative forms of the document
 // - Limit text field to accepted characters, use a multi-line field if \n is permitted; use \r\n for newlines when \r is permitted
 // - Search feature for catalog
-// - Rendered graph view
 // - Selection of symbol type/preview (e.g. show decimal, hex, or glyph)
 
 import SwiftUI
 import FSM
+
+/// Full-window mode of a document: the editor, or one compiled projection of the selected rule.
+enum DocumentPane: String, CaseIterable, Identifiable {
+	case edit, cfg, regex, fsm, graph, railroad, instances, test
+	var id: Self { self }
+
+	var title: String {
+		switch self {
+		case .edit: "Edit"
+		case .cfg: "CFG"
+		case .regex: "Regex"
+		case .fsm: "FSM"
+		case .graph: "Graph"
+		case .railroad: "Railroad"
+		case .instances: "Instances"
+		case .test: "Input Testing"
+		}
+	}
+
+	var systemImage: String {
+		switch self {
+		case .edit: "pencil"
+		case .cfg: "translate"
+		case .regex: "textformat.characters.arrow.left.and.right"
+		case .fsm: "rectangle.portrait.and.arrow.right"
+		case .graph: "flowchart"
+		case .railroad: "train.side.front.car"
+		case .instances: "bolt.fill" // Consider list.bullet.badge.ellipsis on macOS 26+
+		case .test: "text.cursor"
+		}
+	}
+}
 
 /// The main viewer for a single grammar
 struct DocumentView<Document: DocumentProtocol>: View {
@@ -17,6 +47,7 @@ struct DocumentView<Document: DocumentProtocol>: View {
 
 	// User input
  	@State private var selectedCharsetId: String = "UTF-32"
+	// TODO: Keep a list of last-used selected rule names and work down the list if the previous rule becomes unavailable e.g. due to user editing
 	@State private var selectedRule: String? = nil
 	@State private var testInput: String = ""
 
@@ -31,87 +62,70 @@ struct DocumentView<Document: DocumentProtocol>: View {
 	@AppStorage("expandedRule_undefined") private var rule_undefined_expanded = true
 	@AppStorage("expandedRule_recursive") private var rule_recursive_expanded = true
 	@AppStorage("expandedAlphabet") private var alphabet_expanded = true
-	@State private var regex_expanded = false
-	@State private var test_expanded = false
+	@State private var pane: DocumentPane = .edit
 	@State private var inspector_isPresented = false
 
 	// minimized() is necessary here otherwise it won't return a minimized alphabetPartitions
 	let builtins = ABNFBuiltins<DFA<ClosedRangeAlphabet<UInt32>>>.dictionary.mapValues { $0.minimized() };
 
+	private var availablePanes: [DocumentPane] {
+		DocumentPane.allCases.filter { pane in
+			switch pane {
+			case .regex: showRegex
+			case .fsm: showExport
+			case .instances: showInstances
+			case .test: showTestInput
+			default: true
+			}
+		}
+	}
+
+	@ViewBuilder
+	private var paneContent: some View {
+		switch pane {
+		case .edit:
+			document.editorView(document: $document, computed: computed)
+		case .cfg:
+			if let content_cfg = rule.cfg {
+				CFGContentView(grammar: content_cfg)
+			} else {
+				Text("Building CFG...").foregroundStyle(.secondary)
+			}
+		case .regex:
+			RegexContentView(rule_fsm: rule.fsm)
+		case .fsm:
+			ScrollView {
+				FSMExportView(rule_alphabet: rule.alphabet, rule_fsm: rule.fsm)
+				Spacer()
+			}
+		case .graph:
+			DFAGraphPageView(rule_fsm: rule.fsm)
+		case .railroad:
+			ScrollView([.horizontal, .vertical]) {
+				if let content_rr = rule.rr {
+					content_rr.view
+				} else {
+					Text("Select a rule to view its railroad diagram")
+						.foregroundStyle(.secondary)
+				}
+			}
+		case .instances:
+			InstanceGeneratorView(rule_fsm: rule.fsm)
+		case .test:
+			ScrollView {
+				InputTestingView(
+					rule_alphabet: rule.alphabet,
+					rule_fsm: rule.fsm,
+					content_cfg: rule.cfg,
+				)
+				Spacer()
+			}
+		}
+	}
+
 	var body: some View {
-		HStack(spacing: 20) {
-			VStack(alignment: .leading) {
-				TabView {
-					Tab("Edit", systemImage: "pencil") {
-						document.editorView(document: $document, computed: computed)
-					}
-
-					Tab("Information", systemImage: "info.circle") {
-						ScrollView {
-							RuleInformationView(document: $document, computed: computed, rule: rule);
-						}.frame(maxWidth: .infinity)
-					}
-
-					Tab("CFG", systemImage: "translate") {
-						if let content_cfg = rule.cfg {
-							CFGContentView(grammar: content_cfg);
-						} else {
-							Text("Building CFG...")
-						}
-					}
-
-					if showRegex {
-						Tab("Regex", systemImage: "textformat.characters.arrow.left.and.right") {
-							RegexContentView(rule_fsm: rule.fsm)
-						}
-					}
-
-					if showExport {
-						// TODO: "Copy to clipboard" button
-						Tab("FSM", systemImage: "rectangle.portrait.and.arrow.right") {
-							ScrollView {
-								FSMExportView(rule_alphabet: rule.alphabet, rule_fsm: rule.fsm)
-								Spacer()
-							}
-						}
-					}
-
-					Tab("Graph", systemImage: "photo") {
-						DFAGraphPageView(rule_fsm: rule.fsm)
-					}
-
-					Tab("Railroad", systemImage: "train.side.front.car") {
-						ScrollView([.horizontal, .vertical]) {
-							if let content_rr = rule.rr {
-								content_rr.view
-							} else {
-								Text("Select a rule to view its railroad diagram")
-									.foregroundColor(.gray)
-							}
-						}
-					}
-
-					if showInstances {
-						Tab("Instances", systemImage: "printer.dotmatrix") {
-							InstanceGeneratorView(rule_fsm: rule.fsm)
-						}
-					}
-
-					if showTestInput {
-						Tab("Input Testing", systemImage: "pencil") {
-							ScrollView {
-								InputTestingView(
-									rule_alphabet: rule.alphabet,
-									rule_fsm: rule.fsm,
-									content_cfg: rule.cfg,
-								)
-								Spacer()
-							}
-						}
-					}
-				} //TabView
-				.tabViewStyle(.automatic)
-			} // VStack
+		paneContent
+			.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 			.padding()
 			.inspector(isPresented: $inspector_isPresented) {
 				// MARK: Inspector sidebar
@@ -166,49 +180,24 @@ struct DocumentView<Document: DocumentProtocol>: View {
 					}
 
 					if computed.allRuleNames.isEmpty == false {
-						RuleInformationView(document: $document, computed: computed, rule: rule);
-
-						if let rule_fsm = rule.fsm {
-							if showRegex {
-								DisclosureGroup("Regex", isExpanded: $regex_expanded, content: {
-									RegexContentView(rule_fsm: rule_fsm)
-								})
+						RuleInformationView(document: $document, computed: computed, rule: rule)
+						if rule.fsm == nil && rule.cfg == nil {
+							if let err = rule.error {
+								Text(err).foregroundStyle(.red)
+							} else {
+								Text("Building…").foregroundStyle(.secondary)
 							}
-
-							Divider()
-
-							if showTestInput {
-								DisclosureGroup("Test Input", isExpanded: $test_expanded, content: {
-									InputTestingView(
-										rule_alphabet: rule.alphabet,
-										rule_fsm: rule.fsm,
-										content_cfg: rule.cfg,
-									)
-								})
-							}
-						} else if let rule_fsm_error = rule.error {
-							Text(rule_fsm_error)
-								.foregroundColor(.red)
-						} else if rule.fsm != nil {
-							Text("Selected rule is recursive")
-								.foregroundColor(.gray)
-						} else {
-							Text("Building FSM...")
-								.foregroundColor(.gray)
 						}
-					} else if let rule_fsm_error = rule.error {
-						Text("Parse Error: \(rule_fsm_error)")
-							.foregroundColor(.red)
+					} else if let err = rule.error {
+						Text("Parse Error: \(err)").foregroundStyle(.red)
 					} else {
-						Text("Parsing...")
-							.foregroundColor(.gray)
+						Text("Parsing...").foregroundStyle(.secondary)
 					}
 					Spacer()
 				} // ScrollView
 				.padding()
 				.inspectorColumnWidth(min: 300, ideal: 500, max: 2000)
 			}
-		} // HStack
 		.onAppear {
 			document.updateParser(computed)
 		}
@@ -224,15 +213,10 @@ struct DocumentView<Document: DocumentProtocol>: View {
 		.onChange(of: computed.parseRevision) {
 			compileSelectedRule()
 		}
+		.onChange(of: availablePanes) {
+			if availablePanes.contains(pane) == false { pane = .edit }
+		}
 		.toolbar {
-			ToolbarItem(placement: .primaryAction) {
-				Button {
-					inspector_isPresented.toggle()
-				} label: {
-					Label("Inspector", systemImage: "sidebar.squares.right")
-				}
-			}
-
 			// It only makes sense to show this if there's rules to select between
 			if computed.allRuleNames.count > 1 {
 				ToolbarItem(placement: .principal) {
@@ -240,6 +224,23 @@ struct DocumentView<Document: DocumentProtocol>: View {
 						Image(systemName: "arrow.right")
 						StartRulePicker(title: "Start rule", computed: computed, selection: $selectedRule)
 					}
+				}
+			}
+
+			ToolbarItem(placement: .principal) {
+				Picker("View", selection: $pane) {
+					ForEach(availablePanes) { item in
+						Label(item.title, systemImage: item.systemImage).tag(item)
+					}
+				}
+				.pickerStyle(.segmented)
+			}
+
+			ToolbarItem(placement: .primaryAction) {
+				Button {
+					inspector_isPresented.toggle()
+				} label: {
+					Label("Inspector", systemImage: "sidebar.squares.right")
 				}
 			}
 		}
