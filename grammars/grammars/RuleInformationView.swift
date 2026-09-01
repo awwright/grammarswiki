@@ -61,6 +61,7 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 			.padding()
 			.frame(maxWidth: .infinity, alignment: .leading)
 		})
+
 		DisclosureGroup("Document Rule References", content: {
 			Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 10) {
 				ForEach(ruleReferenceOrder, id: \.self) { name in
@@ -95,6 +96,9 @@ struct RuleInformationView<Document: DocumentProtocol>: View {
 
 		document.ruleInfoView(document: $document, rule: rule)
 			.frame(maxWidth: .infinity, alignment: .leading)
+
+		Divider()
+		// Selected rule information
 
 		if showAlphabet {
 			DisclosureGroup("Alphabet", isExpanded: $alphabet_expanded, content: {
