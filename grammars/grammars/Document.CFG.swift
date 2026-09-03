@@ -12,7 +12,7 @@ private struct CFGDocumentFile: Codable {
 	var name: String?
 	var start: [String]?
 	var charset: String?
-	var productions: [CFGDocument.Production]?
+	var rules: [CFGDocument.Rule]?
 }
 
 struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDocument {
@@ -21,26 +21,63 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 	var name: String
 	var charset: String
 
-	/// The core editable data: a real CFG over ClosedRangeAlphabet<UInt32>.
-	var productions: [Production]
+	/// Named rules in document order
+	var rules: [Rule]
 
 	var type: String { "CFG" }
 
-	/// Structured production that can be losslessly mapped to/from CFG<ClosedRangeAlphabet<UInt32>>.Production
-	struct Production: Hashable, Codable, Equatable, Identifiable {
+	/// A variable (nonterminal) defined with its expansions (productions)
+	struct Rule: Hashable, Codable, Equatable, Identifiable {
 		var id: UUID = UUID()
 		var name: String
-		var body: [BodyElement]
 		/// "top" marks rules intended for external/public use
 		var top: Bool
+		var productions: [Production]
 
-		enum CodingKeys: String, CodingKey { case id, name, body, top }
+		enum CodingKeys: String, CodingKey { case id, name, top, productions }
 
-		init(id: UUID = UUID(), name: String, body: [BodyElement], top: Bool) {
+		init(id: UUID = UUID(), name: String, top: Bool, productions: [Production]) {
 			self.id = id;
 			self.name = name;
-			self.body = body;
 			self.top = top;
+			self.productions = productions;
+		}
+
+		init(xmlElement: XMLElement) throws {
+			guard xmlElement.name == "rule" else {
+				throw PageXMLError.unexpectedElement(expected: "rule", actual: xmlElement.name)
+			}
+			self.id = UUID();
+			self.name = xmlElement.attribute(forName: "name")?.stringValue ?? "";
+			let topStr = xmlElement.attribute(forName: "top")?.stringValue?.lowercased() ?? "";
+			self.top = topStr == "true" || topStr == "1";
+			self.productions = try xmlElement.elements(forName: "production").map { try Production(xmlElement: $0) }
+		}
+
+		func makeXMLElement() throws -> XMLElement {
+			let el = XMLElement(name: "rule");
+			var attrs: [String: String] = ["name": name];
+			if top { attrs["top"] = "true" }
+			el.setAttributesWith(attrs);
+			for production in productions {
+				el.addChild(try production.makeXMLElement());
+			}
+			return el;
+		}
+	}
+
+	/// Alternative of a rule
+	///
+	/// An empty body forms the empty string (epsilon)
+	struct Production: Hashable, Codable, Equatable, Identifiable {
+		var id: UUID = UUID()
+		var body: [BodyElement]
+
+		enum CodingKeys: String, CodingKey { case id, body }
+
+		init(id: UUID = UUID(), body: [BodyElement]) {
+			self.id = id;
+			self.body = body;
 		}
 
 		init(xmlElement: XMLElement) throws {
@@ -48,13 +85,10 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 				throw PageXMLError.unexpectedElement(expected: "production", actual: xmlElement.name)
 			}
 			self.id = UUID();
-			self.name = xmlElement.attribute(forName: "name")?.stringValue ?? "";
-			let topStr = xmlElement.attribute(forName: "top")?.stringValue?.lowercased() ?? "";
-			self.top = topStr == "true" || topStr == "1";
 			var body: [BodyElement] = [];
 			for case let child as XMLElement in xmlElement.children ?? [] {
 				switch child.name {
-				case "nt":
+				case "v":
 					body.append(.nonterminal(child.stringValue ?? ""));
 				case "t":
 					let ranges: [TerminalRange] = try child.elements(forName: "range").map { try TerminalRange(xmlElement: $0) }
@@ -68,13 +102,10 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 
 		func makeXMLElement() throws -> XMLElement {
 			let el = XMLElement(name: "production");
-			var attrs: [String: String] = ["name": name];
-			if top { attrs["top"] = "true" }
-			el.setAttributesWith(attrs);
 			for element in body {
 				switch element {
 				case .nonterminal(let nt):
-					let ntEl = XMLElement(name: "nt");
+					let ntEl = XMLElement(name: "v");
 					ntEl.setStringValue(nt, resolvingEntities: false);
 					el.addChild(ntEl);
 				case .terminal(let ranges):
@@ -113,9 +144,9 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 				throw PageXMLError.unexpectedElement(expected: "range", actual: xmlElement.name)
 			}
 			guard let lowerStr = xmlElement.attribute(forName: "lower")?.stringValue,
-			      let upperStr = xmlElement.attribute(forName: "upper")?.stringValue,
-			      let lower = UInt32(lowerStr),
-			      let upper = UInt32(upperStr) else {
+					let upperStr = xmlElement.attribute(forName: "upper")?.stringValue,
+					let lower = UInt32(lowerStr),
+					let upper = UInt32(upperStr) else {
 				throw PageXMLError.invalidAttribute("lower/upper")
 			}
 			self.lower = lower
@@ -139,14 +170,14 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 		self.filepath = nil;
 		self.name = "";
 		self.charset = "UTF-32";
-		self.productions = [];
+		self.rules = [];
 	}
 
-	init(filepath: URL?, name: String, charset: String, productions: [Production]) {
+	init(filepath: URL?, name: String, charset: String, rules: [Rule]) {
 		self.filepath = filepath;
 		self.name = name;
 		self.charset = charset;
-		self.productions = productions;
+		self.rules = rules;
 	}
 
 	init(configuration: ReadConfiguration) throws {
@@ -158,14 +189,14 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 		self.filepath = nil;
 		self.name = decoded.name ?? "";
 		self.charset = decoded.charset ?? "UTF-32";
-		self.productions = decoded.productions ?? [];
+		self.rules = decoded.rules ?? [];
 	}
 
 	func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
 		let payload = CFGDocumentFile(
 			name: self.name.isEmpty ? nil : self.name,
 			charset: self.charset,
-			productions: self.productions.isEmpty ? nil : self.productions
+			rules: self.rules.isEmpty ? nil : self.rules
 		);
 		let encoder = JSONEncoder();
 		encoder.outputFormatting = [.prettyPrinted, .sortedKeys];
@@ -174,7 +205,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 	}
 
 	func duplicate() -> Self {
-		Self(filepath: nil, name: name + " Copy", charset: charset, productions: productions)
+		Self(filepath: nil, name: name + " Copy", charset: charset, rules: rules)
 	}
 
 	// MARK: PageProtocol XML
@@ -187,7 +218,7 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 		self.filepath = nil
 		self.name = xmlElement.attribute(forName: "name")?.stringValue ?? "";
 		self.charset = xmlElement.attribute(forName: "charset")?.stringValue ?? "UTF-32";
-		self.productions = try xmlElement.elements(forName: "production").map { try Production(xmlElement: $0) }
+		self.rules = try xmlElement.elements(forName: "rule").map { try Rule(xmlElement: $0) }
 	}
 
 	func toXMLElement() throws -> XMLElement {
@@ -196,8 +227,8 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 			"name": name,
 			"charset": charset,
 		])
-		for production in productions {
-			el.addChild(try production.makeXMLElement());
+		for rule in rules {
+			el.addChild(try rule.makeXMLElement());
 		}
 		return el;
 	}
@@ -208,25 +239,9 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 		@Binding var document: CFGDocument
 		let computed: RulelistAnalysis
 
-		// Placeholder for empty value
-		private let kEmpty = "<empty>"
-
-		/// Distinct rule names in the order they first appear (productions first, then any extra start symbols).
-		var ruleNames: [String] {
-			var seen = Set<String>();
-			var result: [String] = [];
-			for p in document.productions {
-				if seen.insert(p.name).inserted { result.append(p.name) }
-			}
-			return result;
-		}
-
-		var firstRuleName: String? { document.productions.first?.name }
-
 		var body: some View {
 			ScrollView {
 				VStack(alignment: .leading, spacing: 16) {
-					// Document metadata
 					GroupBox("Document") {
 						VStack(alignment: .leading) {
 							TextField("Charset", text: $document.charset)
@@ -234,54 +249,88 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 						.padding(4)
 					}
 
-					GroupBox("Productions") {
-						VStack(alignment: .leading, spacing: 12) {
-							ForEach(Array(document.productions.enumerated()), id: \.offset) { (offset, prod) in
-								VStack(alignment: .leading, spacing: 4) {
-									HStack {
-										TextField("LHS", text: Binding(
-											get: { document.productions[offset].name },
-											set: { document.productions[offset].name = $0 }
-										))
+					ForEach($document.rules) { $rule in
+						GroupBox("Rule") {
+							VStack(alignment: .leading, spacing: 8) {
+								HStack {
+									TextField("Rule name", text: $rule.name)
 										.font(.system(.headline, design: .monospaced))
 										.frame(minWidth: 120)
 
-										Button {
-											document.productions[offset].top.toggle()
-										} label: {
-											Image(systemName: prod.top ? "star.fill" : "star")
-										}
-										.help(prod.top ? "Top-level / exported rule" : "Internal rule")
+									Button {
+										rule.top.toggle()
+									} label: {
+										Image(systemName: rule.top ? "star.fill" : "star")
+									}
+									.help(rule.top ? "Top-level / exported rule" : "Internal rule")
 
-										Spacer()
+									Spacer()
+
+									Button(role: .destructive) {
+										document.rules.removeAll { $0.id == rule.id }
+									} label: {
+										Image(systemName: "trash")
+									}
+									.help("Remove this rule")
+								}
+
+								if rule.productions.isEmpty {
+									Text("∅ empty language (no productions)")
+										.foregroundStyle(.secondary)
+										.padding(.leading, 4)
+								}
+
+								ForEach($rule.productions) { $production in
+									HStack(alignment: .center, spacing: 6) {
+										if let index = rule.productions.firstIndex(where: { $0.id == production.id }) {
+											Text("\(index + 1).")
+												.foregroundStyle(.secondary)
+												.frame(width: 28, alignment: .trailing)
+												.monospacedDigit()
+										}
+										Text("\u{2192}").foregroundStyle(.secondary)
+										TextField(
+											"body",
+											text: .constant(production.body.description),
+											prompt: Text(production.body.isEmpty ? "\u{03B5}" : "")
+										)
+										.font(.system(.body, design: .monospaced))
+										.textFieldStyle(.roundedBorder)
 
 										Button(role: .destructive) {
-											document.productions.remove(at: offset)
+											rule.productions.removeAll { $0.id == production.id }
 										} label: {
 											Image(systemName: "trash")
 										}
+										.help("Remove this production")
 									}
-
-									// Body (RHS): single text field using ' ' " " [class] syntax
-									HStack(alignment: .center, spacing: 6) {
-										Text("\u{2192}").foregroundStyle(.secondary)
-										TextField("body", text: .constant(document.productions[offset].body.description), prompt: Text(prod.body.isEmpty ? "\u{03B5}" : ""))
-											.font(.system(.body, design: .monospaced))
-											.textFieldStyle(.roundedBorder)
-									}
-
-									Divider()
 								}
-							}
 
-							Button {
-								document.productions.append(Production(name: "X", body: [], top: false))
-							} label: {
-								Label("Add production", systemImage: "plus.rectangle")
+								Button {
+									rule.productions.append(Production(body: []))
+								} label: {
+									Label("Add production", systemImage: "plus")
+								}
+								.help("Add an alternative. An empty body is ε; delete all productions for the empty language.")
 							}
 						}
-						.padding(4)
 					}
+
+					VStack(alignment: .leading, spacing: 16) {
+						if document.rules.isEmpty {
+							Text("No rules defined")
+								.foregroundStyle(.secondary)
+						}
+
+						Button {
+							let name = document.rules.isEmpty ? "S" : "R\(document.rules.count + 1)"
+							document.rules.append(Rule(name: name, top: document.rules.isEmpty, productions: []))
+						} label: {
+							Label("Add rule", systemImage: "plus.rectangle")
+						}
+						.help("Add a named rule with no productions (empty language)")
+					}
+					.padding(4)
 				}
 				.padding()
 			}
@@ -298,20 +347,26 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 	func toCFG(startRule: String?) -> ABNFRulelist<UInt32>.CFG {
 		typealias G = ABNFRulelist<UInt32>.CFG
 		func ruleName(_ name: String) -> CFGRuleName { CFGRuleName(.rule(name)) }
-		let namedProductions: [G.Production] = productions.map { p in
-			G.Production(name: ruleName(p.name), body: p.body.map { element in
-				switch element {
-				case .nonterminal(let name):
-					return .nonterminal(ruleName(name))
-				case .terminal(let ranges):
-					return .terminal(ranges.map(\.closedRange))
+		var dict: Dictionary<CFGRuleName, Array<G.Alternative>> = [:];
+		for rule in rules {
+			let key = ruleName(rule.name);
+			if dict[key] == nil { dict[key] = []; }
+			for production in rule.productions {
+				let body: G.Alternative = production.body.map { element in
+					switch element {
+					case .nonterminal(let name):
+						return .nonterminal(ruleName(name))
+					case .terminal(let ranges):
+						return .terminal(ranges.map(\.closedRange))
+					}
 				}
-			})
+				dict[key, default: []].append(body);
+			}
 		}
-		let start = startRule.flatMap { name in namedProductions.contains(where: { $0.name == ruleName(name) }) ? ruleName(name) : nil }
-		?? namedProductions.first?.name
+		let start = startRule.flatMap { name in dict[ruleName(name)] != nil ? ruleName(name) : nil }
+		?? rules.first.map { ruleName($0.name) }
 		guard let start else { return G() }
-		return G(start: start, productions: namedProductions)
+		return G(start: start, rules: dict)
 	}
 
 	func toCFGArray(startRule: String?) -> CFGArray<ClosedRangeAlphabet<UInt32>> {
@@ -325,9 +380,9 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 			var all: [String] = [];
 			var seenTops = Set<String>();
 			var tops: [String] = [];
-			for p in snapshot.productions {
-				if seenAll.insert(p.name).inserted { all.append(p.name) }
-				if p.top, seenTops.insert(p.name).inserted { tops.append(p.name) }
+			for rule in snapshot.rules {
+				if seenAll.insert(rule.name).inserted { all.append(rule.name) }
+				if rule.top, seenTops.insert(rule.name).inserted { tops.append(rule.name) }
 			}
 			var referencedRuleNames: Dictionary<String, Array<String>> = {
 				var referencedRuleNames: Dictionary<String, Array<String>> = [:];
@@ -335,54 +390,55 @@ struct CFGDocument: DocumentProtocol, PageProtocol, Hashable, Equatable, FileDoc
 				for name in all {
 					referencedRuleNames[name] = [];
 				}
-				for p in snapshot.productions {
-					for element in p.body {
-						guard case .nonterminal(let name) = element, name.isEmpty == false else { continue }
-						if seenRefs[p.name, default: []].insert(name).inserted {
-							referencedRuleNames[p.name, default: []].append(name)
+				for rule in snapshot.rules {
+					for production in rule.productions {
+						for element in production.body {
+							guard case .nonterminal(let name) = element, name.isEmpty == false else { continue }
+							if seenRefs[rule.name, default: []].insert(name).inserted {
+								referencedRuleNames[rule.name, default: []].append(name);
+							}
 						}
 					}
 				}
 				return referencedRuleNames;
 			}();
-			let primary = snapshot.productions.first?.name
+			let primary = snapshot.rules.first?.name
 			if Task.isCancelled { return }
 			await MainActor.run {
-				parser.primaryRuleName = primary
-				parser.topRuleNames = tops
-				parser.allRuleNames = all
-				parser.referencedRuleNames = referencedRuleNames
-				let old = parser.parsed(Array<Production>.self)
-				if old != snapshot.productions {
-					parser.parsedSource = snapshot.productions
-					parser.parseRevision += 1
+				parser.primaryRuleName = primary;
+				parser.topRuleNames = tops;
+				parser.allRuleNames = all;
+				parser.referencedRuleNames = referencedRuleNames;
+				let old = parser.parsed(Array<Rule>.self)
+				if old != snapshot.rules {
+					parser.parsedSource = snapshot.rules;
+					parser.parseRevision += 1;
 				}
 			}
 		}
 	}
 
 	func compileRule(_ ruleName: String, from list: RulelistAnalysis, into rule: RuleAnalysis) {
-		guard let productions = list.parsed(Array<Production>.self) else { return }
+		guard let rules = list.parsed(Array<Rule>.self) else { return }
 		var compileSource = self
-		compileSource.productions = productions
+		compileSource.rules = rules
 		rule.runCompile(ruleName: ruleName, from: list) { revision in
-			if compileSource.productions.contains(where: { $0.name == ruleName }) == false {
+			if compileSource.rules.contains(where: { $0.name == ruleName }) == false {
 				await MainActor.run {
-					rule.error = "Unknown rule \(ruleName)"
-					rule.compiledRevision = revision
+					rule.error = "Unknown rule \(ruleName)";
+					rule.compiledRevision = revision;
 				}
 				return
 			}
-			let cfg = compileSource.toCFG(startRule: ruleName)
-			let empty = cfg.productions.isEmpty
+			let cfg = compileSource.toCFG(startRule: ruleName);
 			if Task.isCancelled { return }
 			await MainActor.run {
-				rule.error = empty ? "Unknown rule \(ruleName)" : nil
-				rule.cfg = empty ? nil : cfg
-				rule.cfga = empty ? nil : CFGArray(cfg)
-				rule.chomskyClass = empty ? nil : cfg.chomskyClass()
-				rule.memoryRequirements = empty ? nil : cfg.memoryRequirements()
-				rule.compiledRevision = revision
+				rule.error = nil;
+				rule.cfg = cfg;
+				rule.cfga = CFGArray(cfg);
+				rule.chomskyClass = cfg.chomskyClass();
+				rule.memoryRequirements = cfg.memoryRequirements();
+				rule.compiledRevision = revision;
 			}
 		}
 	}
