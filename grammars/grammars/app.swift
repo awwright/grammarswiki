@@ -316,7 +316,7 @@ struct MainApp: App {
 	func del(_ document: CatalogListItem) {
 		let oldFilepath = document.filepath;
 		do {
-			try FileManager.default.removeItem(at: oldFilepath)
+			try FileManager.default.trashItem(at: oldFilepath, resultingItemURL: nil)
 		} catch {
 			print(error.localizedDescription)
 		}
