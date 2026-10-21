@@ -28,8 +28,9 @@ protocol PDAProtocol<Symbol> {
 /// A representation of a pushdown automata.
 ///
 /// Equivalency of two PDAs is incomplete: there might be multiple PDAs that represent the same language, but that are not merged into the same equivalency partition because the equivalence is cannot be proven.
-struct PDA<Symbol: Hashable>: PDAProtocol {
-	typealias Symbol = Symbol;
+struct PDA<Symbol: Hashable>: PDAProtocol, CFL {
+	typealias Symbol = Symbol
+	typealias Alphabet = SymbolAlphabet<Symbol>
 
 	public struct Key: Hashable {
 		let state: Int
@@ -60,6 +61,11 @@ struct PDA<Symbol: Hashable>: PDAProtocol {
 	// - A set of accepting states
 	/// States (from the common state) that signals acceptance
 	public let finals: Set<Int>;
+
+	public func contains(_ string: Array<Symbol>) -> Bool {
+		let input: any Sequence<Symbol> = string
+		return contains(input)
+	}
 
 	public func contains(_ input: some Sequence<Symbol>) -> Bool {
 		var currentState = initialStack;

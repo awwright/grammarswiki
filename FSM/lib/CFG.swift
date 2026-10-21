@@ -22,7 +22,7 @@ public protocol CFGProductionProtocol: GrammarProductionProtocol {
 
 public typealias CFG<Alphabet: AlphabetProtocol> = CFGNamed<String, Alphabet>;
 
-public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable, ExpressibleByDictionaryLiteral, ExpressibleByArrayLiteral {
+public struct CFGNamed<Variable: Hashable, Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, CFL, Hashable, ExpressibleByDictionaryLiteral, ExpressibleByArrayLiteral {
 	public typealias Alphabet = Alphabet
 	public typealias Symbol = Alphabet.Symbol
 	public typealias SymbolClass = Alphabet.SymbolClass

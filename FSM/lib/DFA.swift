@@ -43,7 +43,7 @@ extension DFAProtocol {
 ///   - `Element.Element`: The symbol type (e.g., `UInt8`), which must be `Hashable` and `Comparable`.
 ///
 /// - Note: States are represented by integers (`StateNo`), with `nil` as the "oblivion" (non-accepting sink) state.
-public struct DFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol, RegularLanguageSetAlgebra, RegularPatternBuilder {
+public struct DFA<Alphabet: AlphabetProtocol & Hashable>: Hashable, DFAProtocol, DecidableLanguage, RegularLanguageSetAlgebra, RegularPatternBuilder {
 	// TODO: Implement BidirectionalCollection
 
 	/// A partition might contain more than one symbols, represented with a different type.

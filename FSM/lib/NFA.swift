@@ -11,7 +11,7 @@ public protocol NFAProtocol: RegularLanguageProtocol, RegularLanguageSetAlgebra 
 // TODO: LosslessStringConvertible
 // TODO: CustomDebugStringConvertible
 
-public struct NFA<Alphabet: AlphabetProtocol>: NFAProtocol {
+public struct NFA<Alphabet: AlphabetProtocol>: NFAProtocol, DecidableLanguage {
 	// TODO: Implement BidirectionalCollection
 	public typealias Symbol = Alphabet.Symbol
 	public typealias SymbolClass = Alphabet.SymbolClass

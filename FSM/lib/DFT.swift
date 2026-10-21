@@ -14,7 +14,8 @@
 ///   - `OutputSymbol`: The type of output symbols (e.g., `String`), must conform to `Comparable` and `Hashable`.
 // TODO: Conformance with PartitionedSetProtocol so this can be used as the transition table for non-deterministic finite automata
 // TODO: Conformance with DFAProtocol, since this is just additional behaviors on a DFA
-public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
+public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable, DecidableLanguage {
+	public typealias Alphabet = SymbolAlphabet<Symbol>
 	/// Default element type produced reading this as a Sequence
 	public typealias Element = Array<Symbol>
 	/// Default type that inputs are mapped to (to label a partition)
@@ -135,6 +136,11 @@ public struct SymbolDFT<Symbol: Comparable & Hashable>: Hashable {
 	/// before it ever reaches the end of the input.
 	public func isEquivalent(_ lhs: some Sequence<Symbol>, _ rhs: some Sequence<Symbol>) -> Bool {
 		return mappedSequence(lhs.makeIterator()).elementsEqual(mappedSequence(rhs.makeIterator()))
+	}
+
+	public func contains(_ string: Array<Symbol>) -> Bool {
+		let input: any Sequence<Symbol> = string
+		return contains(input)
 	}
 
 	public func contains(_ input: some Sequence<Symbol>) -> Bool {

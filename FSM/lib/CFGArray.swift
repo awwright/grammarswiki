@@ -3,7 +3,7 @@
 /// This is the same language representation as ``CFGNamed``, except nonterminal symbols are
 /// stored the way ``DFA``/``NFA`` store states: each variable is an `Int` index into ``rules``.
 /// `rules[v]` is the list of alternatives for variable `v`.
-public struct CFGArray<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hashable, ExpressibleByDictionaryLiteral, ExpressibleByArrayLiteral {
+public struct CFGArray<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, CFL, Hashable, ExpressibleByDictionaryLiteral, ExpressibleByArrayLiteral {
 	public typealias Alphabet = Alphabet
 	public typealias Symbol = Alphabet.Symbol
 	public typealias SymbolClass = Alphabet.SymbolClass
@@ -568,6 +568,10 @@ public struct CFGArray<Alphabet: AlphabetProtocol & Hashable>: CFGProtocol, Hash
 
 	public func greibachNormalForm() -> Self {
 		fatalError()
+	}
+
+	public func contains(_ string: Array<Alphabet.Symbol>) -> Bool {
+		mapVariableName { $0 }.contains(string)
 	}
 
 	public func mapVariableName<Target: Hashable>(_ transform: (Variable) -> Target) -> CFGNamed<Target, Alphabet> {
