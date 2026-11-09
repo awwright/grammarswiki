@@ -347,7 +347,7 @@ final class ABNFParsedSource {
 	func resolvedRulelist() -> ABNFRulelist<UInt32> {
 		if let resolved { return resolved }
 		guard let bundlePath = Bundle.main.resourcePath else { fatalError() }
-		let catalog = Catalog(root: bundlePath + "/catalog/");
+		let catalog = DocumentCatalog(root: bundlePath + "/catalog/");
 		let (_, merged, _): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, backward: Dictionary<String, (filename: String, ruleid: String)>) = try! catalog.load(path: documentName, content: content);
 		let value = merged.addingBuiltins();
 		resolved = value;

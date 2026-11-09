@@ -34,7 +34,7 @@ func abnf_to_railroad_svg_args(arguments: Array<String>) -> Int32 {
 	let userExpression: ABNFAlternation<Symbol>
 	let dereferencedRulelist: ABNFRulelist<Symbol>
 	do {
-		let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
+		let catalog = DocumentCatalog(root: FileManager.default.currentDirectoryPath);
 		let (_e, _r, _): (expression: ABNFAlternation<Symbol>, rules: ABNFRulelist<Symbol>, backward: Dictionary<String, (filename: String, ruleid: String)>)
 			= try catalog.loadExpression(path: filepath, expression: expressionStr);
 		userExpression = _e;

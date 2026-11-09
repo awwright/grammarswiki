@@ -19,7 +19,7 @@ func grammar_abnf_rule_html_args(arguments: Array<String>) -> Int32 {
 
 func grammar_abnf_rule_html_run(response res: inout some ResponseProtocol, filePath: String, rulename: String) {
 	res.contentType = "application/xhtml+xml"
-	let catalog = Catalog(root: FileManager.default.currentDirectoryPath + "");
+	let catalog = DocumentCatalog(root: FileManager.default.currentDirectoryPath + "");
 	let rule = ABNFRulename<UInt32>(label: rulename);
 	let ruleid = rule.id; // ABNFRulename automatically normalizes the rule label
 	let (rulelist_source, rulelist_merged, rulelist_backwards): (source: Dictionary<String, ABNFRulelist<UInt32>>, merged: ABNFRulelist<UInt32>, [String: (filename: String, ruleid: String)]) = try! catalog.load(path: filePath, rulenames: [ruleid])

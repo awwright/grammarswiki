@@ -14,7 +14,7 @@ func abnf_dereference_args(arguments: Array<String>) -> Int32 {
 	let directory = URL(fileURLWithPath: filepath).deletingLastPathComponent().path;
 	// Assume the catalog root is the directory where filepath is found
 	// TODO: resolve all references relative to the file location
-	let catalog = Catalog(root: directory);
+	let catalog = DocumentCatalog(root: directory);
 	let rulenames: Array<String>? = arguments.count > 3 ? [arguments[3]] : nil;
 	print(bold("filepath"), filepath);
 	print(bold("rulename"), rulenames?.joined(separator: ", ") ?? "*");

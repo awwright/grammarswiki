@@ -1,6 +1,6 @@
 import Foundation; // import `String(contentsOfFile:)`
 
-public struct Catalog {
+public struct DocumentCatalog {
 	public let root: String;
 
 	public init(root: String) {

@@ -32,7 +32,7 @@ func abnf_to_regex_args(arguments: Array<String>) -> Int32 {
 	let importedDict: [String : StringDFA];
 	let fsm: StringDFA;
 	do {
-		let catalog = Catalog(root: FileManager.default.currentDirectoryPath);
+		let catalog = DocumentCatalog(root: FileManager.default.currentDirectoryPath);
 		let (expression, dereferencedRulelist, _): (expression: ABNFAlternation<Symbol>, rules: ABNFRulelist<Symbol>, backward: Dictionary<String, (filename: String, ruleid: String)>)
 		= try catalog.loadExpression(path: filepath ?? "", expression: expressionStr);
 		importedDict = try dereferencedRulelist.toPattern(as: StringDFA.self, rules: builtins).mapValues { $0.minimized().normalized() }
